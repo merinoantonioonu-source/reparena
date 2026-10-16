@@ -57,13 +57,16 @@ function makeXR() {
 }
 // Anclas persistentes como las de Meta Quest Browser: el "mundo" guarda las anclas por su identificador
 const anchorStore = new Map(); let anchorSeq = 0;
+// Suelo del guardián (bounded-floor): dónde está su origen en local-floor
+const bounded = { on: false, pose: { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } };
 class XRRigidTransform { constructor(position, orientation) { this.position = Object.assign({ x: 0, y: 0, z: 0 }, position); this.orientation = Object.assign({ x: 0, y: 0, z: 0, w: 1 }, orientation); } }
 function makeAnchor(pose) { const a = { anchorSpace: { anchorPose: pose }, deleted: false, delete() { this.deleted = true; }, async requestPersistentHandle() { const h = 'anchor-' + (++anchorSeq); anchorStore.set(h, pose); return h; } }; return a; }
 class XRSessionMock {
   constructor(mode, opts) { this.mode = mode; this.opts = opts; this.inputSources = []; this.listeners = {}; this.restored = []; }
   addEventListener(e, f) { (this.listeners[e] = this.listeners[e] || []).push(f); }
   async end() { (this.listeners.end || []).forEach(f => f()); }
+  async requestReferenceSpace(type) { if (type === 'bounded-floor' && bounded.on) return { bounded: true }; throw new Error('not supported'); }
   async restorePersistentAnchor(h) { this.restored.push(h); if (!anchorStore.has(h)) throw new Error('not found'); return makeAnchor(anchorStore.get(h)); }
   async deletePersistentAnchor(h) { anchorStore.delete(h); }
 }
-module.exports = { document, element, AudioContext, makeXR, XRSessionMock, XRRigidTransform, makeAnchor, anchorStore, elements, stats: () => ({ audioNodes }) };
+module.exports = { document, element, AudioContext, makeXR, XRSessionMock, XRRigidTransform, makeAnchor, anchorStore, bounded, elements, stats: () => ({ audioNodes }) };

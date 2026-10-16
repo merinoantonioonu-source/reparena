@@ -64,10 +64,10 @@ RA.setSetting('exercise', 'pushup'); RA.setSetting('mode', 'walkers');
 }
 // Flyers
 RA.setSetting('exercise', 'squat'); RA.setSetting('mode', 'flyers');
-for (const kind of ['drone', 'hornet', 'bomber', 'carrier']) {
-  const inst = RA.RIGS[kind].instance(kind === 'hornet' ? { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), gloss: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), wing: new THREE.MeshBasicMaterial({ skinning: true, transparent: true, side: 2, color: 0xbbbbbb }) } : { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true }), rotor: new THREE.MeshBasicMaterial({ skinning: true, color: 0x555555 }) });
+for (const kind of ['drone', 'hornet', 'stinger', 'bomber', 'carrier']) {
+  const inst = RA.RIGS[kind].instance(kind === 'hornet' || kind === 'stinger' ? { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), gloss: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), wing: new THREE.MeshBasicMaterial({ skinning: true, transparent: true, side: 2, color: 0xbbbbbb }) } : { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true }), rotor: new THREE.MeshBasicMaterial({ skinning: true, color: 0x555555 }) });
   const grp = new THREE.Group(); grp.add(inst.root);
-  const s = kind === 'hornet' ? 0.12 : kind === 'carrier' ? 0.6 : 0.4;
+  const s = kind === 'hornet' ? 0.12 : kind === 'stinger' ? 0.2 : kind === 'carrier' ? 0.6 : 0.4;
   shot(grp, [front(new V3(0, 0, 0), s * 1.6, 0.6), side(new V3(0, 0, 0), s * 1.6), top(new V3(0, 0, 0), s * 1.8)], `flyer_${kind}.png`);
 }
 // Arc + gate + kiosk

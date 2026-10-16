@@ -83,9 +83,10 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = 
   }
   const s = RA.stats;
   log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} partial=${s.partial} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
+  const ended = RA.state === 'end';
   if (check) { const why = check(s); if (why) errors.push(`${name}: ${why}`); }
-  if (RA.state !== 'end' && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
-  else if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
+  if (!ended && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
+  else if (!ended) errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
   if (RA.activeWidgets().some(w => w.label === 'Menú principal')) press('Menú principal'); frame(5);
   RA.exitAll(); frame(1);
 }
@@ -404,6 +405,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('anchor restored', navigator.xr.last.restored[0] === door.handle, 'x moved by', (door.x - oldX).toFixed(2));
   if (Math.abs(door.x - oldX - 1) > 0.01) errors.push('el ancla restaurada no mueve la barra');
   RA.exitAll(); frame(2, 16, xrFrame);
+  // sin ancla, la barra se queda en su sitio de la habitación gracias al suelo del guardián (bounded-floor),
+  // aunque en la sesión siguiente el origen de local-floor esté en otro sitio y girado
+  E.bounded.on = true; door.handle = null; door.anchor = null;
+  await RA.startXR(true); await sleep(50); frame(5, 16, xrFrame);
+  const b0 = door.b && { ...door.b }, x0 = door.x, z0 = door.z; log('bounded pose stored', !!b0); RA.exitAll(); frame(2, 16, xrFrame);
+  const yb = 0.4, q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yb);
+  E.bounded.pose = { position: { x: 0.5, y: 0, z: -0.3 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } };
+  await RA.startXR(true); await sleep(50); frame(5, 16, xrFrame);
+  const ex = 0.5 + Math.cos(yb) * x0 + Math.sin(yb) * z0, ez = -0.3 - Math.sin(yb) * x0 + Math.cos(yb) * z0;
+  log('bar with new session origin:', door.x.toFixed(3), door.z.toFixed(3), 'expected', ex.toFixed(3), ez.toFixed(3));
+  if (!b0 || Math.hypot(door.x - ex, door.z - ez) > 0.005) errors.push('sin ancla, la barra no se queda en su sitio de la habitación al cambiar el origen de la sesión');
+  RA.exitAll(); frame(2, 16, xrFrame); E.bounded.on = false; E.bounded.pose = { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
 
   // ---- Plancha con un brazo en XR: cada brazo dispara a su lado; los dos a la vez no cuentan ----
   for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'plank1', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 6, maxAlive: 4, spawnGap: 0.5 })) RA.setSetting(k, v);
@@ -568,7 +581,7 @@ function makeXRFrame() {
       session: s || { inputSources: src },
       getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
-      getPose(space) { if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getPose(space) { if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
