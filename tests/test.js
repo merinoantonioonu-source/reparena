@@ -10,15 +10,44 @@ Object.assign(global, {
   THREE, document: E.document, window: global, innerWidth: 1200, innerHeight: 800, devicePixelRatio: 1,
   addEventListener: (ev, fn) => (winListeners[ev] = winListeners[ev] || []).push(fn),
   localStorage: { getItem: k => storage.has(k) ? storage.get(k) : null, setItem: (k, v) => storage.set(k, String(v)) },
-  location: { protocol: 'https:', hostname: 'example.com' },
+  location: { protocol: 'https:', hostname: 'example.com', origin: 'https://example.com', pathname: '/reparena/', search: '', assign(u) { this.assigned = u; } },
+  history: { replaceState(a, b, u) { global.location.search = ''; global.location.replaced = u; } },
   AudioContext: E.AudioContext
 });
 Object.defineProperty(global, 'navigator', { value: { xr: E.makeXR() }, configurable: true });
+global.XRRigidTransform = E.XRRigidTransform;
+// ---- Spotify falso: la página vuelve de Spotify con ?code=… y el juego usa la Web API ----
+const SPOT = { calls: [], playing: true, vol: 50, track: 'Eye of the Tiger', tokenCalls: 0, noDevice: false };
+storage.set('reparena3-spotify', JSON.stringify({ clientId: 'testclient' }));
+storage.set('reparena3-spotify-pkce', JSON.stringify({ verifier: 'v'.repeat(64), state: 'st123' }));
+global.location.search = '?code=abc&state=st123';
+global.fetch = async (url, opts = {}) => {
+  const method = opts.method || 'GET'; SPOT.calls.push(method + ' ' + url.replace(/^https:\/\/[^/]+/, ''));
+  const res = (status, body) => ({ status, ok: status >= 200 && status < 300, json: async () => body, text: async () => body === undefined ? '' : JSON.stringify(body) });
+  if (url === 'https://accounts.spotify.com/api/token') {
+    SPOT.tokenCalls++; const b = new URLSearchParams(String(opts.body));
+    if (b.get('client_id') !== 'testclient') return res(400, { error: 'invalid_client' });
+    if (b.get('grant_type') === 'authorization_code' && (b.get('code') !== 'abc' || b.get('code_verifier') !== 'v'.repeat(64) || b.get('redirect_uri') !== 'https://example.com/reparena/')) return res(400, { error: 'invalid_grant' });
+    return res(200, { access_token: 'tok' + SPOT.tokenCalls, expires_in: 3600, refresh_token: 'ref' + SPOT.tokenCalls });
+  }
+  if (!url.startsWith('https://api.spotify.com/v1/')) throw new Error('unexpected fetch ' + url);
+  if (!/^Bearer tok\d+$/.test(opts.headers.Authorization)) return res(401, { error: { status: 401, message: 'The access token expired' } });
+  const path = url.slice('https://api.spotify.com/v1'.length);
+  if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: 'quest', name: 'Quest 3', volume_percent: SPOT.vol, supports_volume: true }, item: { name: SPOT.track, artists: [{ name: 'Survivor' }] } });
+  if (method === 'GET' && path === '/me/player/devices') return res(200, { devices: SPOT.noDevice ? [] : [{ id: 'quest', is_active: true }] });
+  if (method === 'PUT' && path === '/me/player/pause') { SPOT.playing = false; return res(204); }
+  if (method === 'PUT' && path === '/me/player/play') { SPOT.playing = true; return res(204); }
+  if (method === 'POST' && path === '/me/player/next') { SPOT.track = 'Siguiente canción'; return res(204); }
+  if (method === 'POST' && path === '/me/player/previous') return res(204);
+  if (method === 'PUT' && path.startsWith('/me/player/volume?volume_percent=')) { SPOT.vol = +path.split('=')[1]; return res(204); }
+  return res(404, { error: { status: 404, message: 'Not found' } });
+};
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
 window.__RA = { get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg} };
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg},
+  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -39,7 +68,7 @@ function findW(label) { const w = RA.activeWidgets().find(w => w.label === label
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
 
-async function runConfig(name, cfg, simulate, maxSec = 420) {
+async function runConfig(name, cfg, simulate, maxSec = 420, check) {
   for (const k in cfg) RA.setSetting(k, cfg[k]);
   RA.startPreview(); frame(3);
   press('EMPEZAR');
@@ -51,12 +80,16 @@ async function runConfig(name, cfg, simulate, maxSec = 420) {
     maxEnemies = Math.max(maxEnemies, RA.enemies.length + RA.arcs.length);
   }
   const s = RA.stats;
-  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}`);
+  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
+  if (check) { const why = check(s); if (why) errors.push(`${name}: ${why}`); }
   if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
   press('Menú principal'); frame(5);
   RA.exitAll(); frame(1);
 }
 const squatSim = (period = 2.6) => t => { RA.PV.crouch = (t % period) < period * 0.55; };
+// barras: solo se mueve cuando la oleada está en marcha (al colgarse hay que estar quieto)
+const pullSim = (period = 2.6) => t => { RA.PV.crouch = RA.state === 'play' && (t % period) < period * 0.5; };
+const fallOnce = (at, sim) => t => { sim(t); RA.PV.fall = RA.state === 'play' && RA.stats.falls === 0 && t > at; };
 let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { RA.onCharge(); RA.onRep({ perfect: false }, (curlSide++ % 2) ? 'left' : 'right'); } };
 
 (async () => {
@@ -73,8 +106,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Arcos sin agacharse (golpes)', { ...base, mode: 'arcs', exercise: 'squat', lives: 3, waves: 1 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Asalto con vidas (derrota)', { ...base, mode: 'walkers', exercise: 'squat', lives: 1, walkTime: 4 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Jefe en oleada final', { ...base, mode: 'walkers', exercise: 'squat', waves: 1, repsWave: 10 }, squatSim(2.4));
+  const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12 };
+  await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, pullSim(), 420, s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : '');
+  await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
+  await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
+  await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
+  await runConfig('Barras+colgado caída (derrota)', { ...bars, exercise: 'hang', lives: 1, hangTime: 30 }, fallOnce(6, t => {}), 120, s => s.falls !== 1 ? 'la caída no se detecta' : '');
+  await runConfig('Barras bichos sin reventar (pican)', { ...bars, exercise: 'pullup', barTarget: 'bugs', barWait: 2, lives: 2 }, t => {}, 120, s => s.taken < 2 ? 'los bichos no pican al agotarse el tiempo' : '');
+  await runConfig('Barras pompas sin reventar (se escapan)', { ...bars, exercise: 'row', barTarget: 'bubbles', barWait: 2, waves: 1, repsWave: 3 }, (t => { RA.PV.crouch = RA.state === 'play' && t > 25 && (t % 2.6) < 1.3; }), 200, s => s.taken !== 0 ? 'las pompas no deberían hacer daño' : '');
 
   // ---- menús ----
+  RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
   RA.settingsMenu(() => RA.lobbyMenu()); frame(2);
   for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Sistema']) {
@@ -93,6 +135,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Volver'); frame(2);
   press('Arcos'); frame(1); press('Flexiones'); frame(1); log('mode after picking Flexiones in Arcos:', RA.settings.mode, RA.settings.exercise);
   press('Enjambre'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Mirada'); frame(1); press('Volver'); frame(1);
+  // barras: menús, colocar aparatos y pestaña de ajustes
+  press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
+  press('Colocar paralelas'); frame(1); press('Delante de mí'); frame(1); const dip0 = { ...RA.eqPose('dip') };
+  press('Izquierda'); press('Alejar'); press('Girar +'); press('Con las manos (en las gafas)'); frame(1); press('Listo'); frame(1);
+  log('dip nudged', (RA.eqPose('dip').x - dip0.x).toFixed(3), (RA.eqPose('dip').z - dip0.z).toFixed(3), (RA.eqPose('dip').yaw - dip0.yaw).toFixed(3), 'edit', RA.EQ.edit);
+  press('Dominadas'); frame(1); press('Colocar barra'); frame(1); RA.activeWidgets().filter(w => w.label === '+').forEach(w => w.onPress()); press('Listo'); frame(1);
+  press('Más ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
+  press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
+  RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Asalto'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
   // pausa durante partida
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.lobbyMenu(); frame(1); press('EMPEZAR'); frame(120);
   RA.openPause(); frame(2); press('Ajustes'); frame(1); press('Volver'); frame(1); press('Continuar'); frame(10);
@@ -126,6 +177,56 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('after exit xrActive', RA.xrActive, 'state', RA.state);
   await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame); log('AR lobby', RA.state); RA.exitAll(); frame(2, 16, xrFrame);
 
+  // ---- Barras en XR: colocar la barra con las manos, ancla persistente, dominadas y caída ----
+  for (const [k, v] of Object.entries({ mode: 'bars', exercise: 'pullup', lives: 3, waves: 2, repsWave: 3, repsInc: 0, rest: 0, barTarget: 'bubbles', barWait: 0, barArrive: 2, fallMargin: 12, pullRange: 35 })) RA.setSetting(k, v);
+  storage.delete('reparena3-equip'); RA.EQ.xr.door.set = false; RA.EQ.xr.door.handle = null;
+  XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+  log('XR bars: anchors requested', navigator.xr.last.opts.optionalFeatures.includes('anchors'), 'state', RA.state);
+  press('EMPEZAR'); frame(2, 16, xrFrame); log('EMPEZAR without bar opens placement:', RA.EQ.edit);
+  press('Con las manos'); XRS.grip = { left: new THREE.Vector3(-0.3, 2.21, -0.35), right: new THREE.Vector3(0.3, 2.21, -0.35) };
+  frame(170, 16, xrFrame); XRS.grip = null;
+  const door = RA.EQ.xr.door; log('door from hands: set', door.set, 'doorH', RA.settings.doorH, 'x', door.x.toFixed(2), 'z', door.z.toFixed(2), 'yaw', door.yaw.toFixed(2));
+  if (!door.set || Math.abs(RA.settings.doorH - 222) > 2 || Math.abs(door.z + 0.35) > 0.02) errors.push('colocar la barra con las manos no funciona');
+  press('Listo'); frame(2, 16, xrFrame); await sleep(10); frame(2, 16, xrFrame);
+  log('anchor handle', door.handle, 'saved', JSON.parse(storage.get('reparena3-equip')).door.handle);
+  if (!door.handle) errors.push('no se guarda el ancla persistente');
+  press('EMPEZAR'); frame(2, 16, xrFrame); XRS.headY = 1.56; frame(330, 16, xrFrame); log('after mount state', RA.state, 'ref', RA.BAR.ref.toFixed(2));
+  if (RA.state !== 'play') errors.push('XR barras: no empieza la oleada al colgarse (' + RA.state + ')');
+  const up = i => { XRS.headY = (i % 120) < 60 ? 1.56 + 0.4 : 1.56; frame(1, 16, xrFrame); };
+  for (let i = 0; i < 2000 && RA.stats.reps < 2; i++) up(i);
+  XRS.headY = 1.48; frame(15, 16, xrFrame); XRS.headY = 1.56; frame(30, 16, xrFrame); const r0 = RA.stats.reps;
+  for (let i = 0; i < 400 && RA.stats.reps < r0 + 2; i++) up(i);
+  log('reps after a deeper dip (no fall):', RA.stats.reps - r0, 'falls', RA.stats.falls);
+  if (RA.stats.reps - r0 < 2 || RA.stats.falls) errors.push('XR barras: tras bajar algo más sin caer, deja de contar');
+  XRS.headY = 1.36; frame(10, 16, xrFrame); log('after letting go: state', RA.state, 'falls', RA.stats.falls, 'lives', RA.lives);
+  if (RA.state !== 'mount' || RA.stats.falls !== 1) errors.push('XR barras: soltarse no te tira al charco');
+  XRS.headY = 1.56; frame(330, 16, xrFrame); log('back on the bar', RA.state);
+  for (let i = 0; i < 4000 && RA.state !== 'end'; i++) up(i);
+  log('XR pull-ups: state', RA.state, 'reps', RA.stats.reps, 'perfect', RA.stats.perfect, 'kills', RA.stats.kills, 'falls', RA.stats.falls);
+  if (RA.state !== 'end' || RA.stats.kills < 3) errors.push('XR barras: la partida no termina bien');
+  RA.exitAll(); frame(2, 16, xrFrame);
+  // otra sesión: la barra vuelve a su sitio gracias al ancla, aunque el origen de la sesión haya cambiado
+  E.anchorStore.get(door.handle).position.x += 1; const oldX = door.x;
+  await RA.startXR(true); await sleep(50); frame(5, 16, xrFrame);
+  log('anchor restored', navigator.xr.last.restored[0] === door.handle, 'x moved by', (door.x - oldX).toFixed(2));
+  if (Math.abs(door.x - oldX - 1) > 0.01) errors.push('el ancla restaurada no mueve la barra');
+  RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Spotify ----
+  await sleep(50);
+  log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
+  if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
+  RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
+  RA.startPreview(); frame(2); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
+  press('Siguiente'); await sleep(20); press('Vol +'); await sleep(20); await RA.spRefresh(); frame(2);
+  log('after next/vol:', RA.spNowText());
+  for (const c of ['PUT /v1/me/player/pause', 'POST /v1/me/player/next', 'PUT /v1/me/player/volume?volume_percent=60']) if (!SPOT.calls.includes(c)) errors.push('Spotify: falta la llamada ' + c);
+  RA.SP.cfg.access = 'caducado'; const tc = SPOT.tokenCalls; await RA.spRefresh(); log('expired token refreshed', SPOT.tokenCalls === tc + 1, RA.spNowText());
+  if (SPOT.tokenCalls !== tc + 1 || RA.SP.err) errors.push('Spotify: no renueva el token caducado');
+  SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(20); log('no device:', RA.spNowText());
+  if (!/pon algo a sonar/.test(RA.spNowText())) errors.push('Spotify: sin reproductor no avisa');
+  SPOT.noDevice = false; RA.exitAll(); frame(1);
+
   console.warn = origWarn;
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
@@ -143,13 +244,15 @@ function makeXRFrame() {
     return {
       session: s || { inputSources: sources },
       getViewerPose() { return { transform: { position: { x: 0, y: XRS.headY, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
-      getPose(space) { const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
+      getPose(space) { if (space.anchorPose) return { transform: space.anchorPose }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
         let pos = { x: side * 0.2 + (i % 5) * 0.01, y: XRS.headY - 0.45 + Math.floor(i / 5) * 0.01, z: -0.3 - Math.floor(i / 5) * 0.02 };
         let ori = { x: 0, y: 0, z: 0, w: 1 };
         if (j.side === 'left' && XRS.wristUp) { pos = { x: -0.1 + (i % 5) * 0.01, y: XRS.headY - 0.3, z: -0.35 - Math.floor(i / 5) * 0.02 }; ori = { x: 0.7071, y: 0, z: 0, w: 0.7071 }; }
         if (j.side === 'right' && i === 9 && XRS.tip) pos = { x: XRS.tip.x, y: XRS.tip.y, z: XRS.tip.z };
+        if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }
     };

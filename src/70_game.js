@@ -1,10 +1,10 @@
 
 /* =================== ESTADO DE PARTIDA =================== */
-const GAME_STATES = ['calib', 'ready', 'play', 'rest'];
+const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
@@ -491,7 +491,7 @@ function updateProjectiles(dt) {
 }
 function onKilled(e) {
   stats.kills++;
-  const pts = { titan: 1500, carrier: 1500, heavy: 500, bomber: 400, hornet: 350, scout: 300, drone: 250 }[e.kind] || 300;
+  const pts = { titan: 1500, carrier: 1500, bigbubble: 1000, heavy: 500, bomber: 400, hornet: 350, scout: 300, drone: 250, bubble: 200 }[e.kind] || 300;
   score += pts; popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0)));
   if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
@@ -506,7 +506,7 @@ function registerRep(perfect, fire = true, side) {
   boardDirty = true;
 }
 function onRep(opts, side) {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs') return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   registerRep(opts.perfect, true, side);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -530,7 +530,7 @@ function onPartial(text) {
   stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargeOrb.visible = false;
 }
 function onCharge() {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs') return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   charged = true; chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
 }
 const DET = {
@@ -557,6 +557,7 @@ function vertDetector(d, y, t, dt, cfg) {
   }
 }
 function runDetectors(t, dt) {
+  if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
@@ -621,6 +622,7 @@ function updateAim(t) {
 /* =================== OLEADAS =================== */
 function isBossWave(i) { return settings.waves ? i === settings.waves - 1 : (i + 1) % 5 === 0; }
 function buildWave(i) {
+  if (isBars()) return buildBarWave(i);
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
@@ -649,7 +651,8 @@ function spawnFromQueue() {
     return;
   }
   let e;
-  if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  if (isBars()) e = new HeadTarget(spec);
+  else if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -669,24 +672,32 @@ function resetWorld() {
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
 }
-function speedKey() { return { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed' }[settings.mode]; }
+function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed' }[settings.mode]; }
 function summaryText() {
   const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
-  return `${n} · ${waveReps(0)} reps la primera (+${settings.repsInc}) · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
+  const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
+  return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
 function lobbyMenu(reanchor) {
-  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true;
-  const m = openMenu([
+  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
+  const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
+  const start = () => { if (bars && !placed) { PLACE.note = `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`; placeMenu(lobbyMenu); } else beginRun(); };
+  const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
-    { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: () => beginRun() }], h: 0.08 },
-    { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
+    { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
+    { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
-    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : { t: 'field', key: 'repsWave' },
-    { t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] },
-    { t: 'text', text: 'En partida: mira tu muñeca izquierda para abrir el menú', color: '#a49fc8' }
-  ], { reanchor });
+    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
+  ];
+  if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
+  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => { PLACE.note = ''; placeMenu(lobbyMenu); } }] });
+  rows.push(...musicRows());
+  rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
+  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
+  rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
+  const m = openMenu(rows, { reanchor });
   m.rebuild = () => lobbyMenu();
 }
 let settingsTab = 'partida';
@@ -706,15 +717,24 @@ function openPause() {
   pauseMenu(true);
 }
 function resumeGame() {
-  hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready'].includes(state); boardDirty = true;
+  hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
 function pauseMenu(reanchor) {
+  const bars = isBars();
+  const recal = () => {
+    hideMenu();
+    if (!bars) { state = 'calib'; calibT = 0; center.mesh.visible = true; }
+    else if (pausedFrom === 'play') barToMount(0, true); // vuelve a la oleada en curso
+    else if (pausedFrom === 'rest') barToMount(waveIdx + 1);
+    else barToMount(BAR.nextWave, BAR.resume);
+  };
   const m = openMenu([
     { t: 'title', text: 'PAUSA' },
-    { t: 'text', text: `${stats.reps} repeticiones · ${stats.kills} enemigos · ${score} puntos` },
+    { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Recalibrar', onPress: () => { hideMenu(); state = 'calib'; calibT = 0; center.mesh.visible = true; } }, { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    ...musicRows(),
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Colocar barra' : 'Colocar paralelas', onPress: () => { PLACE.note = ''; placeMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
@@ -725,7 +745,8 @@ function beginRun() {
   stats = newStats();
   DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down';
   stateT = 0; boardDirty = true;
-  if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
+  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
@@ -741,7 +762,8 @@ function calibrate() {
 }
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
-  if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
+  if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
+  else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = settings.mode === 'flyers' ? repTime() * (settings.exercise === 'squat' && settings.aim === 'hands' ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
@@ -752,12 +774,13 @@ function startWave(i) {
 function hurtPlayer(src) {
   combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
-  if (!(src instanceof Arc)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
+  if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {
-  if (runSaved || !stats.reps) return; runSaved = true;
+  const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
+  if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps: stats.reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
   store(HIST_KEY, h.slice(-400));
 }
 function endRun(win, manual) {
@@ -766,11 +789,12 @@ function endRun(win, manual) {
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop());
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
+  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
-    `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
-    settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
+    hang ? `Colgado ${got} s · ${stats.falls} caídas al charco · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
+    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
-    stats.reps > prevBest && prevBest > 0 ? '¡Nuevo récord de repeticiones!' : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
+    got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
   endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
@@ -791,26 +815,27 @@ function exitAll() {
 function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
-  if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
+  if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     const ok = !isPush() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
+  else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
   if (state === 'play') {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    if (spawnTimer <= 0 && spawnQueue.length && alive < settings.maxAlive) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : enemies.some(e => e.alive);
-    if (!spawnQueue.length && !anyLeft && !projs.length) {
+    if (settings.exercise === 'hang' ? BAR.hold >= BAR.need : !spawnQueue.length && !anyLeft && !projs.length) {
       if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say('¡Oleada superada!', '#3cf0c6', 2); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : '¡Oleada superada!', '#3cf0c6', 2); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {
     if (Math.floor(stateT) !== Math.floor(stateT - dt)) boardDirty = true;
-    if (stateT >= settings.rest) startWave(waveIdx + 1);
+    if (stateT >= settings.rest) { if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
     for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);

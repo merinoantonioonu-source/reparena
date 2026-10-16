@@ -266,6 +266,21 @@ function buildHornet() {
   return R.build();
 }
 
+/* ---------- Tentáculo del charco (modo Barras) ---------- */
+function buildTentacle() {
+  const R = new Rig(), N = 9, L = 0.1, rad = i => 0.052 * (1 - i / N) + 0.007;
+  for (let i = 0; i < N; i++) R.bone('t' + i, i ? 't' + (i - 1) : null, 0, i ? L : 0, 0);
+  for (let i = 0; i < N; i++) {
+    const r0 = rad(i), r1 = rad(i + 1), b = 't' + i;
+    R.add(b, 'main', G.cyl(r1, r0, L * 1.05, 10), i % 2 ? col(0.2, 0.07, 0.2) : col(0.25, 0.09, 0.24), 0, L / 2, 0);
+    for (const s of [-1, 1]) R.add(b, 'main', G.sph(1, 8, 6), col(0.78, 0.5, 0.56), s * r0 * 0.45, L * 0.5, r0 * 0.78, 0, 0, 0, r0 * 0.34, r0 * 0.34, r0 * 0.2); // ventosas en la cara interior
+    if (i % 2) R.add(b, 'glow', G.sph(0.006, 6, 5), C.green, 0, L * 0.5, -r0 * 0.92);
+  }
+  R.add('t' + (N - 1), 'main', G.cone(0.011, 0.05, 8), col(0.2, 0.07, 0.2), 0, L + 0.02, 0);
+  return R.build();
+}
+M.tentacleSkin = std({ vertexColors: true, normalMap: SURF.chitin.normal, roughness: 0.22, metalness: 0.05, skinning: true });
+
 /* ---------- Arcos de energía ---------- */
 const ARC_FRAMES = {};
 const arcLineMat = new THREE.LineBasicMaterial({ color: 0xffd0c8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -372,7 +387,7 @@ function updateGloves(dt) {
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
   RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true);
-  RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet();
+  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
   for (const [x, z, ry, kind] of [[-6.5, -4, 0.6, 'scout'], [7.5, -5.5, 2.2, 'heavy'], [-11, -9, 1.4, 'scout'], [12, 6, -0.8, 'heavy']]) {

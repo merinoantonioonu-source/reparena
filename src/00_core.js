@@ -9,22 +9,27 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps' };
-const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos' };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', sistema: 'Sistema' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
+const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
+const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
 
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
-  { key: 'repsWave', g: 'partida', label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
-  { key: 'repsInc', g: 'partida', label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
+  { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
+  { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
+  { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
+  { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat'], hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup'] },
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
-  { key: 'perfectTime', g: 'ejercicio', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
+  { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
+  { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
+  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['walkers'] },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['flyers'], hint: 'En flexiones los bichos van a escala, unas 7 veces más lentos.' },
@@ -39,6 +44,16 @@ const SCHEMA = [
   { key: 'arcRate', g: 'arcos', label: 'Arcos por minuto', short: 'Arcos/minuto', type: 'num', min: 3, max: 40, step: 1, def: 12, modes: ['arcs'] },
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
+
+  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que suben del charco, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
+  { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
+  { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
+  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, caes al charco.' },
+  { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
+  { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
+  { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
+  { key: 'dipGap', g: 'barras', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
+  { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', hint: 'El menú se queda fijo: tendrás que acercarte para pulsarlo.' },
@@ -77,6 +92,7 @@ function fmtVal(f, v = settings[f.key]) {
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (settings.mode === 'arcs') settings.exercise = 'squat';
+  if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
 function saveSettings() { store(STORE_KEY, settings); }
 function setSetting(key, v) {
@@ -84,15 +100,20 @@ function setSetting(key, v) {
   settings[key] = f ? clampSetting(f, v) : v;
   if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
   if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
+  // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
+  if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
+  if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
   saveSettings();
   onSettingChanged(key);
 }
 function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
+  if (f.noEx && f.noEx.includes(settings.exercise)) return false;
   return true;
 }
 const isPush = () => settings.exercise === 'pushup';
+const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
@@ -143,8 +164,9 @@ function onFormInput(ev) {
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  ['pushup', 'curl'].forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs'; });
-  $('#exNote').hidden = settings.mode !== 'arcs';
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x); });
+  const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
+  note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
   for (const f of SCHEMA) {
     const wrap = document.querySelector(`[data-field="${f.key}"]`);
     if (wrap) wrap.hidden = !fieldVisible(f);
@@ -160,24 +182,27 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3 }[settings.exercise]; }
+function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
 function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
+function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
   const n = settings.waves || 5;
-  let total = 0; for (let i = 0; i < n; i++) total += waveReps(i);
+  const hang = settings.exercise === 'hang';
+  let total = 0; for (let i = 0; i < n; i++) total += hang ? hangSecs(i) : waveReps(i);
   const restT = settings.rest * Math.max(0, n - 1);
-  const workT = total * (settings.mode === 'arcs' ? 60 / settings.arcRate : repTime());
+  const workT = hang ? total : total * (settings.mode === 'arcs' ? 60 / settings.arcRate : repTime());
   const mins = Math.round((restT + workT) / 60);
   let speed = '';
   if (settings.mode === 'walkers') speed = `Los enemigos tardan ${settings.walkTime} s en alcanzarte.`;
   else if (settings.mode === 'flyers') speed = `Vuelan a ${fmtNum(settings.flySpeed)} km/h.`;
+  else if (settings.mode === 'bars') speed = hang ? `Si te sueltas, caes al charco.` : `Cada objetivo tarda ${fmtNum(settings.barArrive)} s en llegar a donde subirá tu cabeza.`;
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm.`;
-  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> repeticiones${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
+  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : 'repeticiones'}${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
 function renderHistory() {
   const h = store(HIST_KEY) || [];
   $('#histBody').innerHTML = Object.keys(EX_NAMES).map(ex => {
     const s = h.filter(r => r.ex === ex);
-    return `<tr><td>${EX_NAMES[ex]}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
+    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
   }).join('');
 }

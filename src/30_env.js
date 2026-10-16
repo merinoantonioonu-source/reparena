@@ -178,7 +178,7 @@ function layoutArena() {
   });
   gateLight.position.set(0, 1.6 * gs, -D - 0.6);
   hatches.forEach(h => h.g.visible = push && settings.mode !== 'arcs');
-  safeRing.visible = !push; hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows;
@@ -194,6 +194,10 @@ function layoutArena() {
     k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
     rig.add(k.build({ steel: M.steel }, { cast: true }));
     board.mesh.position.set(0, 0.265, -0.005); board.mesh.rotation.set(-0.25, 0, 0); board.mesh.scale.setScalar(0.82);
+  } else if (isBars() && settings.exercise === 'row') {
+    // remo: tumbado mirando al techo; placeRowBoard lo pone encima de tu cara al colgarte
+    rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
+    board.mesh.position.set(0, 0, 0); board.mesh.rotation.set(0, 0, 0); board.mesh.scale.setScalar(0.9);
   } else if (boardMode() === 'gate') {
     const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.05 * gs + H / 2 + 0.2;
     rig.position.set(0, 0, -D - 0.35);
@@ -214,6 +218,7 @@ function layoutArena() {
     board.mesh.position.set(0, 2.3, -0.005); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   }
   rig.add(board.mesh);
+  if (isBars() && settings.exercise === 'row' && BAR.board) placeRowBoard(false);
   boardDirty = true;
 }
 function applyEnvMode() {
