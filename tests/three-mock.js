@@ -209,11 +209,11 @@ class BufferGeometry {
     const n = this.attributes.normal; if (n) { const nm = m.clone(); nm.elements[12] = nm.elements[13] = nm.elements[14] = 0; for (let i = 0; i < n.count; i++) { const v = new Vector3(n.getX(i), n.getY(i), n.getZ(i)).applyMatrix4(nm).normalize(); n.setXYZ(i, v.x, v.y, v.z); } }
     return this;
   }
-  applyQuaternion(q) { return this.applyMatrix4(new Matrix4().makeRotationFromQuaternion(q)); }
+  _rotQ(q) { return this.applyMatrix4(new Matrix4().makeRotationFromQuaternion(q)); } // Three r128 no expone applyQuaternion en geometrías
   translate(x, y, z) { const m = new Matrix4(); m.elements[12] = x; m.elements[13] = y; m.elements[14] = z; return this.applyMatrix4(m); }
-  rotateX(a) { return this.applyQuaternion(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), a)); }
-  rotateY(a) { return this.applyQuaternion(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), a)); }
-  rotateZ(a) { return this.applyQuaternion(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), a)); }
+  rotateX(a) { return this._rotQ(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), a)); }
+  rotateY(a) { return this._rotQ(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), a)); }
+  rotateZ(a) { return this._rotQ(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), a)); }
   scale(x, y, z) { return this.applyMatrix4(new Matrix4().makeScale(x, y, z)); }
   clone() { const g = new BufferGeometry(); for (const k in this.attributes) g.attributes[k] = this.attributes[k].clone(); g.index = this.index ? this.index.clone() : null; return g; }
   toNonIndexed() {
