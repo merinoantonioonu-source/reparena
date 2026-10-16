@@ -51,13 +51,14 @@ function barMounted() {
   else startWave(BAR.nextWave);
   BAR.started = true;
 }
-// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote
+// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote, un poco hacia la coronilla: las
+// pompas llegan desde los pies y nunca pasan por detrás de él
 const _rbm = new THREE.Matrix4(), _rbx = new V3(), _rby = new V3(), _rbz = new V3(), _rbs = new V3(), _rbq = new Q4();
 function placeRowBoard(fromHead) {
   const rig = boardRig.children[0]; if (!rig) return;
   if (fromHead || !BAR.board) {
     _rby.set(0, 1, 0).applyQuaternion(head.q);
-    const P = head.p.clone().addScaledVector(fwd(), 1.25).addScaledVector(_rby, -0.6); P.y = Math.max(P.y, head.p.y + 0.5);
+    const P = head.p.clone().addScaledVector(fwd(), 1.2).addScaledVector(_rby, 0.7); P.y = Math.max(P.y, head.p.y + 0.5);
     _rbz.subVectors(head.p, P).normalize();
     _rbx.crossVectors(_rby, _rbz); if (_rbx.lengthSq() < 1e-6) _rbx.set(1, 0, 0); _rbx.normalize(); _rby.crossVectors(_rbz, _rbx);
     _rbm.makeBasis(_rbx, _rby, _rbz); _rbm.decompose(_rbs, _rbq, new V3());
@@ -325,7 +326,7 @@ function cancelPlace() {
 function updatePlace(dt) {
   if (PLACE.wait) { // ya está colocado: el atril aparece cuando estés de pie
     PLACE.waitT += dt;
-    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); }
+    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); }
     return;
   }
   if (!PLACE.on) { placeLine.visible = false; return; }
@@ -368,7 +369,7 @@ function placeFromHands(k, L, R) {
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
 // Ajustes finos, una vez colocado con las manos
-function adjustMenu(back, reanchor) {
+function adjustMenu(back) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
   const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
@@ -385,7 +386,7 @@ function adjustMenu(back, reanchor) {
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Colocar con las manos', onPress: () => startPlace(back) }, { label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
-  const m = openMenu(rows, { border: '#3cf0c6', reanchor }); m.rebuild = () => adjustMenu(back);
+  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => adjustMenu(back);
 }
 function placeDone() {
   const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;

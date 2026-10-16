@@ -238,6 +238,13 @@ const SND = {
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
   pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
+  waterPop(pos, big) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: big ? 1 : 0.85, ref: 0.8 });
+    noise(o, { type: 'bandpass', f: 1400, to: 500, q: 1.2, d: 0.18, gain: 0.55 }); noise(o, { brown: true, f: 900, to: 180, d: 0.25, gain: 0.5 });
+    tone(o, { f: big ? 300 : 420, to: big ? 900 : 1300, a: 0.002, d: 0.08, gain: 0.22 }); tone(o, { f: 180, to: 520, t: 0.03, d: 0.1, gain: 0.12 });
+    for (let i = 0; i < 7; i++) tone(o, { t: 0.12 + Math.random() * 0.45, f: rand(700, 1500), to: rand(1600, 3200), d: 0.035, gain: 0.04 });
+  },
   splash(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });

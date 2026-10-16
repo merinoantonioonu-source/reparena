@@ -57,7 +57,7 @@ function betweenMenu() {
     { t: 'text', text: `Siguiente: ${blockLabel(nb)}`, color: '#ffd166' },
     { t: 'btns', items: [{ label: 'Empezar ya', style: 'primary', onPress: () => nextBlock(false) }, { label: 'Repetir bloque', onPress: () => { SES.results.pop(); nextBlock(true); } }], h: 0.08 },
     { t: 'btns', items: [{ label: 'Terminar sesión', style: 'danger', onPress: finishSession }] }
-  ], { reanchor: true });
+  ]);
   m.rebuild = betweenMenu;
 }
 function sessionStep(dt) { // descanso entre bloques

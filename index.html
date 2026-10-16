@@ -783,6 +783,13 @@ const SND = {
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
   pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
+  waterPop(pos, big) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: big ? 1 : 0.85, ref: 0.8 });
+    noise(o, { type: 'bandpass', f: 1400, to: 500, q: 1.2, d: 0.18, gain: 0.55 }); noise(o, { brown: true, f: 900, to: 180, d: 0.25, gain: 0.5 });
+    tone(o, { f: big ? 300 : 420, to: big ? 900 : 1300, a: 0.002, d: 0.08, gain: 0.22 }); tone(o, { f: 180, to: 520, t: 0.03, d: 0.1, gain: 0.12 });
+    for (let i = 0; i < 7; i++) tone(o, { t: 0.12 + Math.random() * 0.45, f: rand(700, 1500), to: rand(1600, 3200), d: 0.035, gain: 0.04 });
+  },
   splash(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
@@ -1467,6 +1474,7 @@ const trackFloor = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), std({ color: 
 /* ---------- Marcador fijo ---------- */
 const board = makePanel(1, 0.445, 1024);
 const boardRig = new THREE.Group(); arena.add(boardRig);
+const boardFrameMat = M.steel.clone(); boardFrameMat.transparent = true; // el marco se desvanece con el marcador si tapa algo
 let boardDirty = true;
 function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
@@ -1492,11 +1500,13 @@ function layoutArena() {
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
   if (low) {
-    rig.position.set(0, 0, -1.3);
-    for (const s of [-1, 1]) k.add('steel', G.box(0.05, 0.22, 0.05), C.dark, s * 0.3, 0.11, -0.04);
-    k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
-    rig.add(k.build({ steel: M.steel }, { cast: true }));
-    board.mesh.position.set(0, 0.265, -0.005); board.mesh.rotation.set(-0.25, 0, 0); board.mesh.scale.setScalar(0.82);
+    // en el suelo: tumbado casi plano delante de las manos, inclinado hacia tu cara. Así no se levanta en el camino
+    // de lo que viene hacia tu cabeza (los objetivos y los bichos llegan por encima de 20 cm)
+    const tilt = 1.19, nY = Math.sin(tilt), nZ = Math.cos(tilt);
+    rig.position.set(0, 0, -0.95);
+    k.add('steel', G.box(0.76, 0.36, 0.025), C.dark, 0, 0.075 - nY * 0.016, -nZ * 0.016, -tilt, 0, 0);
+    rig.add(k.build({ steel: boardFrameMat }, { receive: true }));
+    board.mesh.position.set(0, 0.075, 0); board.mesh.rotation.set(-tilt, 0, 0); board.mesh.scale.setScalar(0.7);
   } else if (isBars() && settings.exercise === 'row') {
     // remo: tumbado mirando al techo; placeRowBoard lo pone encima de tu cara al colgarte
     rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
@@ -1507,7 +1517,7 @@ function layoutArena() {
     for (const s of [-1, 1]) k.add('steel', G.box(0.2, yc + H / 2, 0.2), C.dark, s * (W / 2 + 0.18), (yc + H / 2) / 2, -0.15);
     const tilt = Math.atan((yc - 1.6) / D) * 0.8;
     k.add('steel', G.box(W + 0.22, H + 0.22, 0.12), C.gun, 0, yc, -0.08, tilt, 0, 0);
-    rig.add(k.build({ steel: M.steel }, { cast: true }));
+    rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else {
     const cx = -Math.min(2.4, D * 0.3 + 0.7), cz = -Math.min(3.0, D * 0.55);
@@ -1517,7 +1527,7 @@ function layoutArena() {
     k.add('glow', G.box(0.04, 1.7, 0.02), C.teal, 0, 1.0, 0.11);
     const W = 1.25, tilt = Math.atan(0.6 / Math.hypot(cx, cz));
     k.add('steel', G.box(W + 0.1, W * 0.445 + 0.1, 0.08), C.gun, 0, 2.3, -0.05, tilt, 0, 0);
-    rig.add(k.build({ steel: M.steel, glow: M.glow }, { cast: true }));
+    rig.add(k.build({ steel: boardFrameMat, glow: M.glow }, { cast: true }));
     board.mesh.position.set(0, 2.3, -0.005); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   }
   rig.add(board.mesh);
@@ -2138,12 +2148,14 @@ function makeGlove(side) {
 }
 const gloves = { left: makeGlove('left'), right: makeGlove('right') };
 const _gm = new THREE.Matrix4(), _gq = new Q4(), _gp = new V3(), _gs = new V3(), _goff = new V3();
-const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0), _gw = new THREE.Color();
 function updateGloves(dt) {
   for (const side of ['left', 'right']) {
     const h = hands[side], g = gloves[side];
     g.pulse = Math.max(0, g.pulse - dt * 3);
-    g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
+    // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
+    if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
+    else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
@@ -2270,6 +2282,28 @@ function updateDebris(dt) {
   }
 }
 
+/* ---------- Gotas de agua en 3D (las amebas de los Toques al reventar) ---------- */
+// Esferas instanciadas que reflejan el entorno; se estiran en la dirección en que vuelan y, al llegar al suelo, salpican
+const WDROP = { max: 240, list: [] };
+WDROP.mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), std({ color: 0x5fd8c8, emissive: 0x06302a, roughness: 0.03, metalness: 0.35, transparent: true, opacity: 0.6, envMapIntensity: 3, depthWrite: false }), WDROP.max);
+WDROP.mesh.frustumCulled = false; WDROP.mesh.count = 0; if (WDROP.mesh.instanceMatrix.setUsage) WDROP.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(WDROP.mesh);
+const _wdq = new Q4(), _wdd = new V3(), _wds = new V3(), _wdm = new THREE.Matrix4();
+function waterDrop(pos, v, size, life = rand(0.9, 1.5)) { if (WDROP.list.length >= WDROP.max) WDROP.list.shift(); WDROP.list.push({ p: pos.clone(), v, s: size, life, t: 0 }); }
+function updateWater(dt) {
+  const L = WDROP.list; let n = 0;
+  for (let i = 0; i < L.length; i++) {
+    const d = L[i]; d.t += dt; d.v.y -= 9.8 * dt; d.v.multiplyScalar(Math.max(0, 1 - 0.5 * dt)); d.p.addScaledVector(d.v, dt);
+    if (d.p.y < 0.01 || d.t >= d.life) {
+      if (d.p.y < 0.01) { d.p.y = 0.015; fx.droplets(d.p, 2, [0.7, 1, 0.95], 0.5, d.s * 0.8); }
+      L[i] = L[L.length - 1]; L.pop(); i--; continue;
+    }
+    const sp = d.v.length(), k = 1 + Math.min(1.6, sp * 0.2), f = Math.min(1, (d.life - d.t) / 0.2);
+    _wdq.setFromUnitVectors(_up, sp > 1e-3 ? _wdd.copy(d.v).divideScalar(sp) : _up);
+    _wdm.compose(d.p, _wdq, _wds.set(d.s * f / Math.sqrt(k), d.s * f * k, d.s * f / Math.sqrt(k))); WDROP.mesh.setMatrixAt(n++, _wdm);
+  }
+  WDROP.mesh.count = n; if (n) WDROP.mesh.instanceMatrix.needsUpdate = true;
+}
+
 /* ---------- Números flotantes ---------- */
 const popups = [];
 function popup(text, color, pos) {
@@ -2295,6 +2329,19 @@ const fx = {
   dust(pos, n, size = 0.25) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone().add(new V3(rand(-0.1, 0.1), 0.03, rand(-0.1, 0.1))), v: new V3(rand(-0.6, 0.6), rand(0.05, 0.3), rand(-0.6, 0.6)), life: rand(0.8, 1.5), c0: [0.32, 0.29, 0.26], c1: [0.2, 0.19, 0.18], a: 0.35, s0: size * 0.5, s1: size * 1.6, tile: 1, drag: 2.5, fin: 0.1 }); },
   droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
+  // Un aro de agua que revienta: el agua sale despedida hacia fuera desde todo el borde, con gotas grandes, rocío y un destello
+  waterBurst(pos, n, rad, color) {
+    const u = _wdd.set(0, 1, 0); if (Math.abs(n.dot(u)) > 0.9) u.set(1, 0, 0); u.addScaledVector(n, -u.dot(n)).normalize();
+    const w = new V3().crossVectors(n, u), r = new V3(), pale = [lerp(color[0], 1, 0.5), lerp(color[1], 1, 0.5), lerp(color[2], 1, 0.5)];
+    for (let i = 0; i < 44; i++) {
+      const a = i / 44 * TAU + rand(-0.06, 0.06); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a));
+      const p = pos.clone().addScaledVector(r, rad * rand(0.85, 1.1)).addScaledVector(n, rand(-0.02, 0.02));
+      waterDrop(p, r.clone().multiplyScalar(rand(0.7, 2.1)).addScaledVector(n, rand(-0.5, 0.9)).add(new V3(0, rand(0.3, 1.3), 0)), rand(0.006, i % 4 ? 0.013 : 0.024));
+    }
+    for (let i = 0; i < 26; i++) { const a = rand(0, TAU); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)); PNORM.add({ pos: pos.clone().addScaledVector(r, rad), v: r.clone().multiplyScalar(rand(0.6, 2.4)).add(new V3(0, rand(0, 1.2), 0)), life: rand(0.35, 0.8), c0: pale, c1: [0.6, 0.9, 1], a: 0.8, s0: rand(0.01, 0.025), s1: 0.006, tile: 0, g: 6, floor: true, fin: 0.01 }); }
+    for (let i = 0; i < 8; i++) PNORM.add({ pos: pos.clone().add(rv(rad * 0.6)), v: rv(0.25), life: rand(0.5, 0.9), c0: [0.85, 0.95, 1], c1: [0.7, 0.85, 0.9], a: 0.25, s0: rad * 0.6, s1: rad * 1.8, tile: 1, drag: 2, fin: 0.05 }); // rocío
+    fx.glow(pos, pale, rad * 3, 0.12);
+  },
   trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
   electric(pos, n = 14) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rv(1).multiplyScalar(rand(1, 3)), life: rand(0.1, 0.35), c0: [0.9, 0.9, 1], c1: [1, 0.25, 0.15], s0: 0.04, s1: 0.01, tile: 3, fin: 0.01 }); fx.glow(pos, [1, 0.4, 0.3], 0.5, 0.12); },
@@ -2308,14 +2355,14 @@ const fx = {
   }
 };
 function updateFX(dt) {
-  PNORM.update(dt); PADD.update(dt); updateDebris(dt);
+  PNORM.update(dt); PADD.update(dt); updateDebris(dt); updateWater(dt);
   flashLight.intensity = Math.max(0, flashLight.intensity - dt * 22);
   for (const r of rings) if (r.active) { r.t += dt / 0.45; const s = 0.2 + r.size * smooth(Math.min(1, r.t)); r.mesh.scale.set(s, s, s); r.mesh.material.opacity = Math.max(0, 1 - r.t) * 0.8; if (r.t >= 1) { r.active = false; r.mesh.visible = false; } }
   for (const s of scorches) if (s.active) { s.t += dt; s.mesh.material.opacity = Math.min(1, Math.max(0, (12 - s.t) / 4)) * 0.9; if (s.t > 12) { s.active = false; s.mesh.visible = false; } }
   for (let i = popups.length - 1; i >= 0; i--) { const p = popups[i]; p.life -= dt; p.s.position.y += p.v * dt; p.s.material.opacity = Math.min(1, p.life * 2.5); if (p.life <= 0) killPopup(i); }
 }
 function clearFX() {
-  PNORM.clear(); PADD.clear();
+  PNORM.clear(); PADD.clear(); WDROP.list.length = 0; WDROP.mesh.count = 0;
   while (debris.length) { scene.remove(debris.pop().obj); }
   while (popups.length) killPopup(popups.length - 1);
   rings.forEach(r => { r.active = false; r.mesh.visible = false; });
@@ -2575,7 +2622,9 @@ function hideMenu(keepAnchor) {
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 function openMenu(rows, opts = {}) {
-  const reuse = menu && menuAnchor && !opts.reanchor;
+  // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
+  // si no hay ninguno, delante de ti
+  const reuse = menu && menuAnchor;
   hideMenu(true);
   if (!reuse) menuAnchor = opts.anchor || placeAnchor((opts.dist || settings.menuDist) / 100);
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
@@ -2770,7 +2819,7 @@ function updateWristMenu(dt) {
 const wristReady = () => !menu || !menu.wrist || WM.e > 0.95;
 function onWatch() {
   if (PLACE.on) { cancelPlace(); return; }
-  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
+  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
   if (GAME_STATES.includes(state)) openPause();
   else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
@@ -2791,14 +2840,56 @@ const hurtPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), hurtMat); hu
 let hurtT = 0;
 const _hl = new V3();
 function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(head.p); }
+/* ---------- Ningún panel tapa lo que viene hacia ti ---------- */
+// Lo que tiene que verse siempre: los objetivos (Toques y Barras) y los enemigos, con su centro y su radio en el mundo
+const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THREE.Object3D();
+function collectThreats() {
+  let n = 0; const put = (o, r) => { o.center(_ocP[n] || (_ocP[n] = new V3())); _ocR[n++] = r; };
+  for (const x of touches) if (x.alive && !x.judged) put(x, x.part === 'head' ? x.r * 1.7 : 0.16);
+  for (const e of enemies) if (e.alive) put(e, e.type === 'robot' ? 0.9 * e.K.scale : Math.max(0.1, e.radius * 1.5));
+  return n;
+}
+// ¿Tapa este panel (w × h en su plano) alguno de esos n? Un panel normal solo tapa lo que queda detrás de él; uno sin
+// prueba de profundidad (los avisos de la vista) se dibuja encima de todo lo que cae dentro de su silueta
+function panelHides(obj, w, h, always, n) {
+  obj.updateMatrixWorld(); const e = obj.matrixWorld.elements, sc = Math.hypot(e[0], e[1], e[2]) || 1;
+  obj.worldToLocal(_ocH.copy(head.p)); if (_ocH.z <= 0.01) return false; // por detrás no se ve
+  for (let i = 0; i < n; i++) {
+    obj.worldToLocal(_ocT.copy(_ocP[i])); if (_ocT.z >= _ocH.z) continue; // la mirada hacia él no cruza el panel
+    const s = _ocH.z / (_ocH.z - _ocT.z); if (!always && s > 1) continue; // está más cerca que el panel: se ve delante
+    const m = _ocR[i] / sc * s, px = _ocH.x + (_ocT.x - _ocH.x) * s, py = _ocH.y + (_ocT.y - _ocH.y) * s;
+    if (Math.abs(px) < w / 2 + m && Math.abs(py) < h / 2 + m) return true;
+  }
+  return false;
+}
+// Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
+const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
+  center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
+function hudSlot(P, slots, n, dt) {
+  const free = i => { headLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(head.q); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
+  let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
+  for (let i = 0; pick < 0 && i < slots.length; i++) if (free(i)) pick = i;
+  if (pick >= 0) P.slot = pick; else P.slot = Math.min(P.slot, slots.length - 1);
+  P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
+  P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
+  return headLocal(P.off, new V3());
+}
 function updateViewPanels(dt) {
-  const k = 1 - Math.exp(-dt * 4);
+  const k = 1 - Math.exp(-dt * 4), n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, menu && !menu.wrist ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
+    const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.2]] : C.slots; // con el atril abierto, por encima para no taparlo
+    const tgt = hudSlot(C, slots, n, dt);
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
-    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
+    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k); center.mesh.material.opacity = C.fade;
   } else center.mesh.userData.init = false;
-  if (toastP.mesh.visible) { toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false; toastP.mesh.material.opacity = Math.min(1, toastT * 3); headLocal(_hl.set(0, -0.36, -1.1), toastP.mesh.position); toastP.mesh.quaternion.copy(head.q); }
+  if (toastP.mesh.visible) {
+    toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
+    toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
+  }
+  // el marcador está fijo: si algo de lo que viene queda detrás de él, se vuelve casi transparente hasta que pasa
+  const hide = n > 0 && board.mesh.parent && panelHides(board.mesh, 1.06, 0.5, false, n);
+  HUD.board += ((hide ? 0.12 : 1) - HUD.board) * Math.min(1, dt * 8);
+  board.mesh.material.opacity = HUD.board; boardFrameMat.opacity = HUD.board; boardFrameMat.depthWrite = HUD.board > 0.98;
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }
@@ -3113,7 +3204,7 @@ function betweenMenu() {
     { t: 'text', text: `Siguiente: ${blockLabel(nb)}`, color: '#ffd166' },
     { t: 'btns', items: [{ label: 'Empezar ya', style: 'primary', onPress: () => nextBlock(false) }, { label: 'Repetir bloque', onPress: () => { SES.results.pop(); nextBlock(true); } }], h: 0.08 },
     { t: 'btns', items: [{ label: 'Terminar sesión', style: 'danger', onPress: finishSession }] }
-  ], { reanchor: true });
+  ]);
   m.rebuild = betweenMenu;
 }
 function sessionStep(dt) { // descanso entre bloques
@@ -3227,115 +3318,199 @@ const ROBOT_KIND = {
   heavy: { rig: 'heavy', scale: 1.0, speedF: 0.85, heavy: true, stop: 1.4, stride: 0.85, head: 1.75 },
   titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true }
 };
+// Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
+// estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
+const ROW_GAP = 1.1, SLOT_ARC = 1.3;
+function robotSlot(r) {
+  const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
+  const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
+  let best = null, bestC = Infinity;
+  for (let row = 0; row < 3 && !best; row++) {
+    const R = r.K.stop + row * ROW_GAP;
+    for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
+      _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
+      if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
+      const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
+      if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
+    }
+  }
+  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(r.K.stop + 3 * ROW_GAP) };
+  r.slot.copy(best.p); r.row = best.row; r.slotOk = true;
+}
+const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
 class Robot {
   constructor(spec, gate) {
     const K = ROBOT_KIND[spec.kind]; this.K = K; this.type = 'robot'; this.kind = spec.kind;
     this.rig = RIGS[K.rig]; this.inst = this.rig.instance(MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
     this.root.scale.setScalar(K.scale); arena.add(this.root);
     const gr = gate.g.rotation.y; this.pos = new V3(gate.x - Math.sin(gr) * 1.0, 0, gate.z - Math.cos(gr) * 1.0);
-    this.target = new V3(rand(-0.9, 0.9), 0, -(K.stop + rand(0, 0.35)));
-    this.speed = this.pos.distanceTo(this.target) / settings.walkTime * K.speedF;
-    this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * K.scale, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
+    Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
+    robotSlot(this);
+    // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
+    const D = this.pos.distanceTo(this.slot), T = Math.max(2, settings.walkTime / K.speedF - (settings.walkTime >= 10 ? 1.2 : 0));
+    this.chargeD = Math.min(3.2, D * 0.4); this.vRun = clamp(2.2 * D / T, 1.0, 3.2) * (K.heavy ? 0.85 : 1);
+    this.vWalk = Math.max(0.05, (D - this.chargeD) / Math.max(T * 0.4, T - this.chargeD / this.vRun));
+    if (this.vWalk > this.vRun) this.vRun = this.vWalk * 1.3;
+    this.speed = this.vWalk;
+    this.yaw = Math.atan2(this.slot.x - this.pos.x, this.slot.z - this.pos.z);
     this.bar = makeHpBar(this.root, 2.25, 0.7); if (K.boss) setHpBar(this.bar, 1);
-    gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, false); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
+    gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
   }
   center(out) { this.B.chest.getWorldPosition(out); return out; }
-  animate(dt, t, walking) {
+  // spd: lo que de verdad avanza (m/s). Quieto respira y se mueve inquieto; andando balancea cadera, hombros y brazos
+  // en contra de las piernas; corriendo se inclina, alarga la zancada y bombea los brazos
+  animate(dt, t, spd) {
     const B = this.B, K = this.K, isR = this.rig.kind === 'ripper', L = this.rig.legL;
-    if (walking) this.phase += TAU * clamp(this.speed / (K.stride * K.scale), 0.45, 2.4) * dt;
-    const p = this.phase, amp = walking ? 1 : 0.0, drops = [];
+    if (spd === true) spd = this.vWalk; // pose de prueba
+    const amp = clamp(spd / Math.max(0.2, this.vWalk * 0.7), 0, 1), run = this.run;
+    this.phase += TAU * clamp(spd / (K.stride * K.scale * (1 + run * 0.35)), 0, 2.8) * dt;
+    const p = this.phase, drops = [], la = 1 + run * 0.55;
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
       let a1, a2, a3;
-      if (isR) { a1 = -0.55 + 0.42 * Math.sin(q) * amp; a2 = 1.2 + 0.45 * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
-      else { a1 = -0.36 * Math.sin(q) * amp; a2 = 0.08 + 0.62 * Math.max(0, c) * amp; a3 = -(a1 + a2); }
+      if (isR) { a1 = -0.55 + 0.42 * la * Math.sin(q) * amp; a2 = 1.2 + 0.45 * la * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
+      else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
-      if (walking && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * K.scale); if (Math.random() < 0.3) SND.servo(fp); }
+      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * K.scale * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
       this.lastCos[i] = c;
     });
-    B.hips.position.y = Math.max(drops[0], drops[1]) - this.rig.hipOff + 0.015;
-    const lean = isR ? 0.35 : 0.3;
-    B.spine.rotation.x = lean + Math.sin(p * 2) * 0.04 * amp - this.hitT * 1.2 + (this.state === 'windup' ? -0.15 : this.state === 'strike' ? 0.35 : 0);
-    B.spine.rotation.z = Math.sin(p) * 0.06 * amp;
-    // brazos
-    const arm = this.arm; // 0 normal, 1 levantados (preparando golpe), -1 golpe
-    const raise = Math.max(0, arm), strike = Math.max(0, -arm);
+    // cadera: sube y baja con los pasos, gira y cae hacia la pierna que se levanta
+    B.hips.position.y = Math.max(drops[0], drops[1]) - this.rig.hipOff + 0.015 + run * 0.02 * Math.abs(Math.sin(p));
+    B.hips.rotation.y = 0.14 * Math.sin(p) * amp; B.hips.rotation.z = 0.05 * Math.cos(p) * amp;
+    // tronco: inclinado hacia ti, más al correr; los hombros giran al revés que la cadera; respira cuando está quieto
+    const breathe = (1 - amp) * Math.sin(t * 2.1 + this.breath) * 0.035, idleSway = (1 - amp) * Math.sin(t * 0.9 + this.breath) * 0.05;
+    const lean = (isR ? 0.35 : 0.3) + run * 0.3 + this.lunge * 0.35;
+    B.spine.rotation.x = lean + breathe + Math.sin(p * 2) * 0.04 * amp - this.hitT * 1.2 - this.stagger * 0.5 - this.taunt * 0.65 + (this.state === 'windup' ? -0.25 : this.state === 'strike' ? 0.45 : 0);
+    B.spine.rotation.y = -0.18 * Math.sin(p) * amp + this.twist + idleSway;
+    B.spine.rotation.z = Math.sin(p) * 0.06 * amp + this.stagger * 0.15 * Math.sin(t * 23);
+    // brazos: braceo contrario a las piernas; al correr, bombean doblados; en la amenaza, abiertos y en alto
+    const arm = this.arm, raise = Math.max(0, arm), strike = Math.max(0, -arm), sw = (0.32 + run * 0.45) * amp, tn = this.taunt;
     if (isR) {
       for (const [sd, off, sx] of [['L', Math.PI, 1], ['R', 0, -1]]) {
-        B['sh' + sd].rotation.x = lerp(-0.3 + 0.32 * Math.sin(p + off) * amp, -2.7, raise) * (1 - strike) + strike * -0.5;
-        B['sh' + sd].rotation.z = sx * (0.18 + raise * 0.25);
-        B['el' + sd].rotation.x = lerp(-0.8 + 0.2 * Math.sin(p + off) * amp, -0.5, raise) * (1 - strike) + strike * -0.15;
-        B['ha' + sd].rotation.x = -0.25 + Math.sin(t * 3 + off) * 0.08;
+        const swing = -0.3 - run * 0.25 + sw * Math.sin(p + off) + Math.sin(t * 1.7 + off) * 0.05 * (1 - amp);
+        B['sh' + sd].rotation.x = lerp(lerp(swing, -1.0, tn), -2.7, raise) * (1 - strike) + strike * -0.5;
+        B['sh' + sd].rotation.z = sx * (0.18 + raise * 0.25 + tn * 1.0);
+        B['el' + sd].rotation.x = lerp(lerp(-0.8 - run * 0.5 + 0.2 * Math.sin(p + off) * amp, -0.3, tn), -0.5, raise) * (1 - strike) + strike * -0.15;
+        B['ha' + sd].rotation.x = -0.25 + Math.sin(t * 3 + off) * 0.08 + tn * Math.sin(t * 14 + off) * 0.25; // garras que se abren y cierran
       }
     } else {
-      B.shL.rotation.x = lerp(-0.35 + 0.28 * Math.sin(p + Math.PI) * amp, -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2;
-      B.elL.rotation.x = lerp(-0.5, -0.3, raise); B.clawL.rotation.x = -0.2 + raise * 0.4 - strike * 0.3;
-      B.shR.rotation.x = -1.15 + Math.sin(p) * 0.08 * amp; B.shR.rotation.z = -0.15; B.elR.rotation.x = -0.35;
-      this.gunSpin += dt * (this.state === 'windup' || this.state === 'strike' ? 30 : 4); B.gunR.rotation.y = this.gunSpin;
+      B.shL.rotation.x = lerp(lerp(-0.35 - run * 0.2 + sw * Math.sin(p + Math.PI), -1.2, tn), -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2 + tn * 0.9;
+      B.elL.rotation.x = lerp(-0.5 - run * 0.4, -0.3, Math.max(raise, tn)); B.clawL.rotation.x = -0.2 + raise * 0.4 - strike * 0.3 + tn * Math.sin(t * 12) * 0.3;
+      B.shR.rotation.x = -1.15 + Math.sin(p) * 0.08 * amp - tn * 0.4; B.shR.rotation.z = -0.15 - tn * 0.5; B.elR.rotation.x = -0.35;
+      this.gunSpin += dt * (this.state === 'windup' || this.state === 'strike' || tn > 0.5 ? 30 : 4 + run * 10); B.gunR.rotation.y = this.gunSpin;
     }
-    // la cabeza sigue al jugador (con espasmos)
-    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), dist = Math.hypot(toP.x, toP.z);
+    // la cabeza sigue al jugador (con espasmos); en la amenaza, echada atrás rugiendo
+    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw - B.spine.rotation.y), dist = Math.hypot(toP.x, toP.z);
     const pitch = Math.atan2(HL.y - K.head * K.scale, Math.max(0.3, dist));
-    B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw;
-    B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4;
-    B.jaw.rotation.x = this.jaw * (isR ? 0.55 : 0.35);
+    B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw + tn * Math.sin(t * 9) * 0.25;
+    B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4 - tn * 0.5 + lean * 0.5;
+    B.jaw.rotation.x = Math.max(this.jaw, tn) * (isR ? 0.55 : 0.35);
   }
   update(dt, t) {
-    const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4);
-    let walking = false;
+    const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
     // espasmos inquietantes
     this.twitchT -= dt;
     if (this.twitchT <= 0) { this.twitchT = rand(2.5, 6); this.twitch = 1; this.twitchYaw = rand(-0.9, 0.9); }
     if (this.twitch > 0) { this.twitch = Math.max(0, this.twitch - dt * 7); if (this.twitch === 0) this.twitchYaw = 0; }
     if (this.flickT > 0) { this.flickT -= dt; const on = Math.random() < 0.5; if (this.inst.meshes.glow) this.inst.meshes.glow.visible = on; if (this.inst.meshes.halo) this.inst.meshes.halo.visible = on; if (this.flickT <= 0) { if (this.inst.meshes.glow) this.inst.meshes.glow.visible = true; if (this.inst.meshes.halo) this.inst.meshes.halo.visible = true; } }
-    const active = state === 'play' || state === 'rest';
+    const active = state === 'play' || state === 'rest', last = _rp.copy(this.pos);
+    const toPl = Math.hypot(HL.x - this.pos.x, HL.z - this.pos.z), faceP = Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z);
+    let faceTo = null, wantV = 0;
     switch (this.state) {
       case 'emerge':
         if (this.st > 0.9) { this.state = 'walk'; this.st = 0; if (K.heavy || Math.random() < 0.5) { this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : K.heavy ? 0.85 : 1.15); } }
         break;
+      case 'taunt': // se planta, abre los brazos y te ruge
+        this.taunt = Math.min(1, this.taunt + dt * 5); faceTo = faceP;
+        if (this.st > 1.1) { this.state = 'walk'; this.st = 0; }
+        break;
       case 'walk': {
         if (!active) break;
-        const to = tmpA.subVectors(this.target, this.pos); to.y = 0; const d = to.length();
-        if (d > 0.04) {
-          to.normalize(); this.pos.addScaledVector(to, Math.min(d, this.speed * dt)); walking = true;
-          this.yaw += wrapAng(Math.atan2(to.x, to.z) - this.yaw) * Math.min(1, dt * 5);
-        } else if (state === 'play') { this.state = 'windup'; this.st = 0; SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+        // cada poco busca un puesto mejor (al morir otro, los de atrás avanzan)
+        this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } }
+        const to = _rd.subVectors(this.slot, this.pos); to.y = 0; const d = to.length();
+        if (d < 0.12) {
+          faceTo = faceP;
+          if (this.row === 0 && state === 'play') { this.state = 'windup'; this.st = 0; SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          break; // esperando su turno en la fila de atrás: quieto, mirándote
+        }
+        to.divideScalar(d);
+        // amenaza a media distancia (una vez por avance, si hay tiempo)
+        if (!this.taunts && settings.walkTime >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
+        // carga: los últimos metros, corriendo y rugiendo
+        if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
+        wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
+        const steer = _rv.copy(to);
+        for (const o of enemies) {
+          if (o === this || !o.alive || o.type !== 'robot') continue;
+          const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz) || 1e-3, min = this.radius + o.radius + 0.3;
+          if (dd < min + 0.9) { const k = Math.pow((min + 0.9 - dd) / 0.9, 2) * 1.6; steer.x += dx / dd * k; steer.z += dz / dd * k; }
+          const ahead = -(dx * to.x + dz * to.z), lat = dx * to.z - dz * to.x; // el otro, delante y a un lado de mi camino
+          if (ahead > 0 && ahead < 1.8 && Math.abs(lat) < min) { const sgn = lat === 0 ? (this.slot.x > o.slot.x ? 1 : -1) : Math.sign(lat), k = (1 - Math.abs(lat) / min) * 1.4; steer.x += to.z * sgn * k; steer.z -= to.x * sgn * k; }
+        }
+        steer.y = 0; const sl = steer.length(); if (sl > 1e-4) steer.divideScalar(sl);
+        if (steer.dot(to) < -0.2) steer.addScaledVector(to, 0.8).normalize(); // nunca da media vuelta por esquivar
+        _rs.copy(steer).multiplyScalar(wantV); this.vel.lerp(_rs, Math.min(1, dt * 4)); // con inercia: arranca y frena como un cuerpo pesado
+        this.pos.addScaledVector(this.vel, dt);
+        faceTo = Math.atan2(this.vel.x, this.vel.z);
+        // atascado: casi no avanza aunque quiere
+        this.stuckT = this.vel.length() < wantV * 0.25 ? this.stuckT + dt : 0;
         break;
       }
       case 'windup': {
-        this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 6);
-        this.arm = Math.min(1, this.st / 0.6); this.jaw = 1;
-        if (this.st > 0.75) { this.state = 'strike'; this.st = 0; }
+        faceTo = faceP; this.arm = Math.min(1, this.st / 0.6); this.jaw = 1; this.twist = lerp(this.twist, 0.5, Math.min(1, dt * 8));
+        if (this.st > 0.75) { this.state = 'strike'; this.st = 0; this.knockFrom.copy(this.pos); }
         break;
       }
-      case 'strike':
-        this.arm = -Math.min(1, this.st / 0.15);
+      case 'strike': { // zancada hacia ti con el golpe
+        faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, dt * 18)); this.lunge = Math.min(1, this.st / 0.15);
+        const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
+        this.pos.copy(this.knockFrom).addScaledVector(back, -0.35 * smooth(this.lunge));
         if (this.st > 0.18) {
           this.state = 'knock'; this.st = 0; hurtPlayer(this);
-          const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
-          this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.8);
+          // retrocede tras el golpe, pero sin meterse en los que esperan detrás
+          let kd = 1.4; for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const ox = o.pos.x - this.pos.x, oz = o.pos.z - this.pos.z, al = ox * back.x + oz * back.z, lat = Math.abs(ox * back.z - oz * back.x), min = this.radius + o.radius + 0.05; if (al > 0 && lat < min) kd = Math.min(kd, Math.max(0, al - Math.sqrt(min * min - lat * lat))); }
+          this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, kd);
           fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true);
         }
         break;
+      }
       case 'knock': {
         const k = smooth(Math.min(1, this.st / 0.7)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); this.arm = lerp(-1, 0, k); this.hitT = Math.max(this.hitT, (1 - k) * 0.6);
-        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; }
+        this.lunge = 1 - k; faceTo = faceP;
+        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; this.charged = false; this.chargeD = 1.6; this.vel.set(0, 0, 0); }
         break;
       }
     }
-    if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') this.arm *= Math.max(0, 1 - dt * 5);
+    if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - dt * 5); this.twist *= Math.max(0, 1 - dt * 4); this.lunge *= Math.max(0, 1 - dt * 4); }
+    if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - dt * 3);
+    if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
     this.jaw = Math.max(0, this.jaw - dt * 0.9);
-    // separación entre robots
-    for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = dx * dx + dz * dz, min = this.radius + o.radius; if (dd < min * min && dd > 1e-5) { const k = (min - Math.sqrt(dd)) * 0.5 / Math.sqrt(dd); this.pos.x += dx * k; this.pos.z += dz * k * 0.3; } }
+    // al recibir un disparo, retrocede a trompicones
+    if (this.stagger > 0) { const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize(); this.pos.addScaledVector(back, this.stagger * 0.5 * dt); }
+    // nunca se solapan: si se tocan, se separan los dos por igual
+    for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') {
+      let dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz); const min = this.radius + o.radius;
+      if (dd >= min) continue; if (dd < 1e-4) { dx = rand(-1, 1); dz = rand(-1, 1); dd = Math.hypot(dx, dz); }
+      const k = (min - Math.min(dd, min)) * 0.5 / dd; this.pos.x += dx * k; this.pos.z += dz * k; o.pos.x -= dx * k; o.pos.z -= dz * k;
+    }
+    // de cara hacia donde va y, al acercarse, cada vez más hacia ti
+    const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
+    if (faceTo !== null) { const tgt = this.state === 'walk' ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.state === 'walk' ? 5 : 8)); }
+    this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
+    if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
+    const runK = this.spd > this.vWalk * 1.15 ? clamp((this.spd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
+    this.run += (runK - this.run) * Math.min(1, dt * 4);
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
-    this.animate(dt, t, walking);
+    this.animate(dt, t, this.spd);
     if (this.rig.kind !== 'ripper') { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
-    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
   }
@@ -4074,6 +4249,11 @@ function buildWave(i) {
   if (boss) list.push(boss);
   return list;
 }
+// Robots: una compuerta con la salida despejada (dos no aparecen uno encima de otro)
+function freeGate() {
+  const clear = g => !enemies.some(e => e.alive && e.type === 'robot' && Math.hypot(e.pos.x - g.x, e.pos.z - g.z) < 2.2 * g.scale);
+  const ok = gates.filter(clear); return ok.length ? pick(ok) : null;
+}
 // Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
 function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
 function spawnFromQueue() {
@@ -4085,7 +4265,8 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers') e = isTiny() ? new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  else if (settings.mode === 'walkers' && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches));
+  else if (settings.mode === 'walkers') { const g = spec.kind === 'titan' ? gates[1] : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -4118,7 +4299,7 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-function lobbyMenu(reanchor) {
+function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
@@ -4146,7 +4327,7 @@ function lobbyMenu(reanchor) {
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
-  const m = openMenu(rows, { reanchor });
+  const m = openMenu(rows);
   m.rebuild = () => lobbyMenu();
 }
 let settingsTab = 'partida';
@@ -4163,13 +4344,13 @@ function openPause() {
   if (!GAME_STATES.includes(state)) return;
   pausedFrom = state; state = 'paused'; center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; SND.click(); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out) l.out.gain.setTargetAtTime(0.0001, AUD.C.currentTime, 0.1); });
-  pauseMenu(true);
+  pauseMenu();
 }
 function resumeGame() {
   hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
-function pauseMenu(reanchor) {
+function pauseMenu() {
   const bars = isBars();
   const recal = () => {
     hideMenu();
@@ -4185,8 +4366,8 @@ function pauseMenu(reanchor) {
     ...musicRows(),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
-    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(true); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
-  ], { reanchor, border: '#ffd166' });
+    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
+  ], { border: '#ffd166' });
   m.rebuild = () => pauseMenu();
 }
 function beginRun() {
@@ -4267,7 +4448,7 @@ function endRun(win, manual) {
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
     { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
-  const m = openMenu(rows, { reanchor: true }); m.rebuild = () => endMenu(title, lines);
+  const m = openMenu(rows); m.rebuild = () => endMenu(title, lines);
 }
 function exitAll() {
   endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
@@ -4377,13 +4558,14 @@ function barMounted() {
   else startWave(BAR.nextWave);
   BAR.started = true;
 }
-// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote
+// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote, un poco hacia la coronilla: las
+// pompas llegan desde los pies y nunca pasan por detrás de él
 const _rbm = new THREE.Matrix4(), _rbx = new V3(), _rby = new V3(), _rbz = new V3(), _rbs = new V3(), _rbq = new Q4();
 function placeRowBoard(fromHead) {
   const rig = boardRig.children[0]; if (!rig) return;
   if (fromHead || !BAR.board) {
     _rby.set(0, 1, 0).applyQuaternion(head.q);
-    const P = head.p.clone().addScaledVector(fwd(), 1.25).addScaledVector(_rby, -0.6); P.y = Math.max(P.y, head.p.y + 0.5);
+    const P = head.p.clone().addScaledVector(fwd(), 1.2).addScaledVector(_rby, 0.7); P.y = Math.max(P.y, head.p.y + 0.5);
     _rbz.subVectors(head.p, P).normalize();
     _rbx.crossVectors(_rby, _rbz); if (_rbx.lengthSq() < 1e-6) _rbx.set(1, 0, 0); _rbx.normalize(); _rby.crossVectors(_rbz, _rbx);
     _rbm.makeBasis(_rbx, _rby, _rbz); _rbm.decompose(_rbs, _rbq, new V3());
@@ -4651,7 +4833,7 @@ function cancelPlace() {
 function updatePlace(dt) {
   if (PLACE.wait) { // ya está colocado: el atril aparece cuando estés de pie
     PLACE.waitT += dt;
-    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); }
+    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); }
     return;
   }
   if (!PLACE.on) { placeLine.visible = false; return; }
@@ -4694,7 +4876,7 @@ function placeFromHands(k, L, R) {
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
 // Ajustes finos, una vez colocado con las manos
-function adjustMenu(back, reanchor) {
+function adjustMenu(back) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
   const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
@@ -4711,7 +4893,7 @@ function adjustMenu(back, reanchor) {
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Colocar con las manos', onPress: () => startPlace(back) }, { label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
-  const m = openMenu(rows, { border: '#3cf0c6', reanchor }); m.rebuild = () => adjustMenu(back);
+  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => adjustMenu(back);
 }
 function placeDone() {
   const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;
@@ -4719,60 +4901,94 @@ function placeDone() {
 }
 
 
-/* =================== MODO TOQUES: AROS PARA LA CABEZA Y GEMAS PARA LAS MANOS =================== */
-// Aquí no se dispara: vienen hacia ti aros que ondulan como burbujas (mete la cabeza por el hueco) y gemas
-// con una mano dibujada (tócalas con cualquier mano). Llegan a la altura que obliga a hacer el movimiento:
-// abajo en la sentadilla o la flexión, arriba en el salto, en el arco del abdominal (o girados, en los
+/* =================== MODO TOQUES: AMEBAS DE AGUA PARA LA CABEZA Y DIAMANTES PARA LAS MANOS =================== */
+// Aquí no se dispara: vienen hacia ti amebas de agua con forma de aro que ondulan (mete la cabeza por el hueco) y
+// diamantes con la mano que los toca dibujada (izquierda azul, derecha naranja). Llegan a la altura que obliga a hacer
+// el movimiento: abajo en la sentadilla o la flexión, arriba en el salto, en el arco del abdominal (o girados, en los
 // oblicuos). Cada uno espera un momento delante de ti; si no lo tocas, pasa de largo y te golpea.
+// Entre un toque y el siguiente hay que volver a la postura de partida: tras reventar una ameba con un abdominal, la
+// siguiente no cuenta hasta que la cabeza haya vuelto al suelo; tras un diamante, esa mano tiene que volver atrás.
 // Con un ritmo (BPM) llegan justo en el pulso.
 let touches = [];
-const TCH = { ref: 1.6, clock: 0, nextArrive: 0, seq: 0, taps: [], beat0: 0 };
-const TCH_COL = { head: 0x3cf0c6, hand: 0xff9a3c };
+const mkArm = () => ({ armed: true, move: '', hitP: new V3(), lostT: 0, prev: [], cur: [], n: 0, had: false });
+const TCH = { ref: 1.6, clock: 0, nextArrive: 0, seq: 0, taps: [], beat0: 0, headArm: { armed: true, hitY: 0, d: 0 }, arm: { left: mkArm(), right: mkArm() }, hintT: 0, prevHL: new V3(), hadHL: false };
+const TCH_COL = { head: 0x3cf0c6, left: 0x4aa8ff, right: 0xff9a3c };
+const HAND_NAME = { left: 'izquierda', right: 'derecha' };
 const perfNow = () => performance.now() / 1000;
 const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
-// Movimientos de cada ejercicio: los de la cabeza (aros) y los de las manos (gemas)
+// Movimientos de cada ejercicio: los de la cabeza (amebas) y los de las manos (diamantes)
 const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], ['tap']] };
 const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
 const comboMoves = () => String(settings[{ stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase]] || '').split(',').filter(Boolean);
+const GEM_R = 0.13; // radio de toque del diamante (más el grosor de los dedos)
 
 /* ---------- Aspecto ---------- */
 const ringHaloTex = texFrom((() => { const c = mkCanvas(256), x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 60, 128, 128, 128); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.55)'); g.addColorStop(0.62, 'rgba(255,255,255,0.15)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return c; })());
-// Silueta de cabeza dentro del aro y mano dibujada en la gema: la forma dice con qué se toca
+// Silueta de cabeza dentro de la ameba y mano dibujada sobre el diamante: la forma dice con qué se toca
 const headIconTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.9)'; x.beginPath(); x.arc(64, 50, 24, 0, TAU); x.fill(); x.beginPath(); x.moveTo(22, 120); x.quadraticCurveTo(26, 82, 64, 80); x.quadraticCurveTo(102, 82, 106, 120); x.closePath(); x.fill(); return c; })());
-const handIconTex = texFrom((() => {
-  const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = '#fff';
-  rr(x, 34, 58, 60, 52, 18); x.fill(); // palma
-  [[36, 22, 46], [52, 12, 52], [68, 14, 50], [84, 24, 42]].forEach(([fx_, fy, fh]) => { rr(x, fx_, fy, 13, fh, 6.5); x.fill(); });
-  x.save(); x.translate(36, 84); x.rotate(-0.9); rr(x, -6, -36, 13, 36, 6.5); x.fill(); x.restore(); // pulgar
-  return c;
-})());
+// Mano vista por el dorso (como la ves al tocar), del color de esa mano: la derecha con el pulgar a la izquierda;
+// la izquierda, al revés. Con la inicial (D o I) bien grande en la palma
+function handIcon(side) {
+  const c = mkCanvas(128), x = c.getContext('2d'), col = '#' + TCH_COL[side].toString(16).padStart(6, '0');
+  const shape = () => {
+    x.save(); if (side === 'left') { x.translate(128, 0); x.scale(-1, 1); }
+    rr(x, 30, 56, 66, 58, 20); x.fill(); x.stroke(); // palma
+    [[34, 20, 50], [51, 9, 58], [68, 11, 56], [85, 22, 46]].forEach(([fx_, fy, fh]) => { rr(x, fx_, fy, 14, fh, 7); x.fill(); x.stroke(); });
+    x.save(); x.translate(34, 86); x.rotate(-0.9); rr(x, -7, -38, 14, 38, 7); x.fill(); x.stroke(); x.restore(); // pulgar
+    x.restore();
+  };
+  x.lineWidth = 8; x.strokeStyle = 'rgba(10,8,20,0.85)'; x.fillStyle = 'rgba(10,8,20,0.85)'; shape(); // contorno oscuro: se lee sobre cualquier fondo
+  x.lineWidth = 0.01; x.strokeStyle = col; x.fillStyle = col; shape();
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `56px ${FD}`; x.lineWidth = 7; x.strokeStyle = 'rgba(10,8,20,0.9)';
+  x.strokeText(side === 'left' ? 'I' : 'D', 63, 88); x.fillStyle = '#fff'; x.fillText(side === 'left' ? 'I' : 'D', 63, 88);
+  return texFrom(c);
+}
+const handIconTex = { left: handIcon('left'), right: handIcon('right') };
 const gemGeo = new THREE.OctahedronGeometry(1, 0);
-const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3();
-// Aro con el borde grueso que ondula: un toro cuyos vértices se mueven cada fotograma
-function makeWobbleRing() {
-  const geo = new THREE.TorusGeometry(1, 0.2, 8, 40), pos = geo.attributes.position;
-  const base = Float32Array.from(pos.array), ang = new Float32Array(pos.count);
-  for (let i = 0; i < pos.count; i++) ang[i] = Math.atan2(base[i * 3 + 1], base[i * 3]);
-  return { geo, base, ang };
+const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3(), _tu = new V3(), _ta = new V3(), _tb = new V3();
+// Ameba: un aro de agua cuyo borde ondula como un líquido (en la GPU): ondas que recorren el perímetro, el grosor
+// que se hincha y se estrecha, y el aro que se alabea. Se sombrea como agua: brillos, borde que refleja y cáusticas.
+const amebaGeo = new THREE.TorusGeometry(1, 0.2, 18, 72);
+const WATER_VS = `uniform float uTime; uniform float uAmp; uniform float uPulse; uniform float uBurst;
+varying vec3 vN; varying vec3 vV; varying vec2 vUV;
+vec3 ringPos(float u, float v) {
+  float t = uTime;
+  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + uAmp * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
+  float r = 0.2 * (1.0 - uBurst * 0.8) * (1.0 + uAmp * (0.32 * sin(4.0 * u - 2.1 * t) + 0.16 * sin(7.0 * u + 2.9 * t + v * 2.0) + 0.06 * sin(13.0 * u + 5.0 * v - 6.0 * t)));
+  float z = uAmp * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
+  vec2 c = vec2(cos(u), sin(u));
+  return vec3(c * (R + r * cos(v)), z + r * sin(v));
 }
-function wobbleRing(R, t, amp, pulse) {
-  const p = R.geo.attributes.position.array, b = R.base;
-  for (let i = 0; i < R.ang.length; i++) {
-    const a = R.ang[i], cx = Math.cos(a), cy = Math.sin(a);
-    const rr_ = 1 + pulse * 0.08 + amp * (0.07 * Math.sin(3 * a + t * 2.3) + 0.045 * Math.sin(5 * a - t * 3.1));
-    const th = 1 + amp * 0.35 * Math.sin(4 * a - t * 2.7);
-    const ox = b[i * 3] - cx, oy = b[i * 3 + 1] - cy, oz = b[i * 3 + 2];
-    p[i * 3] = cx * rr_ + ox * th; p[i * 3 + 1] = cy * rr_ + oy * th; p[i * 3 + 2] = oz * th;
-  }
-  R.geo.attributes.position.needsUpdate = true;
-}
+void main() {
+  float u = atan(position.y, position.x), v = atan(position.z, length(position.xy) - 1.0);
+  vec3 p = ringPos(u, v);
+  vec3 n = normalize(cross(ringPos(u + 0.01, v) - p, ringPos(u, v + 0.01) - p));
+  if (dot(n, vec3(vec2(cos(u), sin(u)) * cos(v), sin(v))) < 0.0) n = -n;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vN = normalize(normalMatrix * n); vV = normalize(-mv.xyz); vUV = vec2(u, v);
+  gl_Position = projectionMatrix * mv;
+}`;
+const WATER_FS = `uniform float uTime; uniform float uOpacity; uniform vec3 uColor;
+varying vec3 vN; varying vec3 vV; varying vec2 vUV;
+void main() {
+  vec3 n = normalize(vN), v = normalize(vV);
+  float ndv = abs(dot(n, v)), fr = pow(1.0 - ndv, 2.0);
+  vec3 r = reflect(-v, n);
+  float spec = pow(max(dot(r, normalize(vec3(-0.35, 0.85, 0.4))), 0.0), 90.0) * 2.4 + pow(max(dot(r, normalize(vec3(0.55, 0.25, 0.8))), 0.0), 20.0) * 0.45;
+  float ca = sin(vUV.x * 9.0 + uTime * 2.2 + sin(vUV.y * 3.0 + uTime) * 1.5) * sin(vUV.x * 5.0 - uTime * 1.6 + vUV.y * 2.0);
+  vec3 deep = uColor * 0.28, shallow = mix(uColor, vec3(1.0), 0.3);
+  vec3 col = mix(deep, shallow, 0.35 + 0.65 * ndv) + uColor * smoothstep(0.5, 1.0, ca) * 0.5;
+  col = mix(col, vec3(0.85, 0.96, 1.0), fr * 0.55) + vec3(spec);
+  gl_FragColor = vec4(col, clamp(0.4 + 0.5 * fr + spec, 0.0, 1.0) * uOpacity);
+}`;
+const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: WATER_VS, fragmentShader: WATER_FS, transparent: true, depthWrite: false });
 
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
 function moveSpec(move) {
   const r = settings.tchRing / 100, S = TCH.ref, D = arMode ? 4 : 6.5, side = Math.random() < 0.5 ? -1 : 1;
   const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
-  const o = { move, part: HAND_MOVES.includes(move) ? 'hand' : 'head', n: new V3(0, 0, 1), r, hold: 0 };
-  const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro del aro
+  const o = { move, part: HAND_MOVES.includes(move) ? 'hand' : 'head', hand: side < 0 ? 'left' : 'right', n: new V3(0, 0, 1), r, hold: 0 };
+  const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro de la ameba
   if (move === 'lunge') { const ld = settings.lungeDepth / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
@@ -4785,7 +5001,7 @@ function moveSpec(move) {
   } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
     const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
-    if (move === 'knee') o.pos = new V3(side * rand(0, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
+    if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
     else {
       const th = rand(settings.abMin, Math.max(settings.abMin, settings.abMax)) * Math.PI / 180;
       const ph = move === 'twist' ? side * rand(0.5, 1) * settings.abTwist * Math.PI / 180 : 0;
@@ -4798,44 +5014,88 @@ function moveSpec(move) {
   return o;
 }
 
+/* ---------- Volver a la postura de partida entre toques ---------- */
+// Puntos de cada mano que pueden tocar (puntas, nudillos y muñeca; con mando, el mando), en coordenadas de la arena.
+// Se guardan los del fotograma anterior para comprobar todo el recorrido: un puñetazo rápido no atraviesa el diamante sin tocarlo.
+const TOUCH_J = [0, 4, 6, 9, 11, 14, 16, 19, 21, 24];
+function sampleHands(dt) {
+  for (const s of ['left', 'right']) {
+    const h = hands[s], A = TCH.arm[s];
+    [A.prev, A.cur] = [A.cur, A.prev]; const had = A.had; A.had = false;
+    if (!h.ok) { A.n = 0; A.lostT += dt; if (A.lostT > 0.4) A.armed = true; continue; } // fuera de la vista: ha vuelto
+    A.lostT = 0; let n = 0;
+    const put = p => { const v = A.cur[n] || (A.cur[n] = new V3()); arena.worldToLocal(v.copy(p)); n++; };
+    if (h.isHand) { for (const j of TOUCH_J) if (h.J[j].ok) put(h.J[j].p); if (!n) put(h.wrist); } else { put(h.wrist); if (h.tipOk) put(h.tip); }
+    if (!had || A.n !== n) for (let i = 0; i < n; i++) (A.prev[i] || (A.prev[i] = new V3())).copy(A.cur[i]);
+    A.n = n; A.had = true;
+    if (!A.armed) {
+      const w = A.cur[0], P = A.hitP; // la muñeca: vuelve hacia el cuerpo o baja desde donde tocó
+      const back = A.move === 'punch' ? w.z - P.z > 0.18 || w.y < P.y - 0.3 : A.move === 'reach' ? w.y < HL.y - 0.05 || w.y < P.y - 0.45 : A.move === 'tap' ? w.y < 0.17 || w.y < P.y - 0.15 : A.move === 'knee' ? w.y < P.y - 0.2 || w.y < TCH.ref + 0.1 : true;
+      if (back) A.armed = true;
+    }
+  }
+  const H = TCH.headArm;
+  if (!H.armed) { // la cabeza vuelve a su altura de partida (o recorre de vuelta casi todo el movimiento)
+    const d = Math.abs(H.d), thr = clamp(d * 0.3, 0.04, 0.09);
+    if (Math.abs(HL.y - TCH.ref) < thr || (HL.y - H.hitY) * -Math.sign(H.d || -1) > d * 0.8) { H.armed = true; }
+  }
+}
+// Distancia mínima al origen del segmento a→b
+function segDist(a, b) { _tu.subVectors(b, a); const L2 = _tu.lengthSq(), k = L2 > 1e-9 ? clamp(-a.dot(_tu) / L2, 0, 1) : 0; return _ta.copy(a).addScaledVector(_tu, k).length(); }
+function touchHint(text) { if (TCH.hintT > 0) return; TCH.hintT = 1.6; say(text, '#ffd166', 1.1); }
+
 /* ---------- Objetivo ---------- */
 class TouchTarget {
   constructor(move, arriveAt) {
     Object.assign(this, moveSpec(move));
-    Object.assign(this, { alive: true, judged: false, mode: 'approach', spawnT: TCH.clock, arriveAt, win: settings.tchWindow, held: 0, outT: 0, popT: 0, ph: rand(0, TAU) });
-    const col = TCH_COL[this.part];
+    Object.assign(this, { alive: true, judged: false, mode: 'approach', spawnT: TCH.clock, arriveAt, win: settings.tchWindow, held: 0, outT: 0, popT: 0, ph: rand(0, TAU), prevPos: this.from.clone() });
+    const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
     this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
     if (this.part === 'head') {
-      this.R = makeWobbleRing();
-      this.mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, toneMapped: false });
-      this.ring = new THREE.Mesh(this.R.geo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
-      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.mat = waterRingMat(col);
+      this.ring = new THREE.Mesh(amebaGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
-      this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
       this.root.quaternion.setFromUnitVectors(_tz, this.n);
     } else {
-      this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.9, roughness: 0.25, metalness: 0.3, flatShading: true });
-      this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.05, 0.075, 0.05); this.root.add(this.gem);
-      this.glow = glowSprite(col, 0.28, 0.7); this.root.add(this.glow);
-      this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex, color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.07, 0.07, 1); this.icon.position.y = 0.11; this.root.add(this.icon);
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false });
+      this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.085, 0.125, 0.085); this.root.add(this.gem);
+      this.glow = glowSprite(col, 0.45, 0.7); this.root.add(this.glow);
+      this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex[this.hand], color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.13, 0.13, 1); this.icon.position.y = 0.22; this.root.add(this.icon);
     }
   }
   center(out) { return this.root.getWorldPosition(out); }
-  // ¿Está tocando? Cabeza: su centro dentro del hueco del aro; mano: la punta del índice (o la muñeca) en la gema
+  // ¿Está tocando? Cabeza: su centro dentro del hueco de la ameba (también si la cruza entre dos fotogramas);
+  // mano: la que pide el diamante, con cualquier dedo, nudillo o la muñeca, en todo su recorrido desde el fotograma anterior
   touching() {
     if (this.part === 'head') {
-      _tv.subVectors(HL, this.root.position); _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion);
-      const dp = _tv.dot(_tw); _tv.addScaledVector(_tw, -dp);
-      this.rad = _tv.length() / (this.r * 0.75);
-      return Math.abs(dp) < 0.15 && this.rad < 1;
+      _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion); const lim = this.r * 0.75;
+      _tv.subVectors(HL, this.root.position); const dp = _tv.dot(_tw); _tv.addScaledVector(_tw, -dp); this.rad = _tv.length() / lim;
+      if (Math.abs(dp) < 0.15 && this.rad < 1) return true;
+      if (!TCH.hadHL) return false;
+      _tb.subVectors(TCH.prevHL, this.prevPos); const dq = _tb.dot(_tw);
+      if (dp * dq >= 0) return false; // no ha cruzado el plano
+      _tb.lerp(_ta.subVectors(HL, this.root.position), dq / (dq - dp)); _tb.addScaledVector(_tw, -_tb.dot(_tw));
+      this.rad = _tb.length() / lim; return this.rad < 1;
     }
     for (const s of ['left', 'right']) {
-      const h = hands[s]; if (!h.ok) continue;
-      arena.worldToLocal(_tv.copy(h.tipOk ? h.tip : h.wrist));
-      if (_tv.distanceTo(this.root.position) < 0.11) return true;
+      const A = TCH.arm[s];
+      for (let i = 0; i < A.n; i++) {
+        if (segDist(_tv.subVectors(A.prev[i], this.prevPos), _tw.subVectors(A.cur[i], this.root.position)) >= GEM_R) continue;
+        if (s !== this.hand) { touchHint(`¡Con la mano ${HAND_NAME[this.hand]}!`); break; }
+        if (!A.armed) { touchHint('Vuelve a la posición de partida'); return false; }
+        this.by = s; return true;
+      }
     }
     return false;
+  }
+  // tocar solo vale si la parte que toca ha vuelto a su postura tras el toque anterior
+  ready() {
+    if (this.part === 'hand') return true; // touching() ya lo comprueba
+    if (TCH.headArm.armed || this.hold) return true;
+    touchHint('Vuelve a la posición de partida'); return false;
   }
   update(dt, t) {
     const c = TCH.clock, play = state === 'play' || state === 'rest';
@@ -4843,56 +5103,69 @@ class TouchTarget {
       const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
       this.root.position.lerpVectors(this.from, this.pos, e);
       // también vale tocarlo mientras viaja, si atinas
-      if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
+      if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
     } else if (this.mode === 'wait') {
       this.root.position.copy(this.pos);
-      if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
+      if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (c > this.arriveAt + this.win) this.miss();
     } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro
       if (this.touching()) { this.outT = 0; this.held += dt; } else this.outT += dt;
       if (this.held >= this.hold) this.hit();
       else if (this.outT > 0.6) this.miss();
       else if (Math.floor(this.held) !== Math.floor(this.held - dt)) { const left = Math.ceil(this.hold - this.held); say(`Aguanta ${left}`, '#ffd166', 0.6, true); SND.beep(1 + (this.hold - left) * 0.1); }
+    } else if (this.mode === 'burst') { // la ameba se rompe: el agua se abre hacia fuera y se deshace
+      this.popT += dt; const k = Math.min(1, this.popT / 0.22);
+      this.mat.uniforms.uBurst.value = k; this.mat.uniforms.uOpacity.value = 1 - k; this.haloMat.opacity = 0.4 * (1 - k); this.iconMat.opacity = 0;
+      if (k >= 1) { this.dispose(); return; }
     } else if (this.mode === 'pass') {
       // fallado: se aleja un poco hacia ti, se encoge y se apaga (no te atraviesa la cara)
       this.popT += dt; this.root.position.addScaledVector(this.dir, dt * 0.8); this.root.position.y -= dt * 0.3;
       const f = 1 - this.popT / 0.5; this.root.scale.setScalar(Math.max(0.05, 0.3 + 0.7 * f));
-      this.mat.opacity = Math.max(0, f) * 0.9; if (this.haloMat) this.haloMat.opacity = Math.max(0, f) * 0.5;
+      if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; } else this.mat.opacity = Math.max(0, f) * 0.9;
       if (f <= 0) { this.dispose(); return; }
     }
-    // ondula; con ritmo, late en cada pulso
+    this.prevPos.copy(this.root.position);
+    // ondula como el agua; con ritmo, late en cada pulso
     const P = tchPeriod(), ph_ = P ? ((((perfNow() - TCH.beat0) / P) % 1) + 1) % 1 : 1, pulse = P ? Math.exp(-ph_ * 6) : 0;
-    if (this.R) {
-      const near = this.mode === 'wait' || this.mode === 'hold';
-      wobbleRing(this.R, t + this.ph, near ? 1.4 : 1, pulse);
-      if (this.mode === 'hold') { const k = this.held / this.hold; this.mat.color.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
-      this.haloMat.opacity = this.mode === 'pass' ? this.haloMat.opacity : (near ? 0.85 : 0.55) + pulse * 0.3;
+    if (this.ring) {
+      const near = this.mode === 'wait' || this.mode === 'hold', U = this.mat.uniforms;
+      U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 1.4 : 1) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
+      if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
+      if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
     } else if (this.gem) {
       this.gem.rotation.y += dt * 2.2; this.gem.rotation.x = Math.sin(t * 1.3 + this.ph) * 0.3;
-      const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.05 * s, 0.075 * s, 0.05 * s);
+      const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.085 * s, 0.125 * s, 0.085 * s);
     }
   }
   hit() {
     if (this.judged) return; this.judged = true;
-    const c = this.center(new V3()), col = TCH_COL[this.part], rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255];
+    const c = this.center(new V3()), col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand], rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255];
     const P = tchPeriod(), dt_ = Math.abs(TCH.clock - this.arriveAt);
     const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.5 : dt_ < 0.3;
     registerRep(perfect, false); stats.kills++;
     say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, !perfect);
     if (perfect) SND.perfect();
-    SND.pop(c, !!this.hold); fx.droplets(c, this.part === 'head' ? 26 : 16, rgb, 1.6, 0.03); fx.sparks(c, 10, rgb, 1.5, 0.025); fx.glow(c, rgb, 0.35, 0.15);
+    if (this.part === 'head') {
+      // hay que volver a la postura de partida antes de la siguiente ameba
+      Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref });
+      SND.waterPop(c, !!this.hold);
+      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
+      this.mode = 'burst'; this.popT = 0; return;
+    }
+    const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos);
+    SND.pop(c, false); fx.droplets(c, 16, rgb, 1.6, 0.03); fx.sparks(c, 12, rgb, 1.6, 0.025); fx.glow(c, rgb, 0.4, 0.15);
     this.dispose();
   }
   miss() {
     if (this.judged) return; this.judged = true; this.mode = 'pass'; this.popT = 0;
-    this.dir = this.pos.clone().sub(this.from).normalize(); this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
+    this.dir = this.pos.clone().sub(this.from).normalize(); if (this.ring) this.mat.uniforms.uColor.value.setHex(0xff3b5c); else this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
     fx.sparks(this.center(new V3()), 8, [1, 0.25, 0.3], 1, 0.02);
-    if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido del aro!' : this.part === 'head' ? '¡Mete la cabeza en el aro!' : '¡Toca la gema!', '#ff3b5c', 1.1); }
+    if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido de la ameba!' : this.part === 'head' ? '¡Mete la cabeza en la ameba!' : `¡Toca el diamante con la ${HAND_NAME[this.hand]}!`, '#ff3b5c', 1.1); }
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
-    if (this.R) { this.R.geo.dispose(); this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
+    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
     this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose();
   }
 }
@@ -4919,22 +5192,29 @@ function tchGapFor(move) {
   const P = tchPeriod(), base = settings.tchGap + (move === 'plank' ? settings.plankHold : 0);
   return P ? Math.max(1, Math.round(base / P)) * P : base;
 }
-function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + settings.tchArrive + 0.6); }
+function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + settings.tchArrive + 0.6); touchRearm(); }
+function touchRearm() { TCH.headArm.armed = true; TCH.hadHL = false; for (const s of ['left', 'right']) Object.assign(TCH.arm[s], { armed: true, had: false, n: 0 }); }
 function touchStep(dt, t) {
   if (state !== 'paused') TCH.clock += dt;
   if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - settings.tchArrive) {
     const spec = spawnQueue.shift(); touches.push(new TouchTarget(spec.move, Math.max(TCH.nextArrive, TCH.clock + 0.3)));
     TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
   }
-  if (state !== 'paused') { for (const x of touches) if (x.alive) x.update(dt, t); touches = touches.filter(x => x.alive); }
+  if (state === 'paused') return;
+  TCH.hintT -= dt; sampleHands(dt);
+  for (const x of touches) if (x.alive) x.update(dt, t);
+  touches = touches.filter(x => x.alive);
+  TCH.prevHL.copy(HL); TCH.hadHL = true;
 }
 const touchLeft = () => touches.some(x => x.alive && !x.judged);
-function touchClear() { touches.forEach(x => x.alive && x.dispose()); touches = []; }
-// En el ordenador: hacia dónde llevar la cabeza (Espacio) o la mano (G) para tocar el siguiente objetivo
+function touchClear() { touches.forEach(x => x.alive && x.dispose()); touches = []; touchRearm(); }
+// En el ordenador: el siguiente objetivo al que llevar la cabeza (Espacio) o la mano (G). Si esa parte aún no ha
+// vuelto a su postura tras el toque anterior, ninguno: así vuelve primero a casa
 function touchAssist(part) {
   let best = null;
   for (const x of touches) if (x.alive && !x.judged && x.part === part && (x.mode !== 'approach' || TCH.clock > x.arriveAt - 0.6) && (!best || x.arriveAt < best.arriveAt)) best = x;
-  return best ? arena.localToWorld(best.pos.clone()) : null;
+  if (!best || (part === 'head' ? !TCH.headArm.armed && !best.hold : !TCH.arm[best.hand].armed)) return null;
+  return best;
 }
 
 /* ---------- Ritmo: tocando al compás o preguntando a Spotify ---------- */
@@ -5022,7 +5302,7 @@ function previewInput(dt) {
   }
   // Toques: Espacio lleva la cabeza al aro que toca y la devuelve después
   if (settings.mode === 'touch' && GAME_STATES.includes(state) && PV.home) {
-    const want = (PV.crouch && touchAssist('head')) || PV.home; _pvw.subVectors(want, camera.position); const d = _pvw.length();
+    const tg = PV.crouch && touchAssist('head'), want = tg ? arena.localToWorld(tg.pos.clone()) : PV.home; _pvw.subVectors(want, camera.position); const d = _pvw.length();
     if (d > 1e-4) camera.position.addScaledVector(_pvw, Math.min(1, 1.4 * dt / d));
     target = PV.y = camera.position.y;
   }
@@ -5044,9 +5324,9 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
-  if (PV.handAt) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
-  // Toques: G lleva la mano derecha a la gema que toca
-  if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(g); h.tip.copy(g); } }
+  if (PV.handAt) { const h = hands[PV.handSide || 'right']; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
+  // Toques: G lleva al diamante la mano que pide (si ya volvió de su toque anterior)
+  if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands[g.hand], w = arena.localToWorld(g.pos.clone()); h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(w); h.tip.copy(w); } }
   // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
   if (PV.bar && PV.fall) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.25); h.wrist.y -= 0.5; h.wristQ.copy(camera.quaternion); }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
@@ -5073,7 +5353,7 @@ function startPreview() {
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   arena.position.set(0, 0, 0); arena.rotation.set(0, 0, 0);
   applyEnvMode(); applyShadows(); ambientStart();
-  state = 'lobby'; lobbyMenu(true);
+  state = 'lobby'; lobbyMenu();
 }
 function stopPreview() { preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
@@ -5158,7 +5438,7 @@ async function startXR(ar) {
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn()) openPause(); });
     ambientStart();
-    setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
+    setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(); }, 600);
   } catch (err) {
     $('#xrStatus').textContent = 'No se pudo iniciar la sesión: ' + (err && err.message ? err.message : err);
   }

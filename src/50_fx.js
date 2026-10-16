@@ -89,6 +89,28 @@ function updateDebris(dt) {
   }
 }
 
+/* ---------- Gotas de agua en 3D (las amebas de los Toques al reventar) ---------- */
+// Esferas instanciadas que reflejan el entorno; se estiran en la dirección en que vuelan y, al llegar al suelo, salpican
+const WDROP = { max: 240, list: [] };
+WDROP.mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), std({ color: 0x5fd8c8, emissive: 0x06302a, roughness: 0.03, metalness: 0.35, transparent: true, opacity: 0.6, envMapIntensity: 3, depthWrite: false }), WDROP.max);
+WDROP.mesh.frustumCulled = false; WDROP.mesh.count = 0; if (WDROP.mesh.instanceMatrix.setUsage) WDROP.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(WDROP.mesh);
+const _wdq = new Q4(), _wdd = new V3(), _wds = new V3(), _wdm = new THREE.Matrix4();
+function waterDrop(pos, v, size, life = rand(0.9, 1.5)) { if (WDROP.list.length >= WDROP.max) WDROP.list.shift(); WDROP.list.push({ p: pos.clone(), v, s: size, life, t: 0 }); }
+function updateWater(dt) {
+  const L = WDROP.list; let n = 0;
+  for (let i = 0; i < L.length; i++) {
+    const d = L[i]; d.t += dt; d.v.y -= 9.8 * dt; d.v.multiplyScalar(Math.max(0, 1 - 0.5 * dt)); d.p.addScaledVector(d.v, dt);
+    if (d.p.y < 0.01 || d.t >= d.life) {
+      if (d.p.y < 0.01) { d.p.y = 0.015; fx.droplets(d.p, 2, [0.7, 1, 0.95], 0.5, d.s * 0.8); }
+      L[i] = L[L.length - 1]; L.pop(); i--; continue;
+    }
+    const sp = d.v.length(), k = 1 + Math.min(1.6, sp * 0.2), f = Math.min(1, (d.life - d.t) / 0.2);
+    _wdq.setFromUnitVectors(_up, sp > 1e-3 ? _wdd.copy(d.v).divideScalar(sp) : _up);
+    _wdm.compose(d.p, _wdq, _wds.set(d.s * f / Math.sqrt(k), d.s * f * k, d.s * f / Math.sqrt(k))); WDROP.mesh.setMatrixAt(n++, _wdm);
+  }
+  WDROP.mesh.count = n; if (n) WDROP.mesh.instanceMatrix.needsUpdate = true;
+}
+
 /* ---------- Números flotantes ---------- */
 const popups = [];
 function popup(text, color, pos) {
@@ -114,6 +136,19 @@ const fx = {
   dust(pos, n, size = 0.25) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone().add(new V3(rand(-0.1, 0.1), 0.03, rand(-0.1, 0.1))), v: new V3(rand(-0.6, 0.6), rand(0.05, 0.3), rand(-0.6, 0.6)), life: rand(0.8, 1.5), c0: [0.32, 0.29, 0.26], c1: [0.2, 0.19, 0.18], a: 0.35, s0: size * 0.5, s1: size * 1.6, tile: 1, drag: 2.5, fin: 0.1 }); },
   droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
+  // Un aro de agua que revienta: el agua sale despedida hacia fuera desde todo el borde, con gotas grandes, rocío y un destello
+  waterBurst(pos, n, rad, color) {
+    const u = _wdd.set(0, 1, 0); if (Math.abs(n.dot(u)) > 0.9) u.set(1, 0, 0); u.addScaledVector(n, -u.dot(n)).normalize();
+    const w = new V3().crossVectors(n, u), r = new V3(), pale = [lerp(color[0], 1, 0.5), lerp(color[1], 1, 0.5), lerp(color[2], 1, 0.5)];
+    for (let i = 0; i < 44; i++) {
+      const a = i / 44 * TAU + rand(-0.06, 0.06); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a));
+      const p = pos.clone().addScaledVector(r, rad * rand(0.85, 1.1)).addScaledVector(n, rand(-0.02, 0.02));
+      waterDrop(p, r.clone().multiplyScalar(rand(0.7, 2.1)).addScaledVector(n, rand(-0.5, 0.9)).add(new V3(0, rand(0.3, 1.3), 0)), rand(0.006, i % 4 ? 0.013 : 0.024));
+    }
+    for (let i = 0; i < 26; i++) { const a = rand(0, TAU); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)); PNORM.add({ pos: pos.clone().addScaledVector(r, rad), v: r.clone().multiplyScalar(rand(0.6, 2.4)).add(new V3(0, rand(0, 1.2), 0)), life: rand(0.35, 0.8), c0: pale, c1: [0.6, 0.9, 1], a: 0.8, s0: rand(0.01, 0.025), s1: 0.006, tile: 0, g: 6, floor: true, fin: 0.01 }); }
+    for (let i = 0; i < 8; i++) PNORM.add({ pos: pos.clone().add(rv(rad * 0.6)), v: rv(0.25), life: rand(0.5, 0.9), c0: [0.85, 0.95, 1], c1: [0.7, 0.85, 0.9], a: 0.25, s0: rad * 0.6, s1: rad * 1.8, tile: 1, drag: 2, fin: 0.05 }); // rocío
+    fx.glow(pos, pale, rad * 3, 0.12);
+  },
   trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
   electric(pos, n = 14) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rv(1).multiplyScalar(rand(1, 3)), life: rand(0.1, 0.35), c0: [0.9, 0.9, 1], c1: [1, 0.25, 0.15], s0: 0.04, s1: 0.01, tile: 3, fin: 0.01 }); fx.glow(pos, [1, 0.4, 0.3], 0.5, 0.12); },
@@ -127,14 +162,14 @@ const fx = {
   }
 };
 function updateFX(dt) {
-  PNORM.update(dt); PADD.update(dt); updateDebris(dt);
+  PNORM.update(dt); PADD.update(dt); updateDebris(dt); updateWater(dt);
   flashLight.intensity = Math.max(0, flashLight.intensity - dt * 22);
   for (const r of rings) if (r.active) { r.t += dt / 0.45; const s = 0.2 + r.size * smooth(Math.min(1, r.t)); r.mesh.scale.set(s, s, s); r.mesh.material.opacity = Math.max(0, 1 - r.t) * 0.8; if (r.t >= 1) { r.active = false; r.mesh.visible = false; } }
   for (const s of scorches) if (s.active) { s.t += dt; s.mesh.material.opacity = Math.min(1, Math.max(0, (12 - s.t) / 4)) * 0.9; if (s.t > 12) { s.active = false; s.mesh.visible = false; } }
   for (let i = popups.length - 1; i >= 0; i--) { const p = popups[i]; p.life -= dt; p.s.position.y += p.v * dt; p.s.material.opacity = Math.min(1, p.life * 2.5); if (p.life <= 0) killPopup(i); }
 }
 function clearFX() {
-  PNORM.clear(); PADD.clear();
+  PNORM.clear(); PADD.clear(); WDROP.list.length = 0; WDROP.mesh.count = 0;
   while (debris.length) { scene.remove(debris.pop().obj); }
   while (popups.length) killPopup(popups.length - 1);
   rings.forEach(r => { r.active = false; r.mesh.visible = false; });

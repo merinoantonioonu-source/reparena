@@ -109,7 +109,9 @@ function hideMenu(keepAnchor) {
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 function openMenu(rows, opts = {}) {
-  const reuse = menu && menuAnchor && !opts.reanchor;
+  // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
+  // si no hay ninguno, delante de ti
+  const reuse = menu && menuAnchor;
   hideMenu(true);
   if (!reuse) menuAnchor = opts.anchor || placeAnchor((opts.dist || settings.menuDist) / 100);
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
@@ -304,7 +306,7 @@ function updateWristMenu(dt) {
 const wristReady = () => !menu || !menu.wrist || WM.e > 0.95;
 function onWatch() {
   if (PLACE.on) { cancelPlace(); return; }
-  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
+  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
   if (GAME_STATES.includes(state)) openPause();
   else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
@@ -325,14 +327,56 @@ const hurtPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), hurtMat); hu
 let hurtT = 0;
 const _hl = new V3();
 function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(head.p); }
+/* ---------- Ningún panel tapa lo que viene hacia ti ---------- */
+// Lo que tiene que verse siempre: los objetivos (Toques y Barras) y los enemigos, con su centro y su radio en el mundo
+const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THREE.Object3D();
+function collectThreats() {
+  let n = 0; const put = (o, r) => { o.center(_ocP[n] || (_ocP[n] = new V3())); _ocR[n++] = r; };
+  for (const x of touches) if (x.alive && !x.judged) put(x, x.part === 'head' ? x.r * 1.7 : 0.16);
+  for (const e of enemies) if (e.alive) put(e, e.type === 'robot' ? 0.9 * e.K.scale : Math.max(0.1, e.radius * 1.5));
+  return n;
+}
+// ¿Tapa este panel (w × h en su plano) alguno de esos n? Un panel normal solo tapa lo que queda detrás de él; uno sin
+// prueba de profundidad (los avisos de la vista) se dibuja encima de todo lo que cae dentro de su silueta
+function panelHides(obj, w, h, always, n) {
+  obj.updateMatrixWorld(); const e = obj.matrixWorld.elements, sc = Math.hypot(e[0], e[1], e[2]) || 1;
+  obj.worldToLocal(_ocH.copy(head.p)); if (_ocH.z <= 0.01) return false; // por detrás no se ve
+  for (let i = 0; i < n; i++) {
+    obj.worldToLocal(_ocT.copy(_ocP[i])); if (_ocT.z >= _ocH.z) continue; // la mirada hacia él no cruza el panel
+    const s = _ocH.z / (_ocH.z - _ocT.z); if (!always && s > 1) continue; // está más cerca que el panel: se ve delante
+    const m = _ocR[i] / sc * s, px = _ocH.x + (_ocT.x - _ocH.x) * s, py = _ocH.y + (_ocT.y - _ocH.y) * s;
+    if (Math.abs(px) < w / 2 + m && Math.abs(py) < h / 2 + m) return true;
+  }
+  return false;
+}
+// Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
+const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
+  center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
+function hudSlot(P, slots, n, dt) {
+  const free = i => { headLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(head.q); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
+  let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
+  for (let i = 0; pick < 0 && i < slots.length; i++) if (free(i)) pick = i;
+  if (pick >= 0) P.slot = pick; else P.slot = Math.min(P.slot, slots.length - 1);
+  P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
+  P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
+  return headLocal(P.off, new V3());
+}
 function updateViewPanels(dt) {
-  const k = 1 - Math.exp(-dt * 4);
+  const k = 1 - Math.exp(-dt * 4), n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, menu && !menu.wrist ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
+    const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.2]] : C.slots; // con el atril abierto, por encima para no taparlo
+    const tgt = hudSlot(C, slots, n, dt);
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
-    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
+    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k); center.mesh.material.opacity = C.fade;
   } else center.mesh.userData.init = false;
-  if (toastP.mesh.visible) { toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false; toastP.mesh.material.opacity = Math.min(1, toastT * 3); headLocal(_hl.set(0, -0.36, -1.1), toastP.mesh.position); toastP.mesh.quaternion.copy(head.q); }
+  if (toastP.mesh.visible) {
+    toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
+    toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
+  }
+  // el marcador está fijo: si algo de lo que viene queda detrás de él, se vuelve casi transparente hasta que pasa
+  const hide = n > 0 && board.mesh.parent && panelHides(board.mesh, 1.06, 0.5, false, n);
+  HUD.board += ((hide ? 0.12 : 1) - HUD.board) * Math.min(1, dt * 8);
+  board.mesh.material.opacity = HUD.board; boardFrameMat.opacity = HUD.board; boardFrameMat.depthWrite = HUD.board > 0.98;
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }

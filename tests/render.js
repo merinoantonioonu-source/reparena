@@ -37,7 +37,7 @@ for (const kind of ['scout', 'heavy', 'titan']) {
   const h = kind === 'titan' ? 1.6 : 1.05;
   shot(grp, [front(new V3(0, h, 0), kind === 'titan' ? 6 : 4), side(new V3(0, h, 0), kind === 'titan' ? 6 : 4), q34(new V3(0, h, 0), kind === 'titan' ? 5.5 : 3.6)], `robot_${kind}.png`);
   // attack windup pose
-  r.arm = 1; r.jaw = 1; r.animate(0.033, 1, false);
+  r.arm = 1; r.jaw = 1; r.animate(0.033, 1, 0);
   shot(grp, [front(new V3(0, h + 0.2, 0), kind === 'titan' ? 6.5 : 4.2), side(new V3(0, h + 0.2, 0), kind === 'titan' ? 6.5 : 4.2)], `robot_${kind}_attack.png`);
   // head close-up
   const hp = r.B.head.getWorldPosition(new V3());
@@ -108,7 +108,7 @@ console.log('done');
   const pal = { normal: 0x3355ff, primary: 0xff3399, selected: 0x33ffcc, value: 0xffcc33, tab: 0x666699, danger: 0xff3333, ghost: 0x444444, key: 0x9999ff };
   function paint(m) { m.group.children.forEach((c, i) => { if (i === 0) { c.material.color.setHex(0x221a3a); return; } }); m.widgets.forEach(w => { w.mesh.material.color.setHex(w.kind === 'slider' ? 0xaaaaaa : (pal[w.style] || 0xffffff)); }); }
   const views = [];
-  RA.lobbyMenu(true); paint(RA.menu);
+  RA.lobbyMenu(); paint(RA.menu);
   let c = RA.menu.group.position.clone();
   const grp = () => { const g = new THREE.Group(); g.add(RA.menu.group); g.add(RA.stand); return g; };
   const eye = c.clone().add(new V3(0, 0.33, 0.85));

@@ -45,115 +45,199 @@ const ROBOT_KIND = {
   heavy: { rig: 'heavy', scale: 1.0, speedF: 0.85, heavy: true, stop: 1.4, stride: 0.85, head: 1.75 },
   titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true }
 };
+// Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
+// estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
+const ROW_GAP = 1.1, SLOT_ARC = 1.3;
+function robotSlot(r) {
+  const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
+  const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
+  let best = null, bestC = Infinity;
+  for (let row = 0; row < 3 && !best; row++) {
+    const R = r.K.stop + row * ROW_GAP;
+    for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
+      _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
+      if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
+      const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
+      if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
+    }
+  }
+  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(r.K.stop + 3 * ROW_GAP) };
+  r.slot.copy(best.p); r.row = best.row; r.slotOk = true;
+}
+const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
 class Robot {
   constructor(spec, gate) {
     const K = ROBOT_KIND[spec.kind]; this.K = K; this.type = 'robot'; this.kind = spec.kind;
     this.rig = RIGS[K.rig]; this.inst = this.rig.instance(MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
     this.root.scale.setScalar(K.scale); arena.add(this.root);
     const gr = gate.g.rotation.y; this.pos = new V3(gate.x - Math.sin(gr) * 1.0, 0, gate.z - Math.cos(gr) * 1.0);
-    this.target = new V3(rand(-0.9, 0.9), 0, -(K.stop + rand(0, 0.35)));
-    this.speed = this.pos.distanceTo(this.target) / settings.walkTime * K.speedF;
-    this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * K.scale, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
+    Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
+    robotSlot(this);
+    // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
+    const D = this.pos.distanceTo(this.slot), T = Math.max(2, settings.walkTime / K.speedF - (settings.walkTime >= 10 ? 1.2 : 0));
+    this.chargeD = Math.min(3.2, D * 0.4); this.vRun = clamp(2.2 * D / T, 1.0, 3.2) * (K.heavy ? 0.85 : 1);
+    this.vWalk = Math.max(0.05, (D - this.chargeD) / Math.max(T * 0.4, T - this.chargeD / this.vRun));
+    if (this.vWalk > this.vRun) this.vRun = this.vWalk * 1.3;
+    this.speed = this.vWalk;
+    this.yaw = Math.atan2(this.slot.x - this.pos.x, this.slot.z - this.pos.z);
     this.bar = makeHpBar(this.root, 2.25, 0.7); if (K.boss) setHpBar(this.bar, 1);
-    gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, false); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
+    gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
   }
   center(out) { this.B.chest.getWorldPosition(out); return out; }
-  animate(dt, t, walking) {
+  // spd: lo que de verdad avanza (m/s). Quieto respira y se mueve inquieto; andando balancea cadera, hombros y brazos
+  // en contra de las piernas; corriendo se inclina, alarga la zancada y bombea los brazos
+  animate(dt, t, spd) {
     const B = this.B, K = this.K, isR = this.rig.kind === 'ripper', L = this.rig.legL;
-    if (walking) this.phase += TAU * clamp(this.speed / (K.stride * K.scale), 0.45, 2.4) * dt;
-    const p = this.phase, amp = walking ? 1 : 0.0, drops = [];
+    if (spd === true) spd = this.vWalk; // pose de prueba
+    const amp = clamp(spd / Math.max(0.2, this.vWalk * 0.7), 0, 1), run = this.run;
+    this.phase += TAU * clamp(spd / (K.stride * K.scale * (1 + run * 0.35)), 0, 2.8) * dt;
+    const p = this.phase, drops = [], la = 1 + run * 0.55;
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
       let a1, a2, a3;
-      if (isR) { a1 = -0.55 + 0.42 * Math.sin(q) * amp; a2 = 1.2 + 0.45 * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
-      else { a1 = -0.36 * Math.sin(q) * amp; a2 = 0.08 + 0.62 * Math.max(0, c) * amp; a3 = -(a1 + a2); }
+      if (isR) { a1 = -0.55 + 0.42 * la * Math.sin(q) * amp; a2 = 1.2 + 0.45 * la * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
+      else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
-      if (walking && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * K.scale); if (Math.random() < 0.3) SND.servo(fp); }
+      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * K.scale * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
       this.lastCos[i] = c;
     });
-    B.hips.position.y = Math.max(drops[0], drops[1]) - this.rig.hipOff + 0.015;
-    const lean = isR ? 0.35 : 0.3;
-    B.spine.rotation.x = lean + Math.sin(p * 2) * 0.04 * amp - this.hitT * 1.2 + (this.state === 'windup' ? -0.15 : this.state === 'strike' ? 0.35 : 0);
-    B.spine.rotation.z = Math.sin(p) * 0.06 * amp;
-    // brazos
-    const arm = this.arm; // 0 normal, 1 levantados (preparando golpe), -1 golpe
-    const raise = Math.max(0, arm), strike = Math.max(0, -arm);
+    // cadera: sube y baja con los pasos, gira y cae hacia la pierna que se levanta
+    B.hips.position.y = Math.max(drops[0], drops[1]) - this.rig.hipOff + 0.015 + run * 0.02 * Math.abs(Math.sin(p));
+    B.hips.rotation.y = 0.14 * Math.sin(p) * amp; B.hips.rotation.z = 0.05 * Math.cos(p) * amp;
+    // tronco: inclinado hacia ti, más al correr; los hombros giran al revés que la cadera; respira cuando está quieto
+    const breathe = (1 - amp) * Math.sin(t * 2.1 + this.breath) * 0.035, idleSway = (1 - amp) * Math.sin(t * 0.9 + this.breath) * 0.05;
+    const lean = (isR ? 0.35 : 0.3) + run * 0.3 + this.lunge * 0.35;
+    B.spine.rotation.x = lean + breathe + Math.sin(p * 2) * 0.04 * amp - this.hitT * 1.2 - this.stagger * 0.5 - this.taunt * 0.65 + (this.state === 'windup' ? -0.25 : this.state === 'strike' ? 0.45 : 0);
+    B.spine.rotation.y = -0.18 * Math.sin(p) * amp + this.twist + idleSway;
+    B.spine.rotation.z = Math.sin(p) * 0.06 * amp + this.stagger * 0.15 * Math.sin(t * 23);
+    // brazos: braceo contrario a las piernas; al correr, bombean doblados; en la amenaza, abiertos y en alto
+    const arm = this.arm, raise = Math.max(0, arm), strike = Math.max(0, -arm), sw = (0.32 + run * 0.45) * amp, tn = this.taunt;
     if (isR) {
       for (const [sd, off, sx] of [['L', Math.PI, 1], ['R', 0, -1]]) {
-        B['sh' + sd].rotation.x = lerp(-0.3 + 0.32 * Math.sin(p + off) * amp, -2.7, raise) * (1 - strike) + strike * -0.5;
-        B['sh' + sd].rotation.z = sx * (0.18 + raise * 0.25);
-        B['el' + sd].rotation.x = lerp(-0.8 + 0.2 * Math.sin(p + off) * amp, -0.5, raise) * (1 - strike) + strike * -0.15;
-        B['ha' + sd].rotation.x = -0.25 + Math.sin(t * 3 + off) * 0.08;
+        const swing = -0.3 - run * 0.25 + sw * Math.sin(p + off) + Math.sin(t * 1.7 + off) * 0.05 * (1 - amp);
+        B['sh' + sd].rotation.x = lerp(lerp(swing, -1.0, tn), -2.7, raise) * (1 - strike) + strike * -0.5;
+        B['sh' + sd].rotation.z = sx * (0.18 + raise * 0.25 + tn * 1.0);
+        B['el' + sd].rotation.x = lerp(lerp(-0.8 - run * 0.5 + 0.2 * Math.sin(p + off) * amp, -0.3, tn), -0.5, raise) * (1 - strike) + strike * -0.15;
+        B['ha' + sd].rotation.x = -0.25 + Math.sin(t * 3 + off) * 0.08 + tn * Math.sin(t * 14 + off) * 0.25; // garras que se abren y cierran
       }
     } else {
-      B.shL.rotation.x = lerp(-0.35 + 0.28 * Math.sin(p + Math.PI) * amp, -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2;
-      B.elL.rotation.x = lerp(-0.5, -0.3, raise); B.clawL.rotation.x = -0.2 + raise * 0.4 - strike * 0.3;
-      B.shR.rotation.x = -1.15 + Math.sin(p) * 0.08 * amp; B.shR.rotation.z = -0.15; B.elR.rotation.x = -0.35;
-      this.gunSpin += dt * (this.state === 'windup' || this.state === 'strike' ? 30 : 4); B.gunR.rotation.y = this.gunSpin;
+      B.shL.rotation.x = lerp(lerp(-0.35 - run * 0.2 + sw * Math.sin(p + Math.PI), -1.2, tn), -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2 + tn * 0.9;
+      B.elL.rotation.x = lerp(-0.5 - run * 0.4, -0.3, Math.max(raise, tn)); B.clawL.rotation.x = -0.2 + raise * 0.4 - strike * 0.3 + tn * Math.sin(t * 12) * 0.3;
+      B.shR.rotation.x = -1.15 + Math.sin(p) * 0.08 * amp - tn * 0.4; B.shR.rotation.z = -0.15 - tn * 0.5; B.elR.rotation.x = -0.35;
+      this.gunSpin += dt * (this.state === 'windup' || this.state === 'strike' || tn > 0.5 ? 30 : 4 + run * 10); B.gunR.rotation.y = this.gunSpin;
     }
-    // la cabeza sigue al jugador (con espasmos)
-    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), dist = Math.hypot(toP.x, toP.z);
+    // la cabeza sigue al jugador (con espasmos); en la amenaza, echada atrás rugiendo
+    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw - B.spine.rotation.y), dist = Math.hypot(toP.x, toP.z);
     const pitch = Math.atan2(HL.y - K.head * K.scale, Math.max(0.3, dist));
-    B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw;
-    B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4;
-    B.jaw.rotation.x = this.jaw * (isR ? 0.55 : 0.35);
+    B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw + tn * Math.sin(t * 9) * 0.25;
+    B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4 - tn * 0.5 + lean * 0.5;
+    B.jaw.rotation.x = Math.max(this.jaw, tn) * (isR ? 0.55 : 0.35);
   }
   update(dt, t) {
-    const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4);
-    let walking = false;
+    const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
     // espasmos inquietantes
     this.twitchT -= dt;
     if (this.twitchT <= 0) { this.twitchT = rand(2.5, 6); this.twitch = 1; this.twitchYaw = rand(-0.9, 0.9); }
     if (this.twitch > 0) { this.twitch = Math.max(0, this.twitch - dt * 7); if (this.twitch === 0) this.twitchYaw = 0; }
     if (this.flickT > 0) { this.flickT -= dt; const on = Math.random() < 0.5; if (this.inst.meshes.glow) this.inst.meshes.glow.visible = on; if (this.inst.meshes.halo) this.inst.meshes.halo.visible = on; if (this.flickT <= 0) { if (this.inst.meshes.glow) this.inst.meshes.glow.visible = true; if (this.inst.meshes.halo) this.inst.meshes.halo.visible = true; } }
-    const active = state === 'play' || state === 'rest';
+    const active = state === 'play' || state === 'rest', last = _rp.copy(this.pos);
+    const toPl = Math.hypot(HL.x - this.pos.x, HL.z - this.pos.z), faceP = Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z);
+    let faceTo = null, wantV = 0;
     switch (this.state) {
       case 'emerge':
         if (this.st > 0.9) { this.state = 'walk'; this.st = 0; if (K.heavy || Math.random() < 0.5) { this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : K.heavy ? 0.85 : 1.15); } }
         break;
+      case 'taunt': // se planta, abre los brazos y te ruge
+        this.taunt = Math.min(1, this.taunt + dt * 5); faceTo = faceP;
+        if (this.st > 1.1) { this.state = 'walk'; this.st = 0; }
+        break;
       case 'walk': {
         if (!active) break;
-        const to = tmpA.subVectors(this.target, this.pos); to.y = 0; const d = to.length();
-        if (d > 0.04) {
-          to.normalize(); this.pos.addScaledVector(to, Math.min(d, this.speed * dt)); walking = true;
-          this.yaw += wrapAng(Math.atan2(to.x, to.z) - this.yaw) * Math.min(1, dt * 5);
-        } else if (state === 'play') { this.state = 'windup'; this.st = 0; SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+        // cada poco busca un puesto mejor (al morir otro, los de atrás avanzan)
+        this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } }
+        const to = _rd.subVectors(this.slot, this.pos); to.y = 0; const d = to.length();
+        if (d < 0.12) {
+          faceTo = faceP;
+          if (this.row === 0 && state === 'play') { this.state = 'windup'; this.st = 0; SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          break; // esperando su turno en la fila de atrás: quieto, mirándote
+        }
+        to.divideScalar(d);
+        // amenaza a media distancia (una vez por avance, si hay tiempo)
+        if (!this.taunts && settings.walkTime >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
+        // carga: los últimos metros, corriendo y rugiendo
+        if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
+        wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
+        const steer = _rv.copy(to);
+        for (const o of enemies) {
+          if (o === this || !o.alive || o.type !== 'robot') continue;
+          const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz) || 1e-3, min = this.radius + o.radius + 0.3;
+          if (dd < min + 0.9) { const k = Math.pow((min + 0.9 - dd) / 0.9, 2) * 1.6; steer.x += dx / dd * k; steer.z += dz / dd * k; }
+          const ahead = -(dx * to.x + dz * to.z), lat = dx * to.z - dz * to.x; // el otro, delante y a un lado de mi camino
+          if (ahead > 0 && ahead < 1.8 && Math.abs(lat) < min) { const sgn = lat === 0 ? (this.slot.x > o.slot.x ? 1 : -1) : Math.sign(lat), k = (1 - Math.abs(lat) / min) * 1.4; steer.x += to.z * sgn * k; steer.z -= to.x * sgn * k; }
+        }
+        steer.y = 0; const sl = steer.length(); if (sl > 1e-4) steer.divideScalar(sl);
+        if (steer.dot(to) < -0.2) steer.addScaledVector(to, 0.8).normalize(); // nunca da media vuelta por esquivar
+        _rs.copy(steer).multiplyScalar(wantV); this.vel.lerp(_rs, Math.min(1, dt * 4)); // con inercia: arranca y frena como un cuerpo pesado
+        this.pos.addScaledVector(this.vel, dt);
+        faceTo = Math.atan2(this.vel.x, this.vel.z);
+        // atascado: casi no avanza aunque quiere
+        this.stuckT = this.vel.length() < wantV * 0.25 ? this.stuckT + dt : 0;
         break;
       }
       case 'windup': {
-        this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 6);
-        this.arm = Math.min(1, this.st / 0.6); this.jaw = 1;
-        if (this.st > 0.75) { this.state = 'strike'; this.st = 0; }
+        faceTo = faceP; this.arm = Math.min(1, this.st / 0.6); this.jaw = 1; this.twist = lerp(this.twist, 0.5, Math.min(1, dt * 8));
+        if (this.st > 0.75) { this.state = 'strike'; this.st = 0; this.knockFrom.copy(this.pos); }
         break;
       }
-      case 'strike':
-        this.arm = -Math.min(1, this.st / 0.15);
+      case 'strike': { // zancada hacia ti con el golpe
+        faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, dt * 18)); this.lunge = Math.min(1, this.st / 0.15);
+        const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
+        this.pos.copy(this.knockFrom).addScaledVector(back, -0.35 * smooth(this.lunge));
         if (this.st > 0.18) {
           this.state = 'knock'; this.st = 0; hurtPlayer(this);
-          const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
-          this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.8);
+          // retrocede tras el golpe, pero sin meterse en los que esperan detrás
+          let kd = 1.4; for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const ox = o.pos.x - this.pos.x, oz = o.pos.z - this.pos.z, al = ox * back.x + oz * back.z, lat = Math.abs(ox * back.z - oz * back.x), min = this.radius + o.radius + 0.05; if (al > 0 && lat < min) kd = Math.min(kd, Math.max(0, al - Math.sqrt(min * min - lat * lat))); }
+          this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, kd);
           fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true);
         }
         break;
+      }
       case 'knock': {
         const k = smooth(Math.min(1, this.st / 0.7)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); this.arm = lerp(-1, 0, k); this.hitT = Math.max(this.hitT, (1 - k) * 0.6);
-        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; }
+        this.lunge = 1 - k; faceTo = faceP;
+        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; this.charged = false; this.chargeD = 1.6; this.vel.set(0, 0, 0); }
         break;
       }
     }
-    if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') this.arm *= Math.max(0, 1 - dt * 5);
+    if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - dt * 5); this.twist *= Math.max(0, 1 - dt * 4); this.lunge *= Math.max(0, 1 - dt * 4); }
+    if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - dt * 3);
+    if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
     this.jaw = Math.max(0, this.jaw - dt * 0.9);
-    // separación entre robots
-    for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = dx * dx + dz * dz, min = this.radius + o.radius; if (dd < min * min && dd > 1e-5) { const k = (min - Math.sqrt(dd)) * 0.5 / Math.sqrt(dd); this.pos.x += dx * k; this.pos.z += dz * k * 0.3; } }
+    // al recibir un disparo, retrocede a trompicones
+    if (this.stagger > 0) { const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize(); this.pos.addScaledVector(back, this.stagger * 0.5 * dt); }
+    // nunca se solapan: si se tocan, se separan los dos por igual
+    for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') {
+      let dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz); const min = this.radius + o.radius;
+      if (dd >= min) continue; if (dd < 1e-4) { dx = rand(-1, 1); dz = rand(-1, 1); dd = Math.hypot(dx, dz); }
+      const k = (min - Math.min(dd, min)) * 0.5 / dd; this.pos.x += dx * k; this.pos.z += dz * k; o.pos.x -= dx * k; o.pos.z -= dz * k;
+    }
+    // de cara hacia donde va y, al acercarse, cada vez más hacia ti
+    const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
+    if (faceTo !== null) { const tgt = this.state === 'walk' ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.state === 'walk' ? 5 : 8)); }
+    this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
+    if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
+    const runK = this.spd > this.vWalk * 1.15 ? clamp((this.spd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
+    this.run += (runK - this.run) * Math.min(1, dt * 4);
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
-    this.animate(dt, t, walking);
+    this.animate(dt, t, this.spd);
     if (this.rig.kind !== 'ripper') { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
-    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
   }
@@ -892,6 +976,11 @@ function buildWave(i) {
   if (boss) list.push(boss);
   return list;
 }
+// Robots: una compuerta con la salida despejada (dos no aparecen uno encima de otro)
+function freeGate() {
+  const clear = g => !enemies.some(e => e.alive && e.type === 'robot' && Math.hypot(e.pos.x - g.x, e.pos.z - g.z) < 2.2 * g.scale);
+  const ok = gates.filter(clear); return ok.length ? pick(ok) : null;
+}
 // Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
 function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
 function spawnFromQueue() {
@@ -903,7 +992,8 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers') e = isTiny() ? new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  else if (settings.mode === 'walkers' && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches));
+  else if (settings.mode === 'walkers') { const g = spec.kind === 'titan' ? gates[1] : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -936,7 +1026,7 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-function lobbyMenu(reanchor) {
+function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
@@ -964,7 +1054,7 @@ function lobbyMenu(reanchor) {
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
-  const m = openMenu(rows, { reanchor });
+  const m = openMenu(rows);
   m.rebuild = () => lobbyMenu();
 }
 let settingsTab = 'partida';
@@ -981,13 +1071,13 @@ function openPause() {
   if (!GAME_STATES.includes(state)) return;
   pausedFrom = state; state = 'paused'; center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; SND.click(); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out) l.out.gain.setTargetAtTime(0.0001, AUD.C.currentTime, 0.1); });
-  pauseMenu(true);
+  pauseMenu();
 }
 function resumeGame() {
   hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
-function pauseMenu(reanchor) {
+function pauseMenu() {
   const bars = isBars();
   const recal = () => {
     hideMenu();
@@ -1003,8 +1093,8 @@ function pauseMenu(reanchor) {
     ...musicRows(),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
-    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(true); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
-  ], { reanchor, border: '#ffd166' });
+    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
+  ], { border: '#ffd166' });
   m.rebuild = () => pauseMenu();
 }
 function beginRun() {
@@ -1085,7 +1175,7 @@ function endRun(win, manual) {
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
     { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
-  const m = openMenu(rows, { reanchor: true }); m.rebuild = () => endMenu(title, lines);
+  const m = openMenu(rows); m.rebuild = () => endMenu(title, lines);
 }
 function exitAll() {
   endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';

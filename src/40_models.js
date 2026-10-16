@@ -362,12 +362,14 @@ function makeGlove(side) {
 }
 const gloves = { left: makeGlove('left'), right: makeGlove('right') };
 const _gm = new THREE.Matrix4(), _gq = new Q4(), _gp = new V3(), _gs = new V3(), _goff = new V3();
-const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0), _gw = new THREE.Color();
 function updateGloves(dt) {
   for (const side of ['left', 'right']) {
     const h = hands[side], g = gloves[side];
     g.pulse = Math.max(0, g.pulse - dt * 3);
-    g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
+    // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
+    if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
+    else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
