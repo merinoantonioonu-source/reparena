@@ -122,8 +122,9 @@ class TouchTarget {
     if (this.mode === 'approach') {
       const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
       this.root.position.lerpVectors(this.from, this.pos, e);
-      if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
-      else if (k > 0.85 && play && this.touching() && !this.hold) this.hit();
+      // también vale tocarlo mientras viaja, si atinas
+      if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
+      else if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
     } else if (this.mode === 'wait') {
       this.root.position.copy(this.pos);
       if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }

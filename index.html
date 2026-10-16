@@ -232,12 +232,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
-      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Se coloca a la distancia de los ojos que elijas en Ajustes → Sistema (si te cuesta enfocarlo, aléjalo). Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Ahí mismo eliges si los arcos salen con ritmo regular o irregular.</li>
       <li><strong>Plancha lateral:</strong> aguanta con la cadera arriba; cada pocos segundos sale un disparo. En cada descanso, cambia de lado.</li>
-      <li><strong>Toques:</strong> mete la cabeza por el hueco de los aros (turquesa, con una cabeza dibujada) y toca con cualquier mano las gemas (naranjas, con una mano dibujada). Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de los aros (turquesa, con una cabeza dibujada) y toca con cualquier mano las gemas (naranjas, con una mano dibujada). También valen mientras vienen de camino, si atinas. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
       <li><strong>Pistolas</strong> (sentadillas en Asalto o Enjambre, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
@@ -363,6 +363,7 @@ const SCHEMA = [
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
+  { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se coloca a esta distancia. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
@@ -579,8 +580,26 @@ function audioInit() {
   AUD.noise = makeNoiseBuf(C, 3, false);
   AUD.brown = makeNoiseBuf(C, 3, true);
   AUD.curve = makeCurve(12); AUD.curveHard = makeCurve(60);
-  applyVolume();
+  applyVolume(); loadSamples();
   return C;
+}
+/* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
+// Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado.
+const SAMPLE_NAMES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
+AUD.samples = {};
+async function loadSamples() {
+  if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
+  for (const n of SAMPLE_NAMES) for (const ext of ['mp3', 'ogg', 'wav']) {
+    try {
+      const r = await fetch(`sounds/${n}.${ext}`); if (!r.ok) continue;
+      AUD.samples[n] = await AUD.C.decodeAudioData(await r.arrayBuffer()); break;
+    } catch (e) { break; } // sin red o sin servidor (p. ej. abriendo el archivo a pelo): solo sintetizados
+  }
+}
+function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}) {
+  const b = AUD.samples && AUD.samples[name]; if (!b || !sndOK()) return false;
+  const s = AUD.C.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * rand(0.94, 1.06);
+  s.connect(sout(pos, { rev, gain, ref })); s.start(); return true;
 }
 function applyVolume() {
   if (!AUD.C) return;
@@ -713,12 +732,57 @@ const SND = {
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
   },
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
+  // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
+  bolt(pos, L = 0) {
+    if (!sndOK()) return;
+    if (playSample(L >= 2 ? 'rayo-cargado' : 'rayo', pos, { gain: 0.8 + L * 0.12, rate: 1.08 - L * 0.06 }) || (L >= 2 && playSample('rayo', pos, { gain: 1, rate: 0.85 }))) return;
+    const o = sout(pos, { rev: 0.35 + L * 0.08, gain: 0.85 + L * 0.1, ref: 2 }), hard = shaper(o, true);
+    noise(hard, { type: 'highpass', f: 700, a: 0.0005, d: 0.035, gain: 0.9 });          // chasquido
+    noise(o, { type: 'bandpass', f: 3200, q: 0.7, a: 0.001, d: 0.12, gain: 0.5 });
+    for (let i = 0; i < 16 + L * 6; i++) noise(o, { t: Math.pow(Math.random(), 1.6) * (0.25 + L * 0.08), type: 'highpass', f: rand(1800, 5000), d: rand(0.004, 0.02), gain: rand(0.15, 0.45) }); // crepitar
+    tone(hard, { type: 'sawtooth', f: 62, to: 38, a: 0.002, d: 0.22 + L * 0.06, gain: 0.22 });  // zumbido
+    tone(o, { type: 'square', f: rand(110, 130), a: 0.002, d: 0.12, gain: 0.05 });
+    noise(o, { brown: true, type: 'lowpass', f: 900, to: 90, t: 0.02, a: 0.01, d: 0.5 + L * 0.35, gain: 0.35 + L * 0.12 }); // retumbo
+  },
+  // Al llegar al blanco
+  boltHit(pos, L = 0) {
+    if (!sndOK()) return;
+    if (playSample('impacto', pos, { gain: 0.7 + L * 0.1 })) return;
+    const o = sout(pos, { rev: 0.3, gain: 0.6 + L * 0.12, ref: 2 });
+    noise(shaper(o, true), { type: 'highpass', f: 1200, d: 0.03, gain: 0.6 });
+    for (let i = 0; i < 6 + L * 3; i++) noise(o, { t: Math.random() * 0.15, type: 'highpass', f: rand(2500, 6000), d: rand(0.004, 0.012), gain: 0.25 });
+  },
+  // Tentáculos: chapoteo viscoso, gruñido gutural y chillido que sube
+  tentacle(pos, s = 1) {
+    if (!sndOK()) return;
+    if (playSample('tentaculos', pos, { gain: 1, rate: rand(0.85, 1.1), ref: 1.2 })) return;
+    const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.45, gain: 1, ref: 1.2 });
+    const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(380, T); bp.connect(o);
+    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = rand(7, 11); lg.gain.value = 260; lfo.connect(lg).connect(bp.frequency); lfo.start(T); lfo.stop(T + 1.2);
+    const src = C.createBufferSource(); src.buffer = AUD.brown; src.loop = true; src.connect(envGain(T, 0.05, 0.9, 1.0, bp)); src.start(T, Math.random() * 2); src.stop(T + 1.15); // chapoteo
+    const growl = shaper(o, true), am = C.createGain(); am.gain.value = 0.5; am.connect(growl);
+    const trem = C.createOscillator(), tg = C.createGain(); trem.frequency.value = 23; tg.gain.value = 0.45; trem.connect(tg).connect(am.gain); trem.start(T); trem.stop(T + 1.4);
+    [48, 51.5, 72].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s, T); os.frequency.linearRampToValueAtTime(f * s * 0.7, T + 1.3); os.connect(envGain(T, 0.12, 0.2, 1.15, am)); os.start(T); os.stop(T + 1.4); }); // gruñido
+    noise(o, { type: 'bandpass', f: 1800, to: 5200, q: 6, t: 0.25, a: 0.15, d: 0.6, gain: 0.18 }); // chillido
+    tone(o, { type: 'sawtooth', f: 900 * s, to: 2600 * s, t: 0.3, a: 0.2, d: 0.5, gain: 0.03 });
+    for (let i = 0; i < 8; i++) noise(o, { t: rand(0, 0.9), brown: true, f: rand(500, 1400), d: rand(0.04, 0.1), gain: 0.35 }); // gotas
+  },
+  // Caer al foso: zambullida y un coro de tentáculos que se excitan
+  horror(pos) {
+    if (!sndOK()) return;
+    SND.splash(pos);
+    if (playSample('caida-foso', pos, { gain: 1.1, ref: 1.2 })) return;
+    for (let i = 0; i < 4; i++) setTimeout(() => SND.tentacle(pos.clone().add(new V3(rand(-0.8, 0.8), 0, rand(-0.8, 0.8))), rand(0.75, 1.25)), 120 + i * rand(150, 320));
+    const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 2 });
+    noise(o, { type: 'bandpass', f: 600, to: 3800, q: 8, t: 0.4, a: 0.4, d: 1.4, gain: 0.25 }); // aullido
+    tone(shaper(o, true), { type: 'sawtooth', f: 36, to: 28, t: 0.1, a: 0.3, d: 2.0, gain: 0.25 });
+  },
   zap(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.9 });
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
-  pop(pos, big) { if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
   splash(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
@@ -1648,7 +1712,7 @@ const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshB
 poolDisc.rotation.x = -Math.PI / 2; poolDisc.position.y = 0.004; poolDisc.renderOrder = 1; pool.add(poolDisc);
 const poolRimMat = new THREE.MeshBasicMaterial({ color: 0x2cff9a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 const poolRim = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.0, 64), poolRimMat); poolRim.rotation.x = -Math.PI / 2; poolRim.position.y = 0.006; pool.add(poolRim);
-const POOL = { rx: 0.8, rz: 0.8, tents: [], eyes: [], lungeT: 5, grabT: 0, bubbleT: 0 };
+const POOL = { rx: 0.8, rz: 0.8, tents: [], eyes: [], lungeT: 5, grabT: 0, bubbleT: 0, excite: 0, ph: 0 };
 const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
 // Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
@@ -1671,9 +1735,9 @@ function ensureTentacles() {
 }
 const _pt2 = new V3();
 // Algo que pasa en el charco: un tentáculo se lanza a por tus pies, o todos te agarran si caes
-function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.hiss(T.root.getWorldPosition(_pt2), 1.6); } }
+function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15)); } }
 function poolGrab(at) {
-  POOL.grabT = 1.6; SND.splash(at); fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
+  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
   POOL.tents.forEach(T => { T.lungeV = 1; });
 }
 function updatePool(dt, t) {
@@ -1684,7 +1748,10 @@ function updatePool(dt, t) {
   pool.position.set(e.x, 0, e.z); pool.rotation.y = e.yaw;
   poolRimMat.opacity = 0.35 + 0.2 * Math.sin(t * 2.3) + POOL.grabT * 0.3;
   const active = state === 'play';
-  if (active) { POOL.lungeT -= dt; if (POOL.lungeT <= 0) { POOL.lungeT = settings.exercise === 'hang' ? rand(2.5, 6) : rand(5, 11); poolLunge(); } }
+  // excitación tras una caída: se agitan más rápido y más fuerte, y embisten más a menudo
+  POOL.excite = Math.max(0, POOL.excite - dt); const ex = Math.min(1, POOL.excite / 3);
+  POOL.ph += dt * (1 + 2.8 * ex);
+  if (active || ex > 0) { POOL.lungeT -= dt * (1 + 3 * ex); if (POOL.lungeT <= 0) { POOL.lungeT = settings.exercise === 'hang' ? rand(2.5, 6) : rand(5, 11); poolLunge(); } }
   if (POOL.grabT > 0) POOL.grabT = Math.max(0, POOL.grabT - dt);
   // burbujas que revientan en la superficie
   POOL.bubbleT -= dt;
@@ -1699,9 +1766,9 @@ function updatePool(dt, t) {
     const rest = Math.atan2(-T.root.position.x, -T.root.position.z); T.root.rotation.y = rest + wrapAng(Math.atan2(dx, dz) - rest) * k;
     T.root.scale.setScalar(T.s * (1 + k * 0.35));
     for (let i = 0; i < n; i++) {
-      const b = T.B[i], amp = 0.12 + i * 0.05, w = Math.sin(t * 1.6 + T.ph - i * 0.55);
+      const b = T.B[i], amp = (0.12 + i * 0.05) * (1 + 0.9 * ex), P = POOL.ph, w = Math.sin(P * 1.6 + T.ph - i * 0.55);
       b.rotation.x = lerp((i === 0 ? 0.35 : 0.1) + amp * w, i === 0 ? Math.atan2(reach, 0.5) : 0.06 + 0.12 * w, k);
-      b.rotation.z = amp * 0.6 * Math.sin(t * 1.25 + T.ph * 1.7 - i * 0.5) * (1 - k * 0.6);
+      b.rotation.z = amp * 0.6 * Math.sin(P * 1.25 + T.ph * 1.7 - i * 0.5) * (1 - k * 0.6) + ex * 0.08 * Math.sin(P * 9 + i);
     }
   }
 }
@@ -2367,7 +2434,7 @@ function boltStart(from, to, L, scale = 1, miss = false) {
 function boltArrive(b) {
   b.arrive();
   const s = b.scale, L = b.L, c = b.col;
-  if (!b.miss) { fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
+  if (!b.miss) { SND.boltHit(b.to, L); fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
   else fx.glow(b.to, c, 0.15 * s, 0.12);
 }
 function boltsClear() { BOLTS.forEach(b => b.end()); boltLight.intensity = 0; KB.w = 0; keyFlash(); }
@@ -2663,21 +2730,26 @@ function updateWatch(dt) {
 }
 // Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
 // derecho para pulsar y se recoge al bajar el brazo.
-const WMS = 0.46; // escala del panel: 0,76 m de ancho en el atril → 35 cm en la muñeca
-const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4() };
+const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
+// escala a la distancia elegida: más lejos, más grande, para que se lea igual
+const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
 const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
 function wristPose(group, H, k = 1) {
-  const h = hands.left, s = WMS * (1 - Math.pow(1 - WM.e, 3));
+  const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
   if (h.ok && !WM.near) {
-    // encima de la muñeca, un poco hacia la cara, de cara a ti; la parte de abajo nace en la muñeca
-    _wh.copy(head.p).sub(h.wrist); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.set(0, 0, 1); _wh.normalize();
-    _wmt.copy(h.wrist).addScaledVector(_wh, 0.05); _wmt.y += 0.05 + H * WMS / 2;
+    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos, con el borde de abajo
+    // a la altura de la muñeca y de cara a ti (demasiado cerca obliga a bizquear)
+    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.copy(fwdH()); _wh.normalize();
+    _wmt.copy(head.p).addScaledVector(_wh, Math.max(settings.wristDist / 100, Math.hypot(h.wrist.x - head.p.x, h.wrist.z - head.p.z)));
+    _wmt.y = h.wrist.y + 0.03 + H * S / 2;
     _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
     if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+    WM.from.copy(h.wrist);
   }
-  // al crecer, el centro sube desde la muñeca
-  group.position.copy(WM.pos).add(_wml.set(0, -(H * WMS / 2) * (1 - s / WMS), 0).applyQuaternion(WM.q));
+  // al salir, viaja desde la muñeca hasta su sitio mientras crece
+  group.position.lerpVectors(WM.from, WM.pos, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
 }
 function updateWristMenu(dt) {
@@ -3594,7 +3666,7 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
   projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
-  SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
+  SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 // Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
@@ -3603,7 +3675,7 @@ function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
   projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
-  SND.laser(origin); fx.muzzle(origin, col);
+  SND.bolt(origin, L); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
@@ -3922,7 +3994,9 @@ function gunLoad(perfect) {
   GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
   for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
 }
-function gunMuzzle(side, out = new V3()) { const h = hands[side]; return out.copy(h.rayO).addScaledVector(h.rayD, h.isHand ? 0.04 : 0.13); }
+// Boca del cañón: con mando, la del bláster (que se agarra por la empuñadura y apunta como el rayo del mando)
+const GUN_MUZZLE = new V3(0, 0.095, -0.44);
+function gunMuzzle(side, out = new V3()) { const h = hands[side]; return h.isHand ? out.copy(h.rayO).addScaledVector(h.rayD, 0.04) : out.copy(GUN_MUZZLE).applyQuaternion(h.rayQ).add(h.wrist); }
 function gunFire(src) {
   if (!['play', 'rest', 'ready'].includes(state)) return;
   if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
@@ -3930,18 +4004,26 @@ function gunFire(src) {
   if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
   fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
 }
-// Modelo del bláster (se sostiene con el mando; apunta por -Z)
+// Modelo del bláster: el origen es donde la mano agarra el mando; la empuñadura gruesa envuelve el mango del
+// mando y el cuerpo tapa su cabeza, así que en realidad mixta casi no se ve el mando. Apunta por -Z.
 const blasterGlow = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
 function makeBlaster() {
   const k = new Kit();
-  k.add('steel', G.box(0.036, 0.05, 0.13, 0.2), C.gun, 0, 0.012, -0.03);            // cuerpo
-  k.add('steel', G.box(0.03, 0.09, 0.034, 0.2), C.dark, 0, -0.035, 0.03, -0.25, 0, 0); // empuñadura
-  k.add('steel', G.cyl(0.013, 0.015, 0.09, 12, 0.2), C.steel, 0, 0.02, -0.13, Math.PI / 2, 0, 0); // cañón
-  k.add('steel', G.cyl(0.019, 0.019, 0.02, 12, 0.2), C.dark, 0, 0.02, -0.17, Math.PI / 2, 0, 0);
-  k.add('steel', G.box(0.012, 0.02, 0.06, 0.2), C.steel, 0, 0.044, -0.04);           // mira
+  k.add('steel', G.box(0.054, 0.16, 0.072, 0.2), C.dark, 0, -0.03, 0.01, -0.28, 0, 0);   // empuñadura (tapa el mango)
+  k.add('steel', G.box(0.06, 0.02, 0.08, 0.2), C.gun, 0, -0.105, 0.035, -0.28, 0, 0);     // pie de la empuñadura
+  k.add('steel', G.box(0.074, 0.09, 0.27, 0.2), C.gun, 0, 0.085, -0.06);                  // cuerpo (tapa la cabeza del mando)
+  k.add('steel', G.box(0.064, 0.075, 0.05, 0.2), C.dark, 0, 0.08, 0.1);                    // culata
+  k.add('steel', G.box(0.014, 0.012, 0.075, 0.2), C.steel, 0, 0.02, -0.08);                // guardamonte
+  k.add('steel', G.box(0.012, 0.03, 0.012, 0.2), C.steel, 0, 0.005, -0.045, 0.3, 0, 0);    // gatillo
+  k.add('steel', G.cyl(0.025, 0.025, 0.2, 14, 0.2), C.steel, 0, 0.095, -0.29, Math.PI / 2, 0, 0);  // cañón
+  k.add('steel', G.cyl(0.033, 0.03, 0.05, 14, 0.2), C.dark, 0, 0.095, -0.41, Math.PI / 2, 0, 0);   // bocacha
+  k.add('steel', G.box(0.016, 0.022, 0.15, 0.2), C.steel, 0, 0.14, -0.1);                  // mira
+  for (const s of [-1, 1]) k.add('steel', G.box(0.01, 0.05, 0.16, 0.2), C.steel, s * 0.04, 0.085, -0.08); // aletas
   const g = k.build({ steel: gloveMat }, { cast: true });
-  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.018), blasterGlow.clone()); m.position.set(0, 0.012, 0.0 - i * 0.026); g.add(m); return m; });
-  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 4, 16), blasterGlow); tip.position.set(0, 0.02, -0.181); g.add(tip);
+  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.014, 0.024), blasterGlow.clone()); m.position.set(0, 0.134, 0.075 - i * 0.03); g.add(m); return m; });
+  for (const z of [-0.23, -0.29, -0.35]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.027, 0.004, 4, 18), blasterGlow); r.position.set(0, 0.095, z); g.add(r); }
+  for (const s of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.012, 0.2), blasterGlow); st.position.set(s * 0.0465, 0.085, -0.07); g.add(st); }
+  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.005, 4, 18), blasterGlow); tip.position.set(0, 0.095, -0.437); g.add(tip);
   g.visible = false; g.kick = 0; scene.add(g); return g;
 }
 const BLASTERS = { left: makeBlaster(), right: makeBlaster() };
@@ -3954,7 +4036,7 @@ function updatePistol(dt) {
     b.visible = on && h.ok && !h.isHand && h.rayOk;
     if (b.visible) {
       b.kick = Math.max(0, b.kick - dt * 8);
-      b.position.copy(h.rayO).addScaledVector(h.rayD, 0.03 + b.kick * 0.02); b.quaternion.copy(h.rayQ); b.rotateX(-b.kick * 0.25);
+      b.position.copy(h.wrist).addScaledVector(h.rayD, b.kick * 0.025); b.quaternion.copy(h.rayQ); b.rotateX(b.kick * 0.22); // retroceso: la boca sube
       b.cells.forEach((c, i) => { c.material.color.setHex(i < lit ? (GUN.perf[Math.min(GUN.perf.length - 1, i * per)] ? 0xffd166 : 0x3cf0c6) : 0x2a2440); });
     }
     // gatillo (o pellizco) al apretar
@@ -4246,7 +4328,7 @@ function gameStep(dt, t) {
 /* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
 // La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
 // que espera en el punto más alto del recorrido. Bajo la barra de dominadas hay un charco con tentáculos: si te sueltas, caes.
-const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, contact: false, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
 function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
@@ -4354,9 +4436,10 @@ function barDetect(t, dt) {
       barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 });
     } else if (y < BAR.ref + 0.05) { if (BAR.max - BAR.ref > req * 0.55) onPartial('¡Más arriba!'); BAR.det = 'down'; }
   } else if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) BAR.det = 'down'; // rearma al bajar casi todo el recorrido
+  if (BAR.det === 'down') BAR.contact = false;
 }
 function barRep(opts) {
-  if (state !== 'play' || settings.exercise === 'hang') return;
+  if (state !== 'play' || settings.exercise === 'hang' || BAR.contact) return; // ya contó al reventarlo con la cabeza
   registerRep(opts.perfect, false);
   if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -4370,8 +4453,28 @@ function barRep(opts) {
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
-const TGT = { bubble: { r: 0.085 }, bigbubble: { r: 0.15, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
+const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
+// Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
+// con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
+const BUBBLE_VS = `varying vec3 vN; varying vec3 vV; varying vec3 vO;
+void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vO = normal; gl_Position = projectionMatrix * mv; }`;
+const BUBBLE_FS = `uniform float uTime; uniform float uPh; uniform float uOpacity;
+varying vec3 vN; varying vec3 vV; varying vec3 vO;
+void main() {
+  vec3 n = normalize(vN), v = normalize(vV);
+  float fr = pow(1.0 - abs(dot(n, v)), 1.5);
+  float swirl = sin(vO.y * 6.0 + uTime * 1.3 + uPh) * 0.25 + sin(vO.x * 5.0 - uTime * 0.9 + uPh * 2.0) * 0.2;
+  float h = fr * 1.7 + swirl + uTime * 0.08 + uPh;
+  vec3 film = 0.55 + 0.45 * cos(6.28318 * (h + vec3(0.0, 0.33, 0.67)));
+  vec3 r = reflect(-v, n);
+  float spec = pow(max(dot(r, normalize(vec3(-0.4, 0.8, 0.45))), 0.0), 60.0) * 1.8 + pow(max(dot(r, normalize(vec3(0.6, 0.2, 0.75))), 0.0), 22.0) * 0.45;
+  vec3 col = film * (0.5 + 1.4 * fr) + vec3(spec);
+  gl_FragColor = vec4(col, clamp(0.25 + 0.72 * fr + spec, 0.0, 1.0) * uOpacity);
+}`;
+const bubbleMat = () => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uPh: { value: rand(0, 6) }, uOpacity: { value: 1 } }, vertexShader: BUBBLE_VS, fragmentShader: BUBBLE_FS, transparent: true, depthWrite: false });
+// Gotas de colores al reventar
+const BUBBLE_SPLASH = [[1, 0.45, 0.85], [0.45, 0.85, 1], [1, 0.95, 0.45], [0.55, 1, 0.6]];
 // línea que baja del objetivo hacia tu cara: indica dónde está aunque quede por encima de la vista
 const guideGeo = G.cylRaw(0.003, 0.003, 0.4, 6); guideGeo.translate(0, -0.2, 0);
 const guideMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
@@ -4396,9 +4499,9 @@ class HeadTarget {
     Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
     if (this.bubble) {
       this.root = new THREE.Group();
-      this.mat = std({ color: 0x9fffe8, transparent: true, opacity: 0.32, roughness: 0.04, metalness: 0.2, envMapIntensity: 2.5, depthWrite: false });
+      this.mat = bubbleMat();
       this.shell = new THREE.Mesh(bubbleGeo, this.mat); this.shell.scale.setScalar(K.r); this.root.add(this.shell);
-      this.core = glowSprite(0x3cf0c6, K.r * (K.boss ? 1.0 : 1.5), 0.7); this.root.add(this.core);
+      this.core = glowSprite(0xffffff, K.r * (K.boss ? 1.0 : 1.3), 0.25); this.root.add(this.core);
       if (K.boss) { // un ojo atrapado dentro que te sigue
         this.eye = new THREE.Group(); this.root.add(this.eye);
         const ball = new THREE.Mesh(bubbleGeo, eyeWhite); ball.scale.setScalar(0.055); this.eye.add(ball);
@@ -4432,6 +4535,13 @@ class HeadTarget {
   update(dt, t) {
     this.t += dt; const play = state === 'play', idx = this.slotIndex();
     if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot);
+    // si la cabeza lo alcanza mientras subes, revienta aunque no haya llegado a su sitio y esa subida cuenta como
+    // repetición. Solo subiendo: colgado o bajando, un roce no regala nada
+    if (play && this.alive && (this.mode === 'approach' || this.mode === 'wait') && !BAR.contact && BAR.det === 'rising' && this.center(_bw).distanceTo(head.p) < this.radius + 0.09) {
+      // cuenta como la repetición de esta subida (si era el último, la oleada acaba ya y la subida no llegaría a contar)
+      BAR.contact = true; registerRep(false, false); if (combo % 10 !== 0) say('¡Bien!', '#ffffff', 0.7, false);
+      this.onHit(1, false); if (!this.alive) { onKilled(this); return; } // el jefe necesita varios cabezazos
+    }
     if (this.mode === 'approach') {
       if (play || state === 'mount') {
         const to = tmpA.subVectors(this.slot, this.pos), d = to.length();
@@ -4448,7 +4558,7 @@ class HeadTarget {
         hurtPlayer(this); this.alive = false; this.dispose(); return;
       }
     } else if (this.mode === 'leave') {
-      const k = Math.min(1, this.t / 1.1); this.pos.y += dt * 0.5; this.mat.opacity = 0.32 * (1 - k); this.core.material.opacity = 0.7 * (1 - k);
+      const k = Math.min(1, this.t / 1.1); this.pos.y += dt * 0.5; this.mat.uniforms.uOpacity.value = 1 - k; this.core.material.opacity = 0.25 * (1 - k);
       if (k >= 1) { SND.pop(this.center(new V3()), false); this.alive = false; this.dispose(); return; }
     }
     // aspecto
@@ -4458,7 +4568,7 @@ class HeadTarget {
     if (this.bubble) {
       const w = Math.sin(t * 7 + this.ph) * 0.06, r = this.K.r * (1 - this.flick * 0.8);
       this.shell.scale.set(r * (1 + w), r * (1 - w), r * (1 + w * 0.5));
-      const h = t * 0.4 + this.ph; this.mat.color.setRGB(0.6 + 0.4 * Math.sin(h), 0.8 + 0.2 * Math.sin(h + 2.1), 0.75 + 0.25 * Math.sin(h + 4.2));
+      this.mat.uniforms.uTime.value = t;
       if (this.eye) this.eye.lookAt(head.p);
     } else {
       const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
@@ -4479,7 +4589,10 @@ class HeadTarget {
   }
   pop() {
     this.alive = false; const c = this.center(new V3()), big = !!this.K.boss;
-    if (this.bubble) { SND.pop(c, big); fx.droplets(c, big ? 40 : 22, [0.45, 1, 0.85], big ? 2.2 : 1.6, big ? 0.04 : 0.03); fx.glow(c, [0.4, 1, 0.9], big ? 0.8 : 0.45, 0.15); fx.sparks(c, 10, [0.5, 1, 0.9], 1.2, 0.02); }
+    if (this.bubble) { // revienta salpicando gotas irisadas y un destello de película
+      SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
+      fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
+    }
     else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
     this.dispose();
@@ -4729,8 +4842,9 @@ class TouchTarget {
     if (this.mode === 'approach') {
       const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
       this.root.position.lerpVectors(this.from, this.pos, e);
-      if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
-      else if (k > 0.85 && play && this.touching() && !this.hold) this.hit();
+      // también vale tocarlo mientras viaja, si atinas
+      if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
+      else if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
     } else if (this.mode === 'wait') {
       this.root.position.copy(this.pos);
       if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
@@ -4930,6 +5044,7 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  if (PV.handAt) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
   // Toques: G lleva la mano derecha a la gema que toca
   if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(g); h.tip.copy(g); } }
   // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
@@ -5040,7 +5155,8 @@ async function startXR(ar) {
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
-    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
+    // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
+    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn()) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
   } catch (err) {

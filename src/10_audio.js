@@ -35,8 +35,26 @@ function audioInit() {
   AUD.noise = makeNoiseBuf(C, 3, false);
   AUD.brown = makeNoiseBuf(C, 3, true);
   AUD.curve = makeCurve(12); AUD.curveHard = makeCurve(60);
-  applyVolume();
+  applyVolume(); loadSamples();
   return C;
+}
+/* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
+// Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado.
+const SAMPLE_NAMES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
+AUD.samples = {};
+async function loadSamples() {
+  if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
+  for (const n of SAMPLE_NAMES) for (const ext of ['mp3', 'ogg', 'wav']) {
+    try {
+      const r = await fetch(`sounds/${n}.${ext}`); if (!r.ok) continue;
+      AUD.samples[n] = await AUD.C.decodeAudioData(await r.arrayBuffer()); break;
+    } catch (e) { break; } // sin red o sin servidor (p. ej. abriendo el archivo a pelo): solo sintetizados
+  }
+}
+function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}) {
+  const b = AUD.samples && AUD.samples[name]; if (!b || !sndOK()) return false;
+  const s = AUD.C.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * rand(0.94, 1.06);
+  s.connect(sout(pos, { rev, gain, ref })); s.start(); return true;
 }
 function applyVolume() {
   if (!AUD.C) return;
@@ -169,12 +187,57 @@ const SND = {
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
   },
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
+  // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
+  bolt(pos, L = 0) {
+    if (!sndOK()) return;
+    if (playSample(L >= 2 ? 'rayo-cargado' : 'rayo', pos, { gain: 0.8 + L * 0.12, rate: 1.08 - L * 0.06 }) || (L >= 2 && playSample('rayo', pos, { gain: 1, rate: 0.85 }))) return;
+    const o = sout(pos, { rev: 0.35 + L * 0.08, gain: 0.85 + L * 0.1, ref: 2 }), hard = shaper(o, true);
+    noise(hard, { type: 'highpass', f: 700, a: 0.0005, d: 0.035, gain: 0.9 });          // chasquido
+    noise(o, { type: 'bandpass', f: 3200, q: 0.7, a: 0.001, d: 0.12, gain: 0.5 });
+    for (let i = 0; i < 16 + L * 6; i++) noise(o, { t: Math.pow(Math.random(), 1.6) * (0.25 + L * 0.08), type: 'highpass', f: rand(1800, 5000), d: rand(0.004, 0.02), gain: rand(0.15, 0.45) }); // crepitar
+    tone(hard, { type: 'sawtooth', f: 62, to: 38, a: 0.002, d: 0.22 + L * 0.06, gain: 0.22 });  // zumbido
+    tone(o, { type: 'square', f: rand(110, 130), a: 0.002, d: 0.12, gain: 0.05 });
+    noise(o, { brown: true, type: 'lowpass', f: 900, to: 90, t: 0.02, a: 0.01, d: 0.5 + L * 0.35, gain: 0.35 + L * 0.12 }); // retumbo
+  },
+  // Al llegar al blanco
+  boltHit(pos, L = 0) {
+    if (!sndOK()) return;
+    if (playSample('impacto', pos, { gain: 0.7 + L * 0.1 })) return;
+    const o = sout(pos, { rev: 0.3, gain: 0.6 + L * 0.12, ref: 2 });
+    noise(shaper(o, true), { type: 'highpass', f: 1200, d: 0.03, gain: 0.6 });
+    for (let i = 0; i < 6 + L * 3; i++) noise(o, { t: Math.random() * 0.15, type: 'highpass', f: rand(2500, 6000), d: rand(0.004, 0.012), gain: 0.25 });
+  },
+  // Tentáculos: chapoteo viscoso, gruñido gutural y chillido que sube
+  tentacle(pos, s = 1) {
+    if (!sndOK()) return;
+    if (playSample('tentaculos', pos, { gain: 1, rate: rand(0.85, 1.1), ref: 1.2 })) return;
+    const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.45, gain: 1, ref: 1.2 });
+    const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(380, T); bp.connect(o);
+    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = rand(7, 11); lg.gain.value = 260; lfo.connect(lg).connect(bp.frequency); lfo.start(T); lfo.stop(T + 1.2);
+    const src = C.createBufferSource(); src.buffer = AUD.brown; src.loop = true; src.connect(envGain(T, 0.05, 0.9, 1.0, bp)); src.start(T, Math.random() * 2); src.stop(T + 1.15); // chapoteo
+    const growl = shaper(o, true), am = C.createGain(); am.gain.value = 0.5; am.connect(growl);
+    const trem = C.createOscillator(), tg = C.createGain(); trem.frequency.value = 23; tg.gain.value = 0.45; trem.connect(tg).connect(am.gain); trem.start(T); trem.stop(T + 1.4);
+    [48, 51.5, 72].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s, T); os.frequency.linearRampToValueAtTime(f * s * 0.7, T + 1.3); os.connect(envGain(T, 0.12, 0.2, 1.15, am)); os.start(T); os.stop(T + 1.4); }); // gruñido
+    noise(o, { type: 'bandpass', f: 1800, to: 5200, q: 6, t: 0.25, a: 0.15, d: 0.6, gain: 0.18 }); // chillido
+    tone(o, { type: 'sawtooth', f: 900 * s, to: 2600 * s, t: 0.3, a: 0.2, d: 0.5, gain: 0.03 });
+    for (let i = 0; i < 8; i++) noise(o, { t: rand(0, 0.9), brown: true, f: rand(500, 1400), d: rand(0.04, 0.1), gain: 0.35 }); // gotas
+  },
+  // Caer al foso: zambullida y un coro de tentáculos que se excitan
+  horror(pos) {
+    if (!sndOK()) return;
+    SND.splash(pos);
+    if (playSample('caida-foso', pos, { gain: 1.1, ref: 1.2 })) return;
+    for (let i = 0; i < 4; i++) setTimeout(() => SND.tentacle(pos.clone().add(new V3(rand(-0.8, 0.8), 0, rand(-0.8, 0.8))), rand(0.75, 1.25)), 120 + i * rand(150, 320));
+    const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 2 });
+    noise(o, { type: 'bandpass', f: 600, to: 3800, q: 8, t: 0.4, a: 0.4, d: 1.4, gain: 0.25 }); // aullido
+    tone(shaper(o, true), { type: 'sawtooth', f: 36, to: 28, t: 0.1, a: 0.3, d: 2.0, gain: 0.25 });
+  },
   zap(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.9 });
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
-  pop(pos, big) { if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
   splash(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
