@@ -97,6 +97,7 @@ const SCHEMA = [
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
+  { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se coloca a esta distancia. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },

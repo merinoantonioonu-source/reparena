@@ -111,7 +111,7 @@ function boltStart(from, to, L, scale = 1, miss = false) {
 function boltArrive(b) {
   b.arrive();
   const s = b.scale, L = b.L, c = b.col;
-  if (!b.miss) { fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
+  if (!b.miss) { SND.boltHit(b.to, L); fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
   else fx.glow(b.to, c, 0.15 * s, 0.12);
 }
 function boltsClear() { BOLTS.forEach(b => b.end()); boltLight.intensity = 0; KB.w = 0; keyFlash(); }

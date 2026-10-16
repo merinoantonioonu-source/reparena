@@ -44,7 +44,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
@@ -158,6 +158,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('   movimientos:', [...parts].join(' '));
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+  // se pueden tocar mientras viajan: la cabeza va a buscar el aro (o la mano la gema) a mitad de camino
+  const midway = new Set();
+  await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
+    const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'approach' && RA.TCH.clock > o.spawnT + 1.5);
+    if (x) { const w = x.center(new THREE.Vector3()); if (x.part === 'head') { RA.camera.position.set(w.x, w.y, w.z); RA.PV.y = w.y; RA.PV.home = null; } else RA.PV.handAt = w; if (x.arriveAt - RA.TCH.clock > 1) midway.add(x); }
+    else RA.PV.handAt = null;
+  }, 120, s => s.reps < 4 ? `tocando a mitad de camino solo cuenta ${s.reps}` : midway.size < 4 ? 'no se tocaron a mitad de camino' : '');
+  RA.PV.handAt = null;
   await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
   await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
@@ -391,12 +399,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 
   console.warn = origWarn;
   // ---- Menú en la muñeca izquierda: sale al mirarla, se pulsa con el índice derecho y se recoge ----
-  RA.setSetting('menuWhere', 'wrist'); RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
-  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(40, 16, xrFrame);
+  RA.setSetting('menuWhere', 'wrist'); RA.setSetting('wristDist', 55); RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); for (let i = 0; i < 8; i++) { frame(5, 16, xrFrame); if (process.env.DBG) log('WM', RA.WM.e.toFixed(2), RA.WM.on, RA.WM.near, !!RA.menu, RA.settings.wristDist, RA.menu && RA.menu.group.scale.x, RA.menu && RA.menu.wrist); }
   {
-    const m = RA.menu, g = m.group, lw = new THREE.Vector3(-0.2, 1.25, -0.3);
-    log('wrist menu: on wrist', m.wrist, 'visible', g.visible, 'scale', g.scale.x.toFixed(2), 'dist to wrist', g.position.distanceTo(lw).toFixed(2), 'stand', RA.stand.visible);
-    if (!m.wrist || !g.visible || Math.abs(g.scale.x - 0.46) > 0.01 || g.position.distanceTo(lw) > 0.45 || RA.stand.visible) errors.push('el menú no sale de la muñeca izquierda');
+    const m = RA.menu, g = m.group, eye = new THREE.Vector3(0, 1.7, 0), hd = Math.hypot(g.position.x, g.position.z);
+    log('wrist menu: on wrist', m.wrist, 'visible', g.visible, 'scale', g.scale.x.toFixed(2), 'horizontal distance to eyes', hd.toFixed(2), 'stand', RA.stand.visible);
+    if (!m.wrist || !g.visible || Math.abs(g.scale.x - 0.46 * 55 / 45) > 0.01 || Math.abs(hd - 0.55) > 0.03 || RA.stand.visible) errors.push('el menú de muñeca no queda a la distancia elegida');
+    RA.setSetting('wristDist', 75); frame(60, 16, xrFrame); const hd2 = Math.hypot(RA.menu.group.position.x, RA.menu.group.position.z);
+    log('wrist menu at 75 cm:', hd2.toFixed(2)); if (Math.abs(hd2 - 0.75) > 0.03) errors.push('cambiar la distancia del menú de muñeca no lo aleja'); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
     const w = RA.activeWidgets().find(w => w.label === 'Más ajustes'), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
     w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new THREE.Vector3(0, 0, 1))).sub(wp).normalize();
     const before = g.position.clone();
@@ -418,6 +428,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   XRS.controllers = true; XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
   RA.beginRun(); frame(250, 16, xrFrame); log('pistol XR state', RA.state, 'blasters', RA.BLASTERS.left.visible, RA.BLASTERS.right.visible, 'palm hidden', !RA.gloves.left.palm.visible);
   if (!RA.BLASTERS.left.visible || !RA.BLASTERS.right.visible || RA.gloves.left.palm.visible) errors.push('pistolas XR: no se ven los blásters en los mandos');
+  { const st0 = RA.state; (RA.renderer.xr.getSession().listeners.selectstart || []).forEach(f => f({ inputSource: { handedness: 'right' } })); frame(2, 16, xrFrame);
+    log('pistol XR: trigger (selectstart) state', st0, '→', RA.state); if (RA.state === 'paused') errors.push('pistolas XR: el gatillo abre el menú en vez de solo disparar'); }
   for (let i = 0; i < 2400 && RA.state !== 'end'; i++) { const ph = i % 160; XRS.headY = ph < 70 ? 1.38 : 1.7; XRS.trig = ph > 100 && ph < 104 ? 'right' : ph > 120 && ph < 124 ? 'left' : null; frame(1, 16, xrFrame); }
   log('pistol XR: shots', RA.stats.shots, 'hits', RA.stats.hits, 'kills', RA.stats.kills, 'reps', RA.stats.reps, 'state', RA.state);
   if (RA.stats.shots < 4) errors.push('pistolas XR: el gatillo de los mandos no dispara');

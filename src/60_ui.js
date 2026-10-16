@@ -264,21 +264,26 @@ function updateWatch(dt) {
 }
 // Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
 // derecho para pulsar y se recoge al bajar el brazo.
-const WMS = 0.46; // escala del panel: 0,76 m de ancho en el atril → 35 cm en la muñeca
-const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4() };
+const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
+// escala a la distancia elegida: más lejos, más grande, para que se lea igual
+const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
 const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
 function wristPose(group, H, k = 1) {
-  const h = hands.left, s = WMS * (1 - Math.pow(1 - WM.e, 3));
+  const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
   if (h.ok && !WM.near) {
-    // encima de la muñeca, un poco hacia la cara, de cara a ti; la parte de abajo nace en la muñeca
-    _wh.copy(head.p).sub(h.wrist); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.set(0, 0, 1); _wh.normalize();
-    _wmt.copy(h.wrist).addScaledVector(_wh, 0.05); _wmt.y += 0.05 + H * WMS / 2;
+    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos, con el borde de abajo
+    // a la altura de la muñeca y de cara a ti (demasiado cerca obliga a bizquear)
+    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.copy(fwdH()); _wh.normalize();
+    _wmt.copy(head.p).addScaledVector(_wh, Math.max(settings.wristDist / 100, Math.hypot(h.wrist.x - head.p.x, h.wrist.z - head.p.z)));
+    _wmt.y = h.wrist.y + 0.03 + H * S / 2;
     _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
     if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+    WM.from.copy(h.wrist);
   }
-  // al crecer, el centro sube desde la muñeca
-  group.position.copy(WM.pos).add(_wml.set(0, -(H * WMS / 2) * (1 - s / WMS), 0).applyQuaternion(WM.q));
+  // al salir, viaja desde la muñeca hasta su sitio mientras crece
+  group.position.lerpVectors(WM.from, WM.pos, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
 }
 function updateWristMenu(dt) {

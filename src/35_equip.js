@@ -131,7 +131,7 @@ const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshB
 poolDisc.rotation.x = -Math.PI / 2; poolDisc.position.y = 0.004; poolDisc.renderOrder = 1; pool.add(poolDisc);
 const poolRimMat = new THREE.MeshBasicMaterial({ color: 0x2cff9a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 const poolRim = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.0, 64), poolRimMat); poolRim.rotation.x = -Math.PI / 2; poolRim.position.y = 0.006; pool.add(poolRim);
-const POOL = { rx: 0.8, rz: 0.8, tents: [], eyes: [], lungeT: 5, grabT: 0, bubbleT: 0 };
+const POOL = { rx: 0.8, rz: 0.8, tents: [], eyes: [], lungeT: 5, grabT: 0, bubbleT: 0, excite: 0, ph: 0 };
 const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
 // Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
@@ -154,9 +154,9 @@ function ensureTentacles() {
 }
 const _pt2 = new V3();
 // Algo que pasa en el charco: un tentáculo se lanza a por tus pies, o todos te agarran si caes
-function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.hiss(T.root.getWorldPosition(_pt2), 1.6); } }
+function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15)); } }
 function poolGrab(at) {
-  POOL.grabT = 1.6; SND.splash(at); fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
+  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
   POOL.tents.forEach(T => { T.lungeV = 1; });
 }
 function updatePool(dt, t) {
@@ -167,7 +167,10 @@ function updatePool(dt, t) {
   pool.position.set(e.x, 0, e.z); pool.rotation.y = e.yaw;
   poolRimMat.opacity = 0.35 + 0.2 * Math.sin(t * 2.3) + POOL.grabT * 0.3;
   const active = state === 'play';
-  if (active) { POOL.lungeT -= dt; if (POOL.lungeT <= 0) { POOL.lungeT = settings.exercise === 'hang' ? rand(2.5, 6) : rand(5, 11); poolLunge(); } }
+  // excitación tras una caída: se agitan más rápido y más fuerte, y embisten más a menudo
+  POOL.excite = Math.max(0, POOL.excite - dt); const ex = Math.min(1, POOL.excite / 3);
+  POOL.ph += dt * (1 + 2.8 * ex);
+  if (active || ex > 0) { POOL.lungeT -= dt * (1 + 3 * ex); if (POOL.lungeT <= 0) { POOL.lungeT = settings.exercise === 'hang' ? rand(2.5, 6) : rand(5, 11); poolLunge(); } }
   if (POOL.grabT > 0) POOL.grabT = Math.max(0, POOL.grabT - dt);
   // burbujas que revientan en la superficie
   POOL.bubbleT -= dt;
@@ -182,9 +185,9 @@ function updatePool(dt, t) {
     const rest = Math.atan2(-T.root.position.x, -T.root.position.z); T.root.rotation.y = rest + wrapAng(Math.atan2(dx, dz) - rest) * k;
     T.root.scale.setScalar(T.s * (1 + k * 0.35));
     for (let i = 0; i < n; i++) {
-      const b = T.B[i], amp = 0.12 + i * 0.05, w = Math.sin(t * 1.6 + T.ph - i * 0.55);
+      const b = T.B[i], amp = (0.12 + i * 0.05) * (1 + 0.9 * ex), P = POOL.ph, w = Math.sin(P * 1.6 + T.ph - i * 0.55);
       b.rotation.x = lerp((i === 0 ? 0.35 : 0.1) + amp * w, i === 0 ? Math.atan2(reach, 0.5) : 0.06 + 0.12 * w, k);
-      b.rotation.z = amp * 0.6 * Math.sin(t * 1.25 + T.ph * 1.7 - i * 0.5) * (1 - k * 0.6);
+      b.rotation.z = amp * 0.6 * Math.sin(P * 1.25 + T.ph * 1.7 - i * 0.5) * (1 - k * 0.6) + ex * 0.08 * Math.sin(P * 9 + i);
     }
   }
 }

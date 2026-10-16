@@ -2,7 +2,7 @@
 /* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
 // La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
 // que espera en el punto más alto del recorrido. Bajo la barra de dominadas hay un charco con tentáculos: si te sueltas, caes.
-const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, contact: false, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
 function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
@@ -110,9 +110,10 @@ function barDetect(t, dt) {
       barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 });
     } else if (y < BAR.ref + 0.05) { if (BAR.max - BAR.ref > req * 0.55) onPartial('¡Más arriba!'); BAR.det = 'down'; }
   } else if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) BAR.det = 'down'; // rearma al bajar casi todo el recorrido
+  if (BAR.det === 'down') BAR.contact = false;
 }
 function barRep(opts) {
-  if (state !== 'play' || settings.exercise === 'hang') return;
+  if (state !== 'play' || settings.exercise === 'hang' || BAR.contact) return; // ya contó al reventarlo con la cabeza
   registerRep(opts.perfect, false);
   if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -126,8 +127,28 @@ function barRep(opts) {
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
-const TGT = { bubble: { r: 0.085 }, bigbubble: { r: 0.15, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
+const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
+// Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
+// con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
+const BUBBLE_VS = `varying vec3 vN; varying vec3 vV; varying vec3 vO;
+void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vO = normal; gl_Position = projectionMatrix * mv; }`;
+const BUBBLE_FS = `uniform float uTime; uniform float uPh; uniform float uOpacity;
+varying vec3 vN; varying vec3 vV; varying vec3 vO;
+void main() {
+  vec3 n = normalize(vN), v = normalize(vV);
+  float fr = pow(1.0 - abs(dot(n, v)), 1.5);
+  float swirl = sin(vO.y * 6.0 + uTime * 1.3 + uPh) * 0.25 + sin(vO.x * 5.0 - uTime * 0.9 + uPh * 2.0) * 0.2;
+  float h = fr * 1.7 + swirl + uTime * 0.08 + uPh;
+  vec3 film = 0.55 + 0.45 * cos(6.28318 * (h + vec3(0.0, 0.33, 0.67)));
+  vec3 r = reflect(-v, n);
+  float spec = pow(max(dot(r, normalize(vec3(-0.4, 0.8, 0.45))), 0.0), 60.0) * 1.8 + pow(max(dot(r, normalize(vec3(0.6, 0.2, 0.75))), 0.0), 22.0) * 0.45;
+  vec3 col = film * (0.5 + 1.4 * fr) + vec3(spec);
+  gl_FragColor = vec4(col, clamp(0.25 + 0.72 * fr + spec, 0.0, 1.0) * uOpacity);
+}`;
+const bubbleMat = () => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uPh: { value: rand(0, 6) }, uOpacity: { value: 1 } }, vertexShader: BUBBLE_VS, fragmentShader: BUBBLE_FS, transparent: true, depthWrite: false });
+// Gotas de colores al reventar
+const BUBBLE_SPLASH = [[1, 0.45, 0.85], [0.45, 0.85, 1], [1, 0.95, 0.45], [0.55, 1, 0.6]];
 // línea que baja del objetivo hacia tu cara: indica dónde está aunque quede por encima de la vista
 const guideGeo = G.cylRaw(0.003, 0.003, 0.4, 6); guideGeo.translate(0, -0.2, 0);
 const guideMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
@@ -152,9 +173,9 @@ class HeadTarget {
     Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
     if (this.bubble) {
       this.root = new THREE.Group();
-      this.mat = std({ color: 0x9fffe8, transparent: true, opacity: 0.32, roughness: 0.04, metalness: 0.2, envMapIntensity: 2.5, depthWrite: false });
+      this.mat = bubbleMat();
       this.shell = new THREE.Mesh(bubbleGeo, this.mat); this.shell.scale.setScalar(K.r); this.root.add(this.shell);
-      this.core = glowSprite(0x3cf0c6, K.r * (K.boss ? 1.0 : 1.5), 0.7); this.root.add(this.core);
+      this.core = glowSprite(0xffffff, K.r * (K.boss ? 1.0 : 1.3), 0.25); this.root.add(this.core);
       if (K.boss) { // un ojo atrapado dentro que te sigue
         this.eye = new THREE.Group(); this.root.add(this.eye);
         const ball = new THREE.Mesh(bubbleGeo, eyeWhite); ball.scale.setScalar(0.055); this.eye.add(ball);
@@ -188,6 +209,13 @@ class HeadTarget {
   update(dt, t) {
     this.t += dt; const play = state === 'play', idx = this.slotIndex();
     if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot);
+    // si la cabeza lo alcanza mientras subes, revienta aunque no haya llegado a su sitio y esa subida cuenta como
+    // repetición. Solo subiendo: colgado o bajando, un roce no regala nada
+    if (play && this.alive && (this.mode === 'approach' || this.mode === 'wait') && !BAR.contact && BAR.det === 'rising' && this.center(_bw).distanceTo(head.p) < this.radius + 0.09) {
+      // cuenta como la repetición de esta subida (si era el último, la oleada acaba ya y la subida no llegaría a contar)
+      BAR.contact = true; registerRep(false, false); if (combo % 10 !== 0) say('¡Bien!', '#ffffff', 0.7, false);
+      this.onHit(1, false); if (!this.alive) { onKilled(this); return; } // el jefe necesita varios cabezazos
+    }
     if (this.mode === 'approach') {
       if (play || state === 'mount') {
         const to = tmpA.subVectors(this.slot, this.pos), d = to.length();
@@ -204,7 +232,7 @@ class HeadTarget {
         hurtPlayer(this); this.alive = false; this.dispose(); return;
       }
     } else if (this.mode === 'leave') {
-      const k = Math.min(1, this.t / 1.1); this.pos.y += dt * 0.5; this.mat.opacity = 0.32 * (1 - k); this.core.material.opacity = 0.7 * (1 - k);
+      const k = Math.min(1, this.t / 1.1); this.pos.y += dt * 0.5; this.mat.uniforms.uOpacity.value = 1 - k; this.core.material.opacity = 0.25 * (1 - k);
       if (k >= 1) { SND.pop(this.center(new V3()), false); this.alive = false; this.dispose(); return; }
     }
     // aspecto
@@ -214,7 +242,7 @@ class HeadTarget {
     if (this.bubble) {
       const w = Math.sin(t * 7 + this.ph) * 0.06, r = this.K.r * (1 - this.flick * 0.8);
       this.shell.scale.set(r * (1 + w), r * (1 - w), r * (1 + w * 0.5));
-      const h = t * 0.4 + this.ph; this.mat.color.setRGB(0.6 + 0.4 * Math.sin(h), 0.8 + 0.2 * Math.sin(h + 2.1), 0.75 + 0.25 * Math.sin(h + 4.2));
+      this.mat.uniforms.uTime.value = t;
       if (this.eye) this.eye.lookAt(head.p);
     } else {
       const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
@@ -235,7 +263,10 @@ class HeadTarget {
   }
   pop() {
     this.alive = false; const c = this.center(new V3()), big = !!this.K.boss;
-    if (this.bubble) { SND.pop(c, big); fx.droplets(c, big ? 40 : 22, [0.45, 1, 0.85], big ? 2.2 : 1.6, big ? 0.04 : 0.03); fx.glow(c, [0.4, 1, 0.9], big ? 0.8 : 0.45, 0.15); fx.sparks(c, 10, [0.5, 1, 0.9], 1.2, 0.02); }
+    if (this.bubble) { // revienta salpicando gotas irisadas y un destello de película
+      SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
+      fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
+    }
     else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
     this.dispose();

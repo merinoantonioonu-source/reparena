@@ -484,7 +484,7 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
   projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
-  SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
+  SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 // Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
@@ -493,7 +493,7 @@ function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
   projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
-  SND.laser(origin); fx.muzzle(origin, col);
+  SND.bolt(origin, L); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
@@ -812,7 +812,9 @@ function gunLoad(perfect) {
   GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
   for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
 }
-function gunMuzzle(side, out = new V3()) { const h = hands[side]; return out.copy(h.rayO).addScaledVector(h.rayD, h.isHand ? 0.04 : 0.13); }
+// Boca del cañón: con mando, la del bláster (que se agarra por la empuñadura y apunta como el rayo del mando)
+const GUN_MUZZLE = new V3(0, 0.095, -0.44);
+function gunMuzzle(side, out = new V3()) { const h = hands[side]; return h.isHand ? out.copy(h.rayO).addScaledVector(h.rayD, 0.04) : out.copy(GUN_MUZZLE).applyQuaternion(h.rayQ).add(h.wrist); }
 function gunFire(src) {
   if (!['play', 'rest', 'ready'].includes(state)) return;
   if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
@@ -820,18 +822,26 @@ function gunFire(src) {
   if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
   fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
 }
-// Modelo del bláster (se sostiene con el mando; apunta por -Z)
+// Modelo del bláster: el origen es donde la mano agarra el mando; la empuñadura gruesa envuelve el mango del
+// mando y el cuerpo tapa su cabeza, así que en realidad mixta casi no se ve el mando. Apunta por -Z.
 const blasterGlow = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
 function makeBlaster() {
   const k = new Kit();
-  k.add('steel', G.box(0.036, 0.05, 0.13, 0.2), C.gun, 0, 0.012, -0.03);            // cuerpo
-  k.add('steel', G.box(0.03, 0.09, 0.034, 0.2), C.dark, 0, -0.035, 0.03, -0.25, 0, 0); // empuñadura
-  k.add('steel', G.cyl(0.013, 0.015, 0.09, 12, 0.2), C.steel, 0, 0.02, -0.13, Math.PI / 2, 0, 0); // cañón
-  k.add('steel', G.cyl(0.019, 0.019, 0.02, 12, 0.2), C.dark, 0, 0.02, -0.17, Math.PI / 2, 0, 0);
-  k.add('steel', G.box(0.012, 0.02, 0.06, 0.2), C.steel, 0, 0.044, -0.04);           // mira
+  k.add('steel', G.box(0.054, 0.16, 0.072, 0.2), C.dark, 0, -0.03, 0.01, -0.28, 0, 0);   // empuñadura (tapa el mango)
+  k.add('steel', G.box(0.06, 0.02, 0.08, 0.2), C.gun, 0, -0.105, 0.035, -0.28, 0, 0);     // pie de la empuñadura
+  k.add('steel', G.box(0.074, 0.09, 0.27, 0.2), C.gun, 0, 0.085, -0.06);                  // cuerpo (tapa la cabeza del mando)
+  k.add('steel', G.box(0.064, 0.075, 0.05, 0.2), C.dark, 0, 0.08, 0.1);                    // culata
+  k.add('steel', G.box(0.014, 0.012, 0.075, 0.2), C.steel, 0, 0.02, -0.08);                // guardamonte
+  k.add('steel', G.box(0.012, 0.03, 0.012, 0.2), C.steel, 0, 0.005, -0.045, 0.3, 0, 0);    // gatillo
+  k.add('steel', G.cyl(0.025, 0.025, 0.2, 14, 0.2), C.steel, 0, 0.095, -0.29, Math.PI / 2, 0, 0);  // cañón
+  k.add('steel', G.cyl(0.033, 0.03, 0.05, 14, 0.2), C.dark, 0, 0.095, -0.41, Math.PI / 2, 0, 0);   // bocacha
+  k.add('steel', G.box(0.016, 0.022, 0.15, 0.2), C.steel, 0, 0.14, -0.1);                  // mira
+  for (const s of [-1, 1]) k.add('steel', G.box(0.01, 0.05, 0.16, 0.2), C.steel, s * 0.04, 0.085, -0.08); // aletas
   const g = k.build({ steel: gloveMat }, { cast: true });
-  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.018), blasterGlow.clone()); m.position.set(0, 0.012, 0.0 - i * 0.026); g.add(m); return m; });
-  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 4, 16), blasterGlow); tip.position.set(0, 0.02, -0.181); g.add(tip);
+  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.014, 0.024), blasterGlow.clone()); m.position.set(0, 0.134, 0.075 - i * 0.03); g.add(m); return m; });
+  for (const z of [-0.23, -0.29, -0.35]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.027, 0.004, 4, 18), blasterGlow); r.position.set(0, 0.095, z); g.add(r); }
+  for (const s of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.012, 0.2), blasterGlow); st.position.set(s * 0.0465, 0.085, -0.07); g.add(st); }
+  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.005, 4, 18), blasterGlow); tip.position.set(0, 0.095, -0.437); g.add(tip);
   g.visible = false; g.kick = 0; scene.add(g); return g;
 }
 const BLASTERS = { left: makeBlaster(), right: makeBlaster() };
@@ -844,7 +854,7 @@ function updatePistol(dt) {
     b.visible = on && h.ok && !h.isHand && h.rayOk;
     if (b.visible) {
       b.kick = Math.max(0, b.kick - dt * 8);
-      b.position.copy(h.rayO).addScaledVector(h.rayD, 0.03 + b.kick * 0.02); b.quaternion.copy(h.rayQ); b.rotateX(-b.kick * 0.25);
+      b.position.copy(h.wrist).addScaledVector(h.rayD, b.kick * 0.025); b.quaternion.copy(h.rayQ); b.rotateX(b.kick * 0.22); // retroceso: la boca sube
       b.cells.forEach((c, i) => { c.material.color.setHex(i < lit ? (GUN.perf[Math.min(GUN.perf.length - 1, i * per)] ? 0xffd166 : 0x3cf0c6) : 0x2a2440); });
     }
     // gatillo (o pellizco) al apretar

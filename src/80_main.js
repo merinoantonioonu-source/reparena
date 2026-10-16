@@ -78,6 +78,7 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  if (PV.handAt) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
   // Toques: G lleva la mano derecha a la gema que toca
   if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(g); h.tip.copy(g); } }
   // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
@@ -188,7 +189,8 @@ async function startXR(ar) {
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
-    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
+    // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
+    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn()) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
   } catch (err) {
