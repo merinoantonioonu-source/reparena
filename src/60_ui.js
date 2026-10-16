@@ -360,7 +360,7 @@ function drawBoard() {
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
+  if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
   c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';

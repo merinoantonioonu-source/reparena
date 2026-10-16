@@ -7,7 +7,9 @@ let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedF
 const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
-let charged = false, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
+let charged = false, chargePow = 1, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
+// Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
+const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
 const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -468,15 +470,16 @@ function findLock(o, d) {
   }
   return best;
 }
-function fireOrb(origin, dmg, perfect) {
+function fireOrb(origin, dmg, perfect, pow = 1) {
   const e = pickNearest();
-  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(perfect ? 0x3cf0c6 : 0xff8a2a, perfect ? 0.55 : 0.4));
-  m.position.copy(origin); scene.add(m);
+  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
+  m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to);
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col: perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15] });
-  SND.plasma(origin); fx.muzzle(origin, perfect ? [0.3, 1, 0.8] : [1, 0.6, 0.2]);
+  const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
+  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col });
+  SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 function fireBolt(origin, dir, lockFrom, dmg, perfect) {
   const e = findLock(lockFrom || origin, dir);
@@ -495,13 +498,17 @@ function updateProjectiles(dt) {
     tmpA.copy(p.m.position);
     p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
     if (p.kind === 'bolt') p.m.lookAt(tmpB.copy(p.m.position).multiplyScalar(2).sub(tmpA));
-    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 : 0.06, 0.2);
+    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 * (1 + ((p.pow || 1) - 1) * 0.5) : 0.06, 0.2);
     if (k >= 1) {
       scene.remove(p.m); p.m.children.forEach(c => c.material && c.material.dispose()); projs.splice(i, 1);
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
         const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone()); if (!target.alive) onKilled(target);
+        if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
+          const R = isPush() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isPush() ? 0.35 : 1, 0.15); SND.zap(p.to);
+          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone()); if (!o.alive) onKilled(o); }
+        }
         if (p.kind === 'bolt' && p.perfect) {
           const R = isPush() ? 0.45 : 1.6; fx.electric(p.to, 16);
           for (const o of enemies) if (o.alive && o !== target && o.type === 'flyer' && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(1, true, tmpA.clone()); if (!o.alive) onKilled(o); }
@@ -532,11 +539,12 @@ function onRep(opts, side) {
   registerRep(opts.perfect, true, side);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
-  const dmg = opts.perfect ? 2 : 1;
+  const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
+  if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
-    fireOrb(origin, dmg, opts.perfect);
+    fireOrb(origin, dmg, opts.perfect, pow);
   } else {
     for (const s of aimSources()) {
       let o = s.o.clone();
@@ -545,15 +553,21 @@ function onRep(opts, side) {
       fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect);
     }
   }
-  charged = false; chargeOrb.visible = false;
+  charged = false; chargePow = 1; chargeOrb.visible = false;
 }
 function onPartial(text) {
   if (!['play', 'rest', 'ready'].includes(state)) return;
-  stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargeOrb.visible = false;
+  stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargePow = 1; chargeOrb.visible = false;
+}
+// Sube un nivel de carga mientras aguantas abajo
+function onPower(pow) {
+  if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
+  chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
+  say(`CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 0.9); boardDirty = true;
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  charged = true; chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
+  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
 }
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
@@ -566,11 +580,13 @@ function vertDetector(d, y, t, dt, cfg) {
     // la referencia de arriba sube enseguida y baja despacio: se ajusta a tu postura real
     // (calibrar a cuatro patas, o mirar al suelo en la flexión, deja la cabeza más baja que al calibrar)
     d.ref += (y - d.ref) * Math.min(1, dt * (y > d.ref ? 1.5 : 0.25));
-    if (y < d.ref - cfg.start) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; }
+    if (y < d.ref - cfg.start) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; d.holdT = 0; d.pow = 1; }
   } else {
     if (y < d.min) d.min = y;
     const drop = d.ref - d.min;
     if (!d.charged && drop >= cfg.req) { d.charged = true; onCharge(); }
+    // carga: cada POW_STEP segundos abajo (cerca del fondo) sube un nivel, hasta 4
+    if (cfg.power && d.charged && y < d.ref - cfg.req * 0.8) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } }
     d.stillT = still ? d.stillT + dt : 0;
     // vuelve arriba al recuperar la mayor parte del recorrido, aunque no llegues a la referencia
     const upAt = Math.min(d.ref - cfg.back, d.min + Math.max(cfg.req * 0.9, drop * 0.6));
@@ -578,7 +594,7 @@ function vertDetector(d, y, t, dt, cfg) {
     const stuck = d.charged && d.stillT > 0.8 && y - d.min >= cfg.req * 0.7;
     if (y > upAt || stuck) {
       const dur = t - d.t0;
-      if (d.charged) onRep({ perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5 });
+      if (d.charged) onRep({ perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5, pow: cfg.power ? d.pow : 1 });
       else if (drop > cfg.partial) onPartial(cfg.partialMsg);
       if (stuck) d.ref = y;
       d.state = 'up';
@@ -596,7 +612,7 @@ function runDetectors(t, dt) {
     const d = DET.pu, req = settings.pushDepth / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
-    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!' });
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
   } else {
     const range = settings.curlRange / 100;
     for (const side of ['left', 'right']) {
@@ -696,7 +712,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = [];
   projs.forEach(p => scene.remove(p.m)); projs = [];
-  clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; nextArcDrop = 0;
+  clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
@@ -882,5 +898,5 @@ function gameStep(dt, t) {
   const f = fwdH();
   if (isPush() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
-  if (chargeOrb.visible) { const s = 0.15 + Math.sin(t * 10) * 0.03; chargeOrb.scale.set(s, s, 1); }
+  if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
 }

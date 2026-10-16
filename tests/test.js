@@ -98,6 +98,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
   await runConfig('Asalto+sentadillas', { ...base, mode: 'walkers', exercise: 'squat' }, squatSim());
   await runConfig('Asalto+flexiones', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 6 }, squatSim(2.6));
+  await runConfig('Asalto+flexiones cargadas (3 s abajo)', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 20, repsWave: 6, perfectTime: 0 }, t => { RA.PV.crouch = (t % 4.4) < 3.4; }, 420, s => s.kills < s.reps * 0.8 ? `la carga no aumenta el daño (${s.kills} muertes con ${s.reps} disparos)` : '');
   await runConfig('Asalto+curl', { ...base, mode: 'walkers', exercise: 'curl' }, curlSim);
   await runConfig('Enjambre+sentadillas', { ...base, mode: 'flyers', exercise: 'squat' }, squatSim());
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, squatSim());

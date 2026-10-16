@@ -84,6 +84,7 @@ const SND = {
   tick() { if (!sndOK()) return; const o = sout(null, { rev: 0, gain: 0.3 }); tone(o, { type: 'triangle', f: 2400, d: 0.015, gain: 0.05 }); },
   charge() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.6 }); tone(o, { f: 300, to: 900, d: 0.22, gain: 0.08, type: 'sawtooth' }); tone(o, { f: 600, to: 1800, d: 0.2, gain: 0.04 }); },
   perfect() { if (!sndOK()) return; const o = sout(null, { rev: 0.4, gain: 0.6 }); [1318, 1976, 2637, 3951].forEach((f, i) => tone(o, { f, d: 0.6 - i * 0.1, gain: 0.07 - i * 0.012, t: i * 0.03 })); },
+  power(pow, pos) { if (!sndOK()) return; const o = sout(pos || null, { rev: 0.3, gain: 0.7 }); const f = 330 * Math.pow(1.26, pow); tone(o, { type: 'sawtooth', f, to: f * 2, d: 0.18 + pow * 0.04, gain: 0.07 }); tone(o, { f: f * 2, to: f * 3, t: 0.04, d: 0.2, gain: 0.05 }); noise(o, { type: 'bandpass', f: 1800 + pow * 600, q: 3, d: 0.15, gain: 0.08 }); },
   partial() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.6 }); tone(o, { type: 'triangle', f: 260, to: 150, d: 0.25, gain: 0.12 }); },
   miss() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.4 }); tone(o, { type: 'triangle', f: 420, to: 260, d: 0.12, gain: 0.06 }); },
   combo() { if (!sndOK()) return; const o = sout(null, { rev: 0.3, gain: 0.6 }); [523, 659, 784, 1046].forEach((f, i) => tone(o, { type: 'triangle', f, d: 0.18, gain: 0.08, t: i * 0.06 })); },
