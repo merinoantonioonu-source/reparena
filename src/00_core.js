@@ -9,19 +9,19 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl', plank1: 'Plancha 1 brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', press: 'Press de hombro', plank1: 'Plancha con un brazo', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', press: 'Press hombro', plank1: 'Plancha 1 brazo', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  walkers: ['squat', 'pushup', 'curl', 'plank1'], flyers: ['squat', 'pushup', 'curl', 'superman'], arcs: ['squat'],
-  bars: ['row', 'pullup', 'hang'], touch: ['squat', 'jump', 'abs', 'pushup', 'combo']
+  walkers: ['squat', 'lunge', 'pushup', 'dips', 'curl', 'press', 'plank1', 'splank'], flyers: ['squat', 'lunge', 'pushup', 'dips', 'curl', 'press', 'superman', 'splank'], arcs: ['squat'],
+  bars: ['row', 'pullup', 'hang'], touch: ['squat', 'lunge', 'jump', 'abs', 'pushup', 'combo']
 };
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
 const BAR_EX = MODE_EX.bars; // ejercicios del modo Barras: el resto no se usa en él
 // Al cambiar de modo, el ejercicio que se queda: el mismo si vale; si estabas en el suelo, flexiones
-function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'plank1', 'superman', 'abs'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
+function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'plank1', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
@@ -36,6 +36,11 @@ const SCHEMA = [
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
+  { key: 'dipDepth', g: 'ejercicio', label: 'Bajada en el fondo', short: 'Bajada fondo', type: 'num', min: 6, max: 40, step: 1, def: 15, unit: 'cm', ex: ['dips'], hint: 'Cuánto debe bajar la cabeza al doblar los codos, con las manos en el borde de la silla.' },
+  { key: 'pressRange', g: 'ejercicio', label: 'Recorrido del press', short: 'Recorrido press', type: 'num', min: 15, max: 60, step: 1, def: 32, unit: 'cm', ex: ['press'], hint: 'Cuánto debe subir la mancuerna desde los hombros. Cada brazo dispara al llegar arriba.' },
+  { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
+  { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
@@ -59,20 +64,24 @@ const SCHEMA = [
   { key: 'abMax', g: 'toques', label: 'Tronco elevado: máximo', short: 'Ángulo máx.', type: 'num', min: 20, max: 85, step: 5, def: 55, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: '90° sería sentarse del todo.' },
   { key: 'abTwist', g: 'toques', label: 'Giro del tronco (oblicuos)', short: 'Giro', type: 'num', min: 0, max: 45, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Cuánto se desvían hacia los lados algunos aros.' },
   { key: 'comboBase', g: 'toques', label: 'Postura del combinado', short: 'Postura', type: 'choice', opts: [['stand', 'De pie'], ['floor', 'Plancha'], ['abs', 'Boca arriba']], def: 'stand', modes: ['touch'], ex: ['combo'], relayout: true, hint: 'Los movimientos del combinado se hacen todos en esta postura.' },
-  { key: 'comboStand', g: 'toques', label: 'Movimientos (de pie)', short: 'Movimientos', type: 'multi', opts: [['squat', 'Sentadilla'], ['jump', 'Salto'], ['punch', 'Puñetazo'], ['reach', 'Estirarse']], def: 'squat,jump', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'stand', hint: 'Sentadilla: aro bajo · Salto: aro alto · Puñetazo: gema delante · Estirarse: gema arriba.' },
+  { key: 'comboStand', g: 'toques', label: 'Movimientos (de pie)', short: 'Movimientos', type: 'multi', opts: [['squat', 'Sentadilla'], ['lunge', 'Zancada'], ['jump', 'Salto'], ['punch', 'Puñetazo'], ['reach', 'Estirarse']], def: 'squat,jump', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'stand', hint: 'Sentadilla: aro bajo · Zancada: aro bajo un paso por delante · Salto: aro alto · Puñetazo: gema delante · Estirarse: gema arriba.' },
   { key: 'comboFloor', g: 'toques', label: 'Movimientos (plancha)', short: 'Movimientos', type: 'multi', opts: [['push', 'Flexión'], ['plank', 'Plancha'], ['tap', 'Toque']], def: 'push,plank', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Flexión: aro bajo · Plancha: aro que hay que aguantar · Toque: gema para una mano.' },
   { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: aro de frente · Oblicuo: aro girado · Rodillas: gema junto a las rodillas.' },
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en los aros de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro del aro este tiempo.' },
   { key: 'bpm', g: 'toques', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch'], hint: 'Con un ritmo, los objetivos llegan a ti en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
-  { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['walkers', 'flyers'], ex: ['squat'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'aim', g: 'enemigos', cond: () => !settings.pistol, label: 'Apuntar con (sentadillas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
+  { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['walkers', 'flyers'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
+  { key: 'aim', g: 'enemigos', cond: () => !settings.pistol, label: 'Apuntar con (sentadillas y zancadas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['flyers'] },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
   { key: 'arcMax', g: 'arcos', label: 'Bajada máxima bajo un arco', short: 'Bajada máxima', type: 'num', min: 5, max: 90, step: 1, def: 38, unit: 'cm', modes: ['arcs'], hint: 'Cada arco sale a una altura al azar entre la mínima y la máxima.' },
   { key: 'arcRate', g: 'arcos', label: 'Arcos por minuto', short: 'Arcos/minuto', type: 'num', min: 3, max: 40, step: 1, def: 12, modes: ['arcs'] },
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
+  { key: 'arcTiming', g: 'arcos', label: 'Aparición de los arcos', short: 'Aparición', type: 'choice', opts: [['irregular', 'Irregular'], ['regular', 'Regular']], def: 'irregular', modes: ['arcs'], hint: 'Irregular: unas veces seguidos y otras con más hueco, sin que puedas cogerle el ritmo (la media no cambia).' },
+  { key: 'arcTilt', g: 'arcos', label: 'Arcos con la barra inclinada', short: 'Inclinados', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'La barra baja por un lado: apártate hacia el lado alto flexionando esa pierna y estirando la otra (zancada lateral).' },
+  { key: 'arcTiltMax', g: 'arcos', label: 'Inclinación máxima de la barra', short: 'Inclinación', type: 'num', min: 5, max: 35, step: 1, def: 18, unit: '°', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Cuanto más inclinada, más hay que apartarse hacia el lado alto.' },
+  { key: 'arcShift', g: 'arcos', label: 'Desplazamiento lateral en los inclinados', short: 'Desplazamiento', type: 'num', min: 15, max: 70, step: 5, def: 40, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Hasta dónde hay que llevar la cabeza hacia el lado alto para pasar con la bajada normal; en el centro hay que bajar más.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
@@ -147,10 +156,14 @@ function fieldVisible(f) {
 }
 // Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
 // Pistolas: en sentadillas (Asalto y Enjambre) las repeticiones cargan munición y el gatillo dispara
-const pistolOn = () => !!settings.pistol && settings.exercise === 'squat' && (settings.mode === 'walkers' || settings.mode === 'flyers');
+// De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
+const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
+const pistolOn = () => !!settings.pistol && handsFree() && (settings.mode === 'walkers' || settings.mode === 'flyers');
 // En Enjambre con las manos o las pistolas cada repetición da dos disparos (uno por mano)
-const twoShots = () => settings.mode === 'flyers' && settings.exercise === 'squat' && (settings.aim === 'hands' || pistolOn());
-const isFloor = () => ['pushup', 'plank1', 'superman', 'abs'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
+const twoShots = () => settings.mode === 'flyers' && handsFree() && (settings.aim === 'hands' || pistolOn());
+const isFloor = () => ['pushup', 'plank1', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
+// Sentado en el borde de una silla (fondos): la cabeza, a media altura
+const isSeated = () => settings.exercise === 'dips';
 // Tumbado boca arriba (abdominales)
 const isSupine = () => settings.exercise === 'abs' || (settings.exercise === 'combo' && settings.comboBase === 'abs');
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
@@ -234,7 +247,7 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -253,7 +266,7 @@ function updateSummary() {
   else if (settings.mode === 'touch') speed = `Cada objetivo tarda ${fmtNum(settings.tchArrive)} s en llegar y espera ${fmtNum(settings.tchWindow)} s${settings.bpm ? `, al ritmo de ${settings.bpm} BPM` : ''}.`;
   else if (settings.mode === 'bars') speed = hang ? `Si te sueltas, caes al charco.` : `Cada objetivo tarda ${fmtNum(settings.barArrive)} s en llegar a donde subirá tu cabeza.`;
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm.`;
-  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
+  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' || settings.exercise === 'press' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
 function renderHistory() {
   const h = store(HIST_KEY) || [];
