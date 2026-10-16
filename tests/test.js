@@ -137,10 +137,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Enjambre'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Mirada'); frame(1); press('Volver'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
   press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
-  press('Colocar paralelas'); frame(1); press('Delante de mí'); frame(1); const dip0 = { ...RA.eqPose('dip') };
-  press('Izquierda'); press('Alejar'); press('Girar +'); press('Con las manos (en las gafas)'); frame(1); press('Listo'); frame(1);
+  // colocar: el atril se oculta, H = manos arriba; a los 5 s queda colocada y aparece el menú de ajuste
+  press('Colocar paralelas'); frame(2); log('placing: menu hidden', !RA.menu, 'on', RA.PLACE.on);
+  if (RA.menu || !RA.PLACE.on) errors.push('Colocar no entra en el modo colocación');
+  key('keydown', 'KeyH'); frame(120); const early = RA.PLACE.wait; frame(80); key('keyup', 'KeyH'); frame(60);
+  log('hands up: placed at 4 s?', early, '→ menu', RA.activeWidgets().some(w => w.label === 'Girar izquierda'), 'dip', RA.settings.dipH, RA.settings.dipGap);
+  if (early || !RA.activeWidgets().some(w => w.label === 'Girar izquierda')) errors.push('la colocación con las manos arriba no espera 5 s o no abre los ajustes');
+  const dip0 = { ...RA.eqPose('dip') };
+  press('Izquierda'); press('Alejar'); press('Girar izquierda'); press('Listo'); frame(1);
   log('dip nudged', (RA.eqPose('dip').x - dip0.x).toFixed(3), (RA.eqPose('dip').z - dip0.z).toFixed(3), (RA.eqPose('dip').yaw - dip0.yaw).toFixed(3), 'edit', RA.EQ.edit);
-  press('Dominadas'); frame(1); press('Colocar barra'); frame(1); RA.activeWidgets().filter(w => w.label === '+').forEach(w => w.onPress()); press('Listo'); frame(1);
+  press('Dominadas'); frame(1); press('Ajustar'); frame(1); RA.activeWidgets().filter(w => w.label === '+').forEach(w => w.onPress()); press('Listo'); frame(1);
+  press('Colocar barra'); frame(3); key('keydown', 'Escape'); key('keyup', 'Escape'); frame(2); log('cancel placement → lobby menu', !!RA.menu && RA.activeWidgets().some(w => w.label === 'EMPEZAR'), 'on', RA.PLACE.on);
+  if (RA.PLACE.on || !RA.activeWidgets().some(w => w.label === 'EMPEZAR')) errors.push('Esc no cancela la colocación');
   press('Más ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
   press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
   RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Asalto'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
@@ -182,9 +190,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   storage.delete('reparena3-equip'); RA.EQ.xr.door.set = false; RA.EQ.xr.door.handle = null;
   XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
   log('XR bars: anchors requested', navigator.xr.last.opts.optionalFeatures.includes('anchors'), 'state', RA.state);
-  press('EMPEZAR'); frame(2, 16, xrFrame); log('EMPEZAR without bar opens placement:', RA.EQ.edit);
-  press('Con las manos'); XRS.grip = { left: new THREE.Vector3(-0.3, 2.21, -0.35), right: new THREE.Vector3(0.3, 2.21, -0.35) };
-  frame(170, 16, xrFrame); XRS.grip = null;
+  press('EMPEZAR'); frame(2, 16, xrFrame); log('EMPEZAR without bar starts placement:', RA.PLACE.on, 'menu hidden', !RA.menu);
+  XRS.grip = { left: new THREE.Vector3(-0.25, 0.95, -0.1), right: new THREE.Vector3(0.25, 0.95, -0.1) }; frame(400, 16, xrFrame);
+  log('hands down 6 s: placed?', RA.EQ.xr.door.set);
+  if (RA.EQ.xr.door.set) errors.push('se coloca la barra con las manos abajo');
+  XRS.grip = { left: new THREE.Vector3(-0.3, 2.21, -0.35), right: new THREE.Vector3(0.3, 2.21, -0.35) };
+  frame(200, 16, xrFrame); const at3 = RA.EQ.xr.door.set; frame(150, 16, xrFrame); log('hands over head: placed at 3.2 s?', at3, 'at 5.6 s?', RA.EQ.xr.door.set);
+  if (at3 || !RA.EQ.xr.door.set) errors.push('las manos arriba no colocan la barra a los 5 s');
+  XRS.grip = null; frame(100, 16, xrFrame); log('adjust menu after placing:', RA.activeWidgets().some(w => w.label === 'Girar izquierda'));
   const door = RA.EQ.xr.door; log('door from hands: set', door.set, 'doorH', RA.settings.doorH, 'x', door.x.toFixed(2), 'z', door.z.toFixed(2), 'yaw', door.yaw.toFixed(2));
   if (!door.set || Math.abs(RA.settings.doorH - 222) > 2 || Math.abs(door.z + 0.35) > 0.02) errors.push('colocar la barra con las manos no funciona');
   press('Listo'); frame(2, 16, xrFrame); await sleep(10); frame(2, 16, xrFrame);
