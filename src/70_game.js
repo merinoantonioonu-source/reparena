@@ -681,7 +681,7 @@ function summaryText() {
 function lobbyMenu(reanchor) {
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
-  const start = () => { if (bars && !placed) { PLACE.note = `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`; placeMenu(lobbyMenu); } else beginRun(); };
+  const start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`); else beginRun(); };
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
@@ -692,7 +692,7 @@ function lobbyMenu(reanchor) {
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => { PLACE.note = ''; placeMenu(lobbyMenu); } }] });
+  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   rows.push(...musicRows());
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
@@ -734,7 +734,7 @@ function pauseMenu(reanchor) {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...musicRows(),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Colocar barra' : 'Colocar paralelas', onPress: () => { PLACE.note = ''; placeMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Ajustar barra' : 'Ajustar paralelas', onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();

@@ -249,59 +249,96 @@ function buildBarWave(i) {
 }
 
 /* =================== COLOCAR LOS APARATOS =================== */
-const PLACE = { on: false, t: 0, kind: 'door', last: new V3(), has: false, seen: false };
-const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3();
+// Modo colocación: el atril se oculta, vas al aparato y lo agarras con las dos manos por encima de la cabeza.
+// Si las manos se quedan quietas PLACE_HOLD segundos, la media de esas posiciones es el aparato.
+// Después aparece el atril con los ajustes finos (altura, ancho, mover, girar).
+const PLACE_HOLD = 5;
+const PLACE = { on: false, t: 0, kind: 'door', back: null, seen: false, up: false, ok: false, lostT: 0, n: 0, sumL: new V3(), sumR: new V3(), wait: false, waitT: 0, note: '' };
+const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3(), _pl4 = new V3();
 // Punto de agarre: entre la base del dedo corazón y el nudillo (o el mando)
 function gripPoint(side, out) {
   const h = hands[side]; if (!h.ok) return null;
   if (h.isHand) { const a = h.J[10], b = h.J[11]; return a.ok && b.ok ? out.lerpVectors(a.p, b.p, 0.75) : null; }
   return out.copy(h.wrist);
 }
+// Línea luminosa entre las manos: lo que se está midiendo
+const placeLineMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false });
+const placeLine = new THREE.Mesh(G.cylRaw(0.012, 0.012, 1, 8), placeLineMat); placeLine.visible = false; placeLine.renderOrder = 24; scene.add(placeLine);
+function placeReset() { PLACE.t = 0; PLACE.n = 0; PLACE.sumL.set(0, 0, 0); PLACE.sumR.set(0, 0, 0); }
+function startPlace(back, note) {
+  const k = eqKind(); hideMenu();
+  if (EQ.edit !== k) { EQ.edit = k; eqPose(k).anchor = null; } // al terminar se crea un ancla nueva
+  Object.assign(PLACE, { on: true, kind: k, back, lostT: 0, wait: false, seen: false, up: false, ok: false, note: note || '' }); placeReset();
+  center.mesh.visible = true; drawCenter(); SND.click();
+}
+function cancelPlace() {
+  if (!PLACE.on && !PLACE.wait) return;
+  PLACE.on = PLACE.wait = false; placeLine.visible = false; center.mesh.visible = false; SND.click();
+  const back = PLACE.back; placeDone(); if (back) back();
+}
 function updatePlace(dt) {
-  if (!PLACE.on) return;
-  const L = gripPoint('left', _pl1), R = gripPoint('right', _pl2);
-  let ok = false;
-  if (L && R) { const d = Math.hypot(R.x - L.x, R.z - L.z); ok = d > 0.22 && d < (PLACE.kind === 'door' ? 1.5 : 1.1) && Math.abs(R.y - L.y) < 0.15; }
-  PLACE.seen = !!(L && R);
-  if (ok) {
-    const mid = _pl3.addVectors(L, R).multiplyScalar(0.5), v = PLACE.has ? mid.distanceTo(PLACE.last) / Math.max(dt, 1e-3) : 1;
-    PLACE.last.copy(mid); PLACE.has = true;
-    if (v < 0.06) { const before = PLACE.t; PLACE.t += dt; if (Math.floor(before * 2) !== Math.floor(PLACE.t * 2)) SND.tick(); } else PLACE.t = Math.max(0, PLACE.t - dt);
-  } else PLACE.t = Math.max(0, PLACE.t - dt * 2);
-  if (PLACE.t >= 2) {
-    placeFromHands(PLACE.kind, L, R); PLACE.on = false; PLACE.t = 0; center.mesh.visible = false;
-    if (menu && menu.rebuild) menu.rebuild();
+  if (PLACE.wait) { // ya está colocado: el atril aparece cuando estés de pie
+    PLACE.waitT += dt;
+    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); }
+    return;
   }
+  if (!PLACE.on) { placeLine.visible = false; return; }
+  const L = gripPoint('left', _pl1), R = gripPoint('right', _pl2), hy = head.p.y;
+  PLACE.seen = !!(L && R);
+  PLACE.up = PLACE.seen && L.y > hy + 0.12 && R.y > hy + 0.12;
+  const d = PLACE.seen ? Math.hypot(R.x - L.x, R.z - L.z) : 0;
+  PLACE.ok = PLACE.up && d > 0.22 && d < (PLACE.kind === 'door' ? 1.5 : 1.1) && Math.abs(R.y - L.y) < 0.15;
+  if (PLACE.seen) {
+    const mid = _pl3.addVectors(L, R).multiplyScalar(0.5), dir = _pl4.subVectors(R, L), len = Math.max(0.01, dir.length());
+    placeLine.visible = true; placeLine.position.copy(mid); placeLine.quaternion.setFromUnitVectors(_up, dir.divideScalar(len)); placeLine.scale.set(1, len, 1);
+    placeLineMat.color.setHex(PLACE.ok ? 0x3cf0c6 : 0xff8a3d);
+  } else placeLine.visible = false;
+  if (PLACE.ok) {
+    PLACE.lostT = 0;
+    // si las manos se mueven más de 5 cm de su posición media, la cuenta empieza de nuevo
+    if (PLACE.n && _pl4.addVectors(PLACE.sumL, PLACE.sumR).multiplyScalar(0.5 / PLACE.n).distanceTo(_pl3) > 0.05) placeReset();
+    PLACE.sumL.add(L); PLACE.sumR.add(R); PLACE.n++;
+    const before = PLACE.t; PLACE.t += dt;
+    if (Math.floor(before) !== Math.floor(PLACE.t)) SND.beep(1 + Math.floor(PLACE.t) * 0.12);
+    if (PLACE.t >= PLACE_HOLD) placeConfirm();
+  } else { PLACE.lostT += dt; if (PLACE.lostT > 0.5) placeReset(); } // se perdonan cortes breves del seguimiento
+}
+function placeConfirm() {
+  const k = PLACE.kind, L = PLACE.sumL.divideScalar(PLACE.n), R = PLACE.sumR.divideScalar(PLACE.n);
+  placeFromHands(k, L, R);
+  PLACE.on = false; PLACE.wait = true; PLACE.waitT = 0; placeLine.visible = false; SND.charge(); SND.perfect();
+  drawCenter();
 }
 function placeFromHands(k, L, R) {
   const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
   e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
   if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
-  else { setSetting('dipH', Math.round((mid.y - 0.03) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
-  equipChanged(k); SND.charge();
+  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  equipChanged(k);
   PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
 }
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
-function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); }
-function placeMenu(back) {
-  const k = eqKind(), door = k === 'door', e = eqPose(k);
-  if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; } // al terminar se crea un ancla nueva
-  const note = PLACE.on ? (PLACE.seen ? 'Quieto…' : 'No veo tus dos manos: mira hacia ellas') : PLACE.note || (door ? 'Mira la barra, agárrala con las dos manos y quédate quieto 2 s' : 'Apoya una mano en cada paralela y quédate quieto 2 s');
+function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
+// Ajustes finos, una vez colocado con las manos
+function adjustMenu(back, reanchor) {
+  const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
+  if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
+  const what = door ? 'la barra virtual coincida' : 'las paralelas virtuales coincidan';
+  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${door ? 'está colocada' : 'están colocadas'}: pulsa Colocar con las manos`;
   const rows = [
-    { t: 'title', text: door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS' },
-    { t: 'text', text: note, color: PLACE.note && !PLACE.on ? '#3cf0c6' : '#d8d3f5' },
-    { t: 'btns', items: [
-      { label: preview ? 'Con las manos (en las gafas)' : PLACE.on ? 'Midiendo…' : 'Con las manos', style: preview ? 'ghost' : 'primary', onPress: () => { if (preview) { PLACE.note = 'En el ordenador usa «Delante de mí» y los botones'; } else { Object.assign(PLACE, { on: true, t: 0, kind: k, has: false, note: '' }); center.mesh.visible = true; } placeMenu(back); } },
-      { label: 'Delante de mí', onPress: () => { PLACE.on = false; center.mesh.visible = false; placeInFront(k); PLACE.note = door ? 'Barra delante de ti: ajústala' : 'Paralelas delante de ti: ajústalas'; placeMenu(back); } }] },
-    { t: 'btns', items: [['Izquierda', -0.02, 0, 0], ['Derecha', 0.02, 0, 0], ['Alejar', 0, 0.02, 0], ['Acercar', 0, -0.02, 0], ['Girar −', 0, 0, 0.05], ['Girar +', 0, 0, -0.05]].map(([label, sx, fz, r]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, r) })) },
+    { t: 'title', text: door ? 'AJUSTAR BARRA' : 'AJUSTAR PARALELAS' },
+    { t: 'text', text: note, color: PLACE.note ? '#3cf0c6' : e.set ? '#d8d3f5' : '#ffd166' },
     { t: 'field', key: door ? 'doorH' : 'dipH' },
     { t: 'field', key: door ? 'doorW' : 'dipGap' }
   ];
   if (!door) rows.push({ t: 'field', key: 'dipLen' });
-  rows.push({ t: 'btns', items: [{ label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
-  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => placeMenu(back);
+  rows.push({ t: 'btns', items: [['Izquierda', -0.01, 0], ['Derecha', 0.01, 0], ['Acercar', 0, -0.01], ['Alejar', 0, 0.01]].map(([label, sx, fz]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, 0) })) });
+  rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
+  rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
+  rows.push({ t: 'btns', items: [{ label: 'Colocar con las manos', onPress: () => startPlace(back) }, { label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
+  const m = openMenu(rows, { border: '#3cf0c6', reanchor }); m.rebuild = () => adjustMenu(back);
 }
 function placeDone() {
-  const k = EQ.edit; PLACE.on = false; PLACE.note = ''; if (!GAME_STATES.includes(state)) center.mesh.visible = false;
-  if (!k) return; EQ.edit = null; equipChanged(k); equipCommit(k);
+  const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;
+  if (!k) return; EQ.edit = null; if (eqPose(k).set) { equipChanged(k); equipCommit(k); }
 }

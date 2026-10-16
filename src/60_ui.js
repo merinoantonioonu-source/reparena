@@ -84,6 +84,9 @@ function pokeWidgets(list, dt, ready = true) {
 /* =================== MENÚ FIJO EN EL MUNDO =================== */
 let menu = null, menuAnchor = null;
 const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
+// Capas del atril: son paneles semitransparentes casi pegados y, sin un orden fijo, el fondo
+// tapaba botones según desde dónde se mirara. Se dibujan siempre fondo → botones → teclado → teclas.
+const RO = { menu: 20, widget: 21, keypad: 22, key: 23 };
 const stand = (() => {
   const g = new THREE.Group(), k = new Kit();
   k.add('steel', G.cyl(0.2, 0.24, 0.04, 24), C.dark, 0, 0.02, 0); k.add('glow', G.tor(0.21, 0.006, 4, 32), C.teal, 0, 0.042, 0, Math.PI / 2, 0, 0);
@@ -109,14 +112,14 @@ function openMenu(rows, opts = {}) {
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
-  const bg = makePanel(MW, H, 1024); group.add(bg.mesh);
+  const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
   const c = bg.ctx, sc = bg.W / MW;
   rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || '#ff4fa3'; c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.03)'; for (let y = 0; y < bg.H; y += 6) c.fillRect(6, y, bg.W - 12, 2);
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; group.add(w.mesh); widgets.push(w); return w; };
+  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
   const label = (text, cy, color = '#eeeaff') => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
@@ -167,18 +170,18 @@ function openKeypad(f, row) {
   const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
   const grp = new THREE.Group(); grp.position.set(0, 0, 0.03); menu.group.add(grp);
-  const bg = makePanel(KW, KH, 640); grp.add(bg.mesh);
+  const bg = makePanel(KW, KH, 640); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
   const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
   const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
-  grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
+  cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
   menu.keypad = kp; drawKeypad();
 }
 function drawKeypad() {
@@ -226,13 +229,15 @@ function updateWatch(dt) {
       if (Math.abs(dot) > 0.72 && d < 0.7) { show = true; watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(dot) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     } else if (d < 0.65 && h.wrist.y < head.p.y - 0.1) { show = true; watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0)); }
   }
-  const lab = state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
+  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
   watch.mesh.visible = show; watch.armT = show ? (watch.armT || 0) + dt : 0;
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
 function onWatch() {
+  if (PLACE.on) { cancelPlace(); return; }
+  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
   if (GAME_STATES.includes(state)) openPause();
   else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
@@ -269,13 +274,23 @@ function drawCenter() {
   const c = center.ctx, W = center.W, H = center.H; c.clearRect(0, 0, W, H);
   rr(c, 6, 6, W - 12, H - 12, 30); c.fillStyle = 'rgba(14,10,28,0.86)'; c.fill(); c.lineWidth = 4; c.strokeStyle = 'rgba(60,240,198,.6)'; c.stroke();
   c.textBaseline = 'middle';
-  if (PLACE.on) {
+  if (PLACE.on || PLACE.wait) {
     const door = PLACE.kind === 'door';
-    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
-    const L = door ? ['Agarra la barra con las dos manos', 'mirándola. Quieto 2 s.'] : ['Una mano en cada paralela,', 'apoyada encima. Quieto 2 s.'];
-    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
-    c.font = `32px ${FB}`; c.fillStyle = PLACE.seen ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(PLACE.seen ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
-    centerBar(c, W, H, PLACE.t / 2);
+    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left';
+    if (PLACE.wait) {
+      c.fillText(door ? '¡BARRA COLOCADA!' : '¡PARALELAS COLOCADAS!', 44, 68);
+      c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; [PLACE.note, door ? 'Suéltate: ahora aparecen los ajustes finos.' : 'Ponte de pie: aparecen los ajustes finos.'].forEach((l, i) => { fitFont(c, l, W - 88, 36, '500 %px ' + FB); c.fillText(l, 44, 148 + i * 52); });
+      centerBar(c, W, H, 1);
+    } else {
+      c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
+      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
+      c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+      const st = !PLACE.seen ? ['No veo tus manos: míralas', '#ff8a3d'] : !PLACE.up ? ['Sube las manos por encima de la cabeza', '#ff8a3d'] : !PLACE.ok ? ['Separa más las manos', '#ff8a3d'] : ['Bien: no te muevas', '#3cf0c6'];
+      c.font = `500 34px ${FB}`; c.fillStyle = st[1]; c.fillText(st[0], 44, 258);
+      c.font = `500 26px ${FB}`; c.fillStyle = PLACE.note ? '#ffd166' : '#a49fc8'; c.fillText(PLACE.note || 'Cancelar: botón de la muñeca izquierda', 44, 304);
+      if (PLACE.t > 0) { c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(PLACE_HOLD - PLACE.t))), W - 50, 150); }
+      centerBar(c, W, H, PLACE.t / PLACE_HOLD);
+    }
   } else if (state === 'mount') {
     const row = settings.exercise === 'row';
     if (BAR.phase === 'place') {

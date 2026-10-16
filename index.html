@@ -185,7 +185,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Barras:</strong> primero coloca el aparato desde el atril (Colocar barra o Colocar paralelas): agárralo con las manos y quédate quieto 2 segundos, o ponlo delante de ti y ajústalo con los botones. Las Quest lo recuerdan para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el atril. El atril se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el atril con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -202,7 +202,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -2206,6 +2206,9 @@ function pokeWidgets(list, dt, ready = true) {
 /* =================== MENÚ FIJO EN EL MUNDO =================== */
 let menu = null, menuAnchor = null;
 const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
+// Capas del atril: son paneles semitransparentes casi pegados y, sin un orden fijo, el fondo
+// tapaba botones según desde dónde se mirara. Se dibujan siempre fondo → botones → teclado → teclas.
+const RO = { menu: 20, widget: 21, keypad: 22, key: 23 };
 const stand = (() => {
   const g = new THREE.Group(), k = new Kit();
   k.add('steel', G.cyl(0.2, 0.24, 0.04, 24), C.dark, 0, 0.02, 0); k.add('glow', G.tor(0.21, 0.006, 4, 32), C.teal, 0, 0.042, 0, Math.PI / 2, 0, 0);
@@ -2231,14 +2234,14 @@ function openMenu(rows, opts = {}) {
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
-  const bg = makePanel(MW, H, 1024); group.add(bg.mesh);
+  const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
   const c = bg.ctx, sc = bg.W / MW;
   rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || '#ff4fa3'; c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.03)'; for (let y = 0; y < bg.H; y += 6) c.fillRect(6, y, bg.W - 12, 2);
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; group.add(w.mesh); widgets.push(w); return w; };
+  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
   const label = (text, cy, color = '#eeeaff') => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
@@ -2289,18 +2292,18 @@ function openKeypad(f, row) {
   const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
   const grp = new THREE.Group(); grp.position.set(0, 0, 0.03); menu.group.add(grp);
-  const bg = makePanel(KW, KH, 640); grp.add(bg.mesh);
+  const bg = makePanel(KW, KH, 640); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
   const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
   const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
-  grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
+  cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
   menu.keypad = kp; drawKeypad();
 }
 function drawKeypad() {
@@ -2348,13 +2351,15 @@ function updateWatch(dt) {
       if (Math.abs(dot) > 0.72 && d < 0.7) { show = true; watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(dot) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     } else if (d < 0.65 && h.wrist.y < head.p.y - 0.1) { show = true; watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0)); }
   }
-  const lab = state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
+  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
   watch.mesh.visible = show; watch.armT = show ? (watch.armT || 0) + dt : 0;
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
 function onWatch() {
+  if (PLACE.on) { cancelPlace(); return; }
+  if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
   if (GAME_STATES.includes(state)) openPause();
   else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
@@ -2391,13 +2396,23 @@ function drawCenter() {
   const c = center.ctx, W = center.W, H = center.H; c.clearRect(0, 0, W, H);
   rr(c, 6, 6, W - 12, H - 12, 30); c.fillStyle = 'rgba(14,10,28,0.86)'; c.fill(); c.lineWidth = 4; c.strokeStyle = 'rgba(60,240,198,.6)'; c.stroke();
   c.textBaseline = 'middle';
-  if (PLACE.on) {
+  if (PLACE.on || PLACE.wait) {
     const door = PLACE.kind === 'door';
-    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
-    const L = door ? ['Agarra la barra con las dos manos', 'mirándola. Quieto 2 s.'] : ['Una mano en cada paralela,', 'apoyada encima. Quieto 2 s.'];
-    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
-    c.font = `32px ${FB}`; c.fillStyle = PLACE.seen ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(PLACE.seen ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
-    centerBar(c, W, H, PLACE.t / 2);
+    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left';
+    if (PLACE.wait) {
+      c.fillText(door ? '¡BARRA COLOCADA!' : '¡PARALELAS COLOCADAS!', 44, 68);
+      c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; [PLACE.note, door ? 'Suéltate: ahora aparecen los ajustes finos.' : 'Ponte de pie: aparecen los ajustes finos.'].forEach((l, i) => { fitFont(c, l, W - 88, 36, '500 %px ' + FB); c.fillText(l, 44, 148 + i * 52); });
+      centerBar(c, W, H, 1);
+    } else {
+      c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
+      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
+      c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+      const st = !PLACE.seen ? ['No veo tus manos: míralas', '#ff8a3d'] : !PLACE.up ? ['Sube las manos por encima de la cabeza', '#ff8a3d'] : !PLACE.ok ? ['Separa más las manos', '#ff8a3d'] : ['Bien: no te muevas', '#3cf0c6'];
+      c.font = `500 34px ${FB}`; c.fillStyle = st[1]; c.fillText(st[0], 44, 258);
+      c.font = `500 26px ${FB}`; c.fillStyle = PLACE.note ? '#ffd166' : '#a49fc8'; c.fillText(PLACE.note || 'Cancelar: botón de la muñeca izquierda', 44, 304);
+      if (PLACE.t > 0) { c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(PLACE_HOLD - PLACE.t))), W - 50, 150); }
+      centerBar(c, W, H, PLACE.t / PLACE_HOLD);
+    }
   } else if (state === 'mount') {
     const row = settings.exercise === 'row';
     if (BAR.phase === 'place') {
@@ -3291,7 +3306,7 @@ function summaryText() {
 function lobbyMenu(reanchor) {
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
-  const start = () => { if (bars && !placed) { PLACE.note = `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`; placeMenu(lobbyMenu); } else beginRun(); };
+  const start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`); else beginRun(); };
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
@@ -3302,7 +3317,7 @@ function lobbyMenu(reanchor) {
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => { PLACE.note = ''; placeMenu(lobbyMenu); } }] });
+  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   rows.push(...musicRows());
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
@@ -3344,7 +3359,7 @@ function pauseMenu(reanchor) {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...musicRows(),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Colocar barra' : 'Colocar paralelas', onPress: () => { PLACE.note = ''; placeMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Ajustar barra' : 'Ajustar paralelas', onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
@@ -3717,61 +3732,98 @@ function buildBarWave(i) {
 }
 
 /* =================== COLOCAR LOS APARATOS =================== */
-const PLACE = { on: false, t: 0, kind: 'door', last: new V3(), has: false, seen: false };
-const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3();
+// Modo colocación: el atril se oculta, vas al aparato y lo agarras con las dos manos por encima de la cabeza.
+// Si las manos se quedan quietas PLACE_HOLD segundos, la media de esas posiciones es el aparato.
+// Después aparece el atril con los ajustes finos (altura, ancho, mover, girar).
+const PLACE_HOLD = 5;
+const PLACE = { on: false, t: 0, kind: 'door', back: null, seen: false, up: false, ok: false, lostT: 0, n: 0, sumL: new V3(), sumR: new V3(), wait: false, waitT: 0, note: '' };
+const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3(), _pl4 = new V3();
 // Punto de agarre: entre la base del dedo corazón y el nudillo (o el mando)
 function gripPoint(side, out) {
   const h = hands[side]; if (!h.ok) return null;
   if (h.isHand) { const a = h.J[10], b = h.J[11]; return a.ok && b.ok ? out.lerpVectors(a.p, b.p, 0.75) : null; }
   return out.copy(h.wrist);
 }
+// Línea luminosa entre las manos: lo que se está midiendo
+const placeLineMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false });
+const placeLine = new THREE.Mesh(G.cylRaw(0.012, 0.012, 1, 8), placeLineMat); placeLine.visible = false; placeLine.renderOrder = 24; scene.add(placeLine);
+function placeReset() { PLACE.t = 0; PLACE.n = 0; PLACE.sumL.set(0, 0, 0); PLACE.sumR.set(0, 0, 0); }
+function startPlace(back, note) {
+  const k = eqKind(); hideMenu();
+  if (EQ.edit !== k) { EQ.edit = k; eqPose(k).anchor = null; } // al terminar se crea un ancla nueva
+  Object.assign(PLACE, { on: true, kind: k, back, lostT: 0, wait: false, seen: false, up: false, ok: false, note: note || '' }); placeReset();
+  center.mesh.visible = true; drawCenter(); SND.click();
+}
+function cancelPlace() {
+  if (!PLACE.on && !PLACE.wait) return;
+  PLACE.on = PLACE.wait = false; placeLine.visible = false; center.mesh.visible = false; SND.click();
+  const back = PLACE.back; placeDone(); if (back) back();
+}
 function updatePlace(dt) {
-  if (!PLACE.on) return;
-  const L = gripPoint('left', _pl1), R = gripPoint('right', _pl2);
-  let ok = false;
-  if (L && R) { const d = Math.hypot(R.x - L.x, R.z - L.z); ok = d > 0.22 && d < (PLACE.kind === 'door' ? 1.5 : 1.1) && Math.abs(R.y - L.y) < 0.15; }
-  PLACE.seen = !!(L && R);
-  if (ok) {
-    const mid = _pl3.addVectors(L, R).multiplyScalar(0.5), v = PLACE.has ? mid.distanceTo(PLACE.last) / Math.max(dt, 1e-3) : 1;
-    PLACE.last.copy(mid); PLACE.has = true;
-    if (v < 0.06) { const before = PLACE.t; PLACE.t += dt; if (Math.floor(before * 2) !== Math.floor(PLACE.t * 2)) SND.tick(); } else PLACE.t = Math.max(0, PLACE.t - dt);
-  } else PLACE.t = Math.max(0, PLACE.t - dt * 2);
-  if (PLACE.t >= 2) {
-    placeFromHands(PLACE.kind, L, R); PLACE.on = false; PLACE.t = 0; center.mesh.visible = false;
-    if (menu && menu.rebuild) menu.rebuild();
+  if (PLACE.wait) { // ya está colocado: el atril aparece cuando estés de pie
+    PLACE.waitT += dt;
+    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); }
+    return;
   }
+  if (!PLACE.on) { placeLine.visible = false; return; }
+  const L = gripPoint('left', _pl1), R = gripPoint('right', _pl2), hy = head.p.y;
+  PLACE.seen = !!(L && R);
+  PLACE.up = PLACE.seen && L.y > hy + 0.12 && R.y > hy + 0.12;
+  const d = PLACE.seen ? Math.hypot(R.x - L.x, R.z - L.z) : 0;
+  PLACE.ok = PLACE.up && d > 0.22 && d < (PLACE.kind === 'door' ? 1.5 : 1.1) && Math.abs(R.y - L.y) < 0.15;
+  if (PLACE.seen) {
+    const mid = _pl3.addVectors(L, R).multiplyScalar(0.5), dir = _pl4.subVectors(R, L), len = Math.max(0.01, dir.length());
+    placeLine.visible = true; placeLine.position.copy(mid); placeLine.quaternion.setFromUnitVectors(_up, dir.divideScalar(len)); placeLine.scale.set(1, len, 1);
+    placeLineMat.color.setHex(PLACE.ok ? 0x3cf0c6 : 0xff8a3d);
+  } else placeLine.visible = false;
+  if (PLACE.ok) {
+    PLACE.lostT = 0;
+    // si las manos se mueven más de 5 cm de su posición media, la cuenta empieza de nuevo
+    if (PLACE.n && _pl4.addVectors(PLACE.sumL, PLACE.sumR).multiplyScalar(0.5 / PLACE.n).distanceTo(_pl3) > 0.05) placeReset();
+    PLACE.sumL.add(L); PLACE.sumR.add(R); PLACE.n++;
+    const before = PLACE.t; PLACE.t += dt;
+    if (Math.floor(before) !== Math.floor(PLACE.t)) SND.beep(1 + Math.floor(PLACE.t) * 0.12);
+    if (PLACE.t >= PLACE_HOLD) placeConfirm();
+  } else { PLACE.lostT += dt; if (PLACE.lostT > 0.5) placeReset(); } // se perdonan cortes breves del seguimiento
+}
+function placeConfirm() {
+  const k = PLACE.kind, L = PLACE.sumL.divideScalar(PLACE.n), R = PLACE.sumR.divideScalar(PLACE.n);
+  placeFromHands(k, L, R);
+  PLACE.on = false; PLACE.wait = true; PLACE.waitT = 0; placeLine.visible = false; SND.charge(); SND.perfect();
+  drawCenter();
 }
 function placeFromHands(k, L, R) {
   const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
   e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
   if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
-  else { setSetting('dipH', Math.round((mid.y - 0.03) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
-  equipChanged(k); SND.charge();
+  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  equipChanged(k);
   PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
 }
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
-function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); }
-function placeMenu(back) {
-  const k = eqKind(), door = k === 'door', e = eqPose(k);
-  if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; } // al terminar se crea un ancla nueva
-  const note = PLACE.on ? (PLACE.seen ? 'Quieto…' : 'No veo tus dos manos: mira hacia ellas') : PLACE.note || (door ? 'Mira la barra, agárrala con las dos manos y quédate quieto 2 s' : 'Apoya una mano en cada paralela y quédate quieto 2 s');
+function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
+// Ajustes finos, una vez colocado con las manos
+function adjustMenu(back, reanchor) {
+  const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
+  if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
+  const what = door ? 'la barra virtual coincida' : 'las paralelas virtuales coincidan';
+  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${door ? 'está colocada' : 'están colocadas'}: pulsa Colocar con las manos`;
   const rows = [
-    { t: 'title', text: door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS' },
-    { t: 'text', text: note, color: PLACE.note && !PLACE.on ? '#3cf0c6' : '#d8d3f5' },
-    { t: 'btns', items: [
-      { label: preview ? 'Con las manos (en las gafas)' : PLACE.on ? 'Midiendo…' : 'Con las manos', style: preview ? 'ghost' : 'primary', onPress: () => { if (preview) { PLACE.note = 'En el ordenador usa «Delante de mí» y los botones'; } else { Object.assign(PLACE, { on: true, t: 0, kind: k, has: false, note: '' }); center.mesh.visible = true; } placeMenu(back); } },
-      { label: 'Delante de mí', onPress: () => { PLACE.on = false; center.mesh.visible = false; placeInFront(k); PLACE.note = door ? 'Barra delante de ti: ajústala' : 'Paralelas delante de ti: ajústalas'; placeMenu(back); } }] },
-    { t: 'btns', items: [['Izquierda', -0.02, 0, 0], ['Derecha', 0.02, 0, 0], ['Alejar', 0, 0.02, 0], ['Acercar', 0, -0.02, 0], ['Girar −', 0, 0, 0.05], ['Girar +', 0, 0, -0.05]].map(([label, sx, fz, r]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, r) })) },
+    { t: 'title', text: door ? 'AJUSTAR BARRA' : 'AJUSTAR PARALELAS' },
+    { t: 'text', text: note, color: PLACE.note ? '#3cf0c6' : e.set ? '#d8d3f5' : '#ffd166' },
     { t: 'field', key: door ? 'doorH' : 'dipH' },
     { t: 'field', key: door ? 'doorW' : 'dipGap' }
   ];
   if (!door) rows.push({ t: 'field', key: 'dipLen' });
-  rows.push({ t: 'btns', items: [{ label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
-  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => placeMenu(back);
+  rows.push({ t: 'btns', items: [['Izquierda', -0.01, 0], ['Derecha', 0.01, 0], ['Acercar', 0, -0.01], ['Alejar', 0, 0.01]].map(([label, sx, fz]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, 0) })) });
+  rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
+  rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
+  rows.push({ t: 'btns', items: [{ label: 'Colocar con las manos', onPress: () => startPlace(back) }, { label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
+  const m = openMenu(rows, { border: '#3cf0c6', reanchor }); m.rebuild = () => adjustMenu(back);
 }
 function placeDone() {
-  const k = EQ.edit; PLACE.on = false; PLACE.note = ''; if (!GAME_STATES.includes(state)) center.mesh.visible = false;
-  if (!k) return; EQ.edit = null; equipChanged(k); equipCommit(k);
+  const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;
+  if (!k) return; EQ.edit = null; if (eqPose(k).set) { equipChanged(k); equipCommit(k); }
 }
 
 
@@ -3811,7 +3863,7 @@ function readXR(frame) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
 function previewInput(dt) {
   const dropAmt = isPush() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
   let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
@@ -3824,6 +3876,8 @@ function previewInput(dt) {
   camera.position.y = PV.y; camera.updateMatrixWorld();
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
+  // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
+  if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
 function previewBarPose(on) {
@@ -3846,7 +3900,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu(true);
 }
-function stopPreview() { preview = false; EQ.edit = null; PLACE.on = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -3856,13 +3910,14 @@ addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   PV.keys[e.code] = true;
-  if (e.code === 'Escape') { if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
+  if (e.code === 'Escape') { if (PLACE.on || PLACE.wait) onWatch(); else if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
+  if (e.code === 'KeyH') PV.handsUp = true;
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
   if (e.code === 'KeyF') PV.fall = true;
   if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; if (isBars()) { barRep({ perfect: true }); return; } onCharge(); onRep({ perfect: true }); }
   if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
 });
-addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; });
+addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; if (e.code === 'KeyH') PV.handsUp = false; });
 const cv = renderer.domElement, ray = new THREE.Raycaster(), _plane = new THREE.Plane(), _pt = new V3(), _nrm = new V3();
 function rayFrom(e) { const r = cv.getBoundingClientRect(); ray.setFromCamera({ x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera); }
 function hitWidget(e) { if (!menu) return null; rayFrom(e); const list = activeWidgets(), hit = ray.intersectObjects(list.map(w => w.mesh))[0]; return hit ? { w: list.find(w => w.mesh === hit.object), point: hit.point } : null; }
@@ -3924,7 +3979,7 @@ async function startXR(ar) {
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
-    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
