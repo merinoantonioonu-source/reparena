@@ -99,7 +99,7 @@ function spNowText() {
   const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
-// Filas para los menús del juego (atril y pausa)
+// Filas para los menús del juego (principal y pausa)
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;

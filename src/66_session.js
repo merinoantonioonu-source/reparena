@@ -103,7 +103,7 @@ function renderSession() {
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
-  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el atril.` : '';
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 function sesInitPage() {
   const host = $('#sesList');

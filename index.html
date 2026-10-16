@@ -300,7 +300,8 @@ const SCHEMA = [
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
-  { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', hint: 'El menú se queda fijo: tendrás que acercarte para pulsarlo.' },
+  { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
+  { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
@@ -2254,8 +2255,11 @@ function pokeWidgets(list, dt, ready = true) {
   return false;
 }
 
-/* =================== MENÚ FIJO EN EL MUNDO =================== */
+/* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */
+// En las Quest el menú sale de la muñeca izquierda al girarla hacia la cara y se pulsa con el índice derecho.
+// Con el ajuste «Atril», o en el ordenador, queda fijo delante de ti.
 let menu = null, menuAnchor = null;
+const wristMenuOn = () => xrActive && !preview && settings.menuWhere === 'wrist';
 const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
 // Capas del atril: son paneles semitransparentes casi pegados y, sin un orden fijo, el fondo
 // tapaba botones según desde dónde se mirara. Se dibujan siempre fondo → botones → teclado → teclas.
@@ -2324,15 +2328,23 @@ function openMenu(rows, opts = {}) {
     y -= h + GAP;
   });
   bg.tex.needsUpdate = true;
-  group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+  const wrist = wristMenuOn();
   scene.add(group);
-  // atril
-  const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
-  stand.visible = true; stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
-  const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
-  stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
-  stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
-  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
+  if (wrist) { // en la muñeca: la postura la pone updateWristMenu; solo lo pulsa la mano derecha
+    widgets.forEach(w => { w.only = 'right'; });
+    stand.visible = false; wristPose(group, H);
+  } else {
+    group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+    stand.visible = settings.menuWhere === 'stand';
+    if (stand.visible) { // atril
+      const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
+      stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
+      const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
+      stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
+      stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
+    }
+  }
+  menu = { group, widgets, fieldRows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
   return menu;
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
@@ -2349,11 +2361,12 @@ function openKeypad(f, row) {
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
+  if (menu.wrist) cancel.only = ok.only = 'right';
   cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
   menu.keypad = kp; drawKeypad();
 }
@@ -2391,16 +2404,21 @@ function activeWidgets() { if (!menu) return []; return menu.keypad ? menu.keypa
 const watch = new Btn('MENÚ', 0.09, 0.042, () => onWatch(), { depthTest: false, style: 'primary', font: 0.5 });
 watch.only = 'right'; scene.add(watch.mesh); watch.mesh.visible = false;
 const _wu = new V3(), _wh = new V3(), _wo = new V3();
+// ¿Miras la muñeca izquierda? (dorso o palma hacia la cara; con mando, el mando levantado delante)
+function wristLook(h = hands.left, lim = 0.72) {
+  if (!h.ok || state === 'idle') return false;
+  const d = h.wrist.distanceTo(head.p);
+  if (!h.isHand) return d < 0.65 && h.wrist.y < head.p.y - 0.1;
+  _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
+  return Math.abs(_wu.dot(_wh)) > lim && d < 0.7;
+}
 function updateWatch(dt) {
   const h = hands.left;
   let show = false;
-  if (h.ok && state !== 'idle') {
-    const d = h.wrist.distanceTo(head.p);
-    if (h.isHand) {
-      _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
-      const dot = _wu.dot(_wh);
-      if (Math.abs(dot) > 0.72 && d < 0.7) { show = true; watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(dot) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
-    } else if (d < 0.65 && h.wrist.y < head.p.y - 0.1) { show = true; watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0)); }
+  if (wristLook(h) && !(menu && menu.wrist)) { // con el menú en la muñeca, el propio panel hace de botón
+    show = true;
+    if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
+    else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));
   }
   const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
@@ -2408,6 +2426,41 @@ function updateWatch(dt) {
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
+// Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
+// derecho para pulsar y se recoge al bajar el brazo.
+const WMS = 0.46; // escala del panel: 0,76 m de ancho en el atril → 35 cm en la muñeca
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4() };
+const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
+const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
+function wristPose(group, H, k = 1) {
+  const h = hands.left, s = WMS * (1 - Math.pow(1 - WM.e, 3));
+  if (h.ok && !WM.near) {
+    // encima de la muñeca, un poco hacia la cara, de cara a ti; la parte de abajo nace en la muñeca
+    _wh.copy(head.p).sub(h.wrist); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.set(0, 0, 1); _wh.normalize();
+    _wmt.copy(h.wrist).addScaledVector(_wh, 0.05); _wmt.y += 0.05 + H * WMS / 2;
+    _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
+    if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+  }
+  // al crecer, el centro sube desde la muñeca
+  group.position.copy(WM.pos).add(_wml.set(0, -(H * WMS / 2) * (1 - s / WMS), 0).applyQuaternion(WM.q));
+  group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
+}
+function updateWristMenu(dt) {
+  const look = wristLook(hands.left, 0.6);
+  // ¿está el índice derecho delante del panel? Entonces no se mueve ni se esconde
+  WM.near = false;
+  if (menu && menu.wrist && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
+  WM.gestT = look ? WM.gestT + dt : 0; WM.lostT = look || WM.near ? 0 : WM.lostT + dt;
+  if (!WM.on && WM.gestT > 0.12) { WM.on = true; if (menu && menu.wrist) SND.tick(); }
+  if (WM.on && WM.lostT > 0.5) WM.on = false;
+  if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
+  WM.e = clamp(WM.e + (WM.on ? dt : -dt) / 0.22, 0, 1);
+  wristPose(menu.group, menu.H, 1 - Math.exp(-dt * 14));
+  // aviso: un punto que late en la muñeca mientras hay un menú recogido
+  const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
+  if (wristHint.visible) { wristHint.position.copy(h.wrist).add(_wo.set(0, 0.04, 0)); const p = 0.04 + 0.015 * Math.sin(performance.now() / 160); wristHint.scale.set(p, p, 1); }
+}
+const wristReady = () => !menu || !menu.wrist || WM.e > 0.95;
 function onWatch() {
   if (PLACE.on) { cancelPlace(); return; }
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
@@ -2434,7 +2487,7 @@ function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(
 function updateViewPanels(dt) {
   const k = 1 - Math.exp(-dt * 4);
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, menu ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
+    const tgt = headLocal(_hl.set(0, menu && !menu.wrist ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
     center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
   } else center.mesh.userData.init = false;
@@ -2516,7 +2569,7 @@ function drawBoard() {
   if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
-    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
+    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 320);
     board.tex.needsUpdate = true; return;
   }
   const N = settings.waves;
@@ -4322,9 +4375,9 @@ renderer.setAnimationLoop((time, frame) => {
   updateFX(dt);
   updateGloves(dt);
   updateAim(t);
-  updateWatch(dt);
+  updateWatch(dt); updateWristMenu(dt);
   updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
-  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5); }
+  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);
   if (!arMode && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }

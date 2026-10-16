@@ -143,9 +143,9 @@ renderer.setAnimationLoop((time, frame) => {
   updateFX(dt);
   updateGloves(dt);
   updateAim(t);
-  updateWatch(dt);
+  updateWatch(dt); updateWristMenu(dt);
   updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
-  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5); }
+  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);
   if (!arMode && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
