@@ -267,6 +267,69 @@ function buildHornet() {
   return R.build();
 }
 
+/* ---------- Avispa monstruo (modo Barras, «Bichos») ---------- */
+// Del tamaño de una mano, con cara de monstruo: ojos rojos que brillan bajo unas cejas en uve, boca abierta llena de
+// dientes, mandíbulas en gancho y un aguijón brillante en la punta del abdomen, que dobla por debajo para picar.
+function buildStinger() {
+  const R = new Rig();
+  R.bone('body', null).bone('head', 'body', 0, 0.012, 0.05).bone('jaw', 'head', 0, -0.024, 0.024)
+   .bone('mandL', 'head', 0.022, -0.014, 0.022).bone('mandR', 'head', -0.022, -0.014, 0.022)
+   .bone('abd', 'body', 0, -0.004, -0.045).bone('sting', 'abd', 0, -0.012, -0.118);
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) R.bone('w' + sd + '1', 'body', sx * 0.02, 0.035, 0.012).bone('w' + sd + '2', 'body', sx * 0.02, 0.03, -0.012);
+  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GS = (b, g, c, ...t) => R.add(b, 'gloss', g, c, ...t), GL = (b, g, c, ...t) => R.add(b, 'glow', g, c, ...t);
+  const dark = C.waspK, yel = C.waspY, org = C.waspO, tooth = col(0.92, 0.88, 0.74), gum = col(0.35, 0.03, 0.04);
+  // tórax peludo
+  P('body', G.sph(1, 16, 12), dark, 0, 0, 0, 0, 0, 0, 0.046, 0.042, 0.054);
+  P('body', spikes(0, 0, 0, 0.046, 0.042, 0.054, 220, 0.008, 0.0012), col(0.45, 0.3, 0.12));
+  for (const s of [-1, 1]) P('body', G.sph(1, 10, 8), yel, s * 0.03, 0.025, 0.02, 0, 0, 0, 0.012, 0.008, 0.016);
+  P('body', G.sph(1, 10, 8), yel, 0, 0.038, -0.01, 0, 0, 0, 0.018, 0.008, 0.024);
+  // cabeza: cráneo negro con máscara, ojos rojos rasgados bajo cejas en uve, boca abierta llena de colmillos, cuernos
+  P('head', G.sph(1, 16, 12), dark, 0, 0.006, 0.008, 0, 0, 0, 0.048, 0.042, 0.032);
+  P('head', G.sph(1, 16, 12), org, 0, -0.004, 0.022, 0, 0, 0, 0.041, 0.034, 0.024);
+  for (const s of [-1, 1]) {
+    P('head', G.sph(1, 12, 10), C.black, s * 0.021, 0.011, 0.04, 0, 0, s * 0.45, 0.019, 0.012, 0.009);          // cuenca
+    GL('head', G.sph(1, 12, 10), C.red, s * 0.021, 0.011, 0.045, 0, 0, s * 0.45, 0.015, 0.008, 0.006);         // ojo rasgado que brilla
+    P('head', G.box(0.003, 0.01, 0.003), C.black, s * 0.02, 0.011, 0.0505, 0, 0, s * 0.2);                       // pupila de reptil
+    P('head', G.box(0.034, 0.009, 0.014), dark, s * 0.02, 0.024, 0.043, 0.3, 0, -s * 0.55);                     // ceja fruncida
+    for (let k = 0; k < 2; k++) P('head', G.cone(0.007 - k * 0.002, 0.04 - k * 0.012, 6), dark, s * (0.024 + k * 0.012), 0.04 - k * 0.004, -0.004 - k * 0.006, -0.9, 0, -s * (0.35 + k * 0.35)); // cuernos
+    P('head', G.tube([new V3(s * 0.01, 0.034, 0.028), new V3(s * 0.022, 0.065, 0.04), new V3(s * 0.045, 0.08, 0.05), new V3(s * 0.062, 0.072, 0.07)], 0.0016, 10, 4), C.black); // antena
+    const md = s > 0 ? 'mandL' : 'mandR'; // mandíbula en gancho
+    P(md, G.box(0.012, 0.01, 0.026), org, 0, 0, 0.012, 0, -s * 0.4, 0);
+    GS(md, G.cone(0.006, 0.032, 6), C.black, -s * 0.01, 0, 0.03, Math.PI / 2, 0, s * 0.9);
+    for (let k = 0; k < 3; k++) GS(md, G.cone(0.0024, 0.009, 4), tooth, -s * (0.003 + k * 0.004), 0, 0.012 + k * 0.007, 0, 0, s * Math.PI / 2);
+  }
+  P('head', G.sph(1, 14, 10), gum, 0, -0.019, 0.047, 0, 0, 0, 0.027, 0.014, 0.011); // boca abierta
+  P('head', G.sph(1, 10, 8), C.black, 0, -0.019, 0.051, 0, 0, 0, 0.019, 0.008, 0.009);  // garganta
+  for (let i = 0; i < 9; i++) { const x = (i - 4) * 0.0055, big = i === 1 || i === 7; GS('head', G.cone(big ? 0.0034 : 0.0022, big ? 0.02 : 0.01, 5), tooth, x, -0.008 - (big ? 0.008 : 0.004), 0.056 - Math.abs(i - 4) * 0.0018, Math.PI, 0, 0); } // colmillos de arriba
+  P('jaw', G.box(0.044, 0.008, 0.026), org, 0, -0.008, 0.018);
+  for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.0062, big = i === 1 || i === 5; GS('jaw', G.cone(big ? 0.003 : 0.0022, big ? 0.016 : 0.009, 5), tooth, x, -0.002 + (big ? 0.006 : 0.003), 0.03 - Math.abs(i - 3) * 0.0016); }
+  // patas colgando, con garras
+  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) {
+    const a = new V3(s * 0.025, -0.028, 0.025 - i * 0.022), b = new V3(s * 0.055, -0.045, 0.03 - i * 0.026), c = new V3(s * 0.06, -0.085, 0.018 - i * 0.032), d = new V3(s * 0.058, -0.12, 0.01 - i * 0.04);
+    P('body', limbBetween(a, b, 0.0042, 0.0034), dark); P('body', limbBetween(b, c, 0.0034, 0.0026), yel); P('body', limbBetween(c, d, 0.0024, 0.0016), org);
+    GS('body', G.cone(0.0022, 0.012, 4), C.black, d.x, d.y - 0.004, d.z + 0.003, 2.6, 0, 0);
+  }
+  // abdomen a bandas, algo curvado hacia abajo
+  P('abd', G.cyl(0.008, 0.008, 0.016, 8), dark, 0, 0, -0.004, Math.PI / 2, 0, 0);
+  const prof = t => 0.036 * Math.pow(Math.sin(Math.PI * (t * 0.9 + 0.08)), 0.7), N = 7, Lz = 0.11;
+  for (let k = 0; k < N; k++) {
+    const t0 = k / N, t1 = (k + 1) / N, z0 = -0.012 - t0 * Lz, z1 = -0.012 - t1 * Lz, y0 = -t0 * t0 * 0.012, y1 = -t1 * t1 * 0.012;
+    const mid = (t0 + t1) / 2, zm = -0.012 - mid * Lz, ym = -mid * mid * 0.012;
+    P('abd', G.cyl(prof(mid), prof(t0), z0 - zm, 14), yel, 0, (y0 + ym) / 2, (z0 + zm) / 2, -Math.PI / 2, 0, 0);
+    P('abd', G.cyl(prof(t1), prof(mid), zm - z1, 14), dark, 0, (ym + y1) / 2, (zm + z1) / 2, -Math.PI / 2, 0, 0);
+  }
+  P('abd', spikes(0, -0.004, -0.06, 0.034, 0.03, 0.05, 160, 0.006, 0.001, { back: -0.4 }), col(0.45, 0.3, 0.12));
+  // aguijón con una gota de veneno que brilla
+  GS('sting', G.cone(0.0055, 0.045, 8), C.black, 0, 0, -0.02, -Math.PI / 2, 0, 0);
+  GL('sting', G.sph(0.004, 8, 6), C.green, 0, 0, -0.044);
+  // alas
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) for (const [k, w, h] of [[1, 0.1, 0.03], [2, 0.07, 0.022]]) {
+    const g = new THREE.PlaneGeometry(w, h); g.translate(w / 2, 0, 0); g.rotateX(-Math.PI / 2); if (sx < 0) g.scale(-1, 1, 1); g.rotateY(sx * -0.4);
+    R.add('w' + sd + k, 'wing', g, C.white);
+  }
+  return R.build();
+}
+
 /* ---------- Tentáculo del charco (modo Barras) ---------- */
 function buildTentacle() {
   const R = new Rig(), N = 9, L = 0.1, rad = i => 0.052 * (1 - i / N) + 0.007;
@@ -362,12 +425,14 @@ function makeGlove(side) {
 }
 const gloves = { left: makeGlove('left'), right: makeGlove('right') };
 const _gm = new THREE.Matrix4(), _gq = new Q4(), _gp = new V3(), _gs = new V3(), _goff = new V3();
-const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0), _gw = new THREE.Color();
 function updateGloves(dt) {
   for (const side of ['left', 'right']) {
     const h = hands[side], g = gloves[side];
     g.pulse = Math.max(0, g.pulse - dt * 3);
-    g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
+    // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
+    if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
+    else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
@@ -393,7 +458,7 @@ function updateGloves(dt) {
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
   RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true);
-  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet();
+  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet(); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
   for (const [x, z, ry, kind] of [[-6.5, -4, 0.6, 'scout'], [7.5, -5.5, 2.2, 'heavy'], [-11, -9, 1.4, 'scout'], [12, 6, -0.8, 'heavy']]) {

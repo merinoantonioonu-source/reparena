@@ -37,7 +37,7 @@ for (const kind of ['scout', 'heavy', 'titan']) {
   const h = kind === 'titan' ? 1.6 : 1.05;
   shot(grp, [front(new V3(0, h, 0), kind === 'titan' ? 6 : 4), side(new V3(0, h, 0), kind === 'titan' ? 6 : 4), q34(new V3(0, h, 0), kind === 'titan' ? 5.5 : 3.6)], `robot_${kind}.png`);
   // attack windup pose
-  r.arm = 1; r.jaw = 1; r.animate(0.033, 1, false);
+  r.arm = 1; r.jaw = 1; r.animate(0.033, 1, 0);
   shot(grp, [front(new V3(0, h + 0.2, 0), kind === 'titan' ? 6.5 : 4.2), side(new V3(0, h + 0.2, 0), kind === 'titan' ? 6.5 : 4.2)], `robot_${kind}_attack.png`);
   // head close-up
   const hp = r.B.head.getWorldPosition(new V3());
@@ -64,10 +64,10 @@ RA.setSetting('exercise', 'pushup'); RA.setSetting('mode', 'walkers');
 }
 // Flyers
 RA.setSetting('exercise', 'squat'); RA.setSetting('mode', 'flyers');
-for (const kind of ['drone', 'hornet', 'bomber', 'carrier']) {
-  const inst = RA.RIGS[kind].instance(kind === 'hornet' ? { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), gloss: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), wing: new THREE.MeshBasicMaterial({ skinning: true, transparent: true, side: 2, color: 0xbbbbbb }) } : { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true }), rotor: new THREE.MeshBasicMaterial({ skinning: true, color: 0x555555 }) });
+for (const kind of ['drone', 'hornet', 'stinger', 'bomber', 'carrier']) {
+  const inst = RA.RIGS[kind].instance(kind === 'hornet' || kind === 'stinger' ? { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), gloss: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), wing: new THREE.MeshBasicMaterial({ skinning: true, transparent: true, side: 2, color: 0xbbbbbb }) } : { main: new THREE.MeshStandardMaterial({ vertexColors: true, skinning: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true }), rotor: new THREE.MeshBasicMaterial({ skinning: true, color: 0x555555 }) });
   const grp = new THREE.Group(); grp.add(inst.root);
-  const s = kind === 'hornet' ? 0.12 : kind === 'carrier' ? 0.6 : 0.4;
+  const s = kind === 'hornet' ? 0.12 : kind === 'stinger' ? 0.2 : kind === 'carrier' ? 0.6 : 0.4;
   shot(grp, [front(new V3(0, 0, 0), s * 1.6, 0.6), side(new V3(0, 0, 0), s * 1.6), top(new V3(0, 0, 0), s * 1.8)], `flyer_${kind}.png`);
 }
 // Arc + gate + kiosk
@@ -108,7 +108,7 @@ console.log('done');
   const pal = { normal: 0x3355ff, primary: 0xff3399, selected: 0x33ffcc, value: 0xffcc33, tab: 0x666699, danger: 0xff3333, ghost: 0x444444, key: 0x9999ff };
   function paint(m) { m.group.children.forEach((c, i) => { if (i === 0) { c.material.color.setHex(0x221a3a); return; } }); m.widgets.forEach(w => { w.mesh.material.color.setHex(w.kind === 'slider' ? 0xaaaaaa : (pal[w.style] || 0xffffff)); }); }
   const views = [];
-  RA.lobbyMenu(true); paint(RA.menu);
+  RA.lobbyMenu(); paint(RA.menu);
   let c = RA.menu.group.position.clone();
   const grp = () => { const g = new THREE.Group(); g.add(RA.menu.group); g.add(RA.stand); return g; };
   const eye = c.clone().add(new V3(0, 0.33, 0.85));

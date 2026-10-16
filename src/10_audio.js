@@ -238,6 +238,13 @@ const SND = {
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
   pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
+  waterPop(pos, big) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: big ? 1 : 0.85, ref: 0.8 });
+    noise(o, { type: 'bandpass', f: 1400, to: 500, q: 1.2, d: 0.18, gain: 0.55 }); noise(o, { brown: true, f: 900, to: 180, d: 0.25, gain: 0.5 });
+    tone(o, { f: big ? 300 : 420, to: big ? 900 : 1300, a: 0.002, d: 0.08, gain: 0.22 }); tone(o, { f: 180, to: 520, t: 0.03, d: 0.1, gain: 0.12 });
+    for (let i = 0; i < 7; i++) tone(o, { t: 0.12 + Math.random() * 0.45, f: rand(700, 1500), to: rand(1600, 3200), d: 0.035, gain: 0.04 });
+  },
   splash(pos) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
@@ -249,6 +256,9 @@ const SND = {
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
   },
+  // bosque: un búho que ulula a lo lejos y una rama que cruje
+  owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
+  creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
 
@@ -274,13 +284,14 @@ class Loop {
 }
 function buzzLoop(kind, pos) {
   if (!sndOK()) return null;
-  const f0 = { drone: rand(120, 150), hornet: rand(190, 240), bomber: rand(85, 100), carrier: rand(60, 70) }[kind] || 130;
-  return new Loop(pos, kind === 'carrier' ? 0.35 : 0.18, (L, C) => {
+  const f0 = { drone: rand(120, 150), hornet: rand(190, 240), wasp: rand(160, 200), queen: rand(95, 115), bomber: rand(85, 100), carrier: rand(60, 70) }[kind] || 130;
+  const insect = kind === 'hornet' || kind === 'wasp' || kind === 'queen';
+  return new Loop(pos, kind === 'carrier' || kind === 'queen' ? 0.35 : kind === 'wasp' ? 0.24 : 0.18, (L, C) => {
     const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f0 * 3; bp.Q.value = 0.9; bp.connect(L.out);
     const trem = C.createGain(); trem.gain.value = 0.7; trem.connect(bp);
     const a = L.osc('sawtooth', f0), b = L.osc('sawtooth', f0 * 1.013); a.connect(trem); b.connect(trem);
-    const lfo = L.osc('sine', kind === 'hornet' ? 23 : f0 / 9), lg = C.createGain(); lg.gain.value = 0.3; lfo.connect(lg).connect(trem.gain);
-    if (kind === 'hornet') { const v = L.osc('sine', 5.5), vg = C.createGain(); vg.gain.value = 9; v.connect(vg); vg.connect(a.frequency); vg.connect(b.frequency); }
+    const lfo = L.osc('sine', insect ? 23 : f0 / 9), lg = C.createGain(); lg.gain.value = 0.3; lfo.connect(lg).connect(trem.gain);
+    if (insect) { const v = L.osc('sine', kind === 'hornet' ? 5.5 : 7.5), vg = C.createGain(); vg.gain.value = 9; v.connect(vg); vg.connect(a.frequency); vg.connect(b.frequency); }
     else { const w = L.osc('triangle', f0 * 7.1), wg = C.createGain(); wg.gain.value = 0.05; w.connect(wg).connect(L.out); }
     L.freqs = [a, b];
   });
@@ -296,11 +307,25 @@ function humLoop(pos) {
   });
 }
 /* ---------- Ambiente ---------- */
-const AMB = { nodes: null, nextClank: 5, nextThunder: 15 };
+const AMB = { nodes: null, nextClank: 5, nextThunder: 15, kind: '' };
 function ambientStart() {
   if (!AUD.C || AMB.nodes) return;
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
+  AMB.kind = forestOn() ? 'forest' : 'arena';
+  if (AMB.kind === 'forest') { // viento entre las hojas, grillos y un zumbido grave e inquietante
+    const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 0.5;
+    const wg = C.createGain(); wg.gain.value = 0.2; w.connect(wf).connect(wg).connect(out); nodes.push(w);
+    const l1 = C.createOscillator(); l1.frequency.value = 0.08; const lg1 = C.createGain(); lg1.gain.value = 300; l1.connect(lg1).connect(wf.frequency); nodes.push(l1);
+    const l2 = C.createOscillator(); l2.frequency.value = 0.13; const lg2 = C.createGain(); lg2.gain.value = 0.12; l2.connect(lg2).connect(wg.gain); nodes.push(l2);
+    for (const [f, rate, g] of [[4300, 13, 0.012], [5100, 17.5, 0.008]]) {
+      const c = C.createOscillator(); c.frequency.value = f; const cg = C.createGain(); cg.gain.value = 0; c.connect(cg).connect(out);
+      const p = C.createOscillator(); p.type = 'square'; p.frequency.value = rate; const pg = C.createGain(); pg.gain.value = g; p.connect(pg).connect(cg.gain);
+      const sl = C.createOscillator(); sl.frequency.value = 0.21; const sg = C.createGain(); sg.gain.value = g; sl.connect(sg).connect(cg.gain); nodes.push(c, p, sl);
+    }
+    const d = C.createOscillator(); d.type = 'triangle'; d.frequency.value = 55; const dg = C.createGain(); dg.gain.value = 0.035; const dl = C.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 160; d.connect(dl).connect(dg).connect(out); nodes.push(d);
+    nodes.forEach(n => n.start()); AMB.nodes = { nodes, out }; return;
+  }
   const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 130; lp.connect(out);
   [41.2, 41.7, 61.9].forEach((f, i) => { const o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const g = C.createGain(); g.gain.value = i === 2 ? 0.05 : 0.13; o.connect(g).connect(lp); nodes.push(o); });
   const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 380; wf.Q.value = 0.6;
@@ -311,6 +336,8 @@ function ambientStart() {
   nodes.forEach(n => n.start());
   AMB.nodes = { nodes, out };
 }
+// Al entrar o salir del bosque cambia el ambiente
+function ambientRefresh() { if (AMB.nodes && AMB.kind !== (forestOn() ? 'forest' : 'arena')) { ambientStop(); ambientStart(); } }
 function ambientStop() {
   if (!AMB.nodes) return; const T = AUD.C.currentTime;
   AMB.nodes.out.gain.setTargetAtTime(0.0001, T, 0.3); AMB.nodes.nodes.forEach(n => n.stop(T + 1.5)); AMB.nodes = null;

@@ -165,6 +165,7 @@ const trackFloor = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), std({ color: 
 /* ---------- Marcador fijo ---------- */
 const board = makePanel(1, 0.445, 1024);
 const boardRig = new THREE.Group(); arena.add(boardRig);
+const boardFrameMat = M.steel.clone(); boardFrameMat.transparent = true; // el marco se desvanece con el marcador si tapa algo
 let boardDirty = true;
 function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
@@ -174,7 +175,7 @@ function layoutArena() {
   const sp = Math.max(3.6 * gs, D * 0.42);
   gates.forEach((g, i) => {
     g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
-    g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push;
+    g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push && !forestOn();
   });
   gateLight.position.set(0, 1.6 * gs, -D - 0.6);
   const hp = settings.exercise === 'plank1' ? hatchSide : hatchPos; // en la plancha, dos a cada lado
@@ -190,11 +191,20 @@ function layoutArena() {
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
   if (low) {
-    rig.position.set(0, 0, -1.3);
-    for (const s of [-1, 1]) k.add('steel', G.box(0.05, 0.22, 0.05), C.dark, s * 0.3, 0.11, -0.04);
-    k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
-    rig.add(k.build({ steel: M.steel }, { cast: true }));
-    board.mesh.position.set(0, 0.265, -0.005); board.mesh.rotation.set(-0.25, 0, 0); board.mesh.scale.setScalar(0.82);
+    // en el suelo: tumbado casi plano delante de las manos, inclinado hacia tu cara. Así no se levanta en el camino
+    // de lo que viene hacia tu cabeza (los objetivos y los bichos llegan por encima de 20 cm)
+    const tilt = 1.19, nY = Math.sin(tilt), nZ = Math.cos(tilt);
+    rig.position.set(0, 0, -0.95);
+    k.add('steel', G.box(0.76, 0.36, 0.025), C.dark, 0, 0.075 - nY * 0.016, -nZ * 0.016, -tilt, 0, 0);
+    rig.add(k.build({ steel: boardFrameMat }, { receive: true }));
+    board.mesh.position.set(0, 0.075, 0); board.mesh.rotation.set(-tilt, 0, 0); board.mesh.scale.setScalar(0.7);
+  } else if (forestOn()) {
+    // en el bosque, un cartel de madera clavado en dos postes, a un lado
+    rig.position.set(-1.35, 0, -2.3); rig.rotation.y = Math.atan2(1.35, 2.3);
+    for (const s of [-1, 1]) k.add('bark', G.cyl(0.05, 0.06, 2.35, 8), C_DEAD, s * 0.55, 1.17, -0.06);
+    for (let i = 0; i < 3; i++) k.add('bark', G.box(1.22, 0.19, 0.04), C_DEAD, 0, 1.71 + i * 0.19, -0.04, 0, 0, (i - 1) * 0.02);
+    rig.add(k.build({ bark: M.bark }, { cast: true }));
+    board.mesh.position.set(0, 1.9, -0.015); board.mesh.rotation.set(0.05, 0, 0); board.mesh.scale.setScalar(1.05);
   } else if (isBars() && settings.exercise === 'row') {
     // remo: tumbado mirando al techo; placeRowBoard lo pone encima de tu cara al colgarte
     rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
@@ -205,7 +215,7 @@ function layoutArena() {
     for (const s of [-1, 1]) k.add('steel', G.box(0.2, yc + H / 2, 0.2), C.dark, s * (W / 2 + 0.18), (yc + H / 2) / 2, -0.15);
     const tilt = Math.atan((yc - 1.6) / D) * 0.8;
     k.add('steel', G.box(W + 0.22, H + 0.22, 0.12), C.gun, 0, yc, -0.08, tilt, 0, 0);
-    rig.add(k.build({ steel: M.steel }, { cast: true }));
+    rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else {
     const cx = -Math.min(2.4, D * 0.3 + 0.7), cz = -Math.min(3.0, D * 0.55);
@@ -215,7 +225,7 @@ function layoutArena() {
     k.add('glow', G.box(0.04, 1.7, 0.02), C.teal, 0, 1.0, 0.11);
     const W = 1.25, tilt = Math.atan(0.6 / Math.hypot(cx, cz));
     k.add('steel', G.box(W + 0.1, W * 0.445 + 0.1, 0.08), C.gun, 0, 2.3, -0.05, tilt, 0, 0);
-    rig.add(k.build({ steel: M.steel, glow: M.glow }, { cast: true }));
+    rig.add(k.build({ steel: boardFrameMat, glow: M.glow }, { cast: true }));
     board.mesh.position.set(0, 2.3, -0.005); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   }
   rig.add(board.mesh);
@@ -229,7 +239,7 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume();
+  layoutArena(); applyVolume(); applyForest();
 }
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
@@ -245,7 +255,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode) {
+  if (!arMode && !forestOn()) {
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }

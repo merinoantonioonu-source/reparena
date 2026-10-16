@@ -2,15 +2,25 @@
 /* =================== APARATOS: BARRA DE DOMINADAS Y PARALELAS =================== */
 // Las poses van en el espacio de referencia de la sesión (local-floor) o en el mundo de la prueba en el ordenador.
 // La barra de puerta va a lo largo de su eje X local; las paralelas, a lo largo de su eje Z local.
-// En las Quest se guardan además como anclas persistentes de WebXR para que no se muevan entre sesiones.
+// Son muebles fijos: tienen que quedarse en su sitio de la habitación aunque el origen de la sesión cambie (otra
+// sesión, recentrar, calibrar en otro sitio). Para eso se guardan de tres maneras, de más a menos precisa:
+// 1) anclas persistentes de WebXR (las Quest las recuerdan); 2) la pose respecto al suelo del guardián
+// (bounded-floor), que no se mueve entre sesiones; 3) la pose en local-floor, que se corrige al recentrar.
 const EQUIP_KEY = 'reparena3-equip';
-const mkPose = (z) => ({ x: 0, z, yaw: 0, set: false, handle: null, anchor: null });
-const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(-0.2), dip: mkPose(-0.45) }, edit: null, pending: [] };
+const mkPose = (z) => ({ x: 0, z, yaw: 0, set: false, handle: null, anchor: null, b: null, synced: false });
+// bref: espacio bounded-floor; b2l: dónde está su origen en local-floor (x, z, yaw), al día en cada fotograma
+const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(-0.2), dip: mkPose(-0.45) }, edit: null, pending: [], bref: null, b2l: null, ref: null };
 (function loadEquip() {
   const s = store(EQUIP_KEY) || {};
-  for (const k of ['door', 'dip']) { const e = s[k]; if (e && [e.x, e.z, e.yaw].every(isFinite)) Object.assign(EQ.xr[k], { x: e.x, z: e.z, yaw: e.yaw, set: !!e.set, handle: typeof e.handle === 'string' ? e.handle : null }); }
+  for (const k of ['door', 'dip']) {
+    const e = s[k]; if (!e || ![e.x, e.z, e.yaw].every(isFinite)) continue;
+    Object.assign(EQ.xr[k], { x: e.x, z: e.z, yaw: e.yaw, set: !!e.set, handle: typeof e.handle === 'string' ? e.handle : null, b: e.b && [e.b.x, e.b.z, e.b.yaw].every(isFinite) ? { x: e.b.x, z: e.b.z, yaw: e.b.yaw } : null });
+  }
 })();
-function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle }; } store(EQUIP_KEY, o); }
+function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle, b: e.b }; } store(EQUIP_KEY, o); }
+// Pose respecto al suelo del guardián ↔ pose en local-floor
+function eqToBounded(e) { const T = EQ.b2l; if (!T) return; const dx = e.x - T.x, dz = e.z - T.z, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.b = { x: dx * c - dz * s, z: dx * s + dz * c, yaw: e.yaw - T.yaw }; }
+function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.x = T.x + b.x * c + b.z * s; e.z = T.z - b.x * s + b.z * c; e.yaw = b.yaw + T.yaw; }
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
 const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
@@ -79,21 +89,44 @@ function updateEquip(dt, t) {
     const v = EQV[k], e = eqPose(k), on = k === eqKind();
     v.grp.visible = on; if (!on) continue;
     v.grp.position.set(e.x, 0, e.z); v.grp.rotation.set(0, e.yaw, 0);
-    v.vr.visible = !arMode; v.mr.visible = arMode || EQ.edit === k;
+    v.vr.visible = !arMode && !(k === 'door' && forestOn()); v.mr.visible = arMode || EQ.edit === k; // en el bosque, la barra es la rama de un árbol
   }
   eqBeamMat.opacity = EQ.edit ? 0.55 + 0.4 * Math.sin(t * 8) : 0.75;
 }
 
-/* ---------- Anclas persistentes (Quest) ---------- */
+/* ---------- Anclas persistentes (Quest) y suelo del guardián ---------- */
 function anchorsInit(session) {
-  for (const k of ['door', 'dip']) {
-    const e = EQ.xr[k]; e.anchor = null;
-    if (e.handle && session.restorePersistentAnchor) session.restorePersistentAnchor(e.handle).then(a => { if (!EQ.edit) e.anchor = a; }).catch(() => { e.handle = null; saveEquip(); });
-  }
+  EQ.bref = EQ.b2l = EQ.ref = null;
+  if (session.requestReferenceSpace) session.requestReferenceSpace('bounded-floor').then(r => { EQ.bref = r; }).catch(() => {});
+  for (const k of ['door', 'dip']) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; if (e.handle) restoreAnchor(session, e, 0); }
 }
-function anchorsEnd() { for (const k of ['door', 'dip']) EQ.xr[k].anchor = null; EQ.pending.length = 0; }
+// Al empezar la sesión las Quest pueden no haber reconocido aún la habitación: se reintenta antes de dar el ancla por perdida
+function restoreAnchor(session, e, tries) {
+  if (!session.restorePersistentAnchor) return;
+  const h = e.handle;
+  session.restorePersistentAnchor(h).then(a => { if (e.handle === h && !EQ.edit) e.anchor = a; }).catch(() => {
+    if (e.handle !== h || !xrActive) return;
+    if (tries < 3) setTimeout(() => restoreAnchor(session, e, tries + 1), 1500 * (tries + 1));
+    else if (e.b) { e.handle = null; saveEquip(); } // queda la pose respecto al guardián
+  });
+}
+function anchorsEnd() { for (const k of ['door', 'dip']) EQ.xr[k].anchor = null; EQ.pending.length = 0; EQ.bref = EQ.b2l = EQ.ref = null; }
+// Recentrar mueve el origen de local-floor: lo que no tiene ancla ni guardián se lleva al mismo sitio de la habitación
+const _rq = new Q4(), _rm = new THREE.Matrix4(), _rv3 = new V3();
+function onRefReset(ev) {
+  const T = ev && ev.transform; if (!T) return;
+  _rm.compose(_rv3.set(T.position.x, T.position.y, T.position.z), _rq.set(T.orientation.x, T.orientation.y, T.orientation.z, T.orientation.w), new V3(1, 1, 1)).invert();
+  const dyaw = -yawOf(_rq);
+  for (const k of ['door', 'dip']) {
+    const e = EQ.xr[k]; if (e.anchor || (e.b && EQ.bref)) continue;
+    _rv3.set(e.x, 0, e.z).applyMatrix4(_rm); e.x = _rv3.x; e.z = _rv3.z; e.yaw += dyaw;
+  }
+  saveEquip();
+}
 // Se llama dentro del bucle XR: crea las anclas pendientes y sigue las que existen
 function anchorsFrame(frame, ref) {
+  if (ref !== EQ.ref) { EQ.ref = ref; if (ref.addEventListener) ref.addEventListener('reset', onRefReset); }
+  if (EQ.bref) { const bp = frame.getPose(EQ.bref, ref); if (bp) { const p = bp.transform.position, o = bp.transform.orientation; EQ.b2l = { x: p.x, z: p.z, yaw: yawOf(_eqq.set(o.x, o.y, o.z, o.w)) }; } }
   while (EQ.pending.length) {
     const k = EQ.pending.shift(), e = EQ.xr[k], session = frame.session;
     if (!frame.createAnchor || typeof XRRigidTransform === 'undefined') break;
@@ -106,14 +139,18 @@ function anchorsFrame(frame, ref) {
     }).catch(() => {});
   }
   for (const k of ['door', 'dip']) {
-    const e = EQ.xr[k]; if (!e.anchor || !e.anchor.anchorSpace || EQ.edit === k) continue;
-    const pose = frame.getPose(e.anchor.anchorSpace, ref); if (!pose) continue;
-    const p = pose.transform.position, o = pose.transform.orientation;
-    e.x = p.x; e.z = p.z; e.yaw = yawOf(_eqq.set(o.x, o.y, o.z, o.w));
+    const e = EQ.xr[k]; if (!e.set || EQ.edit === k) continue;
+    const pose = e.anchor && e.anchor.anchorSpace && frame.getPose(e.anchor.anchorSpace, ref);
+    if (pose) {
+      const p = pose.transform.position, o = pose.transform.orientation;
+      e.x = p.x; e.z = p.z; e.yaw = yawOf(_eqq.set(o.x, o.y, o.z, o.w));
+      if (!e.synced && EQ.b2l) { e.synced = true; eqToBounded(e); saveEquip(); } // el ancla manda: el guardián se pone al día
+    } else if (e.b && EQ.b2l) eqFromBounded(e);
+    else if (!e.b && EQ.b2l && e.handle === null && e.synced === false) { e.synced = true; eqToBounded(e); saveEquip(); } // poses antiguas: desde ahora, también respecto al guardián
   }
 }
 const _eqq = new Q4();
-function equipChanged(k) { eqPose(k).set = true; if (!preview) saveEquip(); }
+function equipChanged(k) { const e = eqPose(k); e.set = true; if (!preview) { eqToBounded(e); e.synced = true; saveEquip(); } }
 // Al terminar de colocarlo: ancla nueva en el próximo fotograma XR
 function equipCommit(k) { if (!preview && !EQ.pending.includes(k)) EQ.pending.push(k); }
 

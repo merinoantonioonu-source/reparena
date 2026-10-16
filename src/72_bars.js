@@ -51,13 +51,14 @@ function barMounted() {
   else startWave(BAR.nextWave);
   BAR.started = true;
 }
-// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote
+// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote, un poco hacia la coronilla: las
+// pompas llegan desde los pies y nunca pasan por detrás de él
 const _rbm = new THREE.Matrix4(), _rbx = new V3(), _rby = new V3(), _rbz = new V3(), _rbs = new V3(), _rbq = new Q4();
 function placeRowBoard(fromHead) {
   const rig = boardRig.children[0]; if (!rig) return;
   if (fromHead || !BAR.board) {
     _rby.set(0, 1, 0).applyQuaternion(head.q);
-    const P = head.p.clone().addScaledVector(fwd(), 1.25).addScaledVector(_rby, -0.6); P.y = Math.max(P.y, head.p.y + 0.5);
+    const P = head.p.clone().addScaledVector(fwd(), 1.2).addScaledVector(_rby, 0.7); P.y = Math.max(P.y, head.p.y + 0.5);
     _rbz.subVectors(head.p, P).normalize();
     _rbx.crossVectors(_rby, _rbz); if (_rbx.lengthSq() < 1e-6) _rbx.set(1, 0, 0); _rbx.normalize(); _rby.crossVectors(_rbz, _rbx);
     _rbm.makeBasis(_rbx, _rby, _rbz); _rbm.decompose(_rbs, _rbq, new V3());
@@ -127,7 +128,8 @@ function barRep(opts) {
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
-const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
+const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
+const MAT_STINGER = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin, glow: M.glowSkin };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
 // Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
 // con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
@@ -171,6 +173,8 @@ class HeadTarget {
   constructor(spec) {
     const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
     Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
+    // avispa: amagos de picar (se lanza hacia tu cara y se retira) y el abdomen que se dobla para clavar el aguijón
+    Object.assign(this, { feint: 0, feintT: rand(1.2, 2.2), feintOn: false, curl: 0, off: new V3() });
     if (this.bubble) {
       this.root = new THREE.Group();
       this.mat = bubbleMat();
@@ -183,7 +187,7 @@ class HeadTarget {
         const pupil = new THREE.Mesh(bubbleGeo, eyePupil); pupil.scale.set(0.012, 0.016, 0.006); pupil.position.z = 0.058; this.eye.add(pupil);
       }
     } else {
-      this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+      this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
       this.root.scale.setScalar(K.scale);
     }
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
@@ -200,6 +204,7 @@ class HeadTarget {
       const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
       this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
+      if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9);
     }
     this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / settings.barArrive);
     this.root.position.copy(this.pos);
@@ -211,7 +216,7 @@ class HeadTarget {
     if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot);
     // si la cabeza lo alcanza mientras subes, revienta aunque no haya llegado a su sitio y esa subida cuenta como
     // repetición. Solo subiendo: colgado o bajando, un roce no regala nada
-    if (play && this.alive && (this.mode === 'approach' || this.mode === 'wait') && !BAR.contact && BAR.det === 'rising' && this.center(_bw).distanceTo(head.p) < this.radius + 0.09) {
+    if (play && this.alive && (this.mode === 'approach' || this.mode === 'wait') && !BAR.contact && BAR.det === 'rising' && arena.localToWorld(_bw.copy(this.pos)).distanceTo(head.p) < this.radius + 0.09) {
       // cuenta como la repetición de esta subida (si era el último, la oleada acaba ya y la subida no llegaría a contar)
       BAR.contact = true; registerRep(false, false); if (combo % 10 !== 0) say('¡Bien!', '#ffffff', 0.7, false);
       this.onHit(1, false); if (!this.alive) { onKilled(this); return; } // el jefe necesita varios cabezazos
@@ -224,6 +229,13 @@ class HeadTarget {
     } else if (this.mode === 'wait') {
       this.pos.lerp(this.slot, 1 - Math.exp(-dt * 6));
       if (!idx && play && settings.barWait > 0) { this.waitT += dt; if (this.waitT > settings.barWait) this.timeout(); }
+    } else if (this.mode === 'attack' && this.K.wasp) { // se lanza a picarte en la cara y se va (vuelve más tarde)
+      const k = Math.min(1, this.t / 0.35); this.curl = Math.min(1, this.t / 0.2); this.pos.lerpVectors(this.from, _bq.copy(HL).add(_ba.set(0, -0.05, 0)), smooth(k));
+      if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+    } else if (this.mode === 'flee') {
+      const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2);
+      this.pos.copy(this.from).add(_bq.set(Math.sin(this.ph) * 1.5 * k, 1.2 * k, -2.2 * k)); this.root.scale.setScalar(this.K.scale * (1 - k * 0.7));
+      if (k >= 1) { this.alive = false; this.dispose(); return; }
     } else if (this.mode === 'attack') {
       const k = Math.min(1, this.t / 0.3); this.pos.lerpVectors(this.from, HL, k);
       if (k >= 1) {
@@ -244,7 +256,8 @@ class HeadTarget {
       this.shell.scale.set(r * (1 + w), r * (1 - w), r * (1 + w * 0.5));
       this.mat.uniforms.uTime.value = t;
       if (this.eye) this.eye.lookAt(head.p);
-    } else {
+    } else if (this.K.wasp) this.animWasp(dt, t, idx, play);
+    else {
       const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
       const B = this.B;
       if (this.kind === 'hornet') { const f = Math.sin(this.t * 2 * Math.PI * 22) * 0.9, f2 = Math.sin(this.t * 2 * Math.PI * 22 + 0.6) * 0.8; B.wL1.rotation.z = f; B.wR1.rotation.z = -f; B.wL2.rotation.z = f2; B.wR2.rotation.z = -f2; B.abd.rotation.x = 0.25 + Math.sin(this.t * 4) * 0.12; }
@@ -254,6 +267,34 @@ class HeadTarget {
     }
     if (this.bar) this.bar.g.lookAt(head.p);
     if (this.guide) { this.guide.visible = (this.mode === 'wait' || this.mode === 'approach') && !idx; if (this.root.quaternion) this.guide.quaternion.copy(this.root.quaternion).invert(); }
+  }
+  // Avispa: zigzaguea al acercarse, se queda zumbando en su sitio y amaga picarte: se lanza hacia tu cara con el
+  // aguijón por delante y se retira. Cuanto más esperas, más a menudo. El cabezazo cuenta en su sitio, no en el amago.
+  animWasp(dt, t, idx, play) {
+    const B = this.B, wait = this.mode === 'wait', toH = _bq.subVectors(HL, this.pos), dist = toH.length();
+    if (wait && play && !idx) {
+      this.feintT -= dt * (1 + Math.min(2, this.waitT / 4));
+      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; SND.whoosh(this.center(_bw)); if (Math.random() < 0.5) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
+      if (this.feintOn) { this.feint += dt / 0.55; if (this.feint >= 1 || BAR.det === 'rising') { this.feintOn = false; this.feint = 0; this.feintT = rand(1.2, 2.6); } }
+    } else { this.feintOn = false; this.feint = 0; }
+    const f = this.feintOn ? Math.sin(Math.PI * Math.min(1, this.feint)) : 0, reach = Math.max(0, dist - 0.3) * 0.75;
+    const zig = this.mode === 'approach' ? 0.12 : 0.025;
+    this.off.set(Math.sin(t * 3.1 + this.ph) * zig, Math.sin(t * 4.3 + this.ph * 2) * zig * 0.6, Math.sin(t * 2.3 + this.ph) * zig * 0.5);
+    if (dist > 1e-3) this.off.addScaledVector(toH, f * reach / dist);
+    this.root.position.add(this.off);
+    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((this.feintOn ? 1 : 0.15 + 0.1 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
+    // mira a tu cara, inclinada hacia delante para apuntar con el aguijón
+    const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, look.y, look.z)));
+    this.root.rotateX(-0.25 * this.curl);
+    const w = Math.sin(this.t * TAU * 24) * 0.95, w2 = Math.sin(this.t * TAU * 24 + 0.7) * 0.85;
+    B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2;
+    B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2; B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
+    B.abd.rotation.x = -this.curl * 1.9 + Math.sin(t * 5 + this.ph) * 0.08; B.sting.rotation.x = -this.curl * 0.6;
+    const bite = 0.25 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.3;
+    B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite; B.jaw.rotation.x = 0.2 + 0.25 * Math.max(0, Math.sin(t * 7 + this.ph)) + f * 0.4;
+    B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.15; B.head.rotation.z = Math.sin(t * 2.7) * 0.1;
+    if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
+    if (this.buzz) this.buzz.set(this.center(tmpB));
   }
   onHit(dmg, perfect) {
     this.hp -= dmg; this.flick = 0.3; if (this.bar) setHpBar(this.bar, this.hp / this.maxHp);
@@ -267,6 +308,7 @@ class HeadTarget {
       SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
       fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
     }
+    else if (this.K.wasp) { fx.ichor(c, big ? 30 : 20, big ? 1.8 : 1.3); fx.glow(c, [0.6, 1, 0.3], big ? 0.5 : 0.3, 0.12); SND.squish(c); rigDebris(this.inst, c, big ? 2.4 : 1.7, 0, { main: M.robotStaticWasp }); }
     else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
     this.dispose();
@@ -275,7 +317,7 @@ class HeadTarget {
   timeout() {
     spawnQueue.push({ kind: this.kind, hp: this.hp }); this.hp = 0; combo = 0; this.t = 0; boardDirty = true;
     if (this.bubble) { this.mode = 'leave'; say('Se escapó', '#ff8a3d', 1.0); SND.miss(); }
-    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); }
+    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); if (this.K.wasp) SND.hiss(this.center(tmpB), 0.7); }
   }
   dispose() {
     arena.remove(this.root);
@@ -288,8 +330,8 @@ function buildBarWave(i) {
   if (settings.exercise === 'hang') return [];
   let total = waveReps(i); const list = [], bugs = settings.barTarget === 'bugs';
   let boss = null;
-  if (isBossWave(i)) { const b = Math.min(total, Math.min(5, Math.max(3, Math.round(total * 0.2)))); boss = { kind: bugs ? 'carrier' : 'bigbubble', hp: b }; total -= b; }
-  for (let k = 0; total > 0; k++, total--) list.push({ kind: bugs ? (i >= 1 && k % 3 === 2 ? 'hornet' : 'drone') : 'bubble', hp: 1 });
+  if (isBossWave(i)) { const b = Math.min(total, Math.min(5, Math.max(3, Math.round(total * 0.2)))); boss = { kind: bugs ? 'queen' : 'bigbubble', hp: b }; total -= b; }
+  for (let k = 0; total > 0; k++, total--) list.push({ kind: bugs ? 'wasp' : 'bubble', hp: 1 });
   if (boss) list.push(boss);
   return list;
 }
@@ -325,7 +367,7 @@ function cancelPlace() {
 function updatePlace(dt) {
   if (PLACE.wait) { // ya está colocado: el atril aparece cuando estés de pie
     PLACE.waitT += dt;
-    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); }
+    if (PLACE.waitT > 1.2 && head.p.y > 1.1 && head.speed < 0.6) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); }
     return;
   }
   if (!PLACE.on) { placeLine.visible = false; return; }
@@ -368,7 +410,7 @@ function placeFromHands(k, L, R) {
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
 // Ajustes finos, una vez colocado con las manos
-function adjustMenu(back, reanchor) {
+function adjustMenu(back) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
   const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
@@ -385,7 +427,7 @@ function adjustMenu(back, reanchor) {
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Colocar con las manos', onPress: () => startPlace(back) }, { label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
-  const m = openMenu(rows, { border: '#3cf0c6', reanchor }); m.rebuild = () => adjustMenu(back);
+  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => adjustMenu(back);
 }
 function placeDone() {
   const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;

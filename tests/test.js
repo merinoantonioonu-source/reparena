@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -68,7 +68,9 @@ function findW(label) { const w = RA.activeWidgets().find(w => w.label === label
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
 
+// ONLY=expresión: solo las partidas cuyo nombre encaja (para depurar deprisa)
 async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   for (const k in cfg) RA.setSetting(k, cfg[k]);
   RA.startPreview(); frame(3);
   press('EMPEZAR');
@@ -81,12 +83,24 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = 
   }
   const s = RA.stats;
   log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} partial=${s.partial} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
+  const ended = RA.state === 'end';
   if (check) { const why = check(s); if (why) errors.push(`${name}: ${why}`); }
-  if (RA.state !== 'end' && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
-  else if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
-  press('Menú principal'); frame(5);
+  if (!ended && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
+  else if (!ended) errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
+  if (RA.activeWidgets().some(w => w.label === 'Menú principal')) press('Menú principal'); frame(5);
   RA.exitAll(); frame(1);
 }
+// Ningún panel puede quedarse tapando (opaco) algo que viene hacia ti más de un instante (lo que tarda en desvanecerse)
+const PAN = { behind: 0, streak: 0, worst: 0, toast: 0 };
+const watchPanels = sim => t => {
+  const n = RA.collectThreats();
+  const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, 0.34, 0.06, true, n);
+  if (b) PAN.behind++; if (bt) PAN.toast++;
+  const bad = (b && RA.board.mesh.material.opacity > 0.5) || (bt && RA.toastP.mesh.material.opacity > 0.5);
+  PAN.streak = bad ? PAN.streak + 0.033 : 0; PAN.worst = Math.max(PAN.worst, PAN.streak);
+  sim(t);
+};
+const panelCheck = (name, more) => s => { const why = more ? more(s) : ''; const r = PAN.worst > 0.35 ? `${name}: un panel tapa lo que viene durante ${PAN.worst.toFixed(2)} s` : ''; log(`   paneles: ${PAN.behind} fotogramas con algo tras el marcador, ${PAN.toast} tras un aviso, peor racha opaca ${PAN.worst.toFixed(2)} s`); Object.assign(PAN, { behind: 0, streak: 0, worst: 0, toast: 0 }); return why || r; };
 const squatSim = (period = 2.6) => t => { RA.PV.crouch = (t % period) < period * 0.55; };
 // barras: solo se mueve cuando la oleada está en marcha (al colgarse hay que estar quieto)
 const pullSim = (period = 2.6) => t => { RA.PV.crouch = RA.state === 'play' && (t % period) < period * 0.5; };
@@ -97,7 +111,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await sleep(150);
   log('boot ok; renders so far', RA.renderer.renders);
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
-  await runConfig('Asalto+sentadillas', { ...base, mode: 'walkers', exercise: 'squat' }, squatSim());
+  // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
+  const bringMenu = () => {
+    RA.camera.position.set(0.8, 1.6, 1.6); frame(2); const before = RA.menu.group.position.clone();
+    RA.onWatch(); frame(2); const brought = RA.menu.group.position.clone();
+    press('Menú principal'); frame(2); const lobby = RA.menu.group.position.clone();
+    log('bring menu: moved', before.distanceTo(brought).toFixed(2), 'main menu offset from brought', lobby.distanceTo(brought).toFixed(3));
+    RA.camera.position.set(0, 1.6, 0);
+    return before.distanceTo(brought) < 0.3 || lobby.distanceTo(brought) > 0.01 ? '«Traer menú» y luego «Menú principal»: el menú principal no sale donde estaba el traído' : '';
+  };
+  await runConfig('Asalto+sentadillas', { ...base, mode: 'walkers', exercise: 'squat' }, squatSim(), 420, bringMenu);
+  // «Traer menú» al final de la ronda y luego «Menú principal»: el principal sale donde estaba el que trajiste
   await runConfig('Asalto+flexiones', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 6 }, squatSim(2.6));
   await runConfig('Asalto+flexiones cargadas (3 s abajo)', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 20, repsWave: 6, perfectTime: 0 }, t => { RA.PV.crouch = (t % 4.4) < 3.4; }, 420, s => s.kills < s.reps * 0.6 ? `la carga no aumenta el daño (${s.kills} muertes con ${s.reps} disparos)` : '');
   const sides = new Set();
@@ -107,7 +131,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }, 420, s => s.kills < 4 ? 'la plancha con un brazo no mata arañas' : sides.size < 2 ? 'las arañas no llegan por los dos lados' : '');
   RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
   const supCfg = { ...base, mode: 'flyers', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 8 };
-  await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 420, s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : '');
+  await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, watchPanels(t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }), 420, panelCheck('superman', s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : ''));
   await runConfig('Enjambre+superman demasiado corto', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; }, 30, s => s.reps ? 'subir y bajar rápido no debería disparar' : !s.partial ? 'debería avisar de que hay que aguantar' : '', true);
   await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
   RA.PV.keys.KeyR = false;
@@ -153,18 +177,43 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
     const parts = new Set();
-    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, t => { assist(); RA.touches.forEach(x => parts.add(x.part + ':' + x.move)); }, 200,
-      s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : '');
+    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => parts.add(x.part + ':' + x.move)); }), 200,
+      panelCheck(name, s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : ''));
     log('   movimientos:', [...parts].join(' '));
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
-  // se pueden tocar mientras viajan: la cabeza va a buscar el aro (o la mano la gema) a mitad de camino
-  const midway = new Set();
+  // se pueden tocar mientras viajan: la cabeza va a buscar la ameba (o la mano el diamante) a mitad de camino,
+  // y entre un toque y el siguiente vuelve a su postura de partida
+  const midway = new Set(); let home = null;
   await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
+    if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'approach' && RA.TCH.clock > o.spawnT + 1.5);
-    if (x) { const w = x.center(new THREE.Vector3()); if (x.part === 'head') { RA.camera.position.set(w.x, w.y, w.z); RA.PV.y = w.y; RA.PV.home = null; } else RA.PV.handAt = w; if (x.arriveAt - RA.TCH.clock > 1) midway.add(x); }
+    const ready = x && (x.part === 'head' ? RA.TCH.headArm.armed : RA.TCH.arm[x.hand].armed);
+    if (!x || x.part !== 'head' || !ready) { RA.camera.position.copy(home); RA.PV.y = home.y; }
+    if (x && ready) { const w = x.center(new THREE.Vector3()); if (x.part === 'head') { RA.camera.position.set(w.x, w.y, w.z); RA.PV.y = w.y; } else { RA.PV.handAt = w; RA.PV.handSide = x.hand; } if (x.arriveAt - RA.TCH.clock > 1) midway.add(x); }
     else RA.PV.handAt = null;
   }, 120, s => s.reps < 4 ? `tocando a mitad de camino solo cuenta ${s.reps}` : midway.size < 4 ? 'no se tocaron a mitad de camino' : '');
+  // sin volver a la postura de partida, solo cuenta el primero: la cabeza se queda abajo y va de ameba en ameba
+  await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+    if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
+    const x = RA.touches.find(o => o.alive && !o.judged), w = x ? x.center(new THREE.Vector3()) : home.clone().add(new THREE.Vector3(0, -0.2, 0));
+    RA.camera.position.set(w.x, Math.min(w.y, home.y - 0.15), w.z); RA.PV.y = RA.camera.position.y;
+  }, 60, s => s.reps !== 1 ? `con la cabeza abajo todo el rato cuentan ${s.reps} amebas (debería ser 1)` : s.taken < 3 ? 'las amebas no tocadas no cuentan como fallo' : '');
+  // diamantes: solo vale la mano que piden, y entre uno y otro esa mano tiene que volver
+  let flip = 1;
+  for (const [name, mode, want] of [['con la otra mano', 'wrong', 0], ['sin retirar la mano', 'stay', 1], ['retirando la mano', 'back', 4], ['con un puñetazo rápido que la atraviesa', 'fast', 4]]) {
+    await runConfig('Toques diamantes ' + name, { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 100 }, () => {
+      if (RA.PV.home) RA.PV.home = null;
+      const x = RA.touches.find(o => o.alive && !o.judged); if (!x) { if (mode === 'back') RA.PV.handAt = null; return; }
+      const armed = RA.TCH.arm[x.hand].armed, w = x.center(new THREE.Vector3());
+      if (mode === 'back' && !armed) { RA.PV.handAt = null; return; }
+      if (mode === 'stay' && x.mode !== 'wait') return; // la mano se queda donde tocó hasta que llega el siguiente
+      if (mode === 'fast') { if (x.mode !== 'wait') { RA.PV.handAt = null; return; } flip = -flip; w.z += flip * 0.3; } // ningún fotograma cae dentro del diamante
+      RA.PV.handAt = w; RA.PV.handSide = mode === 'wrong' ? (x.hand === 'left' ? 'right' : 'left') : mode === 'stay' ? 'right' : x.hand;
+      if (mode === 'stay') { RA.touches.forEach(o => { o.hand = 'right'; }); }
+    }, 60, s => s.reps !== want ? `${s.reps} diamantes tocados (deberían ser ${want})` : '');
+  }
+  RA.PV.handSide = null;
   RA.PV.handAt = null;
   await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
@@ -173,10 +222,29 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     return a.length < 5 ? 'no llegan objetivos' : off.length ? 'los objetivos no llegan en el pulso: ' + a.join(' ') : '';
   });
   RA.setSetting('bpm', 0); RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+  // ---- Muchos robots a la vez: cada uno a su puesto, sin chocar, sin atascarse y sin ir uno contra otro ----
+  const RB = { minGap: 9, stuck: new Map(), worstStuck: 0, facing: 0, frames: 0, slots: 0 };
+  await runConfig('Asalto multitud de robots', { ...base, mode: 'walkers', exercise: 'squat', waves: 1, repsWave: 40, maxAlive: 7, spawnGap: 0.6, walkTime: 8, lives: 0 }, t => {
+    RA.PV.crouch = t > 20 && (t % 2.6) < 1.4; // primero se acumulan sin disparar
+    const R = RA.enemies.filter(e => e.alive && e.type === 'robot');
+    for (const a of R) {
+      if (a.state === 'walk' && a.spd < 0.05 && Math.hypot(a.slot.x - a.pos.x, a.slot.z - a.pos.z) > 0.3 && RA.state === 'play') { const v = (RB.stuck.get(a) || 0) + 0.033; RB.stuck.set(a, v); RB.worstStuck = Math.max(RB.worstStuck, v); } else RB.stuck.set(a, 0);
+      for (const b of R) if (a !== b) {
+        const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, d = Math.hypot(dx, dz);
+        if (a.root.uuid < b.root.uuid || !a.root.uuid) RB.minGap = Math.min(RB.minGap, d - a.radius - b.radius);
+        // uno contra otro: cerca y mirándose de frente
+        const ang = (y, x, z) => Math.abs(Math.atan2(Math.sin(Math.atan2(x, z) - y), Math.cos(Math.atan2(x, z) - y)));
+        if (d < 1.4 && a.state === 'walk' && ang(a.yaw, dx, dz) < 0.5 && ang(b.yaw, -dx, -dz) < 0.5) RB.facing++;
+        if (a.slot.distanceTo(b.slot) < 0.5) RB.slots++;
+      }
+    }
+    RB.frames++;
+  }, 420, s => { log(`   robots: hueco mínimo ${RB.minGap.toFixed(2)} m, peor atasco ${RB.worstStuck.toFixed(1)} s, fotogramas andando de cara a otro ${RB.facing} de ${RB.frames}, puestos repetidos ${RB.slots}`);
+    return RB.minGap < -0.05 ? 'los robots se solapan' : RB.worstStuck > 1.5 ? `un robot se atasca ${RB.worstStuck.toFixed(1)} s` : RB.facing > RB.frames * 0.02 ? 'los robots andan de cara unos contra otros' : RB.slots ? 'dos robots comparten puesto' : s.kills < 8 ? 'no se matan robots' : ''; });
   await runConfig('Asalto con vidas (derrota)', { ...base, mode: 'walkers', exercise: 'squat', lives: 1, walkTime: 4 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Jefe en oleada final', { ...base, mode: 'walkers', exercise: 'squat', waves: 1, repsWave: 10 }, squatSim(2.4));
   const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
-  await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, pullSim(), 420, s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : '');
+  await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, watchPanels(pullSim()), 420, panelCheck('remo', s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : ''));
   await runConfig('Barras+remo una paralela', { ...bars, exercise: 'row', dipBars: '1', barTarget: 'bubbles' }, pullSim(), 420, s => s.kills < 4 ? 'con una paralela no revienta las pompas' : '');
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
@@ -238,7 +306,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.setSetting('waves', 5); RA.setSetting('repsWave', 12); RA.setSetting('rest', 2); RA.setSetting('lives', 0);
   RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 6 }, { mode: 'walkers', ex: 'pushup', n: 5 }, { mode: 'bars', ex: 'hang', n: 8 }]; RA.SES.rest = 3;
   const hist0 = JSON.parse(storage.get('reparena3-history') || '[]').length;
-  RA.lobbyMenu(true); frame(2); log('lobby shows session:', RA.activeWidgets().some(w => /EMPEZAR SESIÓN/.test(w.label)));
+  RA.lobbyMenu(); frame(2); log('lobby shows session:', RA.activeWidgets().some(w => /EMPEZAR SESIÓN/.test(w.label)));
   RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)).onPress(); frame(2);
   let blocksSeen = new Set(), storedDuring = null;
   for (let i = 0; i < 9000 && RA.state !== 'end'; i++) {
@@ -277,6 +345,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   frame(200, 16, xrFrame); log('after calib state =', RA.state, 'calibRef', RA.calibRef.toFixed(2));
   for (let i = 0; i < 1500 && RA.state !== 'end'; i++) { XRS.headY = (i % 150) < 80 ? 1.30 : 1.70; frame(1, 16, xrFrame); }
   log('XR squats: state', RA.state, 'reps', RA.stats.reps, 'kills', RA.stats.kills);
+  if (process.env.ONLY && !process.env.XR) { log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none'); return; }
   // abrir menú desde la muñeca: girar la muñeca izquierda hacia la cara
   RA.beginRun(); frame(250, 16, xrFrame);
   XRS.wristUp = true; frame(5, 16, xrFrame);
@@ -336,6 +405,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('anchor restored', navigator.xr.last.restored[0] === door.handle, 'x moved by', (door.x - oldX).toFixed(2));
   if (Math.abs(door.x - oldX - 1) > 0.01) errors.push('el ancla restaurada no mueve la barra');
   RA.exitAll(); frame(2, 16, xrFrame);
+  // sin ancla, la barra se queda en su sitio de la habitación gracias al suelo del guardián (bounded-floor),
+  // aunque en la sesión siguiente el origen de local-floor esté en otro sitio y girado
+  E.bounded.on = true; door.handle = null; door.anchor = null;
+  await RA.startXR(true); await sleep(50); frame(5, 16, xrFrame);
+  const b0 = door.b && { ...door.b }, x0 = door.x, z0 = door.z; log('bounded pose stored', !!b0); RA.exitAll(); frame(2, 16, xrFrame);
+  const yb = 0.4, q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yb);
+  E.bounded.pose = { position: { x: 0.5, y: 0, z: -0.3 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } };
+  await RA.startXR(true); await sleep(50); frame(5, 16, xrFrame);
+  const ex = 0.5 + Math.cos(yb) * x0 + Math.sin(yb) * z0, ez = -0.3 - Math.sin(yb) * x0 + Math.cos(yb) * z0;
+  log('bar with new session origin:', door.x.toFixed(3), door.z.toFixed(3), 'expected', ex.toFixed(3), ez.toFixed(3));
+  if (!b0 || Math.hypot(door.x - ex, door.z - ez) > 0.005) errors.push('sin ancla, la barra no se queda en su sitio de la habitación al cambiar el origen de la sesión');
+  RA.exitAll(); frame(2, 16, xrFrame); E.bounded.on = false; E.bounded.pose = { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
 
   // ---- Plancha con un brazo en XR: cada brazo dispara a su lado; los dos a la vez no cuentan ----
   for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'plank1', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 6, maxAlive: 4, spawnGap: 0.5 })) RA.setSetting(k, v);
@@ -500,7 +581,7 @@ function makeXRFrame() {
       session: s || { inputSources: src },
       getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
-      getPose(space) { if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getPose(space) { if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
