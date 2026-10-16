@@ -175,7 +175,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
@@ -188,7 +188,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="music">
     <h2>Música con Spotify</h2>
-    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el atril y desde el menú de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
+    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el menú principal y el de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
     <ol class="steps">
       <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
       <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
@@ -208,11 +208,11 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
-      <li>El menú principal aparece en un atril fijo delante de ti. No te sigue: acércate y pulsa los botones con la punta del índice. La distancia a la que aparece se cambia en Ajustes → Sistema.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el atril. El atril se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el atril con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -304,6 +304,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'boltLight', g: 'sistema', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
   { key: 'volume', g: 'sistema', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
   { key: 'ambient', g: 'sistema', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' }
@@ -2173,6 +2174,149 @@ function clearFX() {
 }
 
 
+/* =================== RAYOS: LOS DISPAROS SON DESCARGAS ELÉCTRICAS =================== */
+// Cada disparo es un rayo quebrado que avanza hasta el blanco (el «líder») y, al llegar, destella y
+// parpadea unas décimas con ramas que cambian, echando chispas. Ilumina el entorno con una luz puntual y,
+// durante el destello, la luz principal (la que proyecta sombras) se desplaza hacia el rayo, así que las
+// sombras saltan. Color, grosor, ramas y luz crecen con la intensidad del disparo.
+const BOLT_COL = [0x9fd8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
+const boltLevel = (perfect, pow = 1) => Math.max(perfect ? 1 : 0, pow > 1 ? pow : 0);
+const boltRGB = L => { const c = new THREE.Color(BOLT_COL[L]); return [c.r, c.g, c.b]; };
+const boltTex = texFrom((() => { const c = mkCanvas(64, 8), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.3, 'rgba(255,255,255,0.35)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 8); return c; })());
+const boltMatL = new THREE.MeshBasicMaterial({ map: boltTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+const boltLight = new THREE.PointLight(0x9fd8ff, 0, 5, 2); scene.add(boltLight);
+const LT_SEG = 220, LT_FLICK = 0.045;
+const _za = new V3(), _zb = new V3(), _zc = new V3(), _zd = new V3(), _zu = new V3(), _zv = new V3();
+// Línea quebrada de a a b: cada tramo se parte por la mitad y el punto medio se desplaza hacia un lado
+function jag(a, b, levels, rough, out = []) {
+  let pts = [a.clone(), b.clone()];
+  for (let l = 0; l < levels; l++) {
+    const next = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p = pts[i], q = pts[i + 1], len = p.distanceTo(q);
+      _zd.subVectors(q, p).normalize(); _zu.set(0, 1, 0); if (Math.abs(_zd.y) > 0.9) _zu.set(1, 0, 0);
+      _zu.cross(_zd).normalize(); _zv.crossVectors(_zd, _zu);
+      const m = p.clone().lerp(q, 0.5).addScaledVector(_zu, rand(-1, 1) * len * rough).addScaledVector(_zv, rand(-1, 1) * len * rough);
+      next.push(m, q);
+    }
+    pts = next;
+  }
+  out.push(...pts); return out;
+}
+class Lightning {
+  constructor() {
+    const g = new THREE.BufferGeometry(), n = LT_SEG * 6;
+    this.P = new Float32Array(n * 3); this.C = new Float32Array(n * 3); const U = new Float32Array(n * 2);
+    const quad = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]; for (let i = 0; i < LT_SEG; i++) U.set(quad, i * 12);
+    g.setAttribute('position', new THREE.BufferAttribute(this.P, 3)); g.setAttribute('color', new THREE.BufferAttribute(this.C, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+    this.g = g; this.mesh = new THREE.Mesh(g, boltMatL); this.mesh.frustumCulled = false; this.mesh.visible = false; this.mesh.renderOrder = 6; scene.add(this.mesh);
+    this.busy = false; this.from = new V3(); this.to = new V3(); this.paths = []; this.n = 0;
+  }
+  start(from, to, L, scale, miss) {
+    Object.assign(this, { busy: true, L, scale, miss, k: 0, age: 0, fade: -1, flickT: 0, bright: 0.8, col: boltRGB(L) });
+    this.from.copy(from); this.to.copy(to); this.FADE = 0.26 + 0.05 * L; this.restrike = L >= 2 ? rand(0.08, 0.14) : -1;
+    this.gen(); this.mesh.visible = true;
+  }
+  // Rayo principal y ramas; se rehace en cada parpadeo
+  gen() {
+    const len = this.from.distanceTo(this.to), lv = len > 3 ? 6 : len > 0.8 ? 5 : 4;
+    const main = jag(this.from, this.to, lv, 0.2), paths = [{ pts: main, w: 1, a: 1, at: 0 }];
+    const nb = Math.round((1 + this.L * 0.8 + rand(0, 1.5)) * Math.min(1, 0.4 + len / 2));
+    for (let i = 0; i < nb; i++) {
+      const j = Math.floor(rand(0.15, 0.8) * (main.length - 1)), s = main[j];
+      _zd.subVectors(main[Math.min(main.length - 1, j + 2)], s).normalize().add(rv(0.9)).normalize();
+      const e = s.clone().addScaledVector(_zd, len * rand(0.1, 0.28));
+      const b = jag(s, e, 3, 0.25); paths.push({ pts: b, w: 0.5, a: 0.7, at: j / (main.length - 1) });
+      if (this.L >= 3 && Math.random() < 0.5) { const j2 = Math.floor(b.length / 2), s2 = b[j2]; _zd.subVectors(b[b.length - 1], s2).normalize().add(rv(1)).normalize(); paths.push({ pts: jag(s2, s2.clone().addScaledVector(_zd, len * rand(0.05, 0.14)), 2, 0.3), w: 0.3, a: 0.5, at: paths[paths.length - 1].at }); }
+    }
+    this.paths = paths;
+  }
+  // Punto del rayo principal a una fracción t del recorrido
+  pointAt(t, out) { const m = this.paths[0].pts, f = clamp(t, 0, 1) * (m.length - 1), i = Math.min(m.length - 2, Math.floor(f)); return out.copy(m[i]).lerp(m[i + 1], f - i); }
+  update(dt) {
+    this.age += dt;
+    if (this.fade >= 0) {
+      this.fade += dt; if (this.fade >= this.FADE) { this.end(); return; }
+      this.flickT -= dt;
+      if (this.flickT <= 0) { this.flickT = LT_FLICK; this.gen(); if (Math.random() < 0.5) fx.sparks(this.pointAt(Math.random(), _zc), 1 + (this.L >> 1), this.col, 1.2, 0.02 * this.scale); }
+      if (this.restrike > 0 && this.fade > this.restrike) { this.restrike = -1; this.fade = Math.min(this.fade, 0.04); SND.zap(this.to); } // segundo latigazo
+      const f = this.fade / this.FADE; this.bright = Math.pow(1 - f, 1.4) * rand(0.55, 1) * (this.fade < 0.05 ? 1.6 : 1);
+    } else { this.bright = rand(0.6, 0.9); this.flickT -= dt; if (this.flickT <= 0) { this.flickT = LT_FLICK; this.gen(); } }
+    this.build();
+  }
+  arrive() { this.k = 1; this.fade = 0; this.flickT = 0; }
+  build() {
+    const P = this.P, C = this.C, cam = head.p, k = this.k, s = this.scale, L = this.L;
+    const wCore = (0.006 + 0.0035 * L) * s, wGlow = wCore * (7 + L), col = this.col, b = this.bright;
+    let n = 0;
+    const seg = (a, c, w, r, g, bl) => {
+      if (n >= LT_SEG) return;
+      _zd.subVectors(c, a); _za.addVectors(a, c).multiplyScalar(0.5); _zb.subVectors(cam, _za);
+      _zu.crossVectors(_zd, _zb); if (_zu.lengthSq() < 1e-10) return; _zu.normalize().multiplyScalar(w / 2);
+      const o = n * 18;
+      P[o] = a.x - _zu.x; P[o + 1] = a.y - _zu.y; P[o + 2] = a.z - _zu.z; P[o + 3] = a.x + _zu.x; P[o + 4] = a.y + _zu.y; P[o + 5] = a.z + _zu.z;
+      P[o + 6] = c.x + _zu.x; P[o + 7] = c.y + _zu.y; P[o + 8] = c.z + _zu.z; P[o + 9] = a.x - _zu.x; P[o + 10] = a.y - _zu.y; P[o + 11] = a.z - _zu.z;
+      P[o + 12] = c.x + _zu.x; P[o + 13] = c.y + _zu.y; P[o + 14] = c.z + _zu.z; P[o + 15] = c.x - _zu.x; P[o + 16] = c.y - _zu.y; P[o + 17] = c.z - _zu.z;
+      for (let i = 0; i < 6; i++) { C[o + i * 3] = r; C[o + i * 3 + 1] = g; C[o + i * 3 + 2] = bl; }
+      n++;
+    };
+    for (const pass of [0, 1]) { // halo ancho y tenue, y núcleo casi blanco
+      for (const p of this.paths) {
+        if (p.at > k) continue;
+        const pts = p.pts, last = pts.length - 1, a = p.a * b, w = (pass ? wCore : wGlow) * p.w;
+        const r = pass ? (0.55 + col[0] * 0.45) * a : col[0] * a * 0.3, g = pass ? (0.55 + col[1] * 0.45) * a : col[1] * a * 0.3, bl = pass ? (0.55 + col[2] * 0.45) * a : col[2] * a * 0.3;
+        for (let i = 0; i < last; i++) {
+          if (p === this.paths[0]) { const t0 = i / last, t1 = (i + 1) / last; if (t0 >= k) break; if (t1 > k) { _zc.copy(pts[i]).lerp(pts[i + 1], (k - t0) / (t1 - t0)); seg(pts[i], _zc, w, r, g, bl); break; } }
+          seg(pts[i], pts[i + 1], w, r, g, bl);
+        }
+      }
+    }
+    this.n = n; this.g.setDrawRange(0, n * 6);
+    this.g.attributes.position.needsUpdate = true; this.g.attributes.color.needsUpdate = true;
+  }
+  end() { this.busy = false; this.mesh.visible = false; this.g.setDrawRange(0, 0); }
+}
+const BOLTS = [];
+function boltStart(from, to, L, scale = 1, miss = false) {
+  let b = BOLTS.find(x => !x.busy);
+  if (!b) { if (BOLTS.length < 12) { b = new Lightning(); BOLTS.push(b); } else b = BOLTS.reduce((o, x) => x.age > o.age ? x : o); }
+  b.start(from, to, L, scale, miss); return b;
+}
+// Al llegar al blanco: destello, chispas y luz
+function boltArrive(b) {
+  b.arrive();
+  const s = b.scale, L = b.L, c = b.col;
+  if (!b.miss) { fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
+  else fx.glow(b.to, c, 0.15 * s, 0.12);
+}
+function boltsClear() { BOLTS.forEach(b => b.end()); boltLight.intensity = 0; KB.w = 0; keyFlash(); }
+// La luz principal se va hacia el rayo durante el destello: las sombras saltan
+const KB = { w: 0, saved: false, pos: new V3(), col: new THREE.Color(), I: 1, at: new V3(), c: new THREE.Color(), last: new V3(), lastI: 0 };
+function keyFlash() {
+  // si el escenario se recolocó entretanto, esa es la nueva posición de reposo
+  if (KB.saved && (keyLight.position.distanceToSquared(KB.last) > 1e-8 || keyLight.intensity !== KB.lastI)) KB.saved = false;
+  if (KB.w <= 0) { if (KB.saved) { keyLight.position.copy(KB.pos); keyLight.color.copy(KB.col); keyLight.intensity = KB.I; KB.saved = false; } return; }
+  if (!KB.saved) { KB.pos.copy(keyLight.position); KB.col.copy(keyLight.color); KB.I = keyLight.intensity; KB.saved = true; }
+  const tg = keyLight.target.position, d = KB.pos.distanceTo(tg);
+  _za.copy(KB.at); arena.worldToLocal(_za); _za.y += 1.2; _za.sub(tg).normalize().multiplyScalar(d).add(tg);
+  keyLight.position.lerpVectors(KB.pos, _za, Math.min(0.9, KB.w));
+  keyLight.color.copy(KB.col).lerp(KB.c, KB.w * 0.6); keyLight.intensity = KB.I * (1 + KB.w * 0.9);
+  KB.last.copy(keyLight.position); KB.lastI = keyLight.intensity;
+}
+function updateBolts(dt) {
+  let best = null, bw = 0;
+  for (const b of BOLTS) if (b.busy) { b.update(dt); const w = b.busy ? b.bright * (1 + b.L * 0.5) * b.scale : 0; if (w > bw) { bw = w; best = b; } }
+  if (best) {
+    best.pointAt(best.fade >= 0 ? 0.75 : best.k, boltLight.position); boltLight.color.setRGB(best.col[0], best.col[1], best.col[2]);
+    boltLight.intensity = (settings.boltLight ? 1 : 0) * bw * 2.6; boltLight.distance = (3 + best.L) * best.scale + 1;
+  } else boltLight.intensity = 0;
+  // sombras: solo con los destellos (rayo ya llegado), si las sombras están activas
+  const fw = settings.boltLight && settings.shadows && best && best.fade >= 0 ? Math.min(1, bw * 0.45) : 0;
+  if (fw > KB.w) { KB.w = fw; best.pointAt(0.6, KB.at); KB.c.setRGB(best.col[0], best.col[1], best.col[2]); } else KB.w = Math.max(0, KB.w - dt * 5);
+  keyFlash();
+}
+
+
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
 const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
@@ -2707,7 +2851,7 @@ function spNowText() {
   const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
-// Filas para los menús del juego (atril y pausa)
+// Filas para los menús del juego (principal y pausa)
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
@@ -2841,7 +2985,7 @@ function renderSession() {
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
-  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el atril.` : '';
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 function sesInitPage() {
   const host = $('#sesList');
@@ -3318,9 +3462,6 @@ class Arc {
 }
 
 /* =================== DISPAROS =================== */
-const orbGeo = new THREE.SphereGeometry(0.05, 14, 10), boltGeo = new THREE.BoxGeometry(0.014, 0.014, 0.46);
-const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, toneMapped: false });
-const boltMat = new THREE.MeshBasicMaterial({ color: 0xa8fcff, toneMapped: false }), boltPerfMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false });
 function glowSprite(color, size, opacity = 0.8) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); s.scale.set(size, size, 1); return s; }
 const chargeOrb = glowSprite(0x3cf0c6, 0.18, 0.9); chargeOrb.visible = false; scene.add(chargeOrb);
 // side: solo los enemigos de ese lado (plancha con un brazo: cada brazo dispara a su lado)
@@ -3341,37 +3482,34 @@ function findLock(o, d) {
   }
   return best;
 }
+// Asalto: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
 function fireOrb(origin, dmg, perfect, pow = 1, side) {
-  const e = pickNearest(side);
-  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
-  m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
+  const e = pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
-  const dist = origin.distanceTo(to);
-  const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col });
+  const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
   SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
+// Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir);
-  const m = new THREE.Mesh(boltGeo, perfect ? boltPerfMat : boltMat); m.add(glowSprite(perfect ? 0xffd166 : 0x5ff5ff, 0.2, 0.8));
-  m.position.copy(origin); scene.add(m);
-  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 30);
+  const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
+  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.08, origin.distanceTo(to) / 34), arc: 0, kind: 'bolt', col: perfect ? [1, 0.85, 0.4] : [0.4, 1, 1] });
-  SND.laser(origin); fx.muzzle(origin, perfect ? [1, 0.85, 0.4] : [0.4, 1, 1]);
+  const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
+  SND.laser(origin); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
     const p = projs[i]; p.t += dt;
     if (p.e && p.e.alive) p.e.center(p.to);
     const k = Math.min(1, p.t / p.dur);
-    tmpA.copy(p.m.position);
-    p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
-    if (p.kind === 'bolt') p.m.lookAt(tmpB.copy(p.m.position).multiplyScalar(2).sub(tmpA));
-    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 * (1 + ((p.pow || 1) - 1) * 0.5) : 0.06, 0.2);
+    // el líder del rayo avanza hacia el blanco (que puede moverse)
+    p.lt.to.copy(p.to); p.lt.k = Math.max(p.lt.k, k);
+    if (k < 1) { const h = p.lt.pointAt(k, tmpA); fx.glow(h, p.col, 0.1 * p.lt.scale, 0.06); }
     if (k >= 1) {
-      scene.remove(p.m); p.m.children.forEach(c => c.material && c.material.dispose()); projs.splice(i, 1);
+      boltArrive(p.lt); projs.splice(i, 1);
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
@@ -3659,7 +3797,7 @@ function updateNextArc() {
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = [];
-  projs.forEach(p => scene.remove(p.m)); projs = [];
+  projs = []; boltsClear();
   clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
@@ -4372,7 +4510,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateListener(head.p, head.q);
   fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
   gameStep(dt, t);
-  updateFX(dt);
+  updateFX(dt); updateBolts(dt);
   updateGloves(dt);
   updateAim(t);
   updateWatch(dt); updateWristMenu(dt);

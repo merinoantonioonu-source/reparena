@@ -450,9 +450,6 @@ class Arc {
 }
 
 /* =================== DISPAROS =================== */
-const orbGeo = new THREE.SphereGeometry(0.05, 14, 10), boltGeo = new THREE.BoxGeometry(0.014, 0.014, 0.46);
-const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, toneMapped: false });
-const boltMat = new THREE.MeshBasicMaterial({ color: 0xa8fcff, toneMapped: false }), boltPerfMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false });
 function glowSprite(color, size, opacity = 0.8) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); s.scale.set(size, size, 1); return s; }
 const chargeOrb = glowSprite(0x3cf0c6, 0.18, 0.9); chargeOrb.visible = false; scene.add(chargeOrb);
 // side: solo los enemigos de ese lado (plancha con un brazo: cada brazo dispara a su lado)
@@ -473,37 +470,34 @@ function findLock(o, d) {
   }
   return best;
 }
+// Asalto: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
 function fireOrb(origin, dmg, perfect, pow = 1, side) {
-  const e = pickNearest(side);
-  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
-  m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
+  const e = pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
-  const dist = origin.distanceTo(to);
-  const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col });
+  const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
   SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
+// Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir);
-  const m = new THREE.Mesh(boltGeo, perfect ? boltPerfMat : boltMat); m.add(glowSprite(perfect ? 0xffd166 : 0x5ff5ff, 0.2, 0.8));
-  m.position.copy(origin); scene.add(m);
-  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 30);
+  const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
+  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.08, origin.distanceTo(to) / 34), arc: 0, kind: 'bolt', col: perfect ? [1, 0.85, 0.4] : [0.4, 1, 1] });
-  SND.laser(origin); fx.muzzle(origin, perfect ? [1, 0.85, 0.4] : [0.4, 1, 1]);
+  const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
+  SND.laser(origin); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
     const p = projs[i]; p.t += dt;
     if (p.e && p.e.alive) p.e.center(p.to);
     const k = Math.min(1, p.t / p.dur);
-    tmpA.copy(p.m.position);
-    p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
-    if (p.kind === 'bolt') p.m.lookAt(tmpB.copy(p.m.position).multiplyScalar(2).sub(tmpA));
-    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 * (1 + ((p.pow || 1) - 1) * 0.5) : 0.06, 0.2);
+    // el líder del rayo avanza hacia el blanco (que puede moverse)
+    p.lt.to.copy(p.to); p.lt.k = Math.max(p.lt.k, k);
+    if (k < 1) { const h = p.lt.pointAt(k, tmpA); fx.glow(h, p.col, 0.1 * p.lt.scale, 0.06); }
     if (k >= 1) {
-      scene.remove(p.m); p.m.children.forEach(c => c.material && c.material.dispose()); projs.splice(i, 1);
+      boltArrive(p.lt); projs.splice(i, 1);
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
@@ -791,7 +785,7 @@ function updateNextArc() {
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = [];
-  projs.forEach(p => scene.remove(p.m)); projs = [];
+  projs = []; boltsClear();
   clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);

@@ -140,7 +140,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateListener(head.p, head.q);
   fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
   gameStep(dt, t);
-  updateFX(dt);
+  updateFX(dt); updateBolts(dt);
   updateGloves(dt);
   updateAim(t);
   updateWatch(dt); updateWristMenu(dt);

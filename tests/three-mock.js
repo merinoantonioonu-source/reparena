@@ -22,6 +22,7 @@ class Vector3 {
   distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
   distanceToSquared(v) { const dx = this.x - v.x, dy = this.y - v.y, dz = this.z - v.z; return dx * dx + dy * dy + dz * dz; }
   dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+  cross(v) { return this.crossVectors(this.clone(), v); }
   crossVectors(a, b) { const x = a.y * b.z - a.z * b.y, y = a.z * b.x - a.x * b.z, z = a.x * b.y - a.y * b.x; return this.set(x, y, z); }
   lerp(v, t) { this.x += (v.x - this.x) * t; this.y += (v.y - this.y) * t; this.z += (v.z - this.z) * t; return this; }
   lerpVectors(a, b, t) { return this.copy(a).lerp(b, t); }
@@ -203,6 +204,7 @@ class Uint16BufferAttribute extends BufferAttribute { constructor(a, s, n) { sup
 class InstancedBufferAttribute extends BufferAttribute {}
 class BufferGeometry {
   constructor() { this.attributes = {}; this.index = null; this.isBufferGeometry = true; this.groups = []; }
+  setDrawRange(start, count) { this.drawRange = { start, count }; }
   setAttribute(n, a) { if (!(a instanceof BufferAttribute)) throw new Error('setAttribute needs BufferAttribute: ' + n); this.attributes[n] = a; return this; }
   getAttribute(n) { return this.attributes[n]; }
   setIndex(i) { this.index = Array.isArray(i) ? new BufferAttribute(new Uint16Array(i), 1) : i; return this; }
