@@ -18,6 +18,7 @@ class Vector3 {
   length() { return Math.hypot(this.x, this.y, this.z); }
   lengthSq() { return this.x * this.x + this.y * this.y + this.z * this.z; }
   normalize() { const l = this.length() || 1; return this.divideScalar(l); }
+  negate() { this.x = -this.x; this.y = -this.y; this.z = -this.z; return this; }
   distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
   distanceToSquared(v) { const dx = this.x - v.x, dy = this.y - v.y, dz = this.z - v.z; return dx * dx + dy * dy + dz * dz; }
   dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }

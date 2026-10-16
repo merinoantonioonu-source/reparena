@@ -3461,9 +3461,20 @@ function beginRun() {
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
-function arenaFromHead() {
-  arena.position.set(head.p.x, 0, head.p.z);
-  const f = fwd(); arena.rotation.y = Math.abs(f.y) < 0.94 ? yawOf(head.q) : lastStandYaw;
+// Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
+// arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
+const _bu = new V3();
+function bodyYaw() {
+  const f = fwd(); if (Math.abs(f.y) < 0.7) return yawOf(head.q);
+  _bu.set(0, 1, 0).applyQuaternion(head.q); if (f.y > 0) _bu.negate(); _bu.y = 0;
+  return _bu.lengthSq() > 0.04 ? Math.atan2(-_bu.x, -_bu.z) : lastStandYaw;
+}
+function arenaFromHead() { arena.position.set(head.p.x, 0, head.p.z); arena.rotation.y = bodyYaw(); }
+// Mientras calibras, el entorno y los enemigos se van colocando a tu alrededor; al calibrar se fijan
+function arenaFollow(dt) {
+  const k = Math.min(1, dt * 4);
+  arena.position.x += (head.p.x - arena.position.x) * k; arena.position.z += (head.p.z - arena.position.z) * k;
+  arena.rotation.y += wrapAng(bodyYaw() - arena.rotation.y) * k;
 }
 function calibrate() {
   arenaFromHead();
@@ -3529,6 +3540,7 @@ function gameStep(dt, t) {
   stateT += dt;
   if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
+    arenaFollow(dt);
     const ok = !isFloor() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
