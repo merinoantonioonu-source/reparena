@@ -173,6 +173,12 @@ const SND = {
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
+  pop(pos, big) { if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  splash(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
+    noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
+    for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
+  },
   whoosh(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
   thunder(dist = 1) {
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });

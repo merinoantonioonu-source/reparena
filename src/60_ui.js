@@ -156,7 +156,7 @@ function openMenu(rows, opts = {}) {
   const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
   stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
   stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
-  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null };
+  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
   return menu;
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
@@ -264,11 +264,31 @@ function updateViewPanels(dt) {
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }
+function centerBar(c, W, H, frac, color = '#3cf0c6') { c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill(); c.fillStyle = color; rr(c, 44, H - 66, Math.max(22, (W - 88) * clamp(frac, 0, 1)), 22, 11); c.fill(); }
 function drawCenter() {
   const c = center.ctx, W = center.W, H = center.H; c.clearRect(0, 0, W, H);
   rr(c, 6, 6, W - 12, H - 12, 30); c.fillStyle = 'rgba(14,10,28,0.86)'; c.fill(); c.lineWidth = 4; c.strokeStyle = 'rgba(60,240,198,.6)'; c.stroke();
   c.textBaseline = 'middle';
-  if (state === 'calib') {
+  if (PLACE.on) {
+    const door = PLACE.kind === 'door';
+    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
+    const L = door ? ['Agarra la barra con las dos manos', 'mirándola. Quieto 2 s.'] : ['Una mano en cada paralela,', 'apoyada encima. Quieto 2 s.'];
+    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+    c.font = `32px ${FB}`; c.fillStyle = PLACE.seen ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(PLACE.seen ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
+    centerBar(c, W, H, PLACE.t / 2);
+  } else if (state === 'mount') {
+    const row = settings.exercise === 'row';
+    if (BAR.phase === 'place') {
+      c.fillStyle = BAR.resume ? '#3cff8a' : '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(BAR.resume ? (row ? '¡A LAS PARALELAS!' : '¡A LA BARRA!') : row ? 'PARALELAS' : 'BARRA', 44, 68);
+      const L = row ? ['Túmbate bajo las paralelas, agárralas', 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
+      c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : row ? 'lejos de las paralelas' : 'lejos de la barra', W - 44, 68);
+      centerBar(c, W, H, BAR.still / 0.8);
+    } else {
+      c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
+      c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
+    }
+  } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
     const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
@@ -286,6 +306,7 @@ function drawCenter() {
 
 /* =================== MARCADOR =================== */
 function repsLeft() {
+  if (settings.exercise === 'hang') return Math.max(0, Math.ceil(BAR.need - BAR.hold));
   if (settings.mode === 'arcs') return spawnQueue.length + arcs.filter(a => !a.judged && !a.second).length;
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
   return Math.ceil(hp / (settings.mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands' ? 2 : 1));
@@ -297,7 +318,7 @@ function drawBoard() {
   c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
   c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
   c.textBaseline = 'middle';
-  if (!['calib', 'ready', 'play', 'rest', 'paused', 'end'].includes(state)) {
+  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
     c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
@@ -311,24 +332,26 @@ function drawBoard() {
   else if (settings.lives <= 8) { c.font = `50px ${FB}`; let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; c.fillStyle = '#ff4fa3'; fitFont(c, s, 360, 50, '%px ' + FB); c.fillText(s, W - 36, 52); }
   else { c.fillStyle = '#ff4fa3'; c.fillText(`♥ ${lives}/${settings.lives}`, W - 36, 52); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, 88, W - 60, 3);
-  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(stats.reps), 36, 210);
-  c.fillStyle = '#a49fc8'; const sub = state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
+  const hang = settings.exercise === 'hang', bars = isBars();
+  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 36, 210);
+  c.fillStyle = '#a49fc8'; const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
   c.textAlign = 'right';
   if (state === 'rest') {
     c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
-    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(`Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
-  } else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
+    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+  } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
+  else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
   if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
-  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(`Combo ×${combo}`, 36, H - 48);
+  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';
-  const mid = settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
+  const mid = bars ? `Caídas ${stats.falls}` : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
   c.fillText(mid, W / 2, H - 48);
   c.textAlign = 'right';
-  c.fillText(settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `Enemigos ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
   board.tex.needsUpdate = true;
 }

@@ -26,7 +26,8 @@ h1 span{color:var(--pink)}
 .lede{margin:0;max-width:62ch;color:var(--muted);font-size:1.1rem}
 h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.04em;margin:0 0 12px}
 .cards{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
-@media (max-width:680px){.cards{grid-template-columns:1fr}}
+.cards.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:680px){.cards,.cards.four{grid-template-columns:1fr}}
 .card{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border:2px solid var(--line);border-radius:14px;background:var(--panel);cursor:pointer;min-width:0}
 .card input{position:absolute;opacity:0;pointer-events:none}
 .card b{font-family:var(--display);font-weight:400;font-size:1.15rem}
@@ -78,6 +79,18 @@ button{font:inherit;cursor:pointer}
 .pbar{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(16,13,26,.88);font-size:.88rem;color:var(--muted)}
 .pbar kbd{font-family:var(--body);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--fg)}
 .loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:1rem;pointer-events:none}
+.music p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
+.steps{margin:0 0 16px;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;max-width:70ch;color:var(--muted)}
+.steps li::marker{color:var(--teal)}
+.steps b,.music p b{color:var(--fg)}
+.music a{color:var(--teal)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;word-break:break-all;color:var(--gold)}
+.spfield{display:flex;flex-direction:column;gap:6px;max-width:460px;margin-bottom:14px}
+.spfield label{font-size:.9rem;font-weight:500}
+.spfield input{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.spfield input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
+.status.sp{margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -90,7 +103,7 @@ button{font:inherit;cursor:pointer}
 
   <section>
     <h2>Modo de juego</h2>
-    <div class="cards">
+    <div class="cards four">
       <label class="card"><input type="radio" name="mode" id="mode-walkers" value="walkers">
         <span class="tag">Disparo automático</span><b>Asalto</b>
         <small>Robots salen de las compuertas y vienen a por ti. En flexiones, arañas que salen del suelo.</small></label>
@@ -100,6 +113,9 @@ button{font:inherit;cursor:pointer}
       <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
         <span class="tag">Solo sentadillas</span><b>Arcos</b>
         <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
+        <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
+        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Debajo hay un charco con tentáculos: no te sueltes.</small></label>
     </div>
   </section>
 
@@ -115,6 +131,15 @@ button{font:inherit;cursor:pointer}
       <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
         <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
         <small>Cada brazo dispara al llegar al hombro. En Enjambre, mira al objetivo mientras subes la mancuerna.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-row" value="row">
+        <span class="tag">Paralelas · altura del visor</span><b>Remo invertido</b>
+        <small>Colgado bajo las paralelas, cuerpo casi horizontal y pies en el suelo. Tira hasta que la cabeza suba lo que pidas.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-pullup" value="pullup">
+        <span class="tag">Barra de puerta · altura del visor</span><b>Dominadas</b>
+        <small>Desde colgado con los brazos estirados, sube la cabeza hasta reventar el objetivo que espera arriba.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-hang" value="hang">
+        <span class="tag">Barra de puerta · altura del visor</span><b>Colgado</b>
+        <small>Aguanta colgado los segundos de cada oleada. Si te sueltas, caes al charco de los tentáculos.</small></label>
     </div>
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
   </section>
@@ -134,6 +159,25 @@ button{font:inherit;cursor:pointer}
   </div>
   <p class="status" id="xrStatus"></p>
 
+  <section class="music">
+    <h2>Música con Spotify</h2>
+    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el atril y desde el menú de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
+    <ol class="steps">
+      <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
+      <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
+      <li>Copia el <b>Client ID</b> de la app, pégalo aquí debajo y pulsa <b>Conectar con Spotify</b>. Solo hay que hacerlo una vez en cada navegador.</li>
+    </ol>
+    <div class="spfield"><label for="spClient">Client ID de tu app de Spotify</label><input id="spClient" type="text" autocomplete="off" spellcheck="false" placeholder="32 letras y números"></div>
+    <div class="actions">
+      <button class="btn alt" id="btnSpConnect">Conectar con Spotify</button>
+      <button class="btn small" id="btnSpTest">Probar</button>
+      <button class="btn small" id="btnSpOff">Desconectar</button>
+    </div>
+    <p class="status sp" id="spStatus"></p>
+    <p class="spnow" id="spNow"></p>
+    <p>Antes de entrar en el juego, abre Spotify en las Quest (o en el móvil) y pon algo a sonar. Si la app de Spotify de las Quest se para al entrar en el juego, usa el móvil como reproductor: el mando funciona igual.</p>
+  </section>
+
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
@@ -141,6 +185,7 @@ button{font:inherit;cursor:pointer}
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
+      <li><strong>Barras:</strong> primero coloca el aparato desde el atril (Colocar barra o Colocar paralelas): agárralo con las manos y quédate quieto 2 segundos, o ponlo delante de ti y ajústalo con los botones. Las Quest lo recuerdan para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -157,7 +202,7 @@ button{font:inherit;cursor:pointer}
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión) o curl · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -175,22 +220,27 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps' };
-const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos' };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', sistema: 'Sistema' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
+const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
+const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
 
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
-  { key: 'repsWave', g: 'partida', label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
-  { key: 'repsInc', g: 'partida', label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
+  { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
+  { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
+  { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
+  { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat'], hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup'] },
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
-  { key: 'perfectTime', g: 'ejercicio', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
+  { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
+  { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
+  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['walkers'] },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['flyers'], hint: 'En flexiones los bichos van a escala, unas 7 veces más lentos.' },
@@ -205,6 +255,16 @@ const SCHEMA = [
   { key: 'arcRate', g: 'arcos', label: 'Arcos por minuto', short: 'Arcos/minuto', type: 'num', min: 3, max: 40, step: 1, def: 12, modes: ['arcs'] },
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
+
+  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que suben del charco, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
+  { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
+  { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
+  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, caes al charco.' },
+  { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
+  { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
+  { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
+  { key: 'dipGap', g: 'barras', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
+  { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', hint: 'El menú se queda fijo: tendrás que acercarte para pulsarlo.' },
@@ -243,6 +303,7 @@ function fmtVal(f, v = settings[f.key]) {
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (settings.mode === 'arcs') settings.exercise = 'squat';
+  if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
 function saveSettings() { store(STORE_KEY, settings); }
 function setSetting(key, v) {
@@ -250,15 +311,20 @@ function setSetting(key, v) {
   settings[key] = f ? clampSetting(f, v) : v;
   if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
   if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
+  // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
+  if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
+  if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
   saveSettings();
   onSettingChanged(key);
 }
 function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
+  if (f.noEx && f.noEx.includes(settings.exercise)) return false;
   return true;
 }
 const isPush = () => settings.exercise === 'pushup';
+const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
@@ -309,8 +375,9 @@ function onFormInput(ev) {
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  ['pushup', 'curl'].forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs'; });
-  $('#exNote').hidden = settings.mode !== 'arcs';
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x); });
+  const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
+  note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
   for (const f of SCHEMA) {
     const wrap = document.querySelector(`[data-field="${f.key}"]`);
     if (wrap) wrap.hidden = !fieldVisible(f);
@@ -326,25 +393,28 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3 }[settings.exercise]; }
+function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
 function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
+function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
   const n = settings.waves || 5;
-  let total = 0; for (let i = 0; i < n; i++) total += waveReps(i);
+  const hang = settings.exercise === 'hang';
+  let total = 0; for (let i = 0; i < n; i++) total += hang ? hangSecs(i) : waveReps(i);
   const restT = settings.rest * Math.max(0, n - 1);
-  const workT = total * (settings.mode === 'arcs' ? 60 / settings.arcRate : repTime());
+  const workT = hang ? total : total * (settings.mode === 'arcs' ? 60 / settings.arcRate : repTime());
   const mins = Math.round((restT + workT) / 60);
   let speed = '';
   if (settings.mode === 'walkers') speed = `Los enemigos tardan ${settings.walkTime} s en alcanzarte.`;
   else if (settings.mode === 'flyers') speed = `Vuelan a ${fmtNum(settings.flySpeed)} km/h.`;
+  else if (settings.mode === 'bars') speed = hang ? `Si te sueltas, caes al charco.` : `Cada objetivo tarda ${fmtNum(settings.barArrive)} s en llegar a donde subirá tu cabeza.`;
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm.`;
-  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> repeticiones${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
+  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : 'repeticiones'}${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
 function renderHistory() {
   const h = store(HIST_KEY) || [];
   $('#histBody').innerHTML = Object.keys(EX_NAMES).map(ex => {
     const s = h.filter(r => r.ex === ex);
-    return `<tr><td>${EX_NAMES[ex]}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
+    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
   }).join('');
 }
 
@@ -522,6 +592,12 @@ const SND = {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.9 });
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
+  },
+  pop(pos, big) { if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  splash(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1, ref: 1.2 });
+    noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
+    for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
   whoosh(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
   thunder(dist = 1) {
@@ -952,7 +1028,7 @@ function spikes(cx, cy, cz, rx, ry, rz, n, len, w, opts = {}) {
 const _up = new V3(0, 1, 0);
 function limbBetween(a, b, r0, r1, seg = 6) {
   const d = b.clone().sub(a), len = d.length(), g = G.cyl(r1, r0, len, seg);
-  g.translate(0, len / 2, 0); _q4.setFromUnitVectors(_up, d.normalize()); g.applyQuaternion(_q4); g.translate(a.x, a.y, a.z); return g;
+  g.translate(0, len / 2, 0); _q4.setFromUnitVectors(_up, d.normalize()); g.applyMatrix4(_m4.makeRotationFromQuaternion(_q4)); g.translate(a.x, a.y, a.z); return g; // r128 no tiene BufferGeometry.applyQuaternion
 }
 function ensureAttrs(g) {
   if (!g.attributes.normal) g.computeVertexNormals();
@@ -1215,7 +1291,7 @@ function layoutArena() {
   });
   gateLight.position.set(0, 1.6 * gs, -D - 0.6);
   hatches.forEach(h => h.g.visible = push && settings.mode !== 'arcs');
-  safeRing.visible = !push; hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows;
@@ -1231,6 +1307,10 @@ function layoutArena() {
     k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
     rig.add(k.build({ steel: M.steel }, { cast: true }));
     board.mesh.position.set(0, 0.265, -0.005); board.mesh.rotation.set(-0.25, 0, 0); board.mesh.scale.setScalar(0.82);
+  } else if (isBars() && settings.exercise === 'row') {
+    // remo: tumbado mirando al techo; placeRowBoard lo pone encima de tu cara al colgarte
+    rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
+    board.mesh.position.set(0, 0, 0); board.mesh.rotation.set(0, 0, 0); board.mesh.scale.setScalar(0.9);
   } else if (boardMode() === 'gate') {
     const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.05 * gs + H / 2 + 0.2;
     rig.position.set(0, 0, -D - 0.35);
@@ -1251,6 +1331,7 @@ function layoutArena() {
     board.mesh.position.set(0, 2.3, -0.005); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   }
   rig.add(board.mesh);
+  if (isBars() && settings.exercise === 'row' && BAR.board) placeRowBoard(false);
   boardDirty = true;
 }
 function applyEnvMode() {
@@ -1307,6 +1388,196 @@ function updateGates(dt, t) {
   }
   for (const h of hatches) { if (h.openT > 0) h.openT -= dt; const tg = h.openT > 0 ? 1 : 0; h.open += (tg - h.open) * Math.min(1, dt * 5); h.lid.position.x = h.open * 0.33; }
 }
+
+
+/* =================== APARATOS: BARRA DE DOMINADAS Y PARALELAS =================== */
+// Las poses van en el espacio de referencia de la sesión (local-floor) o en el mundo de la prueba en el ordenador.
+// La barra de puerta va a lo largo de su eje X local; las paralelas, a lo largo de su eje Z local.
+// En las Quest se guardan además como anclas persistentes de WebXR para que no se muevan entre sesiones.
+const EQUIP_KEY = 'reparena3-equip';
+const mkPose = (z) => ({ x: 0, z, yaw: 0, set: false, handle: null, anchor: null });
+const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(-0.2), dip: mkPose(-0.45) }, edit: null, pending: [] };
+(function loadEquip() {
+  const s = store(EQUIP_KEY) || {};
+  for (const k of ['door', 'dip']) { const e = s[k]; if (e && [e.x, e.z, e.yaw].every(isFinite)) Object.assign(EQ.xr[k], { x: e.x, z: e.z, yaw: e.yaw, set: !!e.set, handle: typeof e.handle === 'string' ? e.handle : null }); }
+})();
+function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle }; } store(EQUIP_KEY, o); }
+const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
+const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
+const EQ_NAMES = { door: 'barra', dip: 'paralelas' };
+// Ejes horizontales del aparato: a lo largo de la barra (X local) y perpendicular (Z local)
+function eqAxes(e, ax, az) { const c = Math.cos(e.yaw), s = Math.sin(e.yaw); if (ax) ax.set(c, 0, -s); if (az) az.set(s, 0, c); }
+// Coordenadas locales (horizontales) de un punto del mundo respecto al aparato
+const _eqa = new V3(), _eqb = new V3();
+function eqLocal(e, p, out) { eqAxes(e, _eqa, _eqb); const dx = p.x - e.x, dz = p.z - e.z; return out.set(dx * _eqa.x + dz * _eqa.z, p.y, dx * _eqb.x + dz * _eqb.z); }
+function eqWorld(e, lx, y, lz, out) { eqAxes(e, _eqa, _eqb); return out.set(e.x + _eqa.x * lx + _eqb.x * lz, y, e.z + _eqa.z * lx + _eqb.z * lz); }
+function eqTopY(k = eqKind()) { return k === 'dip' ? settings.dipH / 100 : settings.doorH / 100; }
+
+/* ---------- Modelos: completos en VR, contorno luminoso en realidad mixta ---------- */
+const eqGroup = new THREE.Group(); eqGroup.visible = false; scene.add(eqGroup);
+const EQV = { door: { grp: new THREE.Group() }, dip: { grp: new THREE.Group() } };
+eqGroup.add(EQV.door.grp, EQV.dip.grp);
+const eqLineMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+const eqBeamMat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+// Barra luminosa entre dos puntos locales (contorno para realidad mixta)
+function glowBar(grp, a, b) {
+  const d = b.clone().sub(a), len = d.length(), mid = a.clone().add(b).multiplyScalar(0.5), q = new Q4().setFromUnitVectors(_up, d.clone().normalize());
+  const core = new THREE.Mesh(G.cylRaw(0.006, 0.006, len, 6), eqLineMat); core.position.copy(mid); core.quaternion.copy(q); grp.add(core);
+  for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.07, len), eqBeamMat); p.position.copy(mid); p.quaternion.copy(q); p.rotateY(i * Math.PI / 2); grp.add(p); }
+}
+function clearGroup(g) { while (g.children.length) { const c = g.children.pop(); c.traverse(n => { if (n.geometry) n.geometry.dispose(); }); } }
+function buildEquipVis() {
+  for (const k of ['door', 'dip']) { const v = EQV[k]; clearGroup(v.grp); v.vr = new THREE.Group(); v.mr = new THREE.Group(); v.grp.add(v.vr, v.mr); }
+  // Barra de puerta: marco, muro a los lados y la barra cromada
+  const H = settings.doorH / 100, W = settings.doorW / 100, top = H + 0.12, wallH = Math.max(2.6, top + 0.35), jx = W / 2 + 0.06;
+  let k = new Kit();
+  k.add('steel', G.cyl(0.016, 0.016, W, 14), C.chrome, 0, H, 0, 0, 0, Math.PI / 2);
+  for (const s of [-1, 1]) {
+    k.add('steel', G.box(0.06, 0.1, 0.1), C.gun, s * (W / 2 - 0.02), H, 0);
+    k.add('paint', G.box(0.1, top, 0.16), C.bone, s * jx, top / 2, 0); // jambas del marco
+    k.add('concrete', G.box(1.3, wallH, 0.14, 1.2), C.concrete, s * (jx + 0.05 + 0.65), wallH / 2, 0);
+    k.add('steel', G.box(0.07, 0.05, 0.05), C.dark, s * (W / 2 - 0.02), H + 0.06, -0.05);
+  }
+  k.add('paint', G.box(W + 0.32, 0.1, 0.16), C.bone, 0, top + 0.05, 0);
+  k.add('concrete', G.box(W + 0.32, wallH - top - 0.1, 0.14, 1.2), C.concrete, 0, (wallH + top + 0.1) / 2, 0);
+  EQV.door.vr.add(k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete }, { cast: true, receive: true }));
+  glowBar(EQV.door.mr, new V3(-W / 2, H, 0), new V3(W / 2, H, 0));
+  for (const s of [-1, 1]) glowBar(EQV.door.mr, new V3(s * W / 2, H - 0.12, 0), new V3(s * W / 2, H + 0.04, 0));
+  // Paralelas: dos barras con postes y patas
+  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100;
+  k = new Kit();
+  for (const s of [-1, 1]) {
+    const x = s * gap / 2;
+    k.add('steel', G.cyl(0.02, 0.02, L, 14), C.chrome, x, dH, 0, Math.PI / 2, 0, 0);
+    k.add('rubber', G.cyl(0.025, 0.025, Math.min(0.32, L * 0.5), 14), C.white, x, dH, 0, Math.PI / 2, 0, 0);
+    for (const e of [-1, 1]) {
+      k.add('steel', G.box(0.045, dH - 0.02, 0.045), C.dark, x, (dH - 0.02) / 2, e * (L / 2 - 0.05));
+      k.add('steel', G.box(0.07, 0.03, 0.07), C.gun, x, dH - 0.01, e * (L / 2 - 0.05));
+    }
+    k.add('steel', G.box(0.08, 0.04, L + 0.3), C.gun, x, 0.02, 0);
+    k.add('paint', G.box(0.085, 0.045, 0.12), C.hazard, x, 0.022, (L + 0.3) / 2 - 0.06);
+  }
+  EQV.dip.vr.add(k.build({ steel: M.steel, rubber: M.rubber, paint: M.paint }, { cast: true, receive: true }));
+  for (const s of [-1, 1]) { glowBar(EQV.dip.mr, new V3(s * gap / 2, dH, -L / 2), new V3(s * gap / 2, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(s * gap / 2, dH - 0.12, e * L / 2), new V3(s * gap / 2, dH, e * L / 2)); }
+  layoutPool();
+}
+settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', '*'].includes(k)) buildEquipVis(); });
+function updateEquip(dt, t) {
+  const show = isBars() && state !== 'idle';
+  eqGroup.visible = show; if (!show) return;
+  for (const k of ['door', 'dip']) {
+    const v = EQV[k], e = eqPose(k), on = k === eqKind();
+    v.grp.visible = on; if (!on) continue;
+    v.grp.position.set(e.x, 0, e.z); v.grp.rotation.set(0, e.yaw, 0);
+    v.vr.visible = !arMode; v.mr.visible = arMode || EQ.edit === k;
+  }
+  eqBeamMat.opacity = EQ.edit ? 0.55 + 0.4 * Math.sin(t * 8) : 0.75;
+}
+
+/* ---------- Anclas persistentes (Quest) ---------- */
+function anchorsInit(session) {
+  for (const k of ['door', 'dip']) {
+    const e = EQ.xr[k]; e.anchor = null;
+    if (e.handle && session.restorePersistentAnchor) session.restorePersistentAnchor(e.handle).then(a => { if (!EQ.edit) e.anchor = a; }).catch(() => { e.handle = null; saveEquip(); });
+  }
+}
+function anchorsEnd() { for (const k of ['door', 'dip']) EQ.xr[k].anchor = null; EQ.pending.length = 0; }
+// Se llama dentro del bucle XR: crea las anclas pendientes y sigue las que existen
+function anchorsFrame(frame, ref) {
+  while (EQ.pending.length) {
+    const k = EQ.pending.shift(), e = EQ.xr[k], session = frame.session;
+    if (!frame.createAnchor || typeof XRRigidTransform === 'undefined') break;
+    const q = new Q4().setFromAxisAngle(_up, e.yaw);
+    let p; try { p = frame.createAnchor(new XRRigidTransform({ x: e.x, y: 0, z: e.z }, { x: q.x, y: q.y, z: q.z, w: q.w }), ref); } catch (err) { p = null; }
+    if (p) p.then(a => {
+      const old = e.handle; e.anchor = a; e.handle = null;
+      if (old && session.deletePersistentAnchor) session.deletePersistentAnchor(old).catch(() => {});
+      if (a.requestPersistentHandle) a.requestPersistentHandle().then(h => { e.handle = h; saveEquip(); }).catch(() => {});
+    }).catch(() => {});
+  }
+  for (const k of ['door', 'dip']) {
+    const e = EQ.xr[k]; if (!e.anchor || !e.anchor.anchorSpace || EQ.edit === k) continue;
+    const pose = frame.getPose(e.anchor.anchorSpace, ref); if (!pose) continue;
+    const p = pose.transform.position, o = pose.transform.orientation;
+    e.x = p.x; e.z = p.z; e.yaw = yawOf(_eqq.set(o.x, o.y, o.z, o.w));
+  }
+}
+const _eqq = new Q4();
+function equipChanged(k) { eqPose(k).set = true; if (!preview) saveEquip(); }
+// Al terminar de colocarlo: ancla nueva en el próximo fotograma XR
+function equipCommit(k) { if (!preview && !EQ.pending.includes(k)) EQ.pending.push(k); }
+
+/* =================== CHARCO CON MONSTRUOS =================== */
+const pool = new THREE.Group(); pool.visible = false; scene.add(pool);
+const poolTex = texFrom((() => {
+  const c = mkCanvas(256), x = c.getContext('2d'), R = rng(31), g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.62, 'rgba(2,8,6,1)'); g.addColorStop(0.88, 'rgba(8,34,22,0.97)'); g.addColorStop(0.96, 'rgba(30,110,70,0.55)'); g.addColorStop(1, 'rgba(30,110,70,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 60; i++) { const a = R() * TAU, r = 30 + R() * 80; x.strokeStyle = `rgba(60,200,130,${0.05 + R() * 0.1})`; x.lineWidth = 1 + R() * 2; x.beginPath(); x.arc(128, 128, r, a, a + 0.3 + R() * 0.8); x.stroke(); }
+  return c;
+})());
+poolTex.wrapS = poolTex.wrapT = THREE.ClampToEdgeWrapping;
+const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, toneMapped: false }));
+poolDisc.rotation.x = -Math.PI / 2; poolDisc.position.y = 0.004; poolDisc.renderOrder = 1; pool.add(poolDisc);
+const poolRimMat = new THREE.MeshBasicMaterial({ color: 0x2cff9a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+const poolRim = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.0, 64), poolRimMat); poolRim.rotation.x = -Math.PI / 2; poolRim.position.y = 0.006; pool.add(poolRim);
+const POOL = { rx: 0.8, rz: 0.8, tents: [], eyes: [], lungeT: 5, grabT: 0, bubbleT: 0 };
+const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
+// Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
+function layoutPool() {
+  if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
+  else { POOL.rx = POOL.rz = 0.8; }
+  pool.scale.set(1, 1, 1); poolDisc.scale.set(POOL.rx, POOL.rz, 1); poolRim.scale.set(POOL.rx, POOL.rz, 1);
+  POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });
+}
+settingHooks.push(k => { if (k === 'exercise' || k === 'mode') layoutPool(); });
+function ensureTentacles() {
+  if (POOL.tents.length || !RIGS.tentacle) return;
+  for (let i = 0; i < 5; i++) {
+    const inst = RIGS.tentacle.instance({ main: M.tentacleSkin, glow: M.glowSkin });
+    pool.add(inst.root);
+    POOL.tents.push({ inst, root: inst.root, B: inst.list, a: (i + 0.3) / 5 * TAU, ph: rand(0, TAU), lunge: 0, lungeV: 0, s: rand(0.8, 1.15) });
+  }
+  layoutPool();
+}
+const _pt2 = new V3();
+// Algo que pasa en el charco: un tentáculo se lanza a por tus pies, o todos te agarran si caes
+function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.hiss(T.root.getWorldPosition(_pt2), 1.6); } }
+function poolGrab(at) {
+  POOL.grabT = 1.6; SND.splash(at); fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
+  POOL.tents.forEach(T => { T.lungeV = 1; });
+}
+function updatePool(dt, t) {
+  const show = isBars() && state !== 'idle';
+  pool.visible = show; if (!show) return;
+  ensureTentacles();
+  const e = eqPose();
+  pool.position.set(e.x, 0, e.z); pool.rotation.y = e.yaw;
+  poolRimMat.opacity = 0.35 + 0.2 * Math.sin(t * 2.3) + POOL.grabT * 0.3;
+  const active = state === 'play';
+  if (active) { POOL.lungeT -= dt; if (POOL.lungeT <= 0) { POOL.lungeT = settings.exercise === 'hang' ? rand(2.5, 6) : rand(5, 11); poolLunge(); } }
+  if (POOL.grabT > 0) POOL.grabT = Math.max(0, POOL.grabT - dt);
+  // burbujas que revientan en la superficie
+  POOL.bubbleT -= dt;
+  if (POOL.bubbleT <= 0) { POOL.bubbleT = rand(0.15, 0.5); const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 0.85; const p = pool.localToWorld(_pt2.set(Math.cos(a) * r * POOL.rx, 0.02, Math.sin(a) * r * POOL.rz)); fx.glow(p, [0.2, 0.8, 0.45], rand(0.04, 0.1), 0.35, 0.6); if (Math.random() < 0.3) fx.droplets(p, 3, [0.2, 0.7, 0.4], 0.5, 0.015); }
+  for (const E of POOL.eyes) { E.t -= dt; const open = E.t > 0.15 || E.t < 0; if (E.t <= 0) E.t = rand(2, 6); E.g.visible = open; E.a += dt * 0.12; E.g.position.set(Math.cos(E.a) * E.r * POOL.rx, 0, Math.sin(E.a) * E.r * POOL.rz); }
+  // tentáculos: ondulación, embestida hacia los pies y agarrón
+  const feet = eqLocal(e, head.p, _pt2);
+  for (const T of POOL.tents) {
+    if (T.lungeV) { T.lunge += dt * 3.2 * T.lungeV; if (T.lunge >= 1) { T.lunge = 1; T.lungeV = -0.5; } else if (T.lunge <= 0) { T.lunge = 0; T.lungeV = 0; } }
+    const k = smooth(Math.max(T.lunge, POOL.grabT > 0 ? Math.min(1, POOL.grabT) : 0)), n = T.B.length;
+    const dx = feet.x - T.root.position.x, dz = feet.z - T.root.position.z, reach = Math.hypot(dx, dz);
+    const rest = Math.atan2(-T.root.position.x, -T.root.position.z); T.root.rotation.y = rest + wrapAng(Math.atan2(dx, dz) - rest) * k;
+    T.root.scale.setScalar(T.s * (1 + k * 0.35));
+    for (let i = 0; i < n; i++) {
+      const b = T.B[i], amp = 0.12 + i * 0.05, w = Math.sin(t * 1.6 + T.ph - i * 0.55);
+      b.rotation.x = lerp((i === 0 ? 0.35 : 0.1) + amp * w, i === 0 ? Math.atan2(reach, 0.5) : 0.06 + 0.12 * w, k);
+      b.rotation.z = amp * 0.6 * Math.sin(t * 1.25 + T.ph * 1.7 - i * 0.5) * (1 - k * 0.6);
+    }
+  }
+}
+buildEquipVis();
 
 
 /* =================== MODELOS =================== */
@@ -1576,6 +1847,21 @@ function buildHornet() {
   return R.build();
 }
 
+/* ---------- Tentáculo del charco (modo Barras) ---------- */
+function buildTentacle() {
+  const R = new Rig(), N = 9, L = 0.1, rad = i => 0.052 * (1 - i / N) + 0.007;
+  for (let i = 0; i < N; i++) R.bone('t' + i, i ? 't' + (i - 1) : null, 0, i ? L : 0, 0);
+  for (let i = 0; i < N; i++) {
+    const r0 = rad(i), r1 = rad(i + 1), b = 't' + i;
+    R.add(b, 'main', G.cyl(r1, r0, L * 1.05, 10), i % 2 ? col(0.2, 0.07, 0.2) : col(0.25, 0.09, 0.24), 0, L / 2, 0);
+    for (const s of [-1, 1]) R.add(b, 'main', G.sph(1, 8, 6), col(0.78, 0.5, 0.56), s * r0 * 0.45, L * 0.5, r0 * 0.78, 0, 0, 0, r0 * 0.34, r0 * 0.34, r0 * 0.2); // ventosas en la cara interior
+    if (i % 2) R.add(b, 'glow', G.sph(0.006, 6, 5), C.green, 0, L * 0.5, -r0 * 0.92);
+  }
+  R.add('t' + (N - 1), 'main', G.cone(0.011, 0.05, 8), col(0.2, 0.07, 0.2), 0, L + 0.02, 0);
+  return R.build();
+}
+M.tentacleSkin = std({ vertexColors: true, normalMap: SURF.chitin.normal, roughness: 0.22, metalness: 0.05, skinning: true });
+
 /* ---------- Arcos de energía ---------- */
 const ARC_FRAMES = {};
 const arcLineMat = new THREE.LineBasicMaterial({ color: 0xffd0c8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -1682,7 +1968,7 @@ function updateGloves(dt) {
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
   RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true);
-  RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet();
+  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
   for (const [x, z, ry, kind] of [[-6.5, -4, 0.6, 'scout'], [7.5, -5.5, 2.2, 'heavy'], [-11, -9, 1.4, 'scout'], [12, 6, -0.8, 'heavy']]) {
@@ -1806,6 +2092,7 @@ const fx = {
   steam(pos, side) { PNORM.add({ pos: pos.clone(), v: new V3(side * rand(0.8, 1.8), rand(0.2, 0.8), rand(0.1, 0.6)), life: rand(1.0, 1.6), c0: [0.75, 0.76, 0.8], c1: [0.5, 0.5, 0.55], a: 0.4, s0: 0.25, s1: 1.4, tile: 1, rotV: rand(-1, 1), fin: 0.1, drag: 1.5 }); },
   sparks(pos, n, color = [1, 0.6, 0.2], speed = 3, size = 0.05) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rUp(1.2).multiplyScalar(speed * rand(0.3, 1.2)), life: rand(0.3, 0.9), c0: [1, 0.95, 0.8], c1: color, s0: size * rand(0.6, 1.2), s1: size * 0.3, tile: 3, g: 6, floor: true, fin: 0.01 }); },
   dust(pos, n, size = 0.25) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone().add(new V3(rand(-0.1, 0.1), 0.03, rand(-0.1, 0.1))), v: new V3(rand(-0.6, 0.6), rand(0.05, 0.3), rand(-0.6, 0.6)), life: rand(0.8, 1.5), c0: [0.32, 0.29, 0.26], c1: [0.2, 0.19, 0.18], a: 0.35, s0: size * 0.5, s1: size * 1.6, tile: 1, drag: 2.5, fin: 0.1 }); },
+  droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
   trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
@@ -1991,7 +2278,7 @@ function openMenu(rows, opts = {}) {
   const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
   stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
   stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
-  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null };
+  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
   return menu;
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
@@ -2099,11 +2386,31 @@ function updateViewPanels(dt) {
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }
+function centerBar(c, W, H, frac, color = '#3cf0c6') { c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill(); c.fillStyle = color; rr(c, 44, H - 66, Math.max(22, (W - 88) * clamp(frac, 0, 1)), 22, 11); c.fill(); }
 function drawCenter() {
   const c = center.ctx, W = center.W, H = center.H; c.clearRect(0, 0, W, H);
   rr(c, 6, 6, W - 12, H - 12, 30); c.fillStyle = 'rgba(14,10,28,0.86)'; c.fill(); c.lineWidth = 4; c.strokeStyle = 'rgba(60,240,198,.6)'; c.stroke();
   c.textBaseline = 'middle';
-  if (state === 'calib') {
+  if (PLACE.on) {
+    const door = PLACE.kind === 'door';
+    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
+    const L = door ? ['Agarra la barra con las dos manos', 'mirándola. Quieto 2 s.'] : ['Una mano en cada paralela,', 'apoyada encima. Quieto 2 s.'];
+    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+    c.font = `32px ${FB}`; c.fillStyle = PLACE.seen ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(PLACE.seen ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
+    centerBar(c, W, H, PLACE.t / 2);
+  } else if (state === 'mount') {
+    const row = settings.exercise === 'row';
+    if (BAR.phase === 'place') {
+      c.fillStyle = BAR.resume ? '#3cff8a' : '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(BAR.resume ? (row ? '¡A LAS PARALELAS!' : '¡A LA BARRA!') : row ? 'PARALELAS' : 'BARRA', 44, 68);
+      const L = row ? ['Túmbate bajo las paralelas, agárralas', 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
+      c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : row ? 'lejos de las paralelas' : 'lejos de la barra', W - 44, 68);
+      centerBar(c, W, H, BAR.still / 0.8);
+    } else {
+      c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
+      c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
+    }
+  } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
     const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
@@ -2121,6 +2428,7 @@ function drawCenter() {
 
 /* =================== MARCADOR =================== */
 function repsLeft() {
+  if (settings.exercise === 'hang') return Math.max(0, Math.ceil(BAR.need - BAR.hold));
   if (settings.mode === 'arcs') return spawnQueue.length + arcs.filter(a => !a.judged && !a.second).length;
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
   return Math.ceil(hp / (settings.mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands' ? 2 : 1));
@@ -2132,7 +2440,7 @@ function drawBoard() {
   c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
   c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
   c.textBaseline = 'middle';
-  if (!['calib', 'ready', 'play', 'rest', 'paused', 'end'].includes(state)) {
+  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
     c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
@@ -2146,35 +2454,167 @@ function drawBoard() {
   else if (settings.lives <= 8) { c.font = `50px ${FB}`; let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; c.fillStyle = '#ff4fa3'; fitFont(c, s, 360, 50, '%px ' + FB); c.fillText(s, W - 36, 52); }
   else { c.fillStyle = '#ff4fa3'; c.fillText(`♥ ${lives}/${settings.lives}`, W - 36, 52); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, 88, W - 60, 3);
-  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(stats.reps), 36, 210);
-  c.fillStyle = '#a49fc8'; const sub = state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
+  const hang = settings.exercise === 'hang', bars = isBars();
+  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 36, 210);
+  c.fillStyle = '#a49fc8'; const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
   c.textAlign = 'right';
   if (state === 'rest') {
     c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
-    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(`Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
-  } else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
+    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+  } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
+  else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
   if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
-  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(`Combo ×${combo}`, 36, H - 48);
+  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';
-  const mid = settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
+  const mid = bars ? `Caídas ${stats.falls}` : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
   c.fillText(mid, W / 2, H - 48);
   c.textAlign = 'right';
-  c.fillText(settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `Enemigos ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
   board.tex.needsUpdate = true;
 }
 
 
+/* =================== MÚSICA: SPOTIFY COMO MANDO A DISTANCIA =================== */
+// La música suena en la app de Spotify (en las Quest o en el móvil) y el juego la controla con la Web API.
+// Inicio de sesión con Authorization Code + PKCE, sin servidor. Hace falta Spotify Premium y una app propia
+// creada en developer.spotify.com con esta página como Redirect URI.
+const SP_KEY = 'reparena3-spotify', SP_PKCE = 'reparena3-spotify-pkce';
+const SP_SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0 };
+const spRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
+const spConnected = () => !!SP.cfg.refresh;
+const spPlaying = () => !!(SP.st && SP.st.is_playing);
+function spSave() { store(SP_KEY, SP.cfg); }
+function b64url(bytes) { let s = ''; bytes.forEach(b => { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function spStatus(text, bad) { const el = $('#spStatus'); if (el) { el.textContent = text; el.style.color = bad ? 'var(--red)' : ''; } }
+
+/* ---------- Inicio de sesión ---------- */
+async function spConnect() {
+  const id = (SP.cfg.clientId || '').trim(); if (!id) { spStatus('Escribe primero el Client ID de tu app de Spotify.', true); return; }
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48))), st = b64url(crypto.getRandomValues(new Uint8Array(12)));
+  const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+  store(SP_PKCE, { verifier, state: st });
+  const q = new URLSearchParams({ client_id: id, response_type: 'code', redirect_uri: spRedirect(), code_challenge_method: 'S256', code_challenge: challenge, scope: SP_SCOPES, state: st });
+  location.assign('https://accounts.spotify.com/authorize?' + q);
+}
+async function spTokenReq(body) {
+  const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { if (body.grant_type === 'refresh_token' && j.error === 'invalid_grant') { delete SP.cfg.refresh; spSave(); } throw new Error(j.error_description || j.error || 'HTTP ' + r.status); }
+  SP.cfg.access = j.access_token; SP.cfg.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.cfg.refresh = j.refresh_token; spSave();
+}
+// Vuelta desde Spotify con ?code=… (o ?error=…)
+async function spHandleRedirect() {
+  const q = new URLSearchParams(location.search || ''); if (!q.has('code') && !q.has('error')) return;
+  const pk = store(SP_PKCE) || {}; store(SP_PKCE, {}); history.replaceState(null, '', spRedirect());
+  if (q.get('error')) { spStatus('Spotify no dio permiso (' + q.get('error') + ').', true); return; }
+  if (!pk.verifier || q.get('state') !== pk.state) { spStatus('La respuesta de Spotify no coincide. Vuelve a pulsar Conectar.', true); return; }
+  try {
+    await spTokenReq({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: spRedirect(), client_id: SP.cfg.clientId, code_verifier: pk.verifier });
+    spStatus('Conectado. Pon algo a sonar en Spotify y pulsa Probar.'); spPage(); spRefresh();
+  } catch (e) { spStatus('No se pudo conectar: ' + e.message, true); }
+}
+async function spToken() {
+  if (SP.cfg.access && Date.now() < (SP.cfg.exp || 0) - 60000) return SP.cfg.access;
+  if (!SP.cfg.refresh) throw new Error('LOGIN');
+  await spTokenReq({ grant_type: 'refresh_token', refresh_token: SP.cfg.refresh, client_id: SP.cfg.clientId });
+  return SP.cfg.access;
+}
+async function spApi(method, path, body, retry = true) {
+  const r = await fetch('https://api.spotify.com/v1' + path, { method, headers: Object.assign({ Authorization: 'Bearer ' + await spToken() }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401 && retry) { SP.cfg.exp = 0; return spApi(method, path, body, false); }
+  if (r.status === 202 || r.status === 204) return null;
+  const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) { j = null; }
+  if (!r.ok) throw new Error(r.status === 404 || (j && j.error && j.error.reason === 'NO_ACTIVE_DEVICE') ? 'NO_DEVICE' : (j && j.error && j.error.message) || 'HTTP ' + r.status);
+  return j;
+}
+function spErrText(e) {
+  const m = String((e && e.message) || e);
+  if (m === 'NO_DEVICE') return 'Abre Spotify en las Quest o el móvil y pon algo a sonar';
+  if (m === 'LOGIN' || /invalid_grant|refresh token/i.test(m)) return 'Vuelve a conectar Spotify en la página';
+  if (/premium/i.test(m)) return 'Hace falta Spotify Premium';
+  if (/fetch|network/i.test(m)) return 'Sin conexión con Spotify';
+  return 'Spotify: ' + m;
+}
+
+/* ---------- Mandos ---------- */
+async function spRefresh() {
+  if (!spConnected()) return;
+  SP.lastRef = Date.now();
+  try { SP.st = await spApi('GET', '/me/player'); SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+  spMenuSync(); spPage();
+}
+async function spDo(fn) {
+  if (SP.busy || !spConnected()) return; SP.busy = true;
+  try { await fn(); SP.err = ''; } catch (e) { SP.err = spErrText(e); } finally { SP.busy = false; }
+  spMenuSync(); setTimeout(spRefresh, 500); // Spotify tarda un momento en reflejar el cambio
+}
+async function spWake() { // sin reproductor activo: despierta el primero disponible
+  const d = await spApi('GET', '/me/player/devices'), list = (d && d.devices) || [];
+  if (!list.length) throw new Error('NO_DEVICE');
+  await spApi('PUT', '/me/player', { device_ids: [(list.find(x => x.is_active) || list[0]).id], play: true });
+}
+function spToggle() { spDo(async () => { if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; } else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; } else await spWake(); }); }
+function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
+function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
+function spVol(d) {
+  spDo(async () => {
+    const dev = SP.st && SP.st.device; if (!dev) throw new Error('NO_DEVICE');
+    if (dev.supports_volume === false) throw new Error('ese reproductor no deja cambiar el volumen desde fuera');
+    const v = clamp(Math.round(((dev.volume_percent == null ? 50 : dev.volume_percent) + d) / 5) * 5, 0, 100);
+    await spApi('PUT', '/me/player/volume?volume_percent=' + v); dev.volume_percent = v;
+  });
+}
+function spNowText() {
+  if (!spConnected()) return '';
+  if (SP.err) return SP.err;
+  const it = SP.st && SP.st.item;
+  if (!it) return SP.st ? 'Spotify: no suena nada' : 'Spotify: buscando reproductor…';
+  const who = it.artists ? it.artists.map(a => a.name).join(', ') : it.show ? it.show.name : '';
+  const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
+  return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
+}
+// Filas para los menús del juego (atril y pausa)
+function musicRows() {
+  if (!spConnected()) return [];
+  if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
+  return [{ t: 'text', text: spNowText(), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true },
+    { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
+}
+function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
+function spTick(dt) {
+  if (!spConnected() || !menu || menu.music === null) return;
+  SP.pollT -= dt; if (SP.pollT <= 0) { SP.pollT = 5; spRefresh(); }
+}
+
+/* ---------- Sección de la página ---------- */
+function spPage() {
+  const now = $('#spNow'); if (now) now.textContent = spConnected() ? spNowText() : 'Sin conectar';
+  const off = $('#btnSpOff'); if (off) off.disabled = !spConnected();
+}
+function spInitPage() {
+  const inp = $('#spClient'); inp.value = SP.cfg.clientId || '';
+  inp.addEventListener('input', () => { SP.cfg.clientId = inp.value.trim(); spSave(); });
+  $('#spRedirect').textContent = spRedirect();
+  $('#btnSpConnect').addEventListener('click', () => { spConnect().catch(e => spStatus('No se pudo abrir Spotify: ' + e.message, true)); });
+  $('#btnSpTest').addEventListener('click', async () => { if (!spConnected()) { spStatus('Primero pulsa Conectar con Spotify.', true); return; } spStatus('Comprobando…'); await spRefresh(); spStatus(SP.err || spNowText(), !!SP.err); });
+  $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
+  spPage();
+  spHandleRedirect();
+}
+
+
 /* =================== ESTADO DE PARTIDA =================== */
-const GAME_STATES = ['calib', 'ready', 'play', 'rest'];
+const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
@@ -2661,7 +3101,7 @@ function updateProjectiles(dt) {
 }
 function onKilled(e) {
   stats.kills++;
-  const pts = { titan: 1500, carrier: 1500, heavy: 500, bomber: 400, hornet: 350, scout: 300, drone: 250 }[e.kind] || 300;
+  const pts = { titan: 1500, carrier: 1500, bigbubble: 1000, heavy: 500, bomber: 400, hornet: 350, scout: 300, drone: 250, bubble: 200 }[e.kind] || 300;
   score += pts; popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0)));
   if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
@@ -2676,7 +3116,7 @@ function registerRep(perfect, fire = true, side) {
   boardDirty = true;
 }
 function onRep(opts, side) {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs') return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   registerRep(opts.perfect, true, side);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -2700,7 +3140,7 @@ function onPartial(text) {
   stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargeOrb.visible = false;
 }
 function onCharge() {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs') return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   charged = true; chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
 }
 const DET = {
@@ -2727,6 +3167,7 @@ function vertDetector(d, y, t, dt, cfg) {
   }
 }
 function runDetectors(t, dt) {
+  if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
@@ -2791,6 +3232,7 @@ function updateAim(t) {
 /* =================== OLEADAS =================== */
 function isBossWave(i) { return settings.waves ? i === settings.waves - 1 : (i + 1) % 5 === 0; }
 function buildWave(i) {
+  if (isBars()) return buildBarWave(i);
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
@@ -2819,7 +3261,8 @@ function spawnFromQueue() {
     return;
   }
   let e;
-  if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  if (isBars()) e = new HeadTarget(spec);
+  else if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -2839,24 +3282,32 @@ function resetWorld() {
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
 }
-function speedKey() { return { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed' }[settings.mode]; }
+function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed' }[settings.mode]; }
 function summaryText() {
   const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
-  return `${n} · ${waveReps(0)} reps la primera (+${settings.repsInc}) · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
+  const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
+  return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
 function lobbyMenu(reanchor) {
-  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true;
-  const m = openMenu([
+  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
+  const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
+  const start = () => { if (bars && !placed) { PLACE.note = `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`; placeMenu(lobbyMenu); } else beginRun(); };
+  const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
-    { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: () => beginRun() }], h: 0.08 },
-    { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
+    { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
+    { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
-    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : { t: 'field', key: 'repsWave' },
-    { t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] },
-    { t: 'text', text: 'En partida: mira tu muñeca izquierda para abrir el menú', color: '#a49fc8' }
-  ], { reanchor });
+    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
+  ];
+  if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
+  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => { PLACE.note = ''; placeMenu(lobbyMenu); } }] });
+  rows.push(...musicRows());
+  rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
+  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
+  rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
+  const m = openMenu(rows, { reanchor });
   m.rebuild = () => lobbyMenu();
 }
 let settingsTab = 'partida';
@@ -2876,15 +3327,24 @@ function openPause() {
   pauseMenu(true);
 }
 function resumeGame() {
-  hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready'].includes(state); boardDirty = true;
+  hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
 function pauseMenu(reanchor) {
+  const bars = isBars();
+  const recal = () => {
+    hideMenu();
+    if (!bars) { state = 'calib'; calibT = 0; center.mesh.visible = true; }
+    else if (pausedFrom === 'play') barToMount(0, true); // vuelve a la oleada en curso
+    else if (pausedFrom === 'rest') barToMount(waveIdx + 1);
+    else barToMount(BAR.nextWave, BAR.resume);
+  };
   const m = openMenu([
     { t: 'title', text: 'PAUSA' },
-    { t: 'text', text: `${stats.reps} repeticiones · ${stats.kills} enemigos · ${score} puntos` },
+    { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Recalibrar', onPress: () => { hideMenu(); state = 'calib'; calibT = 0; center.mesh.visible = true; } }, { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    ...musicRows(),
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Colocar barra' : 'Colocar paralelas', onPress: () => { PLACE.note = ''; placeMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
@@ -2895,7 +3355,8 @@ function beginRun() {
   stats = newStats();
   DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down';
   stateT = 0; boardDirty = true;
-  if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
+  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
@@ -2911,7 +3372,8 @@ function calibrate() {
 }
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
-  if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
+  if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
+  else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = settings.mode === 'flyers' ? repTime() * (settings.exercise === 'squat' && settings.aim === 'hands' ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
@@ -2922,12 +3384,13 @@ function startWave(i) {
 function hurtPlayer(src) {
   combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
-  if (!(src instanceof Arc)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
+  if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {
-  if (runSaved || !stats.reps) return; runSaved = true;
+  const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
+  if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps: stats.reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
   store(HIST_KEY, h.slice(-400));
 }
 function endRun(win, manual) {
@@ -2936,11 +3399,12 @@ function endRun(win, manual) {
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop());
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
+  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
-    `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
-    settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
+    hang ? `Colgado ${got} s · ${stats.falls} caídas al charco · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
+    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
-    stats.reps > prevBest && prevBest > 0 ? '¡Nuevo récord de repeticiones!' : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
+    got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
   endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
@@ -2961,26 +3425,27 @@ function exitAll() {
 function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
-  if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
+  if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     const ok = !isPush() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
+  else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
   if (state === 'play') {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    if (spawnTimer <= 0 && spawnQueue.length && alive < settings.maxAlive) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : enemies.some(e => e.alive);
-    if (!spawnQueue.length && !anyLeft && !projs.length) {
+    if (settings.exercise === 'hang' ? BAR.hold >= BAR.need : !spawnQueue.length && !anyLeft && !projs.length) {
       if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say('¡Oleada superada!', '#3cf0c6', 2); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : '¡Oleada superada!', '#3cf0c6', 2); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {
     if (Math.floor(stateT) !== Math.floor(stateT - dt)) boardDirty = true;
-    if (stateT >= settings.rest) startWave(waveIdx + 1);
+    if (stateT >= settings.rest) { if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
     for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);
@@ -2999,6 +3464,314 @@ function gameStep(dt, t) {
   if (isPush() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
   if (chargeOrb.visible) { const s = 0.15 + Math.sin(t * 10) * 0.03; chargeOrb.scale.set(s, s, 1); }
+}
+
+
+/* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
+// La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
+// que espera en el punto más alto del recorrido. Debajo hay un charco con tentáculos: si te sueltas, caes.
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
+const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
+function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+// ¿Está la cabeza donde tiene que estar para usar el aparato?
+function barNear() {
+  const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
+  if (settings.exercise === 'row') return Math.abs(l.x) < settings.dipGap / 200 + 0.35 && Math.abs(l.z) < settings.dipLen / 200 + 0.9 && y < settings.dipH / 100 + 0.05;
+  return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
+}
+
+/* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
+function barToMount(next, resume = false) {
+  state = 'mount'; stateT = 0; BAR.phase = 'place'; BAR.still = 0; BAR.t = 0; BAR.resume = resume; if (!resume) BAR.nextWave = next;
+  center.mesh.visible = true; drawCenter(); boardDirty = true;
+}
+function barMountStep(dt) {
+  const near = barNear(), still = head.speed < 0.08;
+  if (BAR.phase === 'place') { BAR.still = near && still ? BAR.still + dt : Math.max(0, BAR.still - dt * 2); if (BAR.still >= 0.8) { BAR.phase = 'count'; BAR.t = 0; SND.charge(); } }
+  else if (BAR.phase === 'count') { const before = BAR.t; BAR.t += dt; if (!near) { BAR.phase = 'place'; BAR.still = 0; } else if (BAR.t >= 3) { BAR.phase = 'settle'; BAR.t = 0; BAR.still = 0; } else if (Math.floor(before) !== Math.floor(BAR.t)) SND.beep(); }
+  else { BAR.t += dt; BAR.still = still ? BAR.still + dt : 0; if (BAR.still >= 0.35 || BAR.t > 2.5) barMounted(); }
+}
+function barMounted() {
+  if (!BAR.started) { arenaFromHead(); arena.updateMatrixWorld(); }
+  HL.copy(head.p); arena.worldToLocal(HL);
+  BAR.ref = BAR.hangRef = head.p.y; BAR.refXZ.set(HL.x, 0, HL.z); BAR.mountXZ.set(head.p.x, 0, head.p.z); BAR.det = 'down';
+  // en la barra de puerta el objetivo espera un poco por delante de la cara, hacia la barra, para que se vea al mirarla
+  BAR.front.set(0, 0, 0);
+  if (eqKind() === 'door') {
+    const e = eqPose(), lz = eqLocal(e, head.p, _bl).z; eqAxes(e, null, _ba);
+    const s = Math.abs(lz) > 0.04 ? -Math.sign(lz) : Math.sign(_ba.dot(fwdH()) || 1);
+    BAR.front.copy(_ba).multiplyScalar(s).applyAxisAngle(_up, -arena.rotation.y).multiplyScalar(Math.min(0.22, Math.max(0.12, Math.abs(lz))));
+  }
+  center.mesh.visible = false; SND.charge();
+  if (settings.exercise === 'row') placeRowBoard(true);
+  if (BAR.resume) { BAR.resume = false; state = 'play'; stateT = 0; say('¡Sigue!', '#3cf0c6', 1.2); }
+  else startWave(BAR.nextWave);
+  BAR.started = true;
+}
+// En el remo miras al techo: el marcador se coloca encima de tu cara, mirándote
+const _rbm = new THREE.Matrix4(), _rbx = new V3(), _rby = new V3(), _rbz = new V3(), _rbs = new V3(), _rbq = new Q4();
+function placeRowBoard(fromHead) {
+  const rig = boardRig.children[0]; if (!rig) return;
+  if (fromHead || !BAR.board) {
+    _rby.set(0, 1, 0).applyQuaternion(head.q);
+    const P = head.p.clone().addScaledVector(fwd(), 1.25).addScaledVector(_rby, -0.6); P.y = Math.max(P.y, head.p.y + 0.5);
+    _rbz.subVectors(head.p, P).normalize();
+    _rbx.crossVectors(_rby, _rbz); if (_rbx.lengthSq() < 1e-6) _rbx.set(1, 0, 0); _rbx.normalize(); _rby.crossVectors(_rbz, _rbx);
+    _rbm.makeBasis(_rbx, _rby, _rbz); _rbm.decompose(_rbs, _rbq, new V3());
+    BAR.board = { p: P, q: _rbq.clone() };
+  }
+  arena.updateMatrixWorld();
+  rig.position.copy(arena.worldToLocal(BAR.board.p.clone()));
+  rig.quaternion.copy(new Q4().setFromAxisAngle(_up, arena.rotation.y).invert().multiply(BAR.board.q));
+}
+
+/* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
+function barFall() {
+  stats.falls++;
+  const at = new V3(head.p.x, 0.03, head.p.z); poolGrab(at);
+  hurtPlayer({ silent: true }); if (state === 'end') return;
+  say('¡AL CHARCO!', '#3cff8a', 1.8);
+  barToMount(0, true);
+}
+function barDetect(t, dt) {
+  if (state !== 'play') return;
+  const y = head.p.y, margin = settings.fallMargin / 100;
+  BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
+  if (y < BAR.hangRef - margin || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { barFall(); return; }
+  if (settings.exercise === 'hang') {
+    const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
+    if (Math.floor(BAR.hold) > Math.floor(before)) {
+      score += 10; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true;
+      const s = Math.floor(BAR.hold), left = Math.ceil(BAR.need - BAR.hold);
+      if (left > 0 && left <= 3) SND.beep(1 + (3 - left) * 0.25);
+      else if (left > 0 && s % 10 === 0) { say(`¡${s} s!`, '#3cf0c6', 1.0); SND.combo(); }
+    }
+    return;
+  }
+  const req = barReq(), pt = settings.perfectTime;
+  // referencia abajo (brazos estirados): baja enseguida y sube muy despacio
+  if (y < BAR.ref) BAR.ref += (y - BAR.ref) * Math.min(1, dt * 6); else if (BAR.det !== 'top') BAR.ref += (y - BAR.ref) * Math.min(1, dt * 0.05);
+  if (BAR.det === 'down') {
+    if (y < BAR.ref + 0.04) BAR.refXZ.lerp(_bl.set(HL.x, 0, HL.z), Math.min(1, dt * 3));
+    if (y > BAR.ref + Math.min(0.1, req * 0.4)) { BAR.det = 'rising'; BAR.max = y; BAR.t0 = t; }
+  } else if (BAR.det === 'rising') {
+    BAR.max = Math.max(BAR.max, y);
+    if (y - BAR.ref >= req) {
+      const dur = t - BAR.t0; BAR.det = 'top';
+      // aprende hacia dónde se desplaza la cabeza al subir (en el remo, hacia los pies)
+      BAR.drift.lerp(_bl.set(HL.x - BAR.refXZ.x, 0, HL.z - BAR.refXZ.z), BAR.drift.lengthSq() ? 0.5 : 1);
+      barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 });
+    } else if (y < BAR.ref + 0.05) { if (BAR.max - BAR.ref > req * 0.55) onPartial('¡Más arriba!'); BAR.det = 'down'; }
+  } else if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) BAR.det = 'down'; // rearma al bajar casi todo el recorrido
+}
+function barRep(opts) {
+  if (state !== 'play' || settings.exercise === 'hang') return;
+  registerRep(opts.perfect, false);
+  if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
+  if (opts.perfect) SND.perfect();
+  let tg = frontTarget();
+  if (!tg && spawnQueue.length) { spawnFromQueue(); spawnTimer = spawnInterval; tg = frontTarget(); } // ninguna repetición se pierde
+  if (!tg) return;
+  // si todavía no ha llegado, la onda del cabezazo lo alcanza igual
+  const c = tg.center(new V3()), h = head.p.clone().add(_ba.set(0, 0.08, 0));
+  if (c.distanceTo(h) > 0.35) for (let i = 0; i <= 10; i++) fx.trail(h.clone().lerp(c, i / 10), [0.3, 1, 0.85], 0.06, 0.3);
+  tg.onHit(opts.perfect ? 2 : 1, opts.perfect); if (!tg.alive) onKilled(tg);
+}
+
+/* ---------- Objetivos que se revientan con la cabeza ---------- */
+const TGT = { bubble: { r: 0.085 }, bigbubble: { r: 0.15, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
+const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
+// línea que baja del objetivo hacia tu cara: indica dónde está aunque quede por encima de la vista
+const guideGeo = G.cylRaw(0.003, 0.003, 0.4, 6); guideGeo.translate(0, -0.2, 0);
+const guideMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+const eyeWhite = std({ color: 0xf2eee6, roughness: 0.25 }), eyeIris = new THREE.MeshBasicMaterial({ color: 0xff3020, toneMapped: false }), eyePupil = new THREE.MeshBasicMaterial({ color: 0x050303 });
+const frontTarget = () => enemies.find(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait'));
+// Punto más alto previsto de la cabeza (coordenadas de la arena) y hueco de espera del siguiente
+function barTopPoint(out) {
+  out.set(BAR.refXZ.x + BAR.drift.x + BAR.front.x, BAR.ref + barReq() + 0.04, BAR.refXZ.z + BAR.drift.z + BAR.front.z);
+  if (settings.exercise !== 'row') out.y = Math.min(out.y, settings.doorH / 100 - 0.06);
+  return out;
+}
+function barSlot(idx, out) {
+  barTopPoint(out); if (!idx) return out;
+  const e = eqPose(), w = arena.localToWorld(_bw.copy(out));
+  if (eqKind() === 'door') eqAxes(e, _ba); else { _ba.set(w.x - e.x, 0, w.z - e.z); if (_ba.lengthSq() < 1e-4) eqAxes(e, null, _ba); _ba.normalize(); }
+  w.addScaledVector(_ba, 0.42 * idx); w.y += 0.06;
+  return out.copy(arena.worldToLocal(w));
+}
+class HeadTarget {
+  constructor(spec) {
+    const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
+    Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
+    if (this.bubble) {
+      this.root = new THREE.Group();
+      this.mat = std({ color: 0x9fffe8, transparent: true, opacity: 0.32, roughness: 0.04, metalness: 0.2, envMapIntensity: 2.5, depthWrite: false });
+      this.shell = new THREE.Mesh(bubbleGeo, this.mat); this.shell.scale.setScalar(K.r); this.root.add(this.shell);
+      this.core = glowSprite(0x3cf0c6, K.r * (K.boss ? 1.0 : 1.5), 0.7); this.root.add(this.core);
+      if (K.boss) { // un ojo atrapado dentro que te sigue
+        this.eye = new THREE.Group(); this.root.add(this.eye);
+        const ball = new THREE.Mesh(bubbleGeo, eyeWhite); ball.scale.setScalar(0.055); this.eye.add(ball);
+        const iris = new THREE.Mesh(bubbleGeo, eyeIris); iris.scale.set(0.028, 0.028, 0.012); iris.position.z = 0.047; this.eye.add(iris);
+        const pupil = new THREE.Mesh(bubbleGeo, eyePupil); pupil.scale.set(0.012, 0.016, 0.006); pupil.position.z = 0.058; this.eye.add(pupil);
+      }
+    } else {
+      this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+      this.root.scale.setScalar(K.scale);
+    }
+    if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
+    if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
+    arena.add(this.root);
+    barSlot(this.slotIndex(), this.slot);
+    if (this.bubble) { // sube del borde del charco más cercano
+      const e = eqPose(), l = eqLocal(e, arena.localToWorld(_bw.copy(this.slot)), _bl);
+      const nx = l.x / POOL.rx, nz = l.z / POOL.rz, n = Math.hypot(nx, nz) || 1;
+      this.pos.copy(arena.worldToLocal(eqWorld(e, nx / n * POOL.rx * 0.85, 0.06, nz / n * POOL.rz * 0.85, _bw)));
+      SND.pop(arena.localToWorld(_bw.copy(this.pos)), false);
+    } else { // sale de una compuerta y vuela recto
+      const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
+      this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
+      this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
+    }
+    this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / settings.barArrive);
+    this.root.position.copy(this.pos);
+  }
+  center(out) { this.root.getWorldPosition(out); return out; }
+  slotIndex() { let i = 0; for (const o of enemies) { if (o === this) break; if (o.type === 'target' && o.alive && (o.mode === 'approach' || o.mode === 'wait')) i++; } return i; }
+  update(dt, t) {
+    this.t += dt; const play = state === 'play', idx = this.slotIndex();
+    if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot);
+    if (this.mode === 'approach') {
+      if (play || state === 'mount') {
+        const to = tmpA.subVectors(this.slot, this.pos), d = to.length();
+        if (d < 0.03) { this.mode = 'wait'; this.waitT = 0; } else this.pos.addScaledVector(to.divideScalar(d), Math.min(d, this.speed * dt));
+      }
+    } else if (this.mode === 'wait') {
+      this.pos.lerp(this.slot, 1 - Math.exp(-dt * 6));
+      if (!idx && play && settings.barWait > 0) { this.waitT += dt; if (this.waitT > settings.barWait) this.timeout(); }
+    } else if (this.mode === 'attack') {
+      const k = Math.min(1, this.t / 0.3); this.pos.lerpVectors(this.from, HL, k);
+      if (k >= 1) {
+        const c = this.center(new V3());
+        if (this.kind === 'hornet') { fx.ichor(c, 10, 1); SND.hiss(c, 0.7); } else { fx.explosion(c, 0.3, false); SND.explosion(c, false); }
+        hurtPlayer(this); this.alive = false; this.dispose(); return;
+      }
+    } else if (this.mode === 'leave') {
+      const k = Math.min(1, this.t / 1.1); this.pos.y += dt * 0.5; this.mat.opacity = 0.32 * (1 - k); this.core.material.opacity = 0.7 * (1 - k);
+      if (k >= 1) { SND.pop(this.center(new V3()), false); this.alive = false; this.dispose(); return; }
+    }
+    // aspecto
+    const wait = this.mode === 'wait';
+    this.root.position.copy(this.pos); if (wait) this.root.position.y += Math.sin(t * 2.4 + this.ph) * 0.012;
+    if (this.flick > 0) this.flick = Math.max(0, this.flick - dt);
+    if (this.bubble) {
+      const w = Math.sin(t * 7 + this.ph) * 0.06, r = this.K.r * (1 - this.flick * 0.8);
+      this.shell.scale.set(r * (1 + w), r * (1 - w), r * (1 + w * 0.5));
+      const h = t * 0.4 + this.ph; this.mat.color.setRGB(0.6 + 0.4 * Math.sin(h), 0.8 + 0.2 * Math.sin(h + 2.1), 0.75 + 0.25 * Math.sin(h + 4.2));
+      if (this.eye) this.eye.lookAt(head.p);
+    } else {
+      const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
+      const B = this.B;
+      if (this.kind === 'hornet') { const f = Math.sin(this.t * 2 * Math.PI * 22) * 0.9, f2 = Math.sin(this.t * 2 * Math.PI * 22 + 0.6) * 0.8; B.wL1.rotation.z = f; B.wR1.rotation.z = -f; B.wL2.rotation.z = f2; B.wR2.rotation.z = -f2; B.abd.rotation.x = 0.25 + Math.sin(this.t * 4) * 0.12; }
+      else { for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); } }
+      if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
+      if (this.buzz) this.buzz.set(this.center(tmpB));
+    }
+    if (this.bar) this.bar.g.lookAt(head.p);
+    if (this.guide) { this.guide.visible = (this.mode === 'wait' || this.mode === 'approach') && !idx; if (this.root.quaternion) this.guide.quaternion.copy(this.root.quaternion).invert(); }
+  }
+  onHit(dmg, perfect) {
+    this.hp -= dmg; this.flick = 0.3; if (this.bar) setHpBar(this.bar, this.hp / this.maxHp);
+    if (this.hp <= 0) { this.pop(); return; }
+    const c = this.center(new V3());
+    if (this.bubble) { SND.pop(c, false); fx.droplets(c, 8, [0.45, 1, 0.85], 1, 0.025); } else { SND.metalHit(c, false); fx.sparks(c, 8, [1, 0.6, 0.2], 2, 0.03); }
+  }
+  pop() {
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss;
+    if (this.bubble) { SND.pop(c, big); fx.droplets(c, big ? 40 : 22, [0.45, 1, 0.85], big ? 2.2 : 1.6, big ? 0.04 : 0.03); fx.glow(c, [0.4, 1, 0.9], big ? 0.8 : 0.45, 0.15); fx.sparks(c, 10, [0.5, 1, 0.9], 1.2, 0.02); }
+    else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
+    else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
+    this.dispose();
+  }
+  // No llegaste a tiempo: vuelve a la cola de la oleada; el bicho te pica y la pompa se escapa
+  timeout() {
+    spawnQueue.push({ kind: this.kind, hp: this.hp }); this.hp = 0; combo = 0; this.t = 0; boardDirty = true;
+    if (this.bubble) { this.mode = 'leave'; say('Se escapó', '#ff8a3d', 1.0); SND.miss(); }
+    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); }
+  }
+  dispose() {
+    arena.remove(this.root);
+    if (this.inst) this.inst.skel.dispose();
+    if (this.mat) { this.mat.dispose(); this.core.material.dispose(); }
+    if (this.buzz) { this.buzz.stop(); this.buzz = null; }
+  }
+}
+function buildBarWave(i) {
+  if (settings.exercise === 'hang') return [];
+  let total = waveReps(i); const list = [], bugs = settings.barTarget === 'bugs';
+  let boss = null;
+  if (isBossWave(i)) { const b = Math.min(total, Math.min(5, Math.max(3, Math.round(total * 0.2)))); boss = { kind: bugs ? 'carrier' : 'bigbubble', hp: b }; total -= b; }
+  for (let k = 0; total > 0; k++, total--) list.push({ kind: bugs ? (i >= 1 && k % 3 === 2 ? 'hornet' : 'drone') : 'bubble', hp: 1 });
+  if (boss) list.push(boss);
+  return list;
+}
+
+/* =================== COLOCAR LOS APARATOS =================== */
+const PLACE = { on: false, t: 0, kind: 'door', last: new V3(), has: false, seen: false };
+const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3();
+// Punto de agarre: entre la base del dedo corazón y el nudillo (o el mando)
+function gripPoint(side, out) {
+  const h = hands[side]; if (!h.ok) return null;
+  if (h.isHand) { const a = h.J[10], b = h.J[11]; return a.ok && b.ok ? out.lerpVectors(a.p, b.p, 0.75) : null; }
+  return out.copy(h.wrist);
+}
+function updatePlace(dt) {
+  if (!PLACE.on) return;
+  const L = gripPoint('left', _pl1), R = gripPoint('right', _pl2);
+  let ok = false;
+  if (L && R) { const d = Math.hypot(R.x - L.x, R.z - L.z); ok = d > 0.22 && d < (PLACE.kind === 'door' ? 1.5 : 1.1) && Math.abs(R.y - L.y) < 0.15; }
+  PLACE.seen = !!(L && R);
+  if (ok) {
+    const mid = _pl3.addVectors(L, R).multiplyScalar(0.5), v = PLACE.has ? mid.distanceTo(PLACE.last) / Math.max(dt, 1e-3) : 1;
+    PLACE.last.copy(mid); PLACE.has = true;
+    if (v < 0.06) { const before = PLACE.t; PLACE.t += dt; if (Math.floor(before * 2) !== Math.floor(PLACE.t * 2)) SND.tick(); } else PLACE.t = Math.max(0, PLACE.t - dt);
+  } else PLACE.t = Math.max(0, PLACE.t - dt * 2);
+  if (PLACE.t >= 2) {
+    placeFromHands(PLACE.kind, L, R); PLACE.on = false; PLACE.t = 0; center.mesh.visible = false;
+    if (menu && menu.rebuild) menu.rebuild();
+  }
+}
+function placeFromHands(k, L, R) {
+  const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
+  e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
+  if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
+  else { setSetting('dipH', Math.round((mid.y - 0.03) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  equipChanged(k); SND.charge();
+  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
+}
+function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
+function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); }
+function placeMenu(back) {
+  const k = eqKind(), door = k === 'door', e = eqPose(k);
+  if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; } // al terminar se crea un ancla nueva
+  const note = PLACE.on ? (PLACE.seen ? 'Quieto…' : 'No veo tus dos manos: mira hacia ellas') : PLACE.note || (door ? 'Mira la barra, agárrala con las dos manos y quédate quieto 2 s' : 'Apoya una mano en cada paralela y quédate quieto 2 s');
+  const rows = [
+    { t: 'title', text: door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS' },
+    { t: 'text', text: note, color: PLACE.note && !PLACE.on ? '#3cf0c6' : '#d8d3f5' },
+    { t: 'btns', items: [
+      { label: preview ? 'Con las manos (en las gafas)' : PLACE.on ? 'Midiendo…' : 'Con las manos', style: preview ? 'ghost' : 'primary', onPress: () => { if (preview) { PLACE.note = 'En el ordenador usa «Delante de mí» y los botones'; } else { Object.assign(PLACE, { on: true, t: 0, kind: k, has: false, note: '' }); center.mesh.visible = true; } placeMenu(back); } },
+      { label: 'Delante de mí', onPress: () => { PLACE.on = false; center.mesh.visible = false; placeInFront(k); PLACE.note = door ? 'Barra delante de ti: ajústala' : 'Paralelas delante de ti: ajústalas'; placeMenu(back); } }] },
+    { t: 'btns', items: [['Izquierda', -0.02, 0, 0], ['Derecha', 0.02, 0, 0], ['Alejar', 0, 0.02, 0], ['Acercar', 0, -0.02, 0], ['Girar −', 0, 0, 0.05], ['Girar +', 0, 0, -0.05]].map(([label, sx, fz, r]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, r) })) },
+    { t: 'field', key: door ? 'doorH' : 'dipH' },
+    { t: 'field', key: door ? 'doorW' : 'dipGap' }
+  ];
+  if (!door) rows.push({ t: 'field', key: 'dipLen' });
+  rows.push({ t: 'btns', items: [{ label: 'Listo', style: 'primary', onPress: () => { placeDone(); back(); } }] });
+  const m = openMenu(rows, { border: '#3cf0c6' }); m.rebuild = () => placeMenu(back);
+}
+function placeDone() {
+  const k = EQ.edit; PLACE.on = false; PLACE.note = ''; if (!GAME_STATES.includes(state)) center.mesh.visible = false;
+  if (!k) return; EQ.edit = null; equipChanged(k); equipCommit(k);
 }
 
 
@@ -3034,13 +3807,16 @@ function readXR(frame) {
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
   }
+  anchorsFrame(frame, ref);
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null };
+const PV = { keys: {}, crouch: false, fall: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
 function previewInput(dt) {
   const dropAmt = isPush() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
-  const target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
+  let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
+  // barras: Espacio sube (remo o dominada), F te suelta
+  if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
@@ -3049,8 +3825,18 @@ function previewInput(dt) {
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
 }
+// En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
+function previewBarPose(on) {
+  if (on === PV.bar) return; PV.bar = on;
+  const row = settings.exercise === 'row', e = eqPose();
+  PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
+  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  head.p.copy(camera.position); head.prev.copy(head.p);
+}
 function startPreview() {
   audioInit(); ensureRigs();
+  Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
   PV.baseY = isPush() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
   camera.position.set(0, PV.baseY, 0); camera.rotation.set(isPush() ? -0.7 : -0.12, 0, 0);
@@ -3060,7 +3846,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu(true);
 }
-function stopPreview() { preview = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { preview = false; EQ.edit = null; PLACE.on = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -3072,10 +3858,11 @@ addEventListener('keydown', e => {
   PV.keys[e.code] = true;
   if (e.code === 'Escape') { if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
-  if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; onCharge(); onRep({ perfect: true }); }
-  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro' }[settings.exercise]);
+  if (e.code === 'KeyF') PV.fall = true;
+  if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; if (isBars()) { barRep({ perfect: true }); return; } onCharge(); onRep({ perfect: true }); }
+  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
 });
-addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; });
+addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; });
 const cv = renderer.domElement, ray = new THREE.Raycaster(), _plane = new THREE.Plane(), _pt = new V3(), _nrm = new V3();
 function rayFrom(e) { const r = cv.getBoundingClientRect(); ray.setFromCamera({ x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera); }
 function hitWidget(e) { if (!menu) return null; rayFrom(e); const list = activeWidgets(), hit = ray.intersectObjects(list.map(w => w.mesh))[0]; return hit ? { w: list.find(w => w.mesh === hit.object), point: hit.point } : null; }
@@ -3117,6 +3904,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t);
   updateWatch(dt);
+  updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5); }
   updateViewPanels(dt);
   updateEnv(dt, t);
@@ -3132,11 +3920,11 @@ function ensureRigs() { if (!rigsBuilt) { rigsBuilt = true; buildRigs(); } }
 async function startXR(ar) {
   audioInit(); ensureRigs();
   try {
-    const session = await navigator.xr.requestSession(ar ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] });
+    const session = await navigator.xr.requestSession(ar ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors'] });
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby';
-    session.addEventListener('end', () => { xrActive = false; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    xrActive = true; state = 'lobby'; anchorsInit(session);
+    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
@@ -3160,7 +3948,7 @@ async function checkXR() {
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

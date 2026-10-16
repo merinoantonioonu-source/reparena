@@ -31,13 +31,16 @@ function readXR(frame) {
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
   }
+  anchorsFrame(frame, ref);
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null };
+const PV = { keys: {}, crouch: false, fall: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
 function previewInput(dt) {
   const dropAmt = isPush() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
-  const target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
+  let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
+  // barras: Espacio sube (remo o dominada), F te suelta
+  if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
@@ -46,8 +49,18 @@ function previewInput(dt) {
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
 }
+// En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
+function previewBarPose(on) {
+  if (on === PV.bar) return; PV.bar = on;
+  const row = settings.exercise === 'row', e = eqPose();
+  PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
+  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  head.p.copy(camera.position); head.prev.copy(head.p);
+}
 function startPreview() {
   audioInit(); ensureRigs();
+  Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
   PV.baseY = isPush() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
   camera.position.set(0, PV.baseY, 0); camera.rotation.set(isPush() ? -0.7 : -0.12, 0, 0);
@@ -57,7 +70,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu(true);
 }
-function stopPreview() { preview = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { preview = false; EQ.edit = null; PLACE.on = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -69,10 +82,11 @@ addEventListener('keydown', e => {
   PV.keys[e.code] = true;
   if (e.code === 'Escape') { if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
-  if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; onCharge(); onRep({ perfect: true }); }
-  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro' }[settings.exercise]);
+  if (e.code === 'KeyF') PV.fall = true;
+  if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; if (isBars()) { barRep({ perfect: true }); return; } onCharge(); onRep({ perfect: true }); }
+  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
 });
-addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; });
+addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; });
 const cv = renderer.domElement, ray = new THREE.Raycaster(), _plane = new THREE.Plane(), _pt = new V3(), _nrm = new V3();
 function rayFrom(e) { const r = cv.getBoundingClientRect(); ray.setFromCamera({ x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera); }
 function hitWidget(e) { if (!menu) return null; rayFrom(e); const list = activeWidgets(), hit = ray.intersectObjects(list.map(w => w.mesh))[0]; return hit ? { w: list.find(w => w.mesh === hit.object), point: hit.point } : null; }
@@ -114,6 +128,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t);
   updateWatch(dt);
+  updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5); }
   updateViewPanels(dt);
   updateEnv(dt, t);
@@ -129,11 +144,11 @@ function ensureRigs() { if (!rigsBuilt) { rigsBuilt = true; buildRigs(); } }
 async function startXR(ar) {
   audioInit(); ensureRigs();
   try {
-    const session = await navigator.xr.requestSession(ar ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] });
+    const session = await navigator.xr.requestSession(ar ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors'] });
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby';
-    session.addEventListener('end', () => { xrActive = false; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    xrActive = true; state = 'lobby'; anchorsInit(session);
+    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
@@ -157,7 +172,7 @@ async function checkXR() {
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();
