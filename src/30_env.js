@@ -141,7 +141,7 @@ function makeGate() {
 const gates = [makeGate(), makeGate(), makeGate()];
 
 // Agujeros del suelo para las arañas (modo flexiones)
-const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]];
+const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]], hatchSide = [[-1.0, -0.4], [1.0, -0.4], [-0.95, 0.3], [0.95, 0.3]];
 const hatches = hatchPos.map(([x, z]) => {
   const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
   const k = new Kit();
@@ -170,14 +170,15 @@ function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
-  const D = arenaDepth(), push = isPush(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const D = arenaDepth(), push = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
   gates.forEach((g, i) => {
     g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
     g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push;
   });
   gateLight.position.set(0, 1.6 * gs, -D - 0.6);
-  hatches.forEach(h => h.g.visible = push && settings.mode !== 'arcs');
+  const hp = settings.exercise === 'plank1' ? hatchSide : hatchPos; // en la plancha, dos a cada lado
+  hatches.forEach((h, i) => { h.x = hp[i][0]; h.z = hp[i][1]; h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs'; });
   safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }

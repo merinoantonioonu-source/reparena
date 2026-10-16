@@ -9,7 +9,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
 const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
 const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
@@ -93,6 +93,7 @@ function fmtVal(f, v = settings[f.key]) {
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (settings.mode === 'arcs') settings.exercise = 'squat';
+  if (settings.exercise === 'plank1' && settings.mode !== 'walkers') settings.exercise = 'pushup';
   if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
 function saveSettings() { store(STORE_KEY, settings); }
@@ -101,6 +102,9 @@ function setSetting(key, v) {
   settings[key] = f ? clampSetting(f, v) : v;
   if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
   if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
+  // la plancha con un brazo solo se juega en Asalto (arañas por los dos lados)
+  if (key === 'exercise' && v === 'plank1') settings.mode = 'walkers';
+  if (key === 'mode' && v !== 'walkers' && settings.exercise === 'plank1') settings.exercise = v === 'arcs' ? 'squat' : 'pushup';
   // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
   if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
   if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
@@ -114,7 +118,8 @@ function fieldVisible(f) {
   if (f.cond && !f.cond()) return false;
   return true;
 }
-const isPush = () => settings.exercise === 'pushup';
+// Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
+const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -167,7 +172,7 @@ function onFormInput(ev) {
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x); });
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x) || (x === 'plank1' && settings.mode !== 'walkers'); });
   const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
   note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
   for (const f of SCHEMA) {
@@ -185,7 +190,7 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
+function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
 function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
 function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
 function updateSummary() {

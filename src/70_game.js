@@ -4,7 +4,7 @@ const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, chargePow = 1, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
@@ -185,7 +185,7 @@ class Spider {
     this.root.scale.setScalar(this.s); arena.add(this.root);
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
-    this.target = new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s));
+    this.target = settings.exercise === 'plank1' ? new V3(Math.sign(hatch.x) * rand(0.3, 0.4), 0, rand(-0.3, 0)) : new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s)); // en la plancha atacan por el costado
     this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / settings.walkTime);
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
@@ -333,7 +333,7 @@ const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, roto
 const MAT_WASP = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin };
 class Flyer {
   constructor(spec) {
-    const K = FLYER_KIND[spec.kind], push = isPush(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
+    const K = FLYER_KIND[spec.kind], push = isFloor(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
     this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
@@ -347,7 +347,7 @@ class Flyer {
   }
   center(out) { this.root.getWorldPosition(out); return out; }
   update(dt, t) {
-    this.t += dt; const push = isPush(), active = state === 'play' || state === 'rest';
+    this.t += dt; const push = isFloor(), active = state === 'play' || state === 'rest';
     if (active) {
       const tgt = tmpA.set(0, Math.max(push ? 0.2 : 1.0, HL.y - (push ? 0.05 : 0.12)), 0);
       tgt.x = HL.x * 0.6; tgt.z = HL.z * 0.6;
@@ -396,7 +396,7 @@ class Flyer {
     if (this.hp <= 0) this.kill();
   }
   kill() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isPush() ? 0.45 : 1;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isFloor() ? 0.45 : 1;
     if (this.kind === 'hornet') { fx.ichor(c, 18, 1.5 * s); fx.glow(c, [1, 0.8, 0.3], 0.4 * s, 0.1); SND.squish(c); }
     else { fx.explosion(c, (big ? 1.4 : 0.55) * s, big); SND.explosion(c, big); }
     rigDebris(this.inst, c, (big ? 3 : 2) * s, this.kind === 'hornet' ? 0 : 0.5, this.kind === 'hornet' ? { main: M.robotStaticWasp } : { main: M.carbonStatic });
@@ -454,10 +454,12 @@ const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, toneMapped: false 
 const boltMat = new THREE.MeshBasicMaterial({ color: 0xa8fcff, toneMapped: false }), boltPerfMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false });
 function glowSprite(color, size, opacity = 0.8) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); s.scale.set(size, size, 1); return s; }
 const chargeOrb = glowSprite(0x3cf0c6, 0.18, 0.9); chargeOrb.visible = false; scene.add(chargeOrb);
-function pickNearest() {
+// side: solo los enemigos de ese lado (plancha con un brazo: cada brazo dispara a su lado)
+function pickNearest(side) {
+  const ok = e => !side || (side === 'left' ? e.root.position.x < 0.05 : e.root.position.x > -0.05);
   let best = null, bd = 1e9;
-  for (const e of enemies) if (e.alive && e.hp - e.pending > 0) { const d = e.root.position.distanceToSquared(HL); if (d < bd) { bd = d; best = e; } }
-  if (!best) for (const e of enemies) if (e.alive) { best = e; break; }
+  for (const e of enemies) if (e.alive && e.hp - e.pending > 0 && ok(e)) { const d = e.root.position.distanceToSquared(HL); if (d < bd) { bd = d; best = e; } }
+  if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
 function findLock(o, d) {
@@ -470,11 +472,11 @@ function findLock(o, d) {
   }
   return best;
 }
-function fireOrb(origin, dmg, perfect, pow = 1) {
-  const e = pickNearest();
+function fireOrb(origin, dmg, perfect, pow = 1, side) {
+  const e = pickNearest(side);
   const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
   m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
-  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(fwdH(), 5);
+  const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to);
   const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
@@ -506,11 +508,11 @@ function updateProjectiles(dt) {
         if (p.kind === 'bolt') stats.hits++;
         const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone()); if (!target.alive) onKilled(target);
         if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
-          const R = isPush() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isPush() ? 0.35 : 1, 0.15); SND.zap(p.to);
+          const R = isFloor() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isFloor() ? 0.35 : 1, 0.15); SND.zap(p.to);
           for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone()); if (!o.alive) onKilled(o); }
         }
         if (p.kind === 'bolt' && p.perfect) {
-          const R = isPush() ? 0.45 : 1.6; fx.electric(p.to, 16);
+          const R = isFloor() ? 0.45 : 1.6; fx.electric(p.to, 16);
           for (const o of enemies) if (o.alive && o !== target && o.type === 'flyer' && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(1, true, tmpA.clone()); if (!o.alive) onKilled(o); }
         }
       } else if (p.e) { p.e.pending = Math.max(0, p.e.pending - p.dmg); fx.sparks(p.to, 5, [1, 0.8, 0.4], 1.5, 0.03); }
@@ -544,7 +546,7 @@ function onRep(opts, side) {
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
-    fireOrb(origin, dmg, opts.perfect, pow);
+    fireOrb(origin, dmg, opts.perfect, pow, settings.exercise === 'plank1' ? side : undefined);
   } else {
     for (const s of aimSources()) {
       let o = s.o.clone();
@@ -572,7 +574,8 @@ function onCharge() {
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
-  curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } }
+  curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } },
+  pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
   const still = head.speed < 0.06;
@@ -608,6 +611,28 @@ function runDetectors(t, dt) {
   if (settings.exercise === 'squat') {
     const req = settings.squatDepth / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
+  } else if (settings.exercise === 'plank1') {
+    // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado
+    const P = DET.pl, y = head.p.y, LIFT = 0.18;
+    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
+    P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
+    // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
+    const lifted = s => hands[s].ok && hands[s].wrist.y > P[s].floor + LIFT;
+    for (const side of ['left', 'right']) {
+      const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
+      if (!h.ok) { d.lost += dt; if (d.lost > 0.6) { d.state = 'down'; d.fired = false; } continue; }
+      d.lost = 0;
+      const r = h.wrist.y;
+      if (d.state === 'down') {
+        d.floor += (r - d.floor) * Math.min(1, r < d.floor ? 0.5 : dt * 0.3); // altura de la muñeca apoyada
+        if (r > d.floor + LIFT && !lifted(other)) { d.state = 'up'; d.t0 = t; d.fired = false; d.dev = 0; }
+      } else {
+        d.dev = Math.max(d.dev, Math.abs(y - P.ref));
+        if (r < d.floor + LIFT * 0.5) d.state = 'down';
+        else if (lifted(other)) d.fired = true; // las dos manos arriba: esta subida ya no dispara
+        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
+      }
+    }
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = settings.pushDepth / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
@@ -697,7 +722,7 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  else if (settings.mode === 'walkers') e = isFloor() ? new Spider(spec, settings.exercise === 'plank1' ? pick(hatches.filter(h => (h.x < 0) === (stats.spawned++ % 2 === 0))) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -732,7 +757,7 @@ function lobbyMenu(reanchor) {
     { t: 'text', text: summaryText() },
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs'], ['plank1', 'Plancha 1 brazo', settings.mode !== 'walkers']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
@@ -788,10 +813,10 @@ function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats();
-  DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down';
+  DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = DET.pl.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
@@ -801,8 +826,9 @@ function arenaFromHead() {
 }
 function calibrate() {
   arenaFromHead();
-  const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isPush()) { calibRef = y; lastStandY = y; }
-  for (const s of ['left', 'right']) if (hands[s].ok) DET.curl[s].bottom = hands[s].wrist.y - y;
+  const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isFloor()) { calibRef = y; lastStandY = y; }
+  for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
+  DET.pl.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 function startWave(i) {
@@ -862,7 +888,7 @@ function gameStep(dt, t) {
   stateT += dt;
   if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
-    const ok = !isPush() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
+    const ok = !isFloor() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
@@ -896,7 +922,7 @@ function gameStep(dt, t) {
   }
   if (settings.mode === 'arcs') updateNextArc();
   const f = fwdH();
-  if (isPush() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
+  if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
   if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
 }
