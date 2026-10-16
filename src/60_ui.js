@@ -1,0 +1,334 @@
+
+/* =================== ESTADO DEL JUGADOR =================== */
+const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
+const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
+const mkHand = () => ({ ok: false, isHand: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
+const hands = { left: mkHand(), right: mkHand() };
+let lastStandY = 1.6;
+function fwd(q = head.q) { return new V3(0, 0, -1).applyQuaternion(q); }
+function fwdH(q = head.q) { const f = fwd(q); f.y = 0; if (f.lengthSq() < 1e-4) f.set(0, 0, -1); return f.normalize(); }
+function yawOf(q) { const f = fwd(q); return Math.atan2(-f.x, -f.z); }
+function standHeadY() { return clamp(lastStandY || 1.6, 1.2, 2.05); }
+
+/* =================== WIDGETS QUE SE PULSAN CON EL DEDO =================== */
+const STY = {
+  normal: ['#211a3f', '#eeeaff', '#3cf0c6'], primary: ['#ff4fa3', '#1a0716', null], selected: ['#3cf0c6', '#0d0a1c', null],
+  value: ['#120e26', '#ffd166', '#ffd166'], tab: ['#1a1530', '#a49fc8', '#30284f'], danger: ['#3a1020', '#ffb0c0', '#ff4a6a'], key: ['#2a2250', '#ffffff', '#4a3f80'], ghost: ['#1a1530', '#a49fc8', '#30284f']
+};
+class Btn {
+  constructor(label, w, h, onPress, o = {}) {
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font;
+    this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
+    this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
+  }
+  setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { this.label = l; if (style) this.style = style; this.draw(); } }
+  draw() {
+    const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
+    c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
+    c.fillStyle = this.hover ? '#ffd166' : s[0]; c.fill();
+    if (s[2] && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = s[2]; c.stroke(); }
+    c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
+    fitFont(c, this.label, W - H * 0.4, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
+    c.fillText(this.label, W / 2, H / 2 + 2); this.p.tex.needsUpdate = true;
+  }
+}
+class Slider {
+  constructor(f, w, h, onDrag) {
+    this.kind = 'slider'; this.f = f; this.w = w; this.h = h; this.onDrag = onDrag; this.value = settings[f.key]; this.pad = 0.012;
+    this.p = makePanel(w, h, Math.round(clamp(2200 * w, 256, 1024))); this.mesh = this.p.mesh; this.hover = false; this.baseZ = 0; this.prevZ = {}; this.pending = false; this.draw();
+  }
+  frac() { return (this.value - this.f.min) / (this.f.max - this.f.min); }
+  draw() {
+    const c = this.p.ctx, W = this.p.W, H = this.p.H, pad = this.pad / this.w * W, y = H / 2, x0 = pad, x1 = W - pad, x = x0 + (x1 - x0) * this.frac();
+    c.clearRect(0, 0, W, H);
+    rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#30284f'; c.stroke();
+    rr(c, x0 - H * 0.12, y - H * 0.12, Math.max(H * 0.24, x - x0 + H * 0.12), H * 0.24, H * 0.12); c.fillStyle = '#ff4fa3'; c.fill();
+    c.fillStyle = 'rgba(238,234,255,0.35)'; for (let i = 0; i <= 10; i++) { const tx = x0 + (x1 - x0) * i / 10; c.fillRect(tx - 1, y + H * 0.2, 2, H * 0.1); }
+    c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke();
+    this.p.tex.needsUpdate = true;
+  }
+  set(v) { if (v !== this.value) { this.value = v; this.draw(); } }
+  drag(u) {
+    const f = this.f, v = clampSetting(f, f.min + u * (f.max - f.min));
+    if (v !== this.value) { this.value = v; this.draw(); this.pending = true; SND.tick(); if (this.onDrag) this.onDrag(v, false); }
+  }
+  commit() { if (this.pending) { this.pending = false; if (this.onDrag) this.onDrag(this.value, true); } }
+}
+const fingers = [];
+const _wl = new V3();
+function pokeWidgets(list, dt, ready = true) {
+  for (const w of list) {
+    if (!w.mesh.visible) continue;
+    w.cool = Math.max(0, (w.cool || 0) - dt);
+    let hover = false, press = false, touching = false, drag = null;
+    for (const f of fingers) {
+      if (w.only && w.only !== f.side) continue;
+      const l = w.mesh.worldToLocal(_wl.copy(f.p));
+      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side];
+      if (inX && inY && l.z < 0.07 && l.z > -0.05) hover = true;
+      if (w.kind === 'slider') {
+        if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
+      } else {
+        if (inX && inY && l.z < 0.012 && l.z > -0.07) { touching = true; if (prev !== undefined && prev >= 0.012) press = true; }
+      }
+      w.prevZ[f.side] = l.z;
+    }
+    if (hover !== w.hover) { w.hover = hover; w.draw(); }
+    w.mesh.position.z = w.baseZ - (touching ? 0.004 : 0);
+    if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); continue; }
+    if (press && ready && w.cool <= 0) { w.cool = 0.35; SND.click(); w.onPress(); return true; }
+  }
+  return false;
+}
+
+/* =================== MENÚ FIJO EN EL MUNDO =================== */
+let menu = null, menuAnchor = null;
+const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
+const stand = (() => {
+  const g = new THREE.Group(), k = new Kit();
+  k.add('steel', G.cyl(0.2, 0.24, 0.04, 24), C.dark, 0, 0.02, 0); k.add('glow', G.tor(0.21, 0.006, 4, 32), C.teal, 0, 0.042, 0, Math.PI / 2, 0, 0);
+  g.add(k.build({ steel: M.steel, glow: M.glow }, { cast: true, receive: true }));
+  const post = new THREE.Mesh(G.cyl(0.03, 0.035, 1, 12), M.steel); tint(post.geometry, C.gun); post.castShadow = true; g.add(post); g.post = post;
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1, 0.012), M.glow); tint(strip.geometry, C.teal); g.add(strip); g.strip = strip;
+  g.visible = false; scene.add(g); return g;
+})();
+function placeAnchor(dist) {
+  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? head.p.y - 0.3 : standHeadY() - 0.42;
+  return { pos, yaw: yawOf(head.q) };
+}
+function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+function hideMenu(keepAnchor) {
+  if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
+  if (!keepAnchor) { menuAnchor = null; stand.visible = false; }
+}
+const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+function openMenu(rows, opts = {}) {
+  const reuse = menu && menuAnchor && !opts.reanchor;
+  hideMenu(true);
+  if (!reuse) menuAnchor = opts.anchor || placeAnchor((opts.dist || settings.menuDist) / 100);
+  const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
+  const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
+  const group = new THREE.Group(); group.rotation.order = 'YXZ';
+  const bg = makePanel(MW, H, 1024); group.add(bg.mesh);
+  const c = bg.ctx, sc = bg.W / MW;
+  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || '#ff4fa3'; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.03)'; for (let y = 0; y < bg.H; y += 6) c.fillRect(6, y, bg.W - 12, 2);
+  const widgets = [], fieldRows = [];
+  let y = H / 2 - PAD;
+  const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
+  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; group.add(w.mesh); widgets.push(w); return w; };
+  const label = (text, cy, color = '#eeeaff') => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
+  rows.forEach((r, i) => {
+    const h = heights[i], cy = y - h / 2;
+    if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
+    else if (r.t === 'text') { c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+    else if (r.t === 'btns' || r.t === 'tabs') {
+      const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined }), x + w / 2, cy); x += w + GAP; });
+    } else if (r.t === 'choice') {
+      label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
+      r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
+    } else if (r.t === 'field') {
+      const f = FIELD[r.key]; label(f.short || f.label, cy);
+      if (f.type === 'num') {
+        const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
+        const row = { f };
+        const commit = v => { setSetting(f.key, v); refreshRow(row); };
+        row.minus = addW(new Btn('−', bw, h, () => commit(settings[f.key] - f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
+        row.slider = addW(new Slider(f, sw, h, (v, done) => { row.value.setLabel(fmtVal(f, v)); if (done) commit(v); }), x + sw / 2, cy); x += sw + GAP;
+        row.plus = addW(new Btn('+', bw, h, () => commit(settings[f.key] + f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
+        row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
+        fieldRows.push(row);
+      } else {
+        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
+        const row = { f, btns: [] };
+        opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: 0.38 }), x + w / 2, cy)); x += w + GAP; });
+      }
+    }
+    y -= h + GAP;
+  });
+  bg.tex.needsUpdate = true;
+  group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+  scene.add(group);
+  // atril
+  const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
+  stand.visible = true; stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
+  const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
+  stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
+  stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
+  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null };
+  return menu;
+}
+function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
+
+/* ---------- Teclado numérico ---------- */
+function openKeypad(f, row) {
+  if (!menu) return; closeKeypad();
+  const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
+  const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
+  const grp = new THREE.Group(); grp.position.set(0, 0, 0.03); menu.group.add(grp);
+  const bg = makePanel(KW, KH, 640); grp.add(bg.mesh);
+  const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
+  const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
+  let y0 = KH / 2 - PAD - dispH - g;
+  keys.forEach((k, i) => {
+    const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; grp.add(b.mesh); kp.widgets.push(b);
+  });
+  const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
+  const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
+  cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
+  grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
+  menu.keypad = kp; drawKeypad();
+}
+function drawKeypad() {
+  const kp = menu && menu.keypad; if (!kp) return;
+  const c = kp.bg.ctx, W = kp.bg.W, H = kp.bg.H, s = W / kp.KW, f = kp.f;
+  c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, 26); c.fillStyle = 'rgba(10,7,22,0.98)'; c.fill(); c.lineWidth = 5; c.strokeStyle = '#ffd166'; c.stroke();
+  c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = '#a49fc8'; fitFont(c, f.short || f.label, W - 40, 24, '500 %px ' + FB); c.fillText(f.short || f.label, 22, 18);
+  const shown = kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
+  rr(c, 18, 50, W - 36, kp.dispH * s - 30, 12); c.fillStyle = '#1d1738'; c.fill();
+  c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = kp.fresh ? '#7d77a8' : '#ffffff'; c.font = `700 40px ${FB}`; c.fillText(shown + (f.unit ? ' ' + f.unit : ''), W - 34, 50 + (kp.dispH * s - 30) / 2);
+  c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2);
+  kp.bg.tex.needsUpdate = true;
+}
+function keypadKey(k) {
+  const kp = menu && menu.keypad; if (!kp) return;
+  if (kp.fresh) { kp.str = ''; kp.fresh = false; }
+  if (k === '⌫') kp.str = kp.str.slice(0, -1);
+  else if (k === ',') { if (decimals(kp.f) > 0 && !kp.str.includes(',')) kp.str = (kp.str || '0') + ','; }
+  else if (kp.str.replace(',', '').length < 5) kp.str = (kp.str === '0' ? '' : kp.str) + k;
+  drawKeypad();
+}
+function keypadOK() {
+  const kp = menu && menu.keypad; if (!kp) return;
+  if (!kp.fresh && kp.str !== '') { setSetting(kp.f.key, kp.str); refreshRow(kp.row); }
+  closeKeypad();
+}
+function closeKeypad() {
+  const kp = menu && menu.keypad; if (!kp) return;
+  menu.group.remove(kp.grp); disposeTree(kp.grp); menu.keypad = null;
+}
+function activeWidgets() { if (!menu) return []; return menu.keypad ? menu.keypad.widgets : menu.widgets; }
+
+/* ---------- Botón de muñeca ---------- */
+const watch = new Btn('MENÚ', 0.09, 0.042, () => onWatch(), { depthTest: false, style: 'primary', font: 0.5 });
+watch.only = 'right'; scene.add(watch.mesh); watch.mesh.visible = false;
+const _wu = new V3(), _wh = new V3(), _wo = new V3();
+function updateWatch(dt) {
+  const h = hands.left;
+  let show = false;
+  if (h.ok && state !== 'idle') {
+    const d = h.wrist.distanceTo(head.p);
+    if (h.isHand) {
+      _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
+      const dot = _wu.dot(_wh);
+      if (Math.abs(dot) > 0.72 && d < 0.7) { show = true; watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(dot) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
+    } else if (d < 0.65 && h.wrist.y < head.p.y - 0.1) { show = true; watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0)); }
+  }
+  const lab = state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
+  watch.setLabel(lab);
+  watch.mesh.visible = show; watch.armT = show ? (watch.armT || 0) + dt : 0;
+  if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
+  else if (watch.hover) { watch.hover = false; watch.draw(); }
+}
+function onWatch() {
+  if (GAME_STATES.includes(state)) openPause();
+  else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
+}
+
+/* =================== PANELES DE VISTA =================== */
+const center = makePanel(0.5, 0.2, 1024, { depthTest: false }); scene.add(center.mesh); center.mesh.visible = false;
+const toastP = makePanel(0.34, 0.06, 768, { depthTest: false }); scene.add(toastP.mesh); toastP.mesh.visible = false;
+let toastT = 0;
+function showToast(text, color, dur) {
+  if (!GAME_STATES.includes(state) || !settings.toasts) return;
+  const c = toastP.ctx, W = toastP.W, H = toastP.H; c.clearRect(0, 0, W, H);
+  rr(c, 4, 4, W - 8, H - 8, H / 2 - 4); c.fillStyle = 'rgba(14,10,28,0.72)'; c.fill();
+  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, text, W - 60, 72, '%px ' + FD); c.fillText(text, W / 2, H / 2 + 3);
+  toastP.tex.needsUpdate = true; toastT = dur; toastP.mesh.visible = true;
+}
+const hurtMat = new THREE.MeshBasicMaterial({ map: texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 18, 64, 64, 64); g.addColorStop(0, 'rgba(255,0,30,0)'); g.addColorStop(1, 'rgba(255,0,30,1)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return c; })()), transparent: true, opacity: 0, depthTest: false, depthWrite: false, toneMapped: false });
+const hurtPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), hurtMat); hurtPlane.renderOrder = 40; scene.add(hurtPlane); hurtPlane.visible = false;
+let hurtT = 0;
+const _hl = new V3();
+function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(head.p); }
+function updateViewPanels(dt) {
+  const k = 1 - Math.exp(-dt * 4);
+  if (center.mesh.visible) {
+    const tgt = headLocal(_hl.set(0, -0.08, -1.0), new V3());
+    if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
+    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
+  } else center.mesh.userData.init = false;
+  if (toastP.mesh.visible) { toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false; toastP.mesh.material.opacity = Math.min(1, toastT * 3); headLocal(_hl.set(0, -0.36, -1.1), toastP.mesh.position); toastP.mesh.quaternion.copy(head.q); }
+  if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
+  else hurtPlane.visible = false;
+}
+function drawCenter() {
+  const c = center.ctx, W = center.W, H = center.H; c.clearRect(0, 0, W, H);
+  rr(c, 6, 6, W - 12, H - 12, 30); c.fillStyle = 'rgba(14,10,28,0.86)'; c.fill(); c.lineWidth = 4; c.strokeStyle = 'rgba(60,240,198,.6)'; c.stroke();
+  c.textBaseline = 'middle';
+  if (state === 'calib') {
+    c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
+    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
+    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
+    c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
+    c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
+    if (settings.exercise === 'curl' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
+      const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
+    }
+  } else {
+    c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText('¡PREPÁRATE!', W / 2, 80);
+    c.fillStyle = '#ffffff'; c.font = `120px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W / 2, 230);
+  }
+  center.tex.needsUpdate = true;
+}
+
+/* =================== MARCADOR =================== */
+function repsLeft() {
+  if (settings.mode === 'arcs') return spawnQueue.length + arcs.filter(a => !a.judged && !a.second).length;
+  let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
+  return Math.ceil(hp / (settings.mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands' ? 2 : 1));
+}
+function drawBoard() {
+  const c = board.ctx, W = board.W, H = board.H;
+  c.clearRect(0, 0, W, H);
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#140f28'); g.addColorStop(1, '#0a0817'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
+  c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
+  c.textBaseline = 'middle';
+  if (!['calib', 'ready', 'play', 'rest', 'paused', 'end'].includes(state)) {
+    c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
+    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
+    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
+    board.tex.needsUpdate = true; return;
+  }
+  const N = settings.waves;
+  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; c.fillText(N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`, 36, 52);
+  c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
+  c.textAlign = 'right';
+  if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
+  else if (settings.lives <= 8) { c.font = `50px ${FB}`; let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; c.fillStyle = '#ff4fa3'; fitFont(c, s, 360, 50, '%px ' + FB); c.fillText(s, W - 36, 52); }
+  else { c.fillStyle = '#ff4fa3'; c.fillText(`♥ ${lives}/${settings.lives}`, W - 36, 52); }
+  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, 88, W - 60, 3);
+  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(stats.reps), 36, 210);
+  c.fillStyle = '#a49fc8'; const sub = state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
+  c.textAlign = 'right';
+  if (state === 'rest') {
+    c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
+    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(`Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+  } else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
+  else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
+  else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
+  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
+  else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
+  if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
+  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
+  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(`Combo ×${combo}`, 36, H - 48);
+  c.textAlign = 'center'; c.fillStyle = '#eeeaff';
+  const mid = settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
+  c.fillText(mid, W / 2, H - 48);
+  c.textAlign = 'right';
+  c.fillText(settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `Enemigos ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  board.tex.needsUpdate = true;
+}

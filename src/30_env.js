@@ -1,0 +1,272 @@
+
+/* =================== PANELES DE TEXTO =================== */
+function makePanel(w, h, px = 1024, opts = {}) {
+  const c = mkCanvas(px, Math.round(px * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding; tex.anisotropy = MAX_ANISO;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: false, toneMapped: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  if (opts.depthTest === false) m.renderOrder = 30;
+  return { c, ctx, tex, mesh: m, w, h, W: c.width, H: c.height };
+}
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const FD = '"Bungee","Arial Black",sans-serif', FB = '"Rubik",system-ui,sans-serif';
+function fitFont(c, text, max, start, fam) { let fs = start; c.font = fam.replace('%', fs); while (c.measureText(text).width > max && fs > 14) { fs -= 2; c.font = fam.replace('%', fs); } return fs; }
+
+/* =================== ENTORNO VR =================== */
+const env = new THREE.Group(); scene.add(env);
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 }, flash: { value: 0 } },
+  vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform float time; uniform float flash; varying vec3 vP;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
+    float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
+    void main(){
+      vec3 d = normalize(vP); float h = d.y;
+      vec3 top = vec3(0.02,0.025,0.05), mid = vec3(0.1,0.045,0.05), low = vec3(0.3,0.085,0.045);
+      vec3 c = mix(low, mid, smoothstep(-0.05, 0.22, h)); c = mix(c, top, smoothstep(0.2, 0.85, h));
+      vec2 uv = d.xz / (max(h, 0.0) + 0.22) * 1.4 + vec2(time*0.012, time*0.005);
+      float cl = smoothstep(0.38, 0.85, fbm(uv));
+      vec3 cloudCol = mix(vec3(0.045,0.035,0.045), vec3(0.32,0.1,0.06), smoothstep(0.32, -0.02, h));
+      c = mix(c, cloudCol, cl * smoothstep(-0.02, 0.12, h) * 0.9);
+      c += flash * vec3(0.55,0.6,0.85) * (0.35 + cl * 1.2) * smoothstep(-0.1, 0.3, h);
+      gl_FragColor = vec4(c, 1.0);
+    }`
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), skyMat); sky.renderOrder = -10; env.add(sky);
+const envFloor = new THREE.Mesh(new THREE.CircleGeometry(36, 64), M.floor); envFloor.rotation.x = -Math.PI / 2; envFloor.receiveShadow = true; env.add(envFloor);
+const outerGround = new THREE.Mesh(new THREE.RingGeometry(35.9, 150, 48), std({ color: 0x15100e, roughness: 1 })); outerGround.rotation.x = -Math.PI / 2; outerGround.position.y = -0.01; env.add(outerGround);
+const envLights = []; // luces rojas de la muralla que parpadean
+(function buildEnv() {
+  const k = new Kit(), R = rng(99);
+  // muralla de hormigón con almenas
+  k.add('wall', G.cyl(34, 34, 16, 72, 4, true), C.concrete, 0, 8, 0);
+  for (let i = 0; i < 36; i++) { const a = i / 36 * TAU; k.add('concrete', G.box(3.2, 1.6, 1.4, 3), C.concrete, Math.cos(a) * 34.4, 16.6, Math.sin(a) * 34.4, 0, -a, 0); }
+  // pilares, tuberías y pasarela
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * TAU + 0.13, x = Math.cos(a) * 32.6, z = Math.sin(a) * 32.6;
+    k.add('steel', G.box(1.6, 17, 1.6, 2), C.dark, x, 8.5, z, 0, -a, 0);
+    k.add('steel', G.box(2.0, 0.5, 2.0, 2), C.hazard, x, 1.6, z, 0, -a, 0);
+    envLights.push(new V3(Math.cos(a) * 31.7, 12.5, Math.sin(a) * 31.7));
+  }
+  k.add('steel', G.tor(33.2, 0.55, 8, 96), C.gun, 0, 5.2, 0, Math.PI / 2, 0, 0);
+  k.add('steel', G.tor(33.2, 0.35, 8, 96), C.dark, 0, 6.4, 0, Math.PI / 2, 0, 0);
+  k.add('steel', G.tor(32.4, 0.9, 4, 96), C.dark, 0, 10, 0, Math.PI / 2, 0, 0);
+  for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; k.add('steel', G.box(0.08, 1.2, 0.08, 1), C.gun, Math.cos(a) * 31.6, 10.9, Math.sin(a) * 31.6); }
+  // torres lejanas
+  for (let i = 0; i < 14; i++) {
+    const a = R() * TAU, r = 48 + R() * 25, h = 18 + R() * 30, w = 4 + R() * 6;
+    k.add('concrete', G.box(w, h, w, 6), C.concrete, Math.cos(a) * r, h / 2, Math.sin(a) * r, 0, R() * 3, 0);
+    envLights.push(new V3(Math.cos(a) * r, h + 0.6, Math.sin(a) * r));
+  }
+  // bidones y chatarra
+  for (const [x, z] of [[-9, -6], [10, -8], [-13, 4], [14, 3], [6, 12], [-7, 13]]) {
+    k.add('steel', G.cyl(0.32, 0.32, 0.9, 14, 1.5), C.redPaint, x, 0.45, z);
+    k.add('steel', G.tor(0.32, 0.025, 4, 16), C.dark, x, 0.3, z, Math.PI / 2, 0, 0); k.add('steel', G.tor(0.32, 0.025, 4, 16), C.dark, x, 0.65, z, Math.PI / 2, 0, 0);
+  }
+  for (let i = 0; i < 18; i++) { const a = R() * TAU, r = 14 + R() * 16; k.add('steel', G.box(0.4 + R() * 1.4, 0.2 + R() * 0.8, 0.4 + R() * 1.2, 1), R() < 0.5 ? C.dark : C.gun, Math.cos(a) * r, 0.2, Math.sin(a) * r, R() * 0.5, R() * 3, R() * 0.4); }
+  const wallMat = M.concrete.clone(); wallMat.side = THREE.BackSide;
+  const g = k.build({ concrete: M.concrete, steel: M.steel, wall: wallMat }, { receive: true });
+  env.add(g);
+  // luces rojas (halos)
+  const hk = new Kit(); envLights.forEach(p => { hk.add('glow', G.sph(0.18, 8, 6), C.red, p.x, p.y, p.z); hk.add('halo', G.halo(2.6), C.redHalo, p.x, p.y, p.z); });
+  const hg = hk.build({ glow: M.glow, halo: M.halo.clone() }); env.add(hg); envLights.mesh = hg.children[1];
+})();
+// Focos de búsqueda (conos de luz volumétrica falsa)
+const searchlights = [];
+for (let i = 0; i < 3; i++) {
+  const a = -Math.PI / 2 + (i - 1) * 0.9, grp = new THREE.Group(); grp.position.set(Math.cos(a) * 31, 15.5, Math.sin(a) * 31);
+  const geo = new THREE.ConeGeometry(2.6, 30, 24, 1, true); geo.translate(0, -15, 0);
+  const cone = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: TX.cone, color: 0xb8c8ff, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false, fog: false }));
+  grp.add(cone); const lamp = new THREE.Mesh(G.cyl(0.5, 0.6, 0.6, 14), M.steel); tint(lamp.geometry, C.dark); grp.add(lamp);
+  env.add(grp); searchlights.push({ grp, a, ph: i * 2.1 });
+}
+const barrelFires = [[-9, -6], [10, -8], [-13, 4], [14, 3], [6, 12], [-7, 13]].map(([x, z]) => new V3(x, 0.95, z));
+const smokeCols = [new V3(-38, 6, -46), new V3(44, 6, -30), new V3(10, 6, 52)];
+
+/* =================== ARENA (también en realidad mixta) =================== */
+const arena = new THREE.Group(); scene.add(arena);
+const keyLight = new THREE.DirectionalLight(0xc8d2ff, 1.1); keyLight.position.set(-5, 10, 4); arena.add(keyLight); arena.add(keyLight.target); keyLight.target.position.set(0, 0, -4);
+keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024);
+Object.assign(keyLight.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 }); keyLight.shadow.bias = -0.0006; keyLight.shadow.normalBias = 0.02;
+const rimLight = new THREE.DirectionalLight(0xff3a22, 0.9); rimLight.position.set(2, 4, -12); arena.add(rimLight); arena.add(rimLight.target);
+const gateLight = new THREE.PointLight(0xff3a10, 1.4, 12, 2); arena.add(gateLight);
+const catcher = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), M.shadowCatcher); catcher.rotation.x = -Math.PI / 2; catcher.position.y = 0.002; catcher.receiveShadow = true; arena.add(catcher);
+const safeRing = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 64), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false }));
+safeRing.rotation.x = -Math.PI / 2; safeRing.position.y = 0.006; arena.add(safeRing);
+const hazardLine = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.16), M.hazard); hazardLine.rotation.x = -Math.PI / 2; hazardLine.position.set(0, 0.005, -1.65); hazardLine.receiveShadow = true; arena.add(hazardLine);
+M.hazard.map.repeat.set(8, 1);
+
+function makeGate() {
+  const g = new THREE.Group(), k = new Kit();
+  for (const s of [-1, 1]) {
+    k.add('steel', G.box(0.55, 3.7, 0.9), C.dark, s * 1.5, 1.85, 0);
+    k.add('steel', G.box(0.62, 0.35, 1.0), C.gun, s * 1.5, 0.17, 0);
+    k.add('paint', G.box(0.08, 3.0, 0.6), C.hazard, s * 1.25, 1.5, 0.12);
+    k.add('steel', G.cyl(0.05, 0.05, 2.6, 10), C.chrome, s * 1.78, 1.6, 0.32);
+    k.add('steel', G.cyl(0.08, 0.08, 0.6, 10), C.dark, s * 1.78, 0.4, 0.32);
+    k.add('steel', G.box(0.2, 0.2, 0.2), C.gun, s * 1.78, 2.95, 0.32);
+    k.add('concrete', G.box(1.2, 1.2, 2.2, 2), C.concrete, s * 2.2, 0.6, -0.3, 0, s * 0.15, 0);
+    k.add('glow', G.box(0.03, 2.4, 0.02), C.red, s * 1.22, 1.6, 0.46);
+  }
+  k.add('paint', G.box(3.5, 0.55, 0.95), C.hazard, 0, 3.42, 0);
+  k.add('steel', G.box(3.8, 0.16, 1.05), C.dark, 0, 3.76, 0);
+  k.add('steel', G.box(1.0, 0.25, 0.3), C.gun, 0, 3.95, 0.1);
+  // túnel interior
+  k.add('steel', G.box(2.5, 3.1, 0.12), C.black, 0, 1.55, -1.5);
+  for (const s of [-1, 1]) k.add('steel', G.box(0.12, 3.1, 1.5), C.black, s * 1.25, 1.55, -0.75);
+  k.add('steel', G.box(2.5, 0.12, 1.5), C.black, 0, 3.05, -0.75);
+  for (let i = 0; i < 6; i++) k.add('glow', G.box(2.1, 0.03, 0.02), col(0.6, 0.05, 0.02), 0, 0.4 + i * 0.45, -1.42);
+  k.add('halo', G.plane(3.4, 3.4), col(0.55, 0.06, 0.02), 0, 1.5, -1.38);
+  const frame = k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete, glow: M.glow, halo: M.halo }, { cast: true, receive: true });
+  g.add(frame);
+  const ramp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.35), M.hazard); ramp.rotation.x = -Math.PI / 2; ramp.position.set(0, 0.006, 0.75); g.add(ramp);
+  const doorGeo = new THREE.BoxGeometry(1.26, 3.0, 0.16);
+  const doorL = new THREE.Mesh(doorGeo, M.door), doorR = new THREE.Mesh(doorGeo, M.door);
+  doorL.position.set(-0.62, 1.5, 0.06); doorR.position.set(0.62, 1.5, 0.06); doorR.rotation.y = Math.PI;
+  [doorL, doorR].forEach(d => { d.castShadow = true; d.receiveShadow = true; g.add(d); });
+  // baliza giratoria
+  const beacon = new THREE.Group(); beacon.position.set(0, 4.2, 0.1); g.add(beacon);
+  const bMat = new THREE.MeshBasicMaterial({ color: 0x330800, toneMapped: false });
+  beacon.add(new THREE.Mesh(G.cyl(0.13, 0.15, 0.22, 14), bMat));
+  const beamMat = new THREE.MeshBasicMaterial({ map: TX.cone, color: 0xff3010, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false });
+  const beamGeo = new THREE.ConeGeometry(0.7, 4, 12, 1, true); beamGeo.translate(0, -2, 0); beamGeo.rotateZ(Math.PI / 2);
+  const beam1 = new THREE.Mesh(beamGeo, beamMat), beam2 = new THREE.Mesh(beamGeo, beamMat); beam2.rotation.y = Math.PI;
+  const spin = new THREE.Group(); spin.add(beam1, beam2); beacon.add(spin);
+  const glowSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color: 0xff4010, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  glowSpr.scale.set(1.6, 1.6, 1); beacon.add(glowSpr);
+  arena.add(g);
+  return { g, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false };
+}
+const gates = [makeGate(), makeGate(), makeGate()];
+
+// Agujeros del suelo para las arañas (modo flexiones)
+const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]];
+const hatches = hatchPos.map(([x, z]) => {
+  const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
+  const k = new Kit();
+  k.add('steel', G.cyl(0.2, 0.22, 0.03, 20), C.gun, 0, 0.012, 0);
+  k.add('steel', G.cyl(0.16, 0.16, 0.034, 20), C.black, 0, 0.014, 0);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; k.add('steel', G.box(0.03, 0.03, 0.05), C.dark, Math.cos(a) * 0.19, 0.03, Math.sin(a) * 0.19, 0, -a, 0); }
+  k.add('halo', G.plane(0.3, 0.3), col(0.5, 0.05, 0.02), 0, 0.036, 0, -Math.PI / 2, 0, 0);
+  g.add(k.build({ steel: M.steel, halo: M.halo }, { receive: true }));
+  const lk = new Kit(); for (let i = 0; i < 5; i++) lk.add('steel', G.box(0.3, 0.012, 0.03), C.steel, 0, 0, (i - 2) * 0.055);
+  lk.add('steel', G.box(0.03, 0.014, 0.3), C.dark, 0, 0, 0);
+  const lid = lk.build({ steel: M.steel }, { cast: true }); lid.position.y = 0.035; g.add(lid);
+  return { g, lid, open: 0, openT: 0, x, z };
+});
+
+// Vía de los arcos
+const arcTrack = new THREE.Group(); arena.add(arcTrack);
+const railMat = new THREE.MeshBasicMaterial({ color: 0xff2a1a, toneMapped: false, transparent: true, opacity: 0.85 });
+const rails = [-1.12, 1.12].map(x => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 1), railMat); m.position.x = x; arcTrack.add(m); return m; });
+const trackFloor = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), std({ color: 0x0c0a0c, roughness: 0.4, metalness: 0.6, transparent: true, opacity: 0.7 })); trackFloor.rotation.x = -Math.PI / 2; trackFloor.position.y = 0.003; trackFloor.receiveShadow = true; arcTrack.add(trackFloor);
+
+/* ---------- Marcador fijo ---------- */
+const board = makePanel(1, 0.445, 1024);
+const boardRig = new THREE.Group(); arena.add(boardRig);
+let boardDirty = true;
+function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6 : 11); }
+function gateScale() { return arMode ? 0.72 : 1; }
+function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
+function layoutArena() {
+  const D = arenaDepth(), push = isPush(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const sp = Math.max(3.6 * gs, D * 0.42);
+  gates.forEach((g, i) => {
+    g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
+    g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push;
+  });
+  gateLight.position.set(0, 1.6 * gs, -D - 0.6);
+  hatches.forEach(h => h.g.visible = push && settings.mode !== 'arcs');
+  safeRing.visible = !push; hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
+  arcTrack.visible = arcs;
+  if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
+  catcher.visible = arMode && !!settings.shadows;
+  keyLight.target.position.set(0, 0, -D * 0.45);
+  const ext = Math.max(6, D * 0.65); Object.assign(keyLight.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); keyLight.shadow.camera.updateProjectionMatrix();
+  keyLight.position.set(-5, 10, 4 - D * 0.45);
+  while (boardRig.children.length) boardRig.remove(boardRig.children[0]);
+  const rig = new THREE.Group(); boardRig.add(rig);
+  const k = new Kit();
+  if (push) {
+    rig.position.set(0, 0, -1.3);
+    for (const s of [-1, 1]) k.add('steel', G.box(0.05, 0.22, 0.05), C.dark, s * 0.3, 0.11, -0.04);
+    k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
+    rig.add(k.build({ steel: M.steel }, { cast: true }));
+    board.mesh.position.set(0, 0.265, -0.005); board.mesh.rotation.set(-0.25, 0, 0); board.mesh.scale.setScalar(0.82);
+  } else if (boardMode() === 'gate') {
+    const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.05 * gs + H / 2 + 0.2;
+    rig.position.set(0, 0, -D - 0.35);
+    for (const s of [-1, 1]) k.add('steel', G.box(0.2, yc + H / 2, 0.2), C.dark, s * (W / 2 + 0.18), (yc + H / 2) / 2, -0.15);
+    const tilt = Math.atan((yc - 1.6) / D) * 0.8;
+    k.add('steel', G.box(W + 0.22, H + 0.22, 0.12), C.gun, 0, yc, -0.08, tilt, 0, 0);
+    rig.add(k.build({ steel: M.steel }, { cast: true }));
+    board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
+  } else {
+    const cx = -Math.min(2.4, D * 0.3 + 0.7), cz = -Math.min(3.0, D * 0.55);
+    rig.position.set(cx, 0, cz); rig.rotation.y = Math.atan2(-cx, -cz);
+    k.add('steel', G.cyl(0.3, 0.36, 0.12, 20), C.dark, 0, 0.06, 0);
+    k.add('steel', G.cyl(0.1, 0.12, 2.0, 16), C.steel, 0, 1.06, 0);
+    k.add('glow', G.box(0.04, 1.7, 0.02), C.teal, 0, 1.0, 0.11);
+    const W = 1.25, tilt = Math.atan(0.6 / Math.hypot(cx, cz));
+    k.add('steel', G.box(W + 0.1, W * 0.445 + 0.1, 0.08), C.gun, 0, 2.3, -0.05, tilt, 0, 0);
+    rig.add(k.build({ steel: M.steel, glow: M.glow }, { cast: true }));
+    board.mesh.position.set(0, 2.3, -0.005); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
+  }
+  rig.add(board.mesh);
+  boardDirty = true;
+}
+function applyEnvMode() {
+  env.visible = !arMode;
+  scene.fog = arMode ? null : new THREE.FogExp2(0x1c1214, 0.028);
+  renderer.setClearColor(0x000000, arMode ? 0 : 1);
+  hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
+  keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
+  renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
+  layoutArena(); applyVolume();
+}
+function applyShadows() {
+  renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
+  scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); });
+  catcher.visible = arMode && !!settings.shadows;
+}
+settingHooks.push(k => {
+  if (['depth', 'board', 'mode', 'exercise', '*'].includes(k)) layoutArena();
+  if (k === 'shadows' || k === '*') applyShadows();
+});
+
+/* ---------- Animación del entorno ---------- */
+const ENV = { lightningT: 12, flash: 0, emitT: 0 };
+function updateEnv(dt, t) {
+  skyMat.uniforms.time.value = t;
+  if (!arMode) {
+    ENV.lightningT -= dt;
+    if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
+    if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }
+    skyMat.uniforms.flash.value = ENV.flash * (Math.random() < 0.85 ? 1 : 0.3);
+    hemi.intensity = 0.42 + ENV.flash * 1.4;
+    searchlights.forEach(s => { const pitch = 1.0 + Math.sin(t * 0.21 + s.ph * 1.7) * 0.15; s.grp.rotation.set(0, 0, 0); s.grp.rotateY(-(s.a + Math.sin(t * 0.13 + s.ph) * 0.55)); s.grp.rotateZ(-pitch); });
+    if (envLights.mesh) envLights.mesh.material.opacity = 0.55 + 0.45 * Math.max(0, Math.sin(t * 2.2));
+    ENV.emitT -= dt;
+    if (ENV.emitT <= 0) {
+      ENV.emitT = 0.07;
+      for (const p of barrelFires) { if (Math.random() < 0.8) fx.fire(p, 0.22); if (Math.random() < 0.25) fx.smoke(p.clone().add(new V3(0, 0.6, 0)), 0.5, 0.5, 3); }
+      for (const p of smokeCols) if (Math.random() < 0.5) fx.bigSmoke(p);
+    }
+  }
+  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + gates[1].open * 1.5;
+}
+function updateGates(dt, t) {
+  for (const g of gates) {
+    if (g.openT > 0) g.openT -= dt;
+    const target = g.openT > 0 ? 1 : 0; g.open += (target - g.open) * Math.min(1, dt * 3.2);
+    g.doorL.position.x = -0.62 - g.open * 1.25; g.doorR.position.x = 0.62 + g.open * 1.25;
+    const on = g.openT > 0 || g.open > 0.05;
+    g.spin.rotation.y += dt * 6;
+    g.beamMat.opacity = on ? 0.35 : 0; g.glowSpr.material.opacity = on ? 0.6 + 0.4 * Math.sin(t * 12) : 0;
+    g.bMat.color.setHex(on ? 0xff2a08 : 0x330800);
+    if (target && !g.wasOpen && g.g.visible) { const p = arena.localToWorld(new V3(g.x, 0.3, g.z + 0.5)); for (const s of [-1, 1]) for (let i = 0; i < 6; i++) fx.steam(arena.localToWorld(new V3(g.x + s * 1.3 * g.scale, 0.3 + i * 0.25, g.z + 0.4)), s); SND.door(p); }
+    g.wasOpen = !!target;
+  }
+  for (const h of hatches) { if (h.openT > 0) h.openT -= dt; const tg = h.openT > 0 ? 1 : 0; h.open += (tg - h.open) * Math.min(1, dt * 5); h.lid.position.x = h.open * 0.33; }
+}

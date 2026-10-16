@@ -1,0 +1,140 @@
+
+/* =================== PARTÍCULAS (instanciadas: 1 llamada de dibujo por sistema) =================== */
+const P_VS = `attribute vec3 iPos; attribute vec4 iCol; attribute vec3 iMisc; varying vec2 vUv; varying vec4 vCol;
+void main(){
+  float s = sin(iMisc.y), c = cos(iMisc.y);
+  vec2 q = vec2(position.x*c - position.y*s, position.x*s + position.y*c) * iMisc.x;
+  vec4 mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += q;
+  gl_Position = projectionMatrix * mv;
+  float tx = mod(iMisc.z, 2.0), ty = floor(iMisc.z / 2.0);
+  vUv = vec2((position.x + 0.5 + tx) * 0.5, (position.y + 0.5 + (1.0 - ty)) * 0.5);
+  vCol = iCol;
+}`;
+const P_FS = `uniform sampler2D map; varying vec2 vUv; varying vec4 vCol;
+void main(){ vec4 t = texture2D(map, vUv); gl_FragColor = vec4(vCol.rgb * t.rgb, vCol.a * t.a); }`;
+class PSys {
+  constructor(max, blending, order) {
+    this.max = max; this.p = [];
+    const g = new THREE.InstancedBufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0], 3));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    this.aPos = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
+    this.aCol = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4);
+    this.aMisc = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
+    [this.aPos, this.aCol, this.aMisc].forEach(a => { if (a.setUsage) a.setUsage(THREE.DynamicDrawUsage); });
+    g.setAttribute('iPos', this.aPos); g.setAttribute('iCol', this.aCol); g.setAttribute('iMisc', this.aMisc);
+    g.instanceCount = 0; this.geo = g;
+    this.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { map: { value: TX.atlas } }, vertexShader: P_VS, fragmentShader: P_FS, transparent: true, depthWrite: false, blending }));
+    this.mesh.frustumCulled = false; this.mesh.renderOrder = order; scene.add(this.mesh);
+  }
+  add(o) {
+    if (this.p.length >= this.max) this.p.splice(0, 1);
+    o.t = 0; o.rot = o.rot === undefined ? Math.random() * TAU : o.rot; o.rotV = o.rotV || 0; o.fin = o.fin === undefined ? 0.05 : o.fin;
+    o.c1 = o.c1 || o.c0; o.s1 = o.s1 === undefined ? o.s0 : o.s1; o.g = o.g || 0; o.drag = o.drag || 0; o.a = o.a === undefined ? 1 : o.a;
+    this.p.push(o); return o;
+  }
+  update(dt) {
+    const P = this.aPos.array, Cc = this.aCol.array, Mi = this.aMisc.array; let n = 0;
+    for (let i = 0; i < this.p.length; i++) {
+      const o = this.p[i]; o.t += dt / o.life;
+      if (o.t >= 1) { this.p[i] = this.p[this.p.length - 1]; this.p.pop(); i--; continue; }
+      o.v.y -= o.g * dt; if (o.drag) o.v.multiplyScalar(Math.max(0, 1 - o.drag * dt));
+      o.pos.addScaledVector(o.v, dt); if (o.floor && o.pos.y < 0.02) { o.pos.y = 0.02; o.v.y *= -0.3; o.v.x *= 0.6; o.v.z *= 0.6; }
+      o.rot += o.rotV * dt;
+      const t = o.t, env = t < o.fin ? t / o.fin : 1 - (t - o.fin) / (1 - o.fin);
+      P[n * 3] = o.pos.x; P[n * 3 + 1] = o.pos.y; P[n * 3 + 2] = o.pos.z;
+      Cc[n * 4] = lerp(o.c0[0], o.c1[0], t); Cc[n * 4 + 1] = lerp(o.c0[1], o.c1[1], t); Cc[n * 4 + 2] = lerp(o.c0[2], o.c1[2], t); Cc[n * 4 + 3] = o.a * env;
+      Mi[n * 3] = lerp(o.s0, o.s1, Math.sqrt(t)); Mi[n * 3 + 1] = o.rot; Mi[n * 3 + 2] = o.tile;
+      n++;
+    }
+    this.geo.instanceCount = n;
+    if (n) { this.aPos.needsUpdate = true; this.aCol.needsUpdate = true; this.aMisc.needsUpdate = true; }
+  }
+  clear() { this.p.length = 0; this.geo.instanceCount = 0; }
+}
+const PNORM = new PSys(500, THREE.NormalBlending, 4);
+const PADD = new PSys(900, THREE.AdditiveBlending, 6);
+const rv = (s = 1) => new V3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(2 * s);
+const rUp = (up = 0.6) => new V3(Math.random() - 0.5, Math.random() * up + 0.15, Math.random() - 0.5).normalize();
+
+/* ---------- Anillos de onda expansiva y quemaduras ---------- */
+const rings = [], scorches = [];
+const ringGeo = new THREE.RingGeometry(0.8, 1, 48);
+const scorchGeo = new THREE.PlaneGeometry(1, 1);
+function shockRing(pos, size, color) {
+  let r = rings.find(x => !x.active);
+  if (!r) { if (rings.length >= 6) return; r = { mesh: new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide })) }; r.mesh.rotation.x = -Math.PI / 2; scene.add(r.mesh); rings.push(r); }
+  r.active = true; r.t = 0; r.size = size; r.mesh.material.color.setHex(color); r.mesh.position.set(pos.x, Math.max(0.03, pos.y < 0.6 ? pos.y : 0.03), pos.z); r.mesh.visible = true;
+}
+function scorch(pos, size) {
+  if (pos.y > 0.8) return;
+  let s = scorches.find(x => !x.active);
+  if (!s) { if (scorches.length >= 10) s = scorches.reduce((a, b) => a.t > b.t ? a : b); else { s = { mesh: new THREE.Mesh(scorchGeo, new THREE.MeshBasicMaterial({ map: TX.scorch, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })) }; s.mesh.rotation.x = -Math.PI / 2; scene.add(s.mesh); scorches.push(s); } }
+  s.active = true; s.t = 0; s.mesh.position.set(pos.x, 0.004, pos.z); s.mesh.scale.setScalar(size); s.mesh.rotation.z = Math.random() * TAU; s.mesh.visible = true;
+}
+
+/* ---------- Restos que caen con física sencilla ---------- */
+const debris = [];
+function addDebris(obj, v, w, life, smoke) { scene.add(obj); debris.push({ obj, v, w, life, max: life, smoke, smokeT: 0 }); }
+function updateDebris(dt) {
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const d = debris[i]; d.life -= dt;
+    d.v.y -= 9.8 * dt; d.obj.position.addScaledVector(d.v, dt);
+    d.obj.rotation.x += d.w.x * dt; d.obj.rotation.y += d.w.y * dt; d.obj.rotation.z += d.w.z * dt;
+    const floorY = 0.04 * d.obj.scale.x;
+    if (d.obj.position.y < floorY && d.life > 0.8) { d.obj.position.y = floorY; d.v.y = Math.abs(d.v.y) * 0.25; d.v.x *= 0.5; d.v.z *= 0.5; d.w.multiplyScalar(0.5); if (Math.abs(d.v.y) < 0.4) d.v.y = 0; }
+    if (d.smoke && d.life > d.max * 0.3) { d.smokeT -= dt; if (d.smokeT <= 0) { d.smokeT = 0.07; fx.smoke(d.obj.position.clone(), 0.18, 0.4, 1.2); if (Math.random() < 0.4) fx.flame(d.obj.position.clone(), 0.12); } }
+    if (d.life < 0.8) { d.obj.position.y -= dt * 0.25; }
+    if (d.life <= 0) { scene.remove(d.obj); debris.splice(i, 1); }
+  }
+}
+
+/* ---------- Números flotantes ---------- */
+const popups = [];
+function popup(text, color, pos) {
+  const c = mkCanvas(384, 128), x = c.getContext('2d');
+  x.font = `76px ${FD}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 12; x.strokeStyle = 'rgba(10,8,20,.85)'; x.strokeText(text, 192, 68); x.fillStyle = color; x.fillText(text, 192, 68);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, toneMapped: false })); s.renderOrder = 25;
+  const d = Math.max(0.5, pos.distanceTo(head.p)), k = Math.min(0.9, 0.07 * d); s.scale.set(k * 3, k, 1); s.position.copy(pos);
+  scene.add(s); popups.push({ s, v: 0.25 * Math.min(4, d), life: 0.9 });
+  if (popups.length > 12) killPopup(0);
+}
+function killPopup(i) { const p = popups[i]; scene.remove(p.s); p.s.material.map.dispose(); p.s.material.dispose(); popups.splice(i, 1); }
+
+/* ---------- API de efectos ---------- */
+const fx = {
+  glow(pos, color, size, life = 0.15, a = 1) { PADD.add({ pos: pos.clone(), v: new V3(), life, c0: color, s0: size, s1: size * 1.4, tile: 0, a, fin: 0.01 }); },
+  flame(pos, s = 0.2) { PADD.add({ pos: pos.clone().add(rv(s * 0.3)), v: new V3(rand(-0.1, 0.1), rand(0.5, 1.0), rand(-0.1, 0.1)), life: rand(0.35, 0.6), c0: [1, 0.78, 0.4], c1: [0.7, 0.12, 0.02], s0: s * rand(0.7, 1.2), s1: s * 0.25, tile: 2, rotV: rand(-2, 2), fin: 0.1 }); },
+  fire(pos, s) { fx.flame(pos, s); },
+  smoke(pos, size, rise = 0.5, life = 2.5, dark = 0.16) { PNORM.add({ pos: pos.clone(), v: new V3(rand(-0.15, 0.15), rise * rand(0.7, 1.2), rand(-0.15, 0.15)), life: life * rand(0.8, 1.2), c0: [dark, dark * 0.92, dark * 0.88], c1: [dark * 0.55, dark * 0.5, dark * 0.5], a: 0.6, s0: size, s1: size * 3, tile: 1, rotV: rand(-0.4, 0.4), fin: 0.15, drag: 0.3 }); },
+  bigSmoke(pos) { PNORM.add({ pos: pos.clone().add(rv(1.5)), v: new V3(rand(0.2, 0.6), rand(1.2, 2.2), rand(-0.3, 0.3)), life: rand(10, 16), c0: [0.12, 0.09, 0.08], c1: [0.06, 0.05, 0.05], a: 0.5, s0: 5, s1: 18, tile: 1, rotV: rand(-0.1, 0.1), fin: 0.1 }); },
+  steam(pos, side) { PNORM.add({ pos: pos.clone(), v: new V3(side * rand(0.8, 1.8), rand(0.2, 0.8), rand(0.1, 0.6)), life: rand(1.0, 1.6), c0: [0.75, 0.76, 0.8], c1: [0.5, 0.5, 0.55], a: 0.4, s0: 0.25, s1: 1.4, tile: 1, rotV: rand(-1, 1), fin: 0.1, drag: 1.5 }); },
+  sparks(pos, n, color = [1, 0.6, 0.2], speed = 3, size = 0.05) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rUp(1.2).multiplyScalar(speed * rand(0.3, 1.2)), life: rand(0.3, 0.9), c0: [1, 0.95, 0.8], c1: color, s0: size * rand(0.6, 1.2), s1: size * 0.3, tile: 3, g: 6, floor: true, fin: 0.01 }); },
+  dust(pos, n, size = 0.25) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone().add(new V3(rand(-0.1, 0.1), 0.03, rand(-0.1, 0.1))), v: new V3(rand(-0.6, 0.6), rand(0.05, 0.3), rand(-0.6, 0.6)), life: rand(0.8, 1.5), c0: [0.32, 0.29, 0.26], c1: [0.2, 0.19, 0.18], a: 0.35, s0: size * 0.5, s1: size * 1.6, tile: 1, drag: 2.5, fin: 0.1 }); },
+  ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
+  trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
+  muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
+  electric(pos, n = 14) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rv(1).multiplyScalar(rand(1, 3)), life: rand(0.1, 0.35), c0: [0.9, 0.9, 1], c1: [1, 0.25, 0.15], s0: 0.04, s1: 0.01, tile: 3, fin: 0.01 }); fx.glow(pos, [1, 0.4, 0.3], 0.5, 0.12); },
+  explosion(pos, size = 1, big = false) {
+    fx.glow(pos, [1, 0.85, 0.6], 2.2 * size, 0.14);
+    for (let i = 0; i < (big ? 26 : 14); i++) PADD.add({ pos: pos.clone().add(rv(0.15 * size)), v: rv(1).multiplyScalar(2.2 * size), life: rand(0.45, 0.95), c0: [1, 0.85, 0.45], c1: [0.55, 0.08, 0.01], s0: 0.35 * size, s1: 1.25 * size, tile: 2, rotV: rand(-3, 3), drag: 3, fin: 0.04 });
+    for (let i = 0; i < (big ? 22 : 12); i++) PNORM.add({ pos: pos.clone().add(rv(0.25 * size)), v: rv(1).multiplyScalar(1.2 * size).add(new V3(0, 0.5 * size, 0)), life: rand(1.8, 3.2), c0: [0.13, 0.11, 0.1], c1: [0.07, 0.065, 0.06], a: 0.75, s0: 0.5 * size, s1: 2.3 * size, tile: 1, rotV: rand(-0.6, 0.6), drag: 1.6, fin: 0.12 });
+    fx.sparks(pos, big ? 46 : 26, [1, 0.45, 0.1], 6 * Math.sqrt(size), 0.06 * Math.sqrt(size));
+    shockRing(pos, 3.5 * size, 0xff8a3a); scorch(pos, 1.6 * size);
+    flashLight.position.copy(pos); flashLight.intensity = big ? 9 : 5; flashLight.distance = 10 * size + 4;
+  }
+};
+function updateFX(dt) {
+  PNORM.update(dt); PADD.update(dt); updateDebris(dt);
+  flashLight.intensity = Math.max(0, flashLight.intensity - dt * 22);
+  for (const r of rings) if (r.active) { r.t += dt / 0.45; const s = 0.2 + r.size * smooth(Math.min(1, r.t)); r.mesh.scale.set(s, s, s); r.mesh.material.opacity = Math.max(0, 1 - r.t) * 0.8; if (r.t >= 1) { r.active = false; r.mesh.visible = false; } }
+  for (const s of scorches) if (s.active) { s.t += dt; s.mesh.material.opacity = Math.min(1, Math.max(0, (12 - s.t) / 4)) * 0.9; if (s.t > 12) { s.active = false; s.mesh.visible = false; } }
+  for (let i = popups.length - 1; i >= 0; i--) { const p = popups[i]; p.life -= dt; p.s.position.y += p.v * dt; p.s.material.opacity = Math.min(1, p.life * 2.5); if (p.life <= 0) killPopup(i); }
+}
+function clearFX() {
+  PNORM.clear(); PADD.clear();
+  while (debris.length) { scene.remove(debris.pop().obj); }
+  while (popups.length) killPopup(popups.length - 1);
+  rings.forEach(r => { r.active = false; r.mesh.visible = false; });
+}

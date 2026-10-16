@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RepArena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Una columna centrada; tarjetas solo para elegir modo y ejercicio. Tema oscuro único (fortaleza industrial nocturna). */
+:root{
+  --bg:#100d1a; --panel:#1a1529; --panel2:#221b36; --line:#30284f; --fg:#eeeaff; --muted:#a49fc8;
+  --teal:#3cf0c6; --pink:#ff4fa3; --gold:#ffd166; --red:#ff4a4a;
+  --display:"Bungee","Impact","Arial Black",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:940px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:34px}
+.eyebrow{margin:0;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:500}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2.6rem,9vw,4.6rem);line-height:1;margin:8px 0 12px}
+h1 span{color:var(--pink)}
+.lede{margin:0;max-width:62ch;color:var(--muted);font-size:1.1rem}
+h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.04em;margin:0 0 12px}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:680px){.cards{grid-template-columns:1fr}}
+.card{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border:2px solid var(--line);border-radius:14px;background:var(--panel);cursor:pointer;min-width:0}
+.card input{position:absolute;opacity:0;pointer-events:none}
+.card b{font-family:var(--display);font-weight:400;font-size:1.15rem}
+.card small{color:var(--muted);font-size:.86rem}
+.card .tag{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.card:has(input:checked){border-color:var(--teal);box-shadow:0 0 0 4px rgba(60,240,198,.12)}
+.card:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:2px}
+.card:has(input:disabled){opacity:.45;cursor:not-allowed}
+.note{margin:10px 0 0;font-size:.85rem;color:var(--gold)}
+.groups{display:flex;flex-direction:column;gap:26px}
+.group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.field{min-width:0;display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lab{font-size:.9rem;font-weight:500;color:var(--fg)}
+.num{display:flex;align-items:center;gap:10px}
+.num input[type=range]{flex:1;min-width:0;accent-color:var(--pink);height:28px}
+.num input[type=number]{width:5.6em;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;font-variant-numeric:tabular-nums;text-align:right}
+.num input[type=number]:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.num .unit{color:var(--muted);font-size:.85rem;min-width:3.2em}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg label{flex:1 1 auto;text-align:center;padding:8px 6px;cursor:pointer;font-weight:500;font-size:.88rem;color:var(--muted);border-right:1px solid var(--line);position:relative}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--teal);color:#0d0a1c}
+.seg label:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:-3px}
+.hint{margin:0;font-size:.8rem;color:var(--muted)}
+.zero{font-size:.78rem;color:var(--gold)}
+.estimate{margin:0;color:var(--muted)}
+.estimate strong{color:var(--gold);font-variant-numeric:tabular-nums}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+button{font:inherit;cursor:pointer}
+.btn{border:2px solid var(--line);background:transparent;color:var(--fg);padding:14px 22px;border-radius:12px;font-weight:700;font-size:1rem}
+.btn.primary{background:var(--pink);border-color:var(--pink);color:#1a0716}
+.btn.alt{border-color:var(--teal);color:var(--teal)}
+.btn.small{padding:8px 14px;font-size:.88rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.status{margin:-18px 0 0;font-size:.9rem;color:var(--gold)}
+.how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px;max-width:70ch}
+.how li::marker{color:var(--teal)}
+.hist table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
+.hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
+.tablebox{overflow-x:auto}
+#stage{position:fixed;inset:0;background:#000;z-index:50}
+#stage canvas{display:block;width:100%;height:100%}
+.cross{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none}
+.pbar{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(16,13,26,.88);font-size:.88rem;color:var(--muted)}
+.pbar kbd{font-family:var(--body);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--fg)}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:1rem;pointer-events:none}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Meta Quest 3 · WebXR · seguimiento de manos</p>
+    <h1>Rep<span>Arena</span></h1>
+    <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
+  </header>
+
+  <section>
+    <h2>Modo de juego</h2>
+    <div class="cards">
+      <label class="card"><input type="radio" name="mode" id="mode-walkers" value="walkers">
+        <span class="tag">Disparo automático</span><b>Asalto</b>
+        <small>Robots salen de las compuertas y vienen a por ti. En flexiones, arañas que salen del suelo.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-flyers" value="flyers">
+        <span class="tag">Tú apuntas</span><b>Enjambre</b>
+        <small>Drones y avispas gigantes en vuelo errático. Apunta con las manos o la mirada y dispara con la repetición.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
+        <span class="tag">Solo sentadillas</span><b>Arcos</b>
+        <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ejercicio</h2>
+    <div class="cards">
+      <label class="card"><input type="radio" name="exercise" id="ex-squat" value="squat">
+        <span class="tag">Sensor: altura del visor</span><b>Sentadillas</b>
+        <small>En Enjambre disparas con las dos manos a la vez al subir: cada mano, a donde apunte.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-pushup" value="pushup">
+        <span class="tag">Sensor: altura del visor</span><b>Flexiones</b>
+        <small>La batalla ocurre en el suelo, bajo tu cara. Apuntas con la mirada y disparas al empujar.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
+        <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
+        <small>Cada brazo dispara al llegar al hombro. En Enjambre, mira al objetivo mientras subes la mancuerna.</small></label>
+    </div>
+    <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
+  </section>
+
+  <section>
+    <h2>Ajustes</h2>
+    <div class="groups" id="settingsGroups"></div>
+  </section>
+
+  <p class="estimate" id="estimate"></p>
+
+  <div class="actions">
+    <button class="btn primary" id="btnAR">Entrar en realidad mixta</button>
+    <button class="btn alt" id="btnVR">Entrar en VR</button>
+    <button class="btn" id="btnPreview">Probar en el ordenador</button>
+    <button class="btn small" id="btnReset">Restablecer ajustes</button>
+  </div>
+  <p class="status" id="xrStatus"></p>
+
+  <section class="how">
+    <h2>Dentro del juego</h2>
+    <ul>
+      <li>El menú principal aparece en un atril fijo delante de ti. No te sigue: acércate y pulsa los botones con la punta del índice. La distancia a la que aparece se cambia en Ajustes → Sistema.</li>
+      <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
+      <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
+      <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
+      <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
+    </ul>
+  </section>
+
+  <section class="hist">
+    <h2>Tu historial en este dispositivo</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>Ejercicio</th><th>Sesiones</th><th>Reps totales</th><th>Mejor sesión</th><th>Perfectas</th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<div id="stage" hidden>
+  <div class="cross" id="cross" hidden></div>
+  <div class="pbar">
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión) o curl · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <button class="btn" id="btnExitPreview">Salir de la prueba</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*__JS__*/
+</script>
+</body>
+</html>
