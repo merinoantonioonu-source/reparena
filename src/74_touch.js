@@ -11,7 +11,7 @@ const TCH_COL = { head: 0x3cf0c6, hand: 0xff9a3c };
 const perfNow = () => performance.now() / 1000;
 const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Movimientos de cada ejercicio: los de la cabeza (aros) y los de las manos (gemas)
-const TCH_MOVES = { squat: [['squat'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], ['tap']] };
+const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], ['tap']] };
 const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
 const comboMoves = () => String(settings[{ stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase]] || '').split(',').filter(Boolean);
 
@@ -53,7 +53,8 @@ function moveSpec(move) {
   const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
   const o = { move, part: HAND_MOVES.includes(move) ? 'hand' : 'head', n: new V3(0, 0, 1), r, hold: 0 };
   const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro del aro
-  if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
+  if (move === 'lunge') { const ld = settings.lungeDepth / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
+  else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
   else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
   else if (move === 'reach') o.pos = new V3(side * rand(0.2, 0.35), S + 0.5 + jh, -0.2);

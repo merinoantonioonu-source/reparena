@@ -194,6 +194,7 @@ class BufferAttribute {
   constructor(array, itemSize, normalized = false) { this.array = array; this.itemSize = itemSize; this.normalized = normalized; this.needsUpdate = false; if (!(array && array.length !== undefined)) throw new Error('bad attribute array'); }
   get count() { return this.array.length / this.itemSize; }
   getX(i) { return this.array[i * this.itemSize]; } getY(i) { return this.array[i * this.itemSize + 1]; } getZ(i) { return this.array[i * this.itemSize + 2]; }
+  setX(i, v) { this.array[i * this.itemSize] = v; return this; } setY(i, v) { this.array[i * this.itemSize + 1] = v; return this; } setZ(i, v) { this.array[i * this.itemSize + 2] = v; return this; }
   setXY(i, x, y) { this.array[i * this.itemSize] = x; this.array[i * this.itemSize + 1] = y; return this; }
   setXYZ(i, x, y, z) { this.array[i * this.itemSize] = x; this.array[i * this.itemSize + 1] = y; this.array[i * this.itemSize + 2] = z; return this; }
   setUsage() { return this; }

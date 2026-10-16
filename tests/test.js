@@ -112,10 +112,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
   RA.PV.keys.KeyR = false;
   await runConfig('Asalto+curl', { ...base, mode: 'walkers', exercise: 'curl' }, curlSim);
+  // ---- Zancadas, fondos en silla, press de hombro y plancha lateral ----
+  await runConfig('Asalto+zancadas', { ...base, mode: 'walkers', exercise: 'lunge' }, squatSim(2.8), 420, s => s.partial > 1 ? 'zancadas completas cuentan como medias' : '');
+  await runConfig('Enjambre+zancadas', { ...base, mode: 'flyers', exercise: 'lunge', flySpeed: 8 }, squatSim(2.8));
+  await runConfig('Asalto+fondos en silla', { ...base, mode: 'walkers', exercise: 'dips' }, squatSim(2.6), 420, s => s.partial > 1 ? 'fondos completos cuentan como medios' : '');
+  await runConfig('Enjambre+fondos en silla', { ...base, mode: 'flyers', exercise: 'dips', flySpeed: 8 }, squatSim(2.6));
+  await runConfig('Asalto+press de hombro', { ...base, mode: 'walkers', exercise: 'press' }, squatSim(1.8), 420, s => s.reps < 10 ? 'el press no cuenta las repeticiones' : '');
+  await runConfig('Enjambre+press de hombro', { ...base, mode: 'flyers', exercise: 'press', flySpeed: 8 }, squatSim(1.8));
+  await runConfig('Asalto+plancha lateral', { ...base, mode: 'walkers', exercise: 'splank', splHold: 2, walkTime: 14 }, () => { RA.PV.crouch = false; }, 420, s => s.partial ? 'aguantando quieto no debería cortarse' : '');
+  await runConfig('Enjambre+plancha lateral', { ...base, mode: 'flyers', exercise: 'splank', splHold: 2, flySpeed: 8 }, () => { RA.PV.crouch = false; }, 420);
+  await runConfig('Plancha lateral con la cadera cayendo', { ...base, mode: 'walkers', exercise: 'splank', splHold: 3, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.4) > 1.6; }, 30, s => s.reps ? 'con la cadera cayendo antes de tiempo no debería disparar' : !s.partial ? 'debería avisar de que sube la cadera' : '', true);
+  RA.PV.crouch = false;
   await runConfig('Enjambre+sentadillas', { ...base, mode: 'flyers', exercise: 'squat' }, squatSim());
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, squatSim());
   await runConfig('Enjambre+curl', { ...base, mode: 'flyers', exercise: 'curl' }, curlSim);
   await runConfig('Arcos', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 40 }, t => { RA.PV.crouch = true; });
+  // arcos inclinados: hay que apartarse hacia el lado alto; aparición regular o irregular
+  const gaps = { regular: [], irregular: [] };
+  for (const timing of ['regular', 'irregular']) {
+    let last = -1, n = -1;
+    await runConfig('Arcos ' + timing, { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcTiming: timing, arcTilt: 0, waves: 1, repsWave: 12, arcRate: 20 }, t => { RA.PV.crouch = true; const q = RA.spawnQueue.length; if (n >= 0 && q < n) { if (last >= 0) gaps[timing].push(t - last); last = t; } n = q; }, 200);
+  }
+  const spread = g => g.length ? Math.max(...g) - Math.min(...g) : 0;
+  log('arc gaps spread: regular', spread(gaps.regular).toFixed(2), 'irregular', spread(gaps.irregular).toFixed(2), 'irregular mean', (gaps.irregular.reduce((a, b) => a + b, 0) / gaps.irregular.length).toFixed(2));
+  if (spread(gaps.regular) > 0.1 || spread(gaps.irregular) < 1.0) errors.push('la aparición regular/irregular de los arcos no se nota');
+  await runConfig('Arcos inclinados (apartándose)', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, waves: 1, repsWave: 8, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken ? `golpes al apartarse hacia el lado alto: ${s.taken}` : '');
+  RA.PV.noLean = true;
+  await runConfig('Arcos inclinados sin apartarse', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, arcMin: 30, arcMax: 30, waves: 1, repsWave: 6, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken < 4 ? `sin apartarse deberían golpear casi todos (${s.taken})` : '');
+  RA.PV.noLean = false; RA.setSetting('arcTilt', 0);
   await runConfig('Arcos sin agacharse (golpes)', { ...base, mode: 'arcs', exercise: 'squat', lives: 3, waves: 1 }, t => { RA.PV.crouch = false; }, 120);
   // ---- Pistolas: las sentadillas cargan munición y el gatillo (T) dispara donde miras ----
   const aimShoot = every => t => { RA.PV.crouch = (t % 2.6) < 1.4; const e = RA.enemies.find(x => x.alive); if (e && (t % every) < 0.04 && RA.GUN.ammo) { const c = e.center(new THREE.Vector3()); RA.camera.lookAt(c); RA.PV.keys.KeyT = true; } else RA.PV.keys.KeyT = false; };
@@ -126,7 +150,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
-  for (const [name, ex, extra] of [['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['flexiones (aros)', 'pushup', {}],
+  for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
     const parts = new Set();
     await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, t => { assist(); RA.touches.forEach(x => parts.add(x.part + ':' + x.move)); }, 200,
@@ -171,6 +195,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('keypad result lives =', RA.settings.lives);
   press('Sistema'); frame(1); press('No'); frame(1); press('Sí'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
   press('Volver'); frame(2);
+  press('Asalto'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('Asalto exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios nuevos'); }
   press('Arcos'); frame(1); log('Arcos offers only squats:', !RA.activeWidgets().some(w => w.label === 'Flexiones'), RA.settings.exercise);
   if (RA.activeWidgets().some(w => w.label === 'Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
   // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
@@ -310,10 +335,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.beginRun(); XRS.headY = 0.55; frame(200, 16, xrFrame); frame(250, 16, xrFrame);
   log('plank1 after calib', RA.state, 'enemies', RA.enemies.length);
   const sideOf = e => e.pos.x < 0 ? 'left' : 'right', hpSide = s => RA.enemies.filter(e => e.alive && sideOf(e) === s).reduce((a, e) => a + e.hp, 0);
-  const hl0 = hpSide('left'), hr0 = hpSide('right'), pr0 = RA.stats.reps;
+  const hl0 = hpSide('left'), hr0 = hpSide('right'), pp0 = RA.stats.reps;
   XRS.lift = 'left'; frame(40, 16, xrFrame); XRS.lift = null; frame(40, 16, xrFrame);
-  log('lift left: reps +' + (RA.stats.reps - pr0), 'left hp', hl0, '→', hpSide('left'), 'right hp', hr0, '→', hpSide('right'));
-  if (RA.stats.reps - pr0 !== 1 || hpSide('right') < hr0) errors.push('plancha: levantar el brazo izquierdo no dispara solo a la izquierda');
+  log('lift left: reps +' + (RA.stats.reps - pp0), 'left hp', hl0, '→', hpSide('left'), 'right hp', hr0, '→', hpSide('right'));
+  if (RA.stats.reps - pp0 !== 1 || hpSide('right') < hr0) errors.push('plancha: levantar el brazo izquierdo no dispara solo a la izquierda');
   const r1 = RA.stats.reps; XRS.lift = 'both'; frame(60, 16, xrFrame); XRS.lift = null; frame(30, 16, xrFrame);
   log('lift both: reps +' + (RA.stats.reps - r1));
   if (RA.stats.reps !== r1) errors.push('plancha: levantar los dos brazos no debería disparar');
@@ -415,6 +440,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.stats.reps < 5 || RA.stats.taken) errors.push(`abdominales XR: ${RA.stats.reps} tocados, ${RA.stats.taken} fallos`);
   XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
 
+  // ---- Press de hombro en XR: por encima de la cabeza las manos se pierden y la repetición cuenta igual ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'press', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20, pressRange: 32 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  const sh = y => ({ left: new THREE.Vector3(-0.22, y, -0.1), right: new THREE.Vector3(0.22, y, -0.1) });
+  RA.beginRun(); XRS.hands = sh(1.55); frame(250, 16, xrFrame); log('press XR calib', RA.state, 'bottom', RA.DET.pr.left.bottom.toFixed(2));
+  let prR = RA.stats.reps;
+  for (let i = 0; i < 3; i++) { for (let k = 0; k <= 20; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } for (let k = 20; k >= 0; k--) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } }
+  log('press XR visible: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: 3 subidas con las dos manos deberían ser 6 (${RA.stats.reps - prR})`);
+  prR = RA.stats.reps;
+  for (let i = 0; i < 3; i++) { for (let k = 0; k <= 14; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } XRS.noHands = true; frame(30, 16, xrFrame); XRS.noHands = false; XRS.hands = sh(1.55); frame(30, 16, xrFrame); }
+  log('press XR lost overhead: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: con las manos perdidas arriba deberían ser 6 (${RA.stats.reps - prR})`);
+  XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
+
   // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----
   for (const [k, v] of Object.entries({ mode: 'flyers', exercise: 'superman', lives: 0, waves: 1, repsWave: 30, rest: 0, supHold: 2, supRange: 8, supArms: 'yes' })) RA.setSetting(k, v);
   for (const [name, calibY, lieY, liftY, handsZ, want] of [['normal', 0.25, 0.25, 0.35, -0.6, 3], ['calibrado más bajo', 0.15, 0.25, 0.35, -0.6, 3], ['calibrado más alto', 0.45, 0.25, 0.35, -0.6, 3], ['manos junto a la cabeza', 0.25, 0.25, 0.35, 0.0, 0], ['subiendo poco', 0.25, 0.25, 0.29, -0.6, 0]]) {
@@ -452,7 +490,7 @@ function makeXRFrame() {
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
       getPose(space) { if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
-        if (XRS.noLeft && j.side === 'left') return null;
+        if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
         let pos = { x: side * 0.2 + (i % 5) * 0.01, y: XRS.headY - 0.45 + Math.floor(i / 5) * 0.01, z: -0.3 - Math.floor(i / 5) * 0.02 };
         let ori = { x: 0, y: 0, z: 0, w: 1 };
