@@ -225,6 +225,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (Math.abs(door.x - oldX - 1) > 0.01) errors.push('el ancla restaurada no mueve la barra');
   RA.exitAll(); frame(2, 16, xrFrame);
 
+  // ---- Flexiones en XR: calibrar un poco alto o mirar al suelo no debe impedir el disparo ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 6, rest: 0, walkTime: 30, pushDepth: 13 })) RA.setSetting(k, v);
+  for (const [name, calibY, topY, low, want] of [['calibrada a cuatro patas', 0.68, 0.56, 0.22, 4], ['mirando al suelo', 0.56, 0.51, 0.22, 4], ['medias flexiones', 0.56, 0.56, 0.08, 0]]) {
+    XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); XRS.headY = calibY; frame(200, 16, xrFrame); XRS.headY = topY; frame(60, 16, xrFrame);
+    for (let i = 0; i < 1000 && RA.state !== 'end'; i++) { XRS.headY = (i % 150) < 75 ? topY - low : topY; frame(1, 16, xrFrame); }
+    log(`XR push-ups ${name}: reps`, RA.stats.reps, 'partial', RA.stats.partial);
+    if (want ? RA.stats.reps < want : RA.stats.reps) errors.push(`flexiones ${name}: ${RA.stats.reps} repeticiones`);
+    RA.exitAll(); frame(2, 16, xrFrame);
+  }
+
   // ---- Spotify ----
   await sleep(50);
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());

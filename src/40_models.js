@@ -144,7 +144,8 @@ function buildSpider() {
   for (const s of [-1, 1]) {
     GS('body', G.sph(0.0058, 10, 8), C.fang, s * 0.009, 0.014, 0.044); GS('body', G.sph(0.0036, 8, 6), C.fang, s * 0.018, 0.012, 0.04);
     GS('body', G.sph(0.0026, 6, 5), C.fang, s * 0.008, 0.02, 0.031); GS('body', G.sph(0.0026, 6, 5), C.fang, s * 0.016, 0.018, 0.034);
-    R.add('body', 'glow', G.sph(0.0013, 5, 4), col(0.6, 0.05, 0.02), s * 0.0095, 0.0155, 0.0495);
+    R.add('body', 'glow', G.sph(0.0027, 8, 6), col(1, 0.07, 0.02), s * 0.0093, 0.0152, 0.0488); // ojos rojos: brillan más cuanto más cerca y más rabiosa
+    R.add('body', 'glow', G.sph(0.0017, 6, 5), col(1, 0.07, 0.02), s * 0.0178, 0.0122, 0.0425);
     const f = s > 0 ? 'fangL' : 'fangR', p = s > 0 ? 'palpL' : 'palpR';
     P(f, G.sph(1, 10, 8), C.chel, 0, 0, 0, 0.25, 0, 0, 0.0095, 0.013, 0.0095);
     P(f, spikes(0, 0, 0, 0.0095, 0.013, 0.0095, 30, 0.004, 0.0007), C.hair);
