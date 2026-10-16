@@ -254,6 +254,9 @@ class SphereGeometry extends BufferGeometry { constructor(r = 1, ws = 8, hs = 6,
   for (let iy = 0; iy <= hs; iy++) { const row = [], v = iy / hs; for (let ix = 0; ix <= ws; ix++) { const u = ix / ws, x = -r * Math.cos(ps + u * pl) * Math.sin(ts + v * tl), y = r * Math.cos(ts + v * tl), z = r * Math.sin(ps + u * pl) * Math.sin(ts + v * tl); pos.push(x, y, z); const l = Math.hypot(x, y, z) || 1; nor.push(x / l, y / l, z / l); uv.push(u, 1 - v); row.push(n++); } grid.push(row); }
   for (let iy = 0; iy < hs; iy++) for (let ix = 0; ix < ws; ix++) { const a = grid[iy][ix + 1], b = grid[iy][ix], c = grid[iy + 1][ix], d = grid[iy + 1][ix + 1]; if (iy !== 0 || ts > 0) idx.push(a, b, d); if (iy !== hs - 1 || te < Math.PI) idx.push(b, c, d); }
   adopt(this, mk(pos, nor, uv, idx)); } }
+class OctahedronGeometry extends BufferGeometry { constructor(r = 1) { super();
+  const v = [[r, 0, 0], [-r, 0, 0], [0, r, 0], [0, -r, 0], [0, 0, r], [0, 0, -r]], f = [[0, 2, 4], [0, 4, 3], [0, 3, 5], [0, 5, 2], [1, 2, 5], [1, 5, 3], [1, 3, 4], [1, 4, 2]], pos = [];
+  f.forEach(t => t.forEach(i => pos.push(...v[i]))); this.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3)); } }
 class TorusGeometry extends BufferGeometry { constructor(R = 1, r = 0.4, rs = 8, ts = 6, arc = Math.PI * 2) { super();
   const pos = [], nor = [], uv = [], idx = [];
   for (let j = 0; j <= rs; j++) for (let i = 0; i <= ts; i++) { const u = i / ts * arc, v = j / rs * Math.PI * 2, x = (R + r * Math.cos(v)) * Math.cos(u), y = (R + r * Math.cos(v)) * Math.sin(u), z = r * Math.sin(v); pos.push(x, y, z); const cx = R * Math.cos(u), cy = R * Math.sin(u), nx = x - cx, ny = y - cy, nz = z, l = Math.hypot(nx, ny, nz) || 1; nor.push(nx / l, ny / l, nz / l); uv.push(i / ts, j / rs); }
@@ -306,7 +309,7 @@ class WebGLRenderer {
 module.exports = {
   Vector2, Vector3, Euler, Quaternion, Matrix4, Color, Object3D, Group, Scene, Bone, Mesh, SkinnedMesh, Skeleton, InstancedMesh, Sprite, Line, LineSegments, Points,
   PerspectiveCamera, DirectionalLight, PointLight, HemisphereLight, Fog, FogExp2, BufferAttribute, Float32BufferAttribute, Uint16BufferAttribute, InstancedBufferAttribute,
-  BufferGeometry, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, TorusGeometry, TubeGeometry, PlaneGeometry, CircleGeometry, RingGeometry, InstancedBufferGeometry, CatmullRomCurve3,
+  BufferGeometry, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, OctahedronGeometry, TorusGeometry, TubeGeometry, PlaneGeometry, CircleGeometry, RingGeometry, InstancedBufferGeometry, CatmullRomCurve3,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, SpriteMaterial, LineBasicMaterial, PointsMaterial, ShadowMaterial, CanvasTexture, Texture, PMREMGenerator, Plane, Raycaster, WebGLRenderer,
   sRGBEncoding: 3001, ACESFilmicToneMapping: 4, PCFSoftShadowMap: 2, BackSide: 1, DoubleSide: 2, FrontSide: 0, AdditiveBlending: 2, NormalBlending: 1, RepeatWrapping: 1000, ClampToEdgeWrapping: 1001, DynamicDrawUsage: 35048,
   MathUtils: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) }

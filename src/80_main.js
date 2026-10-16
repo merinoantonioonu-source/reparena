@@ -35,13 +35,24 @@ function readXR(frame) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null };
+// Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
+const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2 : isFloor() ? 0.45 : 1.6;
+const pvPitch = () => settings.exercise === 'superman' ? -0.35 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
+function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
+const _pvw = new V3();
 function previewInput(dt) {
   const dropAmt = isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
   let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
+  // Toques: Espacio lleva la cabeza al aro que toca y la devuelve después
+  if (settings.mode === 'touch' && GAME_STATES.includes(state) && PV.home) {
+    const want = (PV.crouch && touchAssist('head')) || PV.home; _pvw.subVectors(want, camera.position); const d = _pvw.length();
+    if (d > 1e-4) camera.position.addScaledVector(_pvw, Math.min(1, 1.4 * dt / d));
+    target = PV.y = camera.position.y;
+  }
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
@@ -57,6 +68,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  // Toques: G lleva la mano derecha a la gema que toca
+  if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(g); h.tip.copy(g); } }
   // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
   if (PV.bar && PV.fall) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.25); h.wrist.y -= 0.5; h.wristQ.copy(camera.quaternion); }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
@@ -65,11 +78,11 @@ function previewInput(dt) {
 function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
-  PV.baseY = !on ? (settings.exercise === 'superman' ? 0.22 : isFloor() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  PV.baseY = !on ? pvBaseY() : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
   // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
   const one = row && dipOne();
   if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
-  camera.rotation.set(!on ? (isFloor() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
+  camera.rotation.set(!on ? pvPitch() : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {
@@ -77,8 +90,8 @@ function startPreview() {
   Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
   const sup = settings.exercise === 'superman';
-  PV.baseY = sup ? 0.22 : isFloor() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
-  camera.position.set(0, PV.baseY, 0); camera.rotation.set(sup ? -0.35 : isFloor() ? -0.7 : -0.12, 0, 0);
+  PV.baseY = pvBaseY(); PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
+  camera.position.set(0, PV.baseY, 0); camera.rotation.set(pvPitch(), 0, 0);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   arena.position.set(0, 0, 0); arena.rotation.set(0, 0, 0);

@@ -47,7 +47,7 @@ const expose = `
 window.__RA = { stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg},
-  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS };
+  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -124,6 +124,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   let maxAmmo = 0;
   await runConfig('Asalto+pistolas sin disparar', { ...base, mode: 'walkers', exercise: 'squat', pistol: 1, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.4; RA.PV.keys.KeyT = false; maxAmmo = Math.max(maxAmmo, RA.GUN.ammo); }, 25, s => s.kills ? 'sin apretar el gatillo no debería disparar' : maxAmmo !== 3 ? `la munición debería llegar a 3 y no pasar (${maxAmmo})` : '', true);
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
+  // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
+  const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
+  for (const [name, ex, extra] of [['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['flexiones (aros)', 'pushup', {}],
+    ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
+    const parts = new Set();
+    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, t => { assist(); RA.touches.forEach(x => parts.add(x.part + ':' + x.move)); }, 200,
+      s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : '');
+    log('   movimientos:', [...parts].join(' '));
+  }
+  RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+  await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
+  const arr = new Set();
+  await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
+    const a = [...arr].sort((x, y) => x - y), off = a.slice(1).map((x, i) => (x - a[i]) / 0.5).filter(k => Math.abs(k - Math.round(k)) > 0.04 || Math.round(k) < 1);
+    return a.length < 5 ? 'no llegan objetivos' : off.length ? 'los objetivos no llegan en el pulso: ' + a.join(' ') : '';
+  });
+  RA.setSetting('bpm', 0); RA.PV.keys.KeyG = false; RA.PV.crouch = false;
   await runConfig('Asalto con vidas (derrota)', { ...base, mode: 'walkers', exercise: 'squat', lives: 1, walkTime: 4 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Jefe en oleada final', { ...base, mode: 'walkers', exercise: 'squat', waves: 1, repsWave: 10 }, squatSim(2.4));
   const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
@@ -154,7 +171,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('keypad result lives =', RA.settings.lives);
   press('Sistema'); frame(1); press('No'); frame(1); press('Sí'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
   press('Volver'); frame(2);
-  press('Arcos'); frame(1); press('Flexiones'); frame(1); log('mode after picking Flexiones in Arcos:', RA.settings.mode, RA.settings.exercise);
+  press('Arcos'); frame(1); log('Arcos offers only squats:', !RA.activeWidgets().some(w => w.label === 'Flexiones'), RA.settings.exercise);
+  if (RA.activeWidgets().some(w => w.label === 'Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
+  // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
+  press('Toques'); frame(1); const tw = RA.activeWidgets().map(w => w.label);
+  log('Toques exercises:', ['Sentadillas', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'));
+  if (!['Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl')) errors.push('el menú de Toques no ofrece sus ejercicios');
+  RA.setSetting('comboFloor', 'push'); press('Combinado'); frame(1); press('Plancha'); frame(1); RA.activeWidgets().filter(w => w.label === 'Plancha')[1].onPress(); frame(1); press('Toque'); frame(1);
+  log('combo floor moves:', RA.settings.comboBase, RA.settings.comboFloor);
+  if (RA.settings.comboBase !== 'floor' || RA.settings.comboFloor !== 'push,plank,tap') errors.push('no se eligen los movimientos del combinado: ' + RA.settings.comboFloor);
+  for (let i = 0; i < 4; i++) { findW(RA.activeWidgets().find(w => /^Al compás/.test(w.label)).label).onPress(); frame(1); await sleep(400); }
+  log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
+  press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
   press('Enjambre'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Mirada'); frame(1); press('Volver'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
   press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
@@ -369,6 +397,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('pistol XR: shots', RA.stats.shots, 'hits', RA.stats.hits, 'kills', RA.stats.kills, 'reps', RA.stats.reps, 'state', RA.state);
   if (RA.stats.shots < 4) errors.push('pistolas XR: el gatillo de los mandos no dispara');
   XRS.controllers = false; XRS.trig = null; RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Toques en XR: abdominales boca arriba; el entorno mira hacia los pies y la cabeza alcanza los aros ----
+  for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'abs', lives: 0, waves: 1, repsWave: 5, tchHands: 0, tchArrive: 2, tchGap: 2.5, tchWindow: 1.5 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  RA.beginRun(); XRS.headX = 0.5; XRS.headZ = -0.2; XRS.headY = 0.2;
+  XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.3, Math.PI / 2, 0, 'YXZ')); // boca arriba, pies hacia -X
+  frame(250, 16, xrFrame);
+  log('abs XR calib: state', RA.state, 'arena yaw', RA.arena.rotation.y.toFixed(2), 'ref', RA.TCH.ref.toFixed(2));
+  if (RA.state !== 'ready' || Math.abs(RA.arena.rotation.y - Math.PI / 2) > 0.05) errors.push('abdominales XR: boca arriba el entorno no mira hacia los pies');
+  const lie = new THREE.Vector3(0.5, 0.2, -0.2);
+  for (let i = 0; i < 2500 && RA.state !== 'end'; i++) {
+    const tg = RA.touches.find(x => x.alive && !x.judged && x.mode === 'wait'), p = tg ? RA.arena.localToWorld(tg.pos.clone()) : lie;
+    XRS.headX += (p.x - XRS.headX) * 0.15; XRS.headY += (p.y - XRS.headY) * 0.15; XRS.headZ += (p.z - XRS.headZ) * 0.15; frame(1, 16, xrFrame);
+  }
+  log('abs XR: reps', RA.stats.reps, 'misses', RA.stats.taken, 'state', RA.state);
+  if (RA.stats.reps < 5 || RA.stats.taken) errors.push(`abdominales XR: ${RA.stats.reps} tocados, ${RA.stats.taken} fallos`);
+  XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
 
   // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----
   for (const [k, v] of Object.entries({ mode: 'flyers', exercise: 'superman', lives: 0, waves: 1, repsWave: 30, rest: 0, supHold: 2, supRange: 8, supArms: 'yes' })) RA.setSetting(k, v);
