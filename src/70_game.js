@@ -579,7 +579,7 @@ const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } },
-  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0 },
+  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0, peak: 0, lift: 0, armT: 0, stillT: 0, lo: 0.2 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -609,11 +609,15 @@ function vertDetector(d, y, t, dt, cfg) {
     } else if (!d.charged && d.stillT > 3) { d.ref = y + cfg.back * 0.5; d.state = 'up'; d.stillT = 0; }
   }
 }
-// Superman: ¿están las manos por delante de la cabeza, con los brazos estirados? Sin manos a la vista no se puede saber
-function armsOut() {
-  const fx_ = -Math.sin(arena.rotation.y), fz_ = -Math.cos(arena.rotation.y);
-  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * fx_ + (h.wrist.z - head.p.z) * fz_ < 0.25) return false; }
-  return true;
+// Superman: ¿hay alguna mano claramente recogida junto a la cabeza? La dirección del cuerpo sale de la propia
+// cabeza (hacia dónde apuntan la cara y la coronilla), no del escenario: así da igual hacia dónde te tumbes.
+// Sin manos a la vista (el seguimiento falla mucho tumbado) se da por bueno.
+function armsBack() {
+  if (settings.supArms === 'no') return false;
+  const d = fwd().add(new V3(0, 1, 0).applyQuaternion(head.q)); d.y = 0;
+  if (d.lengthSq() < 1e-4) return false; d.normalize();
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * d.x + (h.wrist.z - head.p.z) * d.z < 0.15) return true; }
+  return false;
 }
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
@@ -623,20 +627,43 @@ function runDetectors(t, dt) {
     const req = settings.squatDepth / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
   } else if (settings.exercise === 'superman') {
-    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara
+    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara.
+    // S.ref es la altura de la cabeza tumbado: baja enseguida y sube despacio cuando no estás arriba, así se
+    // corrige sola si al calibrar la cabeza estaba más alta o más baja que al hacer el ejercicio.
     const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
-    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; return; }
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
     S.awayT = 0; S.warnT -= dt;
+    // quieto y sin subir el tronco: esa es tu altura tumbado
+    S.stillT = head.speed < 0.05 ? S.stillT + dt : 0;
+    if (S.state !== 'up') S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 3 : y < S.ref + req * 0.5 ? 0.6 : S.state === 'down' && S.stillT > 1.2 ? 1.5 : 0));
+    S.lo = Math.min(S.lo + (y - S.lo) * Math.min(1, dt * 0.5), y); // lo más bajo de los últimos segundos
+    S.lift = Math.max(0, y - S.ref);
     if (S.state === 'down') {
-      if (y < S.ref + 0.04) S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 2 : 0.1)); // altura tumbado
-      if (y > S.ref + req) { S.state = 'up'; S.t0 = t; S.sec = 0; onCharge(); }
+      S.peak = Math.max(S.peak, y);
+      // hay que subir de verdad: no basta con una referencia que se quedó baja
+      if (y > S.ref + req && y - S.lo > req * 0.6) { S.state = 'up'; S.t0 = t; S.sec = 0; S.armT = 0; S.peak = y; onCharge(); }
+      else if (y < S.ref + req * 0.3) {
+        // subió pero no lo bastante: dile cuánto le faltó
+        const got = S.peak - S.ref;
+        if (got > req * 0.5 && state === 'play') { say(`Sube un poco más: ${Math.round(got * 100)} de ${Math.round(req * 100)} cm`, '#ff8a3d', 1.6); SND.partial(); }
+        S.peak = y;
+      }
     } else if (S.state === 'up') {
-      const held = t - S.t0;
-      if (y < S.ref + req * 0.7) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; }
-      else if (!armsOut()) { S.t0 = t; S.sec = 0; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
-      else if (held >= hold) { onRep({ perfect: y - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
-      else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
-    } else if (y < S.ref + Math.max(0.04, req * 0.4)) S.state = 'down';
+      const held = t - S.t0; S.peak = Math.max(S.peak, y);
+      if (y < S.ref + req * 0.6) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; S.peak = y; }
+      else {
+        // manos recogidas durante un rato: el tiempo se para (un fallo suelto del seguimiento no cuenta)
+        S.armT = armsBack() ? S.armT + dt : 0;
+        if (S.armT > 0.4) { S.t0 += dt; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
+        else if (held >= hold) { onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
+        else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
+      }
+    } else {
+      // tras disparar hay que volver a bajar: hasta tu altura tumbado o, si la referencia se quedó baja,
+      // al menos lo que pide la elevación desde lo más alto (y entonces la referencia se corrige)
+      if (y < S.ref + Math.max(0.03, req * 0.4)) { S.state = 'down'; S.peak = y; }
+      else if (y < S.peak - req) { S.state = 'down'; S.peak = y; S.ref = Math.max(S.ref, y - req * 0.3); }
+    }
   } else if (settings.exercise === 'plank1') {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
@@ -870,7 +897,7 @@ function calibrate() {
   arenaFromHead();
   const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isFloor()) { calibRef = y; lastStandY = y; }
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
-  DET.pl.ref = y; DET.su.ref = y;
+  DET.pl.ref = y; DET.su.ref = DET.su.lo = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 function startWave(i) {
@@ -904,7 +931,7 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
-    hang ? `Colgado ${got} s · ${stats.falls} caídas al charco · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
+    hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')

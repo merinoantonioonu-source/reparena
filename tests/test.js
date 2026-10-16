@@ -238,7 +238,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Listo'); frame(2, 16, xrFrame); await sleep(10); frame(2, 16, xrFrame);
   log('anchor handle', door.handle, 'saved', JSON.parse(storage.get('reparena3-equip')).door.handle);
   if (!door.handle) errors.push('no se guarda el ancla persistente');
-  press('EMPEZAR'); frame(2, 16, xrFrame); XRS.headY = 1.56; frame(330, 16, xrFrame); log('after mount state', RA.state, 'ref', RA.BAR.ref.toFixed(2));
+  const barGrip = { left: new THREE.Vector3(-0.3, 2.21, -0.35), right: new THREE.Vector3(0.3, 2.21, -0.35) };
+  press('EMPEZAR'); frame(2, 16, xrFrame); XRS.headY = 1.56; frame(100, 16, xrFrame);
+  log('standing under the bar with hands down: still mounting?', RA.state === 'mount'); if (RA.state !== 'mount') errors.push('XR barras: de pie con las manos abajo se da por colgado');
+  XRS.grip = barGrip; frame(330, 16, xrFrame); log('after mount state', RA.state, 'ref', RA.BAR.ref.toFixed(2));
   if (RA.state !== 'play') errors.push('XR barras: no empieza la oleada al colgarse (' + RA.state + ')');
   const up = i => { XRS.headY = (i % 120) < 60 ? 1.56 + 0.4 : 1.56; frame(1, 16, xrFrame); };
   for (let i = 0; i < 2000 && RA.stats.reps < 2; i++) up(i);
@@ -249,7 +252,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   XRS.headY = 1.36; frame(10, 16, xrFrame); log('after letting go: state', RA.state, 'falls', RA.stats.falls, 'lives', RA.lives);
   if (RA.state !== 'mount' || RA.stats.falls !== 1) errors.push('XR barras: soltarse no te tira al charco');
   XRS.headY = 1.56; frame(330, 16, xrFrame); log('back on the bar', RA.state);
+  // caer de pie: la cabeza sube un poco, pero las manos bajan y se ven
+  XRS.grip = null; XRS.headY = 1.66; frame(40, 16, xrFrame); log('let go landing on feet: state', RA.state, 'falls', RA.stats.falls);
+  if (RA.state !== 'mount' || RA.stats.falls !== 2) errors.push('XR barras: al caer de pie sigue contando que estás colgado');
+  frame(300, 16, xrFrame); if (RA.state !== 'mount') errors.push('XR barras: de pie tras caer se vuelve a dar por colgado');
+  XRS.grip = barGrip; XRS.headY = 1.56; frame(330, 16, xrFrame); log('back on the bar again', RA.state);
   for (let i = 0; i < 4000 && RA.state !== 'end'; i++) up(i);
+  XRS.grip = null;
   log('XR pull-ups: state', RA.state, 'reps', RA.stats.reps, 'perfect', RA.stats.perfect, 'kills', RA.stats.kills, 'falls', RA.stats.falls);
   if (RA.state !== 'end' || RA.stats.kills < 3) errors.push('XR barras: la partida no termina bien');
   RA.exitAll(); frame(2, 16, xrFrame);
@@ -321,6 +330,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   SPOT.noDevice = false; RA.exitAll(); frame(1);
 
   console.warn = origWarn;
+  // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----
+  for (const [k, v] of Object.entries({ mode: 'flyers', exercise: 'superman', lives: 0, waves: 1, repsWave: 30, rest: 0, supHold: 2, supRange: 8, supArms: 'yes' })) RA.setSetting(k, v);
+  for (const [name, calibY, lieY, liftY, handsZ, want] of [['normal', 0.25, 0.25, 0.35, -0.6, 3], ['calibrado más bajo', 0.15, 0.25, 0.35, -0.6, 3], ['calibrado más alto', 0.45, 0.25, 0.35, -0.6, 3], ['manos junto a la cabeza', 0.25, 0.25, 0.35, 0.0, 0], ['subiendo poco', 0.25, 0.25, 0.29, -0.6, 0]]) {
+    XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); XRS.headY = calibY; XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.2, 0, 0, 'YXZ'));
+    XRS.hands = { left: new THREE.Vector3(-0.2, 0.08, -0.55), right: new THREE.Vector3(0.2, 0.08, -0.55) };
+    frame(250, 16, xrFrame);
+    XRS.hands = { left: new THREE.Vector3(-0.2, 0.08, handsZ), right: new THREE.Vector3(0.2, 0.08, handsZ) };
+    XRS.headY = lieY; frame(120, 16, xrFrame); const r0 = RA.stats.reps;
+    if (process.env.DBG) log(name, 'after lie', RA.state, JSON.stringify(RA.DET.su));
+    for (let i = 0; i < 1500; i++) { const up = (i % 300) < 190; if (process.env.DBG && i % 50 === 0) log(i, RA.state, RA.DET.su.state, RA.DET.su.ref.toFixed(3), RA.DET.su.lo.toFixed(3), XRS.headY); XRS.headY = up ? liftY : lieY; XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(up ? -0.5 : -1.2, 0, 0, 'YXZ')); frame(1, 16, xrFrame); }
+    const got = RA.stats.reps - r0; log(`superman XR ${name}: reps ${got}`);
+    if (want ? got < want : got) errors.push(`superman XR (${name}): ${got} disparos`);
+    XRS.hands = null; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
+  }
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
 })().catch(e => { console.log('FATAL', e.stack); console.log('ERRORS so far:\n' + errors.join('\n')); });
@@ -346,6 +370,7 @@ function makeXRFrame() {
         if (j.side === 'left' && XRS.wristUp) { pos = { x: -0.1 + (i % 5) * 0.01, y: XRS.headY - 0.3, z: -0.35 - Math.floor(i / 5) * 0.02 }; ori = { x: 0.7071, y: 0, z: 0, w: 0.7071 }; }
         if (j.side === 'right' && i === 9 && XRS.tip) pos = { x: XRS.tip.x, y: XRS.tip.y, z: XRS.tip.z };
         if (XRS.lift === j.side || XRS.lift === 'both') pos.y += 0.4;
+        if (XRS.hands) { const g = XRS.hands[j.side]; pos = { x: g.x + (i % 5) * 0.01, y: g.y, z: g.z - Math.floor(i / 5) * 0.02 }; }
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }

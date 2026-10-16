@@ -123,7 +123,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
-        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Debajo hay un charco con tentáculos: no te sueltes.</small></label>
+        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
     </div>
   </section>
 
@@ -269,7 +269,8 @@ const SCHEMA = [
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
-  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 5, max: 35, step: 1, def: 12, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo.' },
+  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
+  { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
@@ -287,10 +288,10 @@ const SCHEMA = [
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
-  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que suben del charco, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
+  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
-  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, caes al charco.' },
+  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, te has soltado. También cuenta ver las manos por debajo de la barra.' },
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
   { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
   { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
@@ -1598,7 +1599,7 @@ function poolGrab(at) {
   POOL.tents.forEach(T => { T.lungeV = 1; });
 }
 function updatePool(dt, t) {
-  const show = isBars() && state !== 'idle';
+  const show = isBars() && eqKind() === 'door' && state !== 'idle'; // el charco solo bajo la barra de dominadas
   pool.visible = show; if (!show) return;
   ensureTentacles();
   const e = eqPose();
@@ -3393,7 +3394,7 @@ const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } },
-  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0 },
+  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0, peak: 0, lift: 0, armT: 0, stillT: 0, lo: 0.2 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -3423,11 +3424,15 @@ function vertDetector(d, y, t, dt, cfg) {
     } else if (!d.charged && d.stillT > 3) { d.ref = y + cfg.back * 0.5; d.state = 'up'; d.stillT = 0; }
   }
 }
-// Superman: ¿están las manos por delante de la cabeza, con los brazos estirados? Sin manos a la vista no se puede saber
-function armsOut() {
-  const fx_ = -Math.sin(arena.rotation.y), fz_ = -Math.cos(arena.rotation.y);
-  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * fx_ + (h.wrist.z - head.p.z) * fz_ < 0.25) return false; }
-  return true;
+// Superman: ¿hay alguna mano claramente recogida junto a la cabeza? La dirección del cuerpo sale de la propia
+// cabeza (hacia dónde apuntan la cara y la coronilla), no del escenario: así da igual hacia dónde te tumbes.
+// Sin manos a la vista (el seguimiento falla mucho tumbado) se da por bueno.
+function armsBack() {
+  if (settings.supArms === 'no') return false;
+  const d = fwd().add(new V3(0, 1, 0).applyQuaternion(head.q)); d.y = 0;
+  if (d.lengthSq() < 1e-4) return false; d.normalize();
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * d.x + (h.wrist.z - head.p.z) * d.z < 0.15) return true; }
+  return false;
 }
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
@@ -3437,20 +3442,43 @@ function runDetectors(t, dt) {
     const req = settings.squatDepth / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
   } else if (settings.exercise === 'superman') {
-    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara
+    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara.
+    // S.ref es la altura de la cabeza tumbado: baja enseguida y sube despacio cuando no estás arriba, así se
+    // corrige sola si al calibrar la cabeza estaba más alta o más baja que al hacer el ejercicio.
     const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
-    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; return; }
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
     S.awayT = 0; S.warnT -= dt;
+    // quieto y sin subir el tronco: esa es tu altura tumbado
+    S.stillT = head.speed < 0.05 ? S.stillT + dt : 0;
+    if (S.state !== 'up') S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 3 : y < S.ref + req * 0.5 ? 0.6 : S.state === 'down' && S.stillT > 1.2 ? 1.5 : 0));
+    S.lo = Math.min(S.lo + (y - S.lo) * Math.min(1, dt * 0.5), y); // lo más bajo de los últimos segundos
+    S.lift = Math.max(0, y - S.ref);
     if (S.state === 'down') {
-      if (y < S.ref + 0.04) S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 2 : 0.1)); // altura tumbado
-      if (y > S.ref + req) { S.state = 'up'; S.t0 = t; S.sec = 0; onCharge(); }
+      S.peak = Math.max(S.peak, y);
+      // hay que subir de verdad: no basta con una referencia que se quedó baja
+      if (y > S.ref + req && y - S.lo > req * 0.6) { S.state = 'up'; S.t0 = t; S.sec = 0; S.armT = 0; S.peak = y; onCharge(); }
+      else if (y < S.ref + req * 0.3) {
+        // subió pero no lo bastante: dile cuánto le faltó
+        const got = S.peak - S.ref;
+        if (got > req * 0.5 && state === 'play') { say(`Sube un poco más: ${Math.round(got * 100)} de ${Math.round(req * 100)} cm`, '#ff8a3d', 1.6); SND.partial(); }
+        S.peak = y;
+      }
     } else if (S.state === 'up') {
-      const held = t - S.t0;
-      if (y < S.ref + req * 0.7) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; }
-      else if (!armsOut()) { S.t0 = t; S.sec = 0; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
-      else if (held >= hold) { onRep({ perfect: y - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
-      else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
-    } else if (y < S.ref + Math.max(0.04, req * 0.4)) S.state = 'down';
+      const held = t - S.t0; S.peak = Math.max(S.peak, y);
+      if (y < S.ref + req * 0.6) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; S.peak = y; }
+      else {
+        // manos recogidas durante un rato: el tiempo se para (un fallo suelto del seguimiento no cuenta)
+        S.armT = armsBack() ? S.armT + dt : 0;
+        if (S.armT > 0.4) { S.t0 += dt; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
+        else if (held >= hold) { onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
+        else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
+      }
+    } else {
+      // tras disparar hay que volver a bajar: hasta tu altura tumbado o, si la referencia se quedó baja,
+      // al menos lo que pide la elevación desde lo más alto (y entonces la referencia se corrige)
+      if (y < S.ref + Math.max(0.03, req * 0.4)) { S.state = 'down'; S.peak = y; }
+      else if (y < S.peak - req) { S.state = 'down'; S.peak = y; S.ref = Math.max(S.ref, y - req * 0.3); }
+    }
   } else if (settings.exercise === 'plank1') {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
@@ -3684,7 +3712,7 @@ function calibrate() {
   arenaFromHead();
   const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isFloor()) { calibRef = y; lastStandY = y; }
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
-  DET.pl.ref = y; DET.su.ref = y;
+  DET.pl.ref = y; DET.su.ref = DET.su.lo = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 function startWave(i) {
@@ -3718,7 +3746,7 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
-    hang ? `Colgado ${got} s · ${stats.falls} caídas al charco · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
+    hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
@@ -3789,11 +3817,11 @@ function gameStep(dt, t) {
 
 /* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
 // La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
-// que espera en el punto más alto del recorrido. Debajo hay un charco con tentáculos: si te sueltas, caes.
-const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+// que espera en el punto más alto del recorrido. Bajo la barra de dominadas hay un charco con tentáculos: si te sueltas, caes.
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -3802,13 +3830,22 @@ function barNear() {
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
 
+// ¿Se ven las manos claramente por debajo de la barra? Agarrado, las muñecas están a su altura (o fuera de la
+// vista, por encima de la cabeza); al soltarte bajan y entran en la vista. Devuelve cuántas se ven abajo y cuántas se ven.
+function handsLow() {
+  const y = eqTopY() - 0.35; let low = 0, ok = 0;
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok) { ok++; if (h.wrist.y < y) low++; } }
+  return { low, ok };
+}
+const handsOff = () => { const h = handsLow(); return h.low >= 2 || (h.low === 1 && h.ok === 1); };
+
 /* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
 function barToMount(next, resume = false) {
   state = 'mount'; stateT = 0; BAR.phase = 'place'; BAR.still = 0; BAR.t = 0; BAR.resume = resume; if (!resume) BAR.nextWave = next;
   center.mesh.visible = true; drawCenter(); boardDirty = true;
 }
 function barMountStep(dt) {
-  const near = barNear(), still = head.speed < 0.08;
+  const near = barNear() && !handsOff(), still = head.speed < 0.08; // de pie bajo la barra con las manos abajo no estás colgado
   if (BAR.phase === 'place') { BAR.still = near && still ? BAR.still + dt : Math.max(0, BAR.still - dt * 2); if (BAR.still >= 0.8) { BAR.phase = 'count'; BAR.t = 0; SND.charge(); } }
   else if (BAR.phase === 'count') { const before = BAR.t; BAR.t += dt; if (!near) { BAR.phase = 'place'; BAR.still = 0; } else if (BAR.t >= 3) { BAR.phase = 'settle'; BAR.t = 0; BAR.still = 0; } else if (Math.floor(before) !== Math.floor(BAR.t)) SND.beep(); }
   else { BAR.t += dt; BAR.still = still ? BAR.still + dt : 0; if (BAR.still >= 0.35 || BAR.t > 2.5) barMounted(); }
@@ -3850,16 +3887,20 @@ function placeRowBoard(fromHead) {
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
   stats.falls++;
-  const at = new V3(head.p.x, 0.03, head.p.z); poolGrab(at);
+  const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
+  if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say('¡AL CHARCO!', '#3cff8a', 1.8);
+  say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
   barToMount(0, true);
 }
 function barDetect(t, dt) {
   if (state !== 'play') return;
   const y = head.p.y, margin = settings.fallMargin / 100;
-  BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
-  if (y < BAR.hangRef - margin || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { barFall(); return; }
+  // la posición colgado solo se reajusta quieto abajo: bajar despacio también cuenta como caída
+  if (BAR.det === 'down' && head.speed < 0.05) BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
+  // soltarse: las manos a la vista por debajo de la barra (al caer de pie la cabeza no siempre baja)
+  const off = handsLow(); BAR.letGo = off.low >= 2 || (off.low === 1 && off.ok === 1) ? BAR.letGo + dt : 0;
+  if (y < BAR.hangRef - margin || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { BAR.letGo = 0; barFall(); return; }
   if (settings.exercise === 'hang') {
     const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
     if (Math.floor(BAR.hold) > Math.floor(before)) {
@@ -3944,11 +3985,12 @@ class HeadTarget {
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
     barSlot(this.slotIndex(), this.slot);
-    if (this.bubble) { // sube del borde del charco más cercano
-      const e = eqPose(), l = eqLocal(e, arena.localToWorld(_bw.copy(this.slot)), _bl);
-      const nx = l.x / POOL.rx, nz = l.z / POOL.rz, n = Math.hypot(nx, nz) || 1;
-      this.pos.copy(arena.worldToLocal(eqWorld(e, nx / n * POOL.rx * 0.85, 0.06, nz / n * POOL.rz * 0.85, _bw)));
-      SND.pop(arena.localToWorld(_bw.copy(this.pos)), false);
+    if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
+      const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
+      if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
+      else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+      w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
+      this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
       const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
@@ -4194,6 +4236,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
+  if (PV.bar && PV.fall) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.25); h.wrist.y -= 0.5; h.wristQ.copy(camera.quaternion); }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas

@@ -57,6 +57,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
+  if (PV.bar && PV.fall) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.25); h.wrist.y -= 0.5; h.wristQ.copy(camera.quaternion); }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
