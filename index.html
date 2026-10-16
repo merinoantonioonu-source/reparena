@@ -91,6 +91,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfield input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
 .status.sp{margin:8px 0 0}
+.session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
+.seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
 </head>
 <body>
@@ -131,9 +139,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
         <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
         <small>Cada brazo dispara al llegar al hombro. En Enjambre, mira al objetivo mientras subes la mancuerna.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
+        <span class="tag">Asalto · visor y muñecas</span><b>Plancha con un brazo</b>
+        <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-superman" value="superman">
+        <span class="tag">Enjambre · visor y muñecas</span><b>Superman</b>
+        <small>Tumbado boca abajo, sube el tronco con los brazos estirados y aguanta los segundos que elijas: disparas al bicho que vuela bajo hacia ti.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-row" value="row">
         <span class="tag">Paralelas · altura del visor</span><b>Remo invertido</b>
-        <small>Colgado bajo las paralelas, cuerpo casi horizontal y pies en el suelo. Tira hasta que la cabeza suba lo que pidas.</small></label>
+        <small>Colgado bajo una o dos paralelas, cuerpo casi horizontal y pies en el suelo. Tira hasta que la cabeza suba lo que pidas.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-pullup" value="pullup">
         <span class="tag">Barra de puerta · altura del visor</span><b>Dominadas</b>
         <small>Desde colgado con los brazos estirados, sube la cabeza hasta reventar el objetivo que espera arriba.</small></label>
@@ -158,6 +172,19 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <button class="btn small" id="btnReset">Restablecer ajustes</button>
   </div>
   <p class="status" id="xrStatus"></p>
+
+  <section class="session">
+    <h2>Sesión de entrenamiento</h2>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <div class="seslist" id="sesList"></div>
+    <div class="actions">
+      <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
+      <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
+      <button class="btn small" id="btnSesClear">Vaciar</button>
+    </div>
+    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <p class="estimate" id="sesSummary"></p>
+  </section>
 
   <section class="music">
     <h2>Música con Spotify</h2>
@@ -202,7 +229,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -220,10 +247,12 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
 const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
 const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
+// Ejercicios que solo se juegan en un modo
+const EX_ONLY = { plank1: 'walkers', superman: 'flyers' };
 
 /* =================== AJUSTES =================== */
 const SCHEMA = [
@@ -240,7 +269,9 @@ const SCHEMA = [
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
-  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
+  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 5, max: 35, step: 1, def: 12, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo.' },
+  { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
+  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['walkers'] },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['flyers'], hint: 'En flexiones los bichos van a escala, unas 7 veces más lentos.' },
@@ -263,7 +294,8 @@ const SCHEMA = [
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
   { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
   { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
-  { key: 'dipGap', g: 'barras', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
+  { key: 'dipBars', g: 'barras', label: 'Paralelas que usas', short: 'Paralelas', type: 'choice', opts: [['2', 'Dos'], ['1', 'Una']], def: '2', modes: ['bars'], ex: ['row'], relayout: true, hint: 'Con una sola te tumbas cruzado debajo y la agarras con las dos manos.' },
+  { key: 'dipGap', g: 'barras', cond: () => settings.dipBars !== '1', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
@@ -303,14 +335,19 @@ function fmtVal(f, v = settings[f.key]) {
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (settings.mode === 'arcs') settings.exercise = 'squat';
+  if (EX_ONLY[settings.exercise] && settings.mode !== EX_ONLY[settings.exercise]) settings.exercise = 'pushup';
   if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
-function saveSettings() { store(STORE_KEY, settings); }
+// Durante una sesión se guardan los valores de antes, no los del bloque en curso
+function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
 function setSetting(key, v) {
   const f = FIELD[key];
   settings[key] = f ? clampSetting(f, v) : v;
   if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
   if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
+  // la plancha con un brazo solo se juega en Asalto (arañas por los dos lados) y el superman en Enjambre (voladores bajos)
+  if (key === 'exercise' && EX_ONLY[v]) settings.mode = EX_ONLY[v];
+  if (key === 'mode' && EX_ONLY[settings.exercise] && v !== EX_ONLY[settings.exercise]) settings.exercise = v === 'arcs' ? 'squat' : v === 'bars' ? 'row' : 'pushup';
   // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
   if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
   if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
@@ -321,9 +358,13 @@ function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
   if (f.noEx && f.noEx.includes(settings.exercise)) return false;
+  if (f.cond && !f.cond()) return false;
   return true;
 }
-const isPush = () => settings.exercise === 'pushup';
+// Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
+const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1' || settings.exercise === 'superman';
+// Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
+const isTiny = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -369,13 +410,14 @@ function onFormInput(ev) {
   } else {
     const v = f.type === 'toggle' ? +el.value : el.value;
     settings[key] = clampSetting(f, v); saveSettings(); onSettingChanged(key);
+    if (f.relayout) syncForm(); // cambia qué otros campos se ven
   }
   updateSummary();
 }
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x); });
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x) || (!!EX_ONLY[x] && settings.mode !== EX_ONLY[x]); });
   const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
   note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
   for (const f of SCHEMA) {
@@ -393,9 +435,12 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
-function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
-function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
+function repTimeOf(ex) { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[ex]; }
+function repTime() { return repTimeOf(settings.exercise); }
+// En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
+const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
+function waveReps(i) { return sesWave(i) || Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
+function hangSecs(i) { return sesWave(i) || settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
   const n = settings.waves || 5;
   const hang = settings.exercise === 'hang';
@@ -504,6 +549,7 @@ const SND = {
   tick() { if (!sndOK()) return; const o = sout(null, { rev: 0, gain: 0.3 }); tone(o, { type: 'triangle', f: 2400, d: 0.015, gain: 0.05 }); },
   charge() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.6 }); tone(o, { f: 300, to: 900, d: 0.22, gain: 0.08, type: 'sawtooth' }); tone(o, { f: 600, to: 1800, d: 0.2, gain: 0.04 }); },
   perfect() { if (!sndOK()) return; const o = sout(null, { rev: 0.4, gain: 0.6 }); [1318, 1976, 2637, 3951].forEach((f, i) => tone(o, { f, d: 0.6 - i * 0.1, gain: 0.07 - i * 0.012, t: i * 0.03 })); },
+  power(pow, pos) { if (!sndOK()) return; const o = sout(pos || null, { rev: 0.3, gain: 0.7 }); const f = 330 * Math.pow(1.26, pow); tone(o, { type: 'sawtooth', f, to: f * 2, d: 0.18 + pow * 0.04, gain: 0.07 }); tone(o, { f: f * 2, to: f * 3, t: 0.04, d: 0.2, gain: 0.05 }); noise(o, { type: 'bandpass', f: 1800 + pow * 600, q: 3, d: 0.15, gain: 0.08 }); },
   partial() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.6 }); tone(o, { type: 'triangle', f: 260, to: 150, d: 0.25, gain: 0.12 }); },
   miss() { if (!sndOK()) return; const o = sout(null, { rev: 0.1, gain: 0.4 }); tone(o, { type: 'triangle', f: 420, to: 260, d: 0.12, gain: 0.06 }); },
   combo() { if (!sndOK()) return; const o = sout(null, { rev: 0.3, gain: 0.6 }); [523, 659, 784, 1046].forEach((f, i) => tone(o, { type: 'triangle', f, d: 0.18, gain: 0.08, t: i * 0.06 })); },
@@ -1254,7 +1300,7 @@ function makeGate() {
 const gates = [makeGate(), makeGate(), makeGate()];
 
 // Agujeros del suelo para las arañas (modo flexiones)
-const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]];
+const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]], hatchSide = [[-1.0, -0.4], [1.0, -0.4], [-0.95, 0.3], [0.95, 0.3]];
 const hatches = hatchPos.map(([x, z]) => {
   const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
   const k = new Kit();
@@ -1283,14 +1329,15 @@ function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
-  const D = arenaDepth(), push = isPush(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const D = arenaDepth(), push = isTiny(), low = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
   gates.forEach((g, i) => {
     g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
     g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push;
   });
   gateLight.position.set(0, 1.6 * gs, -D - 0.6);
-  hatches.forEach(h => h.g.visible = push && settings.mode !== 'arcs');
+  const hp = settings.exercise === 'plank1' ? hatchSide : hatchPos; // en la plancha, dos a cada lado
+  hatches.forEach((h, i) => { h.x = hp[i][0]; h.z = hp[i][1]; h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs'; });
   safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
@@ -1301,7 +1348,7 @@ function layoutArena() {
   while (boardRig.children.length) boardRig.remove(boardRig.children[0]);
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
-  if (push) {
+  if (low) {
     rig.position.set(0, 0, -1.3);
     for (const s of [-1, 1]) k.add('steel', G.box(0.05, 0.22, 0.05), C.dark, s * 0.3, 0.11, -0.04);
     k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);
@@ -1404,7 +1451,9 @@ const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(
 function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle }; } store(EQUIP_KEY, o); }
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
-const EQ_NAMES = { door: 'barra', dip: 'paralelas' };
+const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
+// Nombre del aparato para los textos
+function eqName(k = eqKind()) { return k === 'door' ? { the: 'la barra', name: 'barra', pl: false } : dipOne() ? { the: 'la paralela', name: 'paralela', pl: false } : { the: 'las paralelas', name: 'paralelas', pl: true }; }
 // Ejes horizontales del aparato: a lo largo de la barra (X local) y perpendicular (Z local)
 function eqAxes(e, ax, az) { const c = Math.cos(e.yaw), s = Math.sin(e.yaw); if (ax) ax.set(c, 0, -s); if (az) az.set(s, 0, c); }
 // Coordenadas locales (horizontales) de un punto del mundo respecto al aparato
@@ -1443,11 +1492,10 @@ function buildEquipVis() {
   EQV.door.vr.add(k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete }, { cast: true, receive: true }));
   glowBar(EQV.door.mr, new V3(-W / 2, H, 0), new V3(W / 2, H, 0));
   for (const s of [-1, 1]) glowBar(EQV.door.mr, new V3(s * W / 2, H - 0.12, 0), new V3(s * W / 2, H + 0.04, 0));
-  // Paralelas: dos barras con postes y patas
-  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100;
+  // Paralelas: una o dos barras con postes y patas
+  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100, xs = dipOne() ? [0] : [-gap / 2, gap / 2];
   k = new Kit();
-  for (const s of [-1, 1]) {
-    const x = s * gap / 2;
+  for (const x of xs) {
     k.add('steel', G.cyl(0.02, 0.02, L, 14), C.chrome, x, dH, 0, Math.PI / 2, 0, 0);
     k.add('rubber', G.cyl(0.025, 0.025, Math.min(0.32, L * 0.5), 14), C.white, x, dH, 0, Math.PI / 2, 0, 0);
     for (const e of [-1, 1]) {
@@ -1458,10 +1506,10 @@ function buildEquipVis() {
     k.add('paint', G.box(0.085, 0.045, 0.12), C.hazard, x, 0.022, (L + 0.3) / 2 - 0.06);
   }
   EQV.dip.vr.add(k.build({ steel: M.steel, rubber: M.rubber, paint: M.paint }, { cast: true, receive: true }));
-  for (const s of [-1, 1]) { glowBar(EQV.dip.mr, new V3(s * gap / 2, dH, -L / 2), new V3(s * gap / 2, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(s * gap / 2, dH - 0.12, e * L / 2), new V3(s * gap / 2, dH, e * L / 2)); }
+  for (const x of xs) { glowBar(EQV.dip.mr, new V3(x, dH, -L / 2), new V3(x, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(x, dH - 0.12, e * L / 2), new V3(x, dH, e * L / 2)); }
   layoutPool();
 }
-settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', '*'].includes(k)) buildEquipVis(); });
+settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', 'dipBars', '*'].includes(k)) buildEquipVis(); });
 function updateEquip(dt, t) {
   const show = isBars() && state !== 'idle';
   eqGroup.visible = show; if (!show) return;
@@ -1526,7 +1574,8 @@ const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transpa
 for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
 // Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
 function layoutPool() {
-  if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
+  if (eqKind() === 'dip' && dipOne()) { POOL.rx = 0.95; POOL.rz = settings.dipLen / 200 + 0.35; } // cuerpo cruzado bajo la barra
+  else if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
   else { POOL.rx = POOL.rz = 0.8; }
   pool.scale.set(1, 1, 1); poolDisc.scale.set(POOL.rx, POOL.rz, 1); poolRim.scale.set(POOL.rx, POOL.rz, 1);
   POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });
@@ -1725,7 +1774,8 @@ function buildSpider() {
   for (const s of [-1, 1]) {
     GS('body', G.sph(0.0058, 10, 8), C.fang, s * 0.009, 0.014, 0.044); GS('body', G.sph(0.0036, 8, 6), C.fang, s * 0.018, 0.012, 0.04);
     GS('body', G.sph(0.0026, 6, 5), C.fang, s * 0.008, 0.02, 0.031); GS('body', G.sph(0.0026, 6, 5), C.fang, s * 0.016, 0.018, 0.034);
-    R.add('body', 'glow', G.sph(0.0013, 5, 4), col(0.6, 0.05, 0.02), s * 0.0095, 0.0155, 0.0495);
+    R.add('body', 'glow', G.sph(0.0027, 8, 6), col(1, 0.07, 0.02), s * 0.0093, 0.0152, 0.0488); // ojos rojos: brillan más cuanto más cerca y más rabiosa
+    R.add('body', 'glow', G.sph(0.0017, 6, 5), col(1, 0.07, 0.02), s * 0.0178, 0.0122, 0.0425);
     const f = s > 0 ? 'fangL' : 'fangR', p = s > 0 ? 'palpL' : 'palpR';
     P(f, G.sph(1, 10, 8), C.chel, 0, 0, 0, 0.25, 0, 0, 0.0095, 0.013, 0.0095);
     P(f, spikes(0, 0, 0, 0.0095, 0.013, 0.0095, 30, 0.004, 0.0007), C.hair);
@@ -2218,7 +2268,7 @@ const stand = (() => {
   g.visible = false; scene.add(g); return g;
 })();
 function placeAnchor(dist) {
-  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? head.p.y - 0.3 : standHeadY() - 0.42;
+  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.3, head.p.y - 0.3) : standHeadY() - 0.42;
   return { pos, yaw: yawOf(head.q) };
 }
 function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
@@ -2383,7 +2433,7 @@ function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(
 function updateViewPanels(dt) {
   const k = 1 - Math.exp(-dt * 4);
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, -0.08, -1.0), new V3());
+    const tgt = headLocal(_hl.set(0, menu ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
     center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
   } else center.mesh.userData.init = false;
@@ -2400,12 +2450,12 @@ function drawCenter() {
     const door = PLACE.kind === 'door';
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left';
     if (PLACE.wait) {
-      c.fillText(door ? '¡BARRA COLOCADA!' : '¡PARALELAS COLOCADAS!', 44, 68);
+      const nm = eqName(PLACE.kind); c.fillText(`¡${nm.name.toUpperCase()} ${nm.pl ? 'COLOCADAS' : 'COLOCADA'}!`, 44, 68);
       c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; [PLACE.note, door ? 'Suéltate: ahora aparecen los ajustes finos.' : 'Ponte de pie: aparecen los ajustes finos.'].forEach((l, i) => { fitFont(c, l, W - 88, 36, '500 %px ' + FB); c.fillText(l, 44, 148 + i * 52); });
       centerBar(c, W, H, 1);
     } else {
-      c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
-      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
+      c.fillText('COLOCAR ' + eqName(PLACE.kind).name.toUpperCase(), 44, 68);
+      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : dipOne() ? ['Túmbate cruzado debajo y agárrala con', `las dos manos, brazos estirados. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
       const st = !PLACE.seen ? ['No veo tus manos: míralas', '#ff8a3d'] : !PLACE.up ? ['Sube las manos por encima de la cabeza', '#ff8a3d'] : !PLACE.ok ? ['Separa más las manos', '#ff8a3d'] : ['Bien: no te muevas', '#3cf0c6'];
       c.font = `500 34px ${FB}`; c.fillStyle = st[1]; c.fillText(st[0], 44, 258);
@@ -2417,21 +2467,28 @@ function drawCenter() {
     const row = settings.exercise === 'row';
     if (BAR.phase === 'place') {
       c.fillStyle = BAR.resume ? '#3cff8a' : '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(BAR.resume ? (row ? '¡A LAS PARALELAS!' : '¡A LA BARRA!') : row ? 'PARALELAS' : 'BARRA', 44, 68);
-      const L = row ? ['Túmbate bajo las paralelas, agárralas', 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
+      const L = row ? [`Túmbate bajo ${eqName().the}, ${dipOne() ? 'agárrala' : 'agárralas'}`, 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
-      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : row ? 'lejos de las paralelas' : 'lejos de la barra', W - 44, 68);
+      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : 'lejos de ' + eqName().the, W - 44, 68);
       centerBar(c, W, H, BAR.still / 0.8);
     } else {
       c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
       c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
     }
+  } else if (state === 'between') {
+    const nb = SES.blocks[SES.idx + 1];
+    c.textAlign = 'left'; c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.fillText('DESCANSO', 44, 68);
+    c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(0, Math.ceil(SES.wait))), W - 50, 150);
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(`Bloque ${SES.idx + 2} de ${SES.blocks.length}:`, 44, 150);
+    if (nb) { c.fillStyle = '#ffd166'; fitFont(c, blockLabel(nb), W - 300, 40, '500 %px ' + FB); c.fillText(blockLabel(nb), 44, 210); }
+    centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
+    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (settings.exercise === 'curl' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
+    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {
@@ -2455,14 +2512,15 @@ function drawBoard() {
   c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
   c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
   c.textBaseline = 'middle';
-  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end'].includes(state)) {
+  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
     c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
     board.tex.needsUpdate = true; return;
   }
   const N = settings.waves;
-  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; c.fillText(N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`, 36, 52);
+  const wv = N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`;
+  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; fitFont(c, SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 330, 40, '%px ' + FD); c.fillText(SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 36, 52);
   c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
   c.textAlign = 'right';
   if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
@@ -2480,9 +2538,10 @@ function drawBoard() {
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
+  else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
+  if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
   c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';
@@ -2624,15 +2683,147 @@ function spInitPage() {
 }
 
 
+/* =================== SESIÓN DE ENTRENAMIENTO: BLOQUES ENCADENADOS =================== */
+// Una sesión es una lista de bloques {mode, ex, n}: n repeticiones (en colgado, segundos). Cada bloque se juega
+// como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
+// Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
+const SES_KEY = 'reparena3-session';
+const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
+const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc'];
+function blockOk(mode, ex) {
+  if (mode === 'arcs') return ex === 'squat';
+  if (mode === 'bars') return BAR_EX.includes(ex);
+  return !BAR_EX.includes(ex) && (!EX_ONLY[ex] || EX_ONLY[ex] === mode);
+}
+const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
+(function loadSession() {
+  const s = store(SES_KEY) || {};
+  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500) }));
+  if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
+})();
+function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
+const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
+function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}`; }
+// Reparte n en oleadas de unas `per` repeticiones, con el total exacto
+function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
+function sessionMinutes() {
+  let t = SES.rest * Math.max(0, SES.blocks.length - 1);
+  for (const b of SES.blocks) { const w = splitWaves(b.n, b.ex === 'hang' ? 25 : 10); t += (b.ex === 'hang' ? b.n : b.n * (b.mode === 'arcs' ? 60 / settings.arcRate : repTimeOf(b.ex))) + settings.rest * (w.length - 1); }
+  return Math.max(1, Math.round(t / 60));
+}
+
+/* ---------- Durante el juego ---------- */
+function applyBlock(i) {
+  const b = SES.blocks[i]; SES.idx = i;
+  SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
+  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 });
+  onSettingChanged('mode'); onSettingChanged('exercise');
+}
+function startSession() {
+  if (!SES.blocks.length) return;
+  // los bloques de barras necesitan su aparato colocado
+  if (!preview) for (const b of SES.blocks) if (b.mode === 'bars' && !EQ.xr[b.ex === 'row' ? 'dip' : 'door'].set) {
+    setSetting('mode', 'bars'); setSetting('exercise', b.ex); startPlace(lobbyMenu, `Para la sesión, coloca ${eqName().the}`); return;
+  }
+  SES.orig = {}; SES_KEYS.forEach(k => { SES.orig[k] = settings[k]; });
+  Object.assign(SES, { active: true, results: [], stop: false });
+  applyBlock(0); beginRun();
+}
+// Se llama al terminar la partida de un bloque (en lugar del menú de fin)
+function sessionBlockDone(win, manual) {
+  const b = SES.blocks[SES.idx];
+  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, score, win, manual });
+  if (SES.stop || SES.idx + 1 >= SES.blocks.length) { finishSession(); return; }
+  state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
+  betweenMenu();
+}
+function betweenMenu() {
+  const r = SES.results[SES.results.length - 1], nb = SES.blocks[SES.idx + 1];
+  const m = openMenu([
+    { t: 'title', text: `BLOQUE ${SES.idx + 1}/${SES.blocks.length} ${r.win ? 'SUPERADO' : 'TERMINADO'}` },
+    { t: 'text', text: `${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)} · ${r.perfect} perfectas · ${r.score} puntos` },
+    { t: 'text', text: `Siguiente: ${blockLabel(nb)}`, color: '#ffd166' },
+    { t: 'btns', items: [{ label: 'Empezar ya', style: 'primary', onPress: () => nextBlock(false) }, { label: 'Repetir bloque', onPress: () => { SES.results.pop(); nextBlock(true); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Terminar sesión', style: 'danger', onPress: finishSession }] }
+  ], { reanchor: true });
+  m.rebuild = betweenMenu;
+}
+function sessionStep(dt) { // descanso entre bloques
+  SES.wait -= dt; if (SES.wait <= 0) nextBlock(false);
+}
+function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock(repeat ? SES.idx : SES.idx + 1); beginRun(); }
+function finishSession() {
+  const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
+  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
+  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, score: 0 });
+  const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
+  if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
+  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ${tot.score} puntos`);
+  if (all) SND.victory();
+  endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', lines);
+}
+// Devuelve los ajustes como estaban antes de la sesión
+function endSession() {
+  if (!SES.active) return;
+  SES.active = false; SES.waves = null; Object.assign(settings, SES.orig); SES.orig = null;
+  saveSettings(); onSettingChanged('mode'); onSettingChanged('exercise');
+}
+function sessionRows() {
+  if (!SES.blocks.length || SES.active) return [];
+  const txt = SES.blocks.map(b => `${b.n} ${b.ex === 'hang' ? 's colgado' : EX_NAMES[b.ex].toLowerCase()}`).join(' → ');
+  return [{ t: 'text', text: `Sesión: ${txt}`, color: '#ffd166' }, { t: 'btns', items: [{ label: `EMPEZAR SESIÓN (${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, ~${sessionMinutes()} min)`, style: 'primary', onPress: startSession }] }];
+}
+
+/* ---------- Editor de la página ---------- */
+const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'walkers', ex: 'plank1', n: 30 }, { mode: 'walkers', ex: 'pushup', n: 30 }];
+function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
+function renderSession() {
+  const host = $('#sesList'); if (!host) return;
+  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
+    <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
+    <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
+    <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
+    <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
+    : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
+  const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
+  const sum = $('#sesSummary');
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el atril.` : '';
+}
+function sesInitPage() {
+  const host = $('#sesList');
+  host.addEventListener('change', ev => {
+    const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
+    const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
+    if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); }
+    else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
+    else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
+    saveSession(); renderSession();
+  });
+  host.addEventListener('click', ev => {
+    const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
+    const i = +btn.closest('.sesrow').dataset.i;
+    if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
+    saveSession(); renderSession();
+  });
+  $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; SES.blocks.push({ mode: blockOk(settings.mode, ex) ? settings.mode : 'walkers', ex, n: ex === 'hang' ? 30 : 20 }); saveSession(); renderSession(); });
+  $('#btnSesExample').addEventListener('click', () => { SES.blocks = SES_EXAMPLE.map(b => ({ ...b })); saveSession(); renderSession(); });
+  $('#btnSesClear').addEventListener('click', () => { SES.blocks = []; saveSession(); renderSession(); });
+  $('#sesRest').addEventListener('change', ev => { SES.rest = clamp(Math.round(+ev.target.value) || 0, 0, 600); saveSession(); renderSession(); });
+  renderSession();
+}
+
+
 /* =================== ESTADO DE PARTIDA =================== */
 const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
-let charged = false, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
+let charged = false, chargePow = 1, nextArcDrop = 0, calibRef = 1.6, runSaved = false;
+// Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
+const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
 const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -2802,14 +2993,17 @@ function ikKnee(H, F, L1, L2, ox, oz, out) {
 class Spider {
   constructor(spec, hatch) {
     const K = SPIDER_KIND[spec.kind]; this.type = 'spider'; this.kind = spec.kind; this.s = K.s; this.boss = !!K.boss;
-    this.inst = RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }); this.root = this.inst.root; this.B = this.inst.bones;
+    this.glowMat = M.glowSkin.clone(); // ojos propios: cada araña se enciende según su rabia
+    this.inst = RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: this.glowMat }); this.root = this.inst.root; this.B = this.inst.bones;
+    this.eyeGlow = glowSprite(0xff2208, 0.05, 0); this.eyeGlow.position.set(0, 0.015, 0.05); this.B.body.add(this.eyeGlow);
     this.root.scale.setScalar(this.s); arena.add(this.root);
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
-    this.target = new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s));
+    this.target = settings.exercise === 'plank1' ? new V3(Math.sign(hatch.x) * rand(0.3, 0.4), 0, rand(-0.3, 0)) : new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s)); // en la plancha atacan por el costado
     this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / settings.walkTime);
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
+    Object.assign(this, { threatT: rand(1.2, 2.5), close: 0, rage: 0, hopFrom: new V3(), hopTo: new V3(), hopped: false, startD: Math.max(0.1, this.pos.distanceTo(this.target)) });
     this.legs = SPIDER_LEGS.map(d => ({ d, foot: new V3(), from: new V3(), to: new V3(), t: 1, dur: 0.08, hipW: new V3() }));
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw; this.root.updateMatrixWorld(true);
     this.legs.forEach(L => { this.idealFoot(L, _foot); L.foot.copy(_foot); });
@@ -2837,8 +3031,21 @@ class Spider {
         this.runT -= dt;
         if (this.runT <= 0) { this.run = !this.run; this.runT = this.run ? rand(0.3, 0.9) : rand(0.15, 0.8); if (this.run && Math.random() < 0.4) SND.skitter(this.center(tmpA), s); }
         if (this.run) { moveTo = this.target; speed = this.avg / 0.55 * rand(0.9, 1.2); }
-        if (this.pos.distanceTo(this.target) < 0.02 && state === 'play') { this.mode = 'rear'; this.st = 0; SND.hiss(this.center(tmpA), s); }
+        if (this.pos.distanceTo(this.target) < 0.02 && state === 'play') { this.mode = 'rear'; this.st = 0; SND.hiss(this.center(tmpA), s); break; }
+        // amenaza mientras se acerca: más a menudo cuanto más cerca está
+        this.threatT -= dt * (1 + this.close * 2.5);
+        if (this.threatT <= 0 && !this.run && state === 'play' && this.pos.distanceTo(this.target) > 0.05) { this.mode = 'threat'; this.st = 0; this.hopped = false; SND.hiss(this.center(tmpA), s * 0.9); }
         break;
+      case 'threat': { // se alza enseñando los colmillos, da un amago hacia ti y vuelve a correr
+        const k = this.st;
+        this.rear = k < 0.35 ? k / 0.35 * 0.85 : k < 0.6 ? 0.9 : Math.max(0, 0.9 - (k - 0.6) / 0.35 * 0.9);
+        this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 10);
+        if (k >= 0.35 && !this.hopped) { this.hopped = true; this.hopFrom.copy(this.pos); const to = tmpA.subVectors(this.target, this.pos); to.y = 0; const d = to.length(); this.hopTo.copy(this.pos).addScaledVector(to.normalize(), Math.min(0.06 * s, Math.max(0, d - 0.03))); SND.skitter(this.center(tmpB), s); }
+        if (this.hopped && k < 0.6) { const h = (k - 0.35) / 0.25; this.pos.lerpVectors(this.hopFrom, this.hopTo, smooth(h)); this.pos.y = Math.sin(h * Math.PI) * 0.03 * s; }
+        if (k >= 0.6) this.pos.y = 0;
+        if (k > 0.95) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = rand(0.15, 0.45); this.threatT = rand(1.3, 3.2); }
+        break;
+      }
       case 'rear':
         this.rear = Math.min(1, this.st / 0.45); this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 8);
         if (this.st > 0.55) { this.mode = 'lunge'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(lerp(this.pos.x, HL.x, 0.75), 0, lerp(this.pos.z, HL.z, 0.75)); SND.whoosh(this.center(tmpA)); }
@@ -2871,7 +3078,13 @@ class Spider {
     B.body.rotation.x = this.pitch + (moving ? Math.sin(t * 30) * 0.03 : 0);
     B.body.position.y = (this.mode === 'dying' ? lerp(0.055, 0.02, Math.min(1, this.st * 2)) : 0.055 + this.rear * 0.03) + (moving ? Math.abs(Math.sin(t * 24)) * 0.004 : 0);
     B.abd.rotation.x = Math.sin(t * 2.2) * 0.06 + this.rear * 0.5; B.abd.scale.setScalar(1 + Math.sin(t * 2.2) * 0.025);
-    const fang = this.mode === 'rear' || this.mode === 'lunge' ? 0.6 + Math.sin(t * 25) * 0.3 : Math.max(0, Math.sin(t * 1.7)) * 0.25;
+    // cara agresiva: ojos que se encienden al acercarse y al amenazar, colmillos que castañetean
+    this.close = clamp(1 - this.pos.distanceTo(this.target) / this.startD, 0, 1);
+    const angry = this.mode === 'rear' || this.mode === 'lunge' || this.mode === 'threat';
+    this.rage += ((angry ? 1 : this.close * 0.6) - this.rage) * Math.min(1, dt * 6);
+    if (this.mode !== 'dying') { const g = 1 + this.rage * 2.2 + (angry ? Math.sin(t * 30) * 0.4 : 0); this.glowMat.color.setRGB(g, g * 0.7, g * 0.7); this.eyeGlow.material.opacity = this.rage * (0.55 + Math.sin(t * 17) * 0.2); }
+    else { this.glowMat.color.setRGB(0.3, 0.2, 0.2); this.eyeGlow.material.opacity = 0; }
+    const fang = angry ? 0.6 + Math.sin(t * 25) * 0.3 : this.close > 0.45 ? 0.3 + Math.sin(t * 18) * 0.18 : Math.max(0, Math.sin(t * 1.7)) * 0.25;
     B.fangL.rotation.x = -fang; B.fangR.rotation.x = -fang; B.fangL.rotation.z = fang * 0.3; B.fangR.rotation.z = -fang * 0.3;
     B.palpL.rotation.x = Math.sin(t * 7.1) * 0.3 - this.rear * 0.8; B.palpR.rotation.x = Math.sin(t * 6.3 + 1) * 0.3 - this.rear * 0.8;
     if (this.mode === 'dying') { B.body.rotation.z = Math.min(1, this.st * 2) * 0.4; }
@@ -2920,7 +3133,7 @@ class Spider {
     this.alive = false; this.mode = 'dying'; this.st = 0; this.bar.g.visible = false;
     const c = this.center(new V3()); fx.ichor(c, 22, this.s * 1.3); fx.glow(c, [0.6, 0.8, 0.2], 0.25 * this.s, 0.12); SND.squish(c); if (this.boss) { fx.explosion(c, 0.5, false); SND.explosion(c, false); }
   }
-  dispose() { arena.remove(this.root); this.inst.skel.dispose(); }
+  dispose() { arena.remove(this.root); this.inst.skel.dispose(); this.glowMat.dispose(); this.eyeGlow.material.dispose(); }
 }
 
 /* =================== BICHOS VOLADORES =================== */
@@ -2934,13 +3147,13 @@ const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, roto
 const MAT_WASP = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin };
 class Flyer {
   constructor(spec) {
-    const K = FLYER_KIND[spec.kind], push = isPush(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
+    const K = FLYER_KIND[spec.kind], push = isTiny(), low = settings.exercise === 'superman'; this.K = K; this.type = 'flyer'; this.kind = spec.kind;
     this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
     if (push) { const h = pick(hatches); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = settings.flySpeed / 3.6 * (push ? 0.15 : 1);
-    if (!push) { const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r)); }
+    if (!push) { const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.45 : 1), bank: 0, flickT: 0 });
     this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.06 : 0.17, spec.kind === 'hornet' ? 0.1 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
@@ -2948,9 +3161,10 @@ class Flyer {
   }
   center(out) { this.root.getWorldPosition(out); return out; }
   update(dt, t) {
-    this.t += dt; const push = isPush(), active = state === 'play' || state === 'rest';
+    this.t += dt; const push = isTiny(), low = settings.exercise === 'superman', active = state === 'play' || state === 'rest';
     if (active) {
-      const tgt = tmpA.set(0, Math.max(push ? 0.2 : 1.0, HL.y - (push ? 0.05 : 0.12)), 0);
+      // en el superman vuelan bajo, a la altura de tu cabeza con el tronco elevado (nunca por encima de 0,8 m)
+      const tgt = tmpA.set(0, low ? clamp(DET.su.ref + settings.supRange / 100 + 0.08, 0.3, 0.8) : Math.max(push ? 0.2 : 1.0, HL.y - (push ? 0.05 : 0.12)), 0);
       tgt.x = HL.x * 0.6; tgt.z = HL.z * 0.6;
       const to = tmpB.subVectors(tgt, this.base), d = to.length(), reach = push ? 0.32 : 0.85;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
@@ -2961,7 +3175,7 @@ class Flyer {
       }
       if (this.t > this.nextDart) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
-        this.dartT.set(rand(-1, 1) * A, rand(-0.4, 0.6) * A * 0.7, rand(-0.5, 0.5) * A * 0.4);
+        this.dartT.set(rand(-1, 1) * A, rand(-0.4, 0.6) * A * (low ? 0.2 : 0.7), rand(-0.5, 0.5) * A * 0.4);
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
       }
     }
@@ -2971,7 +3185,7 @@ class Flyer {
     this.last.copy(this.pos);
     this.pos.copy(this.base).addScaledVector(right, this.dart.x + Math.sin(this.t * this.w1 + this.ph1) * wob).addScaledVector(dir, this.dart.z);
     this.pos.y += this.dart.y + Math.sin(this.t * this.w2 * 1.7 + this.ph2) * wob * 0.6;
-    this.pos.y = Math.max(push ? 0.06 : 0.45, this.pos.y);
+    this.pos.y = Math.max(push ? 0.06 : low ? 0.2 : 0.45, this.pos.y); if (low) this.pos.y = Math.min(this.pos.y, 1.0);
     this.root.position.copy(this.pos);
     const look = arena.worldToLocal(tmpA.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpA.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
     const lat = ((this.pos.x - this.last.x) * right.x + (this.pos.z - this.last.z) * right.z) / Math.max(dt, 1e-3);
@@ -2997,7 +3211,7 @@ class Flyer {
     if (this.hp <= 0) this.kill();
   }
   kill() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isPush() ? 0.45 : 1;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1;
     if (this.kind === 'hornet') { fx.ichor(c, 18, 1.5 * s); fx.glow(c, [1, 0.8, 0.3], 0.4 * s, 0.1); SND.squish(c); }
     else { fx.explosion(c, (big ? 1.4 : 0.55) * s, big); SND.explosion(c, big); }
     rigDebris(this.inst, c, (big ? 3 : 2) * s, this.kind === 'hornet' ? 0 : 0.5, this.kind === 'hornet' ? { main: M.robotStaticWasp } : { main: M.carbonStatic });
@@ -3055,10 +3269,12 @@ const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, toneMapped: false 
 const boltMat = new THREE.MeshBasicMaterial({ color: 0xa8fcff, toneMapped: false }), boltPerfMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false });
 function glowSprite(color, size, opacity = 0.8) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); s.scale.set(size, size, 1); return s; }
 const chargeOrb = glowSprite(0x3cf0c6, 0.18, 0.9); chargeOrb.visible = false; scene.add(chargeOrb);
-function pickNearest() {
+// side: solo los enemigos de ese lado (plancha con un brazo: cada brazo dispara a su lado)
+function pickNearest(side) {
+  const ok = e => !side || (side === 'left' ? e.root.position.x < 0.05 : e.root.position.x > -0.05);
   let best = null, bd = 1e9;
-  for (const e of enemies) if (e.alive && e.hp - e.pending > 0) { const d = e.root.position.distanceToSquared(HL); if (d < bd) { bd = d; best = e; } }
-  if (!best) for (const e of enemies) if (e.alive) { best = e; break; }
+  for (const e of enemies) if (e.alive && e.hp - e.pending > 0 && ok(e)) { const d = e.root.position.distanceToSquared(HL); if (d < bd) { bd = d; best = e; } }
+  if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
 function findLock(o, d) {
@@ -3071,18 +3287,19 @@ function findLock(o, d) {
   }
   return best;
 }
-function fireOrb(origin, dmg, perfect) {
-  const e = pickNearest();
-  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(perfect ? 0x3cf0c6 : 0xff8a2a, perfect ? 0.55 : 0.4));
-  m.position.copy(origin); scene.add(m);
-  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(fwdH(), 5);
+function fireOrb(origin, dmg, perfect, pow = 1, side) {
+  const e = pickNearest(side);
+  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
+  m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
+  const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to);
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col: perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15] });
-  SND.plasma(origin); fx.muzzle(origin, perfect ? [0.3, 1, 0.8] : [1, 0.6, 0.2]);
+  const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
+  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col });
+  SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
-function fireBolt(origin, dir, lockFrom, dmg, perfect) {
-  const e = findLock(lockFrom || origin, dir);
+function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
+  const e = forced || findLock(lockFrom || origin, dir);
   const m = new THREE.Mesh(boltGeo, perfect ? boltPerfMat : boltMat); m.add(glowSprite(perfect ? 0xffd166 : 0x5ff5ff, 0.2, 0.8));
   m.position.copy(origin); scene.add(m);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 30);
@@ -3098,15 +3315,19 @@ function updateProjectiles(dt) {
     tmpA.copy(p.m.position);
     p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
     if (p.kind === 'bolt') p.m.lookAt(tmpB.copy(p.m.position).multiplyScalar(2).sub(tmpA));
-    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 : 0.06, 0.2);
+    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 * (1 + ((p.pow || 1) - 1) * 0.5) : 0.06, 0.2);
     if (k >= 1) {
       scene.remove(p.m); p.m.children.forEach(c => c.material && c.material.dispose()); projs.splice(i, 1);
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
         const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone()); if (!target.alive) onKilled(target);
+        if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
+          const R = isTiny() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isTiny() ? 0.35 : 1, 0.15); SND.zap(p.to);
+          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone()); if (!o.alive) onKilled(o); }
+        }
         if (p.kind === 'bolt' && p.perfect) {
-          const R = isPush() ? 0.45 : 1.6; fx.electric(p.to, 16);
+          const R = isTiny() ? 0.45 : 1.6; fx.electric(p.to, 16);
           for (const o of enemies) if (o.alive && o !== target && o.type === 'flyer' && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(1, true, tmpA.clone()); if (!o.alive) onKilled(o); }
         }
       } else if (p.e) { p.e.pending = Math.max(0, p.e.pending - p.dmg); fx.sparks(p.to, 5, [1, 0.8, 0.4], 1.5, 0.03); }
@@ -3135,11 +3356,15 @@ function onRep(opts, side) {
   registerRep(opts.perfect, true, side);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
-  const dmg = opts.perfect ? 2 : 1;
+  const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
+  if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
-    fireOrb(origin, dmg, opts.perfect);
+    fireOrb(origin, dmg, opts.perfect, pow, settings.exercise === 'plank1' ? side : undefined);
+  } else if (settings.exercise === 'superman') { // tumbado no se apunta: va al bicho más cercano
+    const e = pickNearest(), o = hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3);
+    fireBolt(o, e ? e.center(new V3()).sub(o).normalize() : fwdH(), null, dmg, opts.perfect, e);
   } else {
     for (const s of aimSources()) {
       let o = s.o.clone();
@@ -3148,38 +3373,61 @@ function onRep(opts, side) {
       fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect);
     }
   }
-  charged = false; chargeOrb.visible = false;
+  charged = false; chargePow = 1; chargeOrb.visible = false;
 }
 function onPartial(text) {
   if (!['play', 'rest', 'ready'].includes(state)) return;
-  stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargeOrb.visible = false;
+  stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargePow = 1; chargeOrb.visible = false;
+}
+// Sube un nivel de carga mientras aguantas abajo
+function onPower(pow) {
+  if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
+  chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
+  say(`CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 0.9); boardDirty = true;
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  charged = true; chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
+  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
 }
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
-  curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } }
+  curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } },
+  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0 },
+  pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
   const still = head.speed < 0.06;
   if (d.state === 'up') {
-    if (y > d.ref) d.ref += (y - d.ref) * Math.min(1, dt * 1.5);
-    if (y < d.ref - cfg.start) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; }
+    // la referencia de arriba sube enseguida y baja despacio: se ajusta a tu postura real
+    // (calibrar a cuatro patas, o mirar al suelo en la flexión, deja la cabeza más baja que al calibrar)
+    d.ref += (y - d.ref) * Math.min(1, dt * (y > d.ref ? 1.5 : 0.25));
+    if (y < d.ref - cfg.start) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; d.holdT = 0; d.pow = 1; }
   } else {
     if (y < d.min) d.min = y;
     const drop = d.ref - d.min;
     if (!d.charged && drop >= cfg.req) { d.charged = true; onCharge(); }
+    // carga: cada POW_STEP segundos abajo (cerca del fondo) sube un nivel, hasta 4
+    if (cfg.power && d.charged && y < d.ref - cfg.req * 0.8) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } }
     d.stillT = still ? d.stillT + dt : 0;
-    if (y > d.ref - cfg.back) {
+    // vuelve arriba al recuperar la mayor parte del recorrido, aunque no llegues a la referencia
+    const upAt = Math.min(d.ref - cfg.back, d.min + Math.max(cfg.req * 0.9, drop * 0.6));
+    // ya arriba y quieto, pero por debajo de la referencia: la referencia era alta y se corrige
+    const stuck = d.charged && d.stillT > 0.8 && y - d.min >= cfg.req * 0.7;
+    if (y > upAt || stuck) {
       const dur = t - d.t0;
-      if (d.charged) onRep({ perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5 });
+      if (d.charged) onRep({ perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5, pow: cfg.power ? d.pow : 1 });
       else if (drop > cfg.partial) onPartial(cfg.partialMsg);
+      if (stuck) d.ref = y;
       d.state = 'up';
     } else if (!d.charged && d.stillT > 3) { d.ref = y + cfg.back * 0.5; d.state = 'up'; d.stillT = 0; }
   }
+}
+// Superman: ¿están las manos por delante de la cabeza, con los brazos estirados? Sin manos a la vista no se puede saber
+function armsOut() {
+  const fx_ = -Math.sin(arena.rotation.y), fz_ = -Math.cos(arena.rotation.y);
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * fx_ + (h.wrist.z - head.p.z) * fz_ < 0.25) return false; }
+  return true;
 }
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
@@ -3188,11 +3436,48 @@ function runDetectors(t, dt) {
   if (settings.exercise === 'squat') {
     const req = settings.squatDepth / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
+  } else if (settings.exercise === 'superman') {
+    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara
+    const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; return; }
+    S.awayT = 0; S.warnT -= dt;
+    if (S.state === 'down') {
+      if (y < S.ref + 0.04) S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 2 : 0.1)); // altura tumbado
+      if (y > S.ref + req) { S.state = 'up'; S.t0 = t; S.sec = 0; onCharge(); }
+    } else if (S.state === 'up') {
+      const held = t - S.t0;
+      if (y < S.ref + req * 0.7) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; }
+      else if (!armsOut()) { S.t0 = t; S.sec = 0; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
+      else if (held >= hold) { onRep({ perfect: y - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
+      else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
+    } else if (y < S.ref + Math.max(0.04, req * 0.4)) S.state = 'down';
+  } else if (settings.exercise === 'plank1') {
+    // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado
+    const P = DET.pl, y = head.p.y, LIFT = 0.18;
+    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
+    P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
+    // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
+    const lifted = s => hands[s].ok && hands[s].wrist.y > P[s].floor + LIFT;
+    for (const side of ['left', 'right']) {
+      const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
+      if (!h.ok) { d.lost += dt; if (d.lost > 0.6) { d.state = 'down'; d.fired = false; } continue; }
+      d.lost = 0;
+      const r = h.wrist.y;
+      if (d.state === 'down') {
+        d.floor += (r - d.floor) * Math.min(1, r < d.floor ? 0.5 : dt * 0.3); // altura de la muñeca apoyada
+        if (r > d.floor + LIFT && !lifted(other)) { d.state = 'up'; d.t0 = t; d.fired = false; d.dev = 0; }
+      } else {
+        d.dev = Math.max(d.dev, Math.abs(y - P.ref));
+        if (r < d.floor + LIFT * 0.5) d.state = 'down';
+        else if (lifted(other)) d.fired = true; // las dos manos arriba: esta subida ya no dispara
+        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
+      }
+    }
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = settings.pushDepth / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
-    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!' });
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
   } else {
     const range = settings.curlRange / 100;
     for (const side of ['left', 'right']) {
@@ -3228,7 +3513,7 @@ function aimSources() {
   return out;
 }
 function updateAim(t) {
-  const show = settings.mode === 'flyers' && ['ready', 'play', 'rest'].includes(state);
+  const show = settings.mode === 'flyers' && settings.exercise !== 'superman' && ['ready', 'play', 'rest'].includes(state);
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
@@ -3268,6 +3553,8 @@ function buildWave(i) {
   if (boss) list.push(boss);
   return list;
 }
+// Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
+function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
@@ -3277,7 +3564,7 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers') e = isPush() ? new Spider(spec, pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  else if (settings.mode === 'walkers') e = isTiny() ? new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -3292,7 +3579,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = [];
   projs.forEach(p => scene.remove(p.m)); projs = [];
-  clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; nextArcDrop = 0;
+  clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
@@ -3304,23 +3591,25 @@ function summaryText() {
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
 function lobbyMenu(reanchor) {
+  endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
-  const start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`); else beginRun(); };
+  const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
+    ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs'], settings.mode === 'flyers' ? ['superman', 'Superman'] : ['plank1', 'Plancha 1 brazo', settings.mode !== 'walkers']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
+  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   rows.push(...musicRows());
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
-  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
+  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows, { reanchor });
   m.rebuild = () => lobbyMenu();
@@ -3330,7 +3619,7 @@ function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
-  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key }));
+  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });
   const m = openMenu(rows); m.rebuild = () => settingsMenu(back, tab);
@@ -3359,8 +3648,9 @@ function pauseMenu(reanchor) {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...musicRows(),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Ajustar barra' : 'Ajustar paralelas', onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
-    { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
+    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(true); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
 }
@@ -3368,21 +3658,33 @@ function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats();
-  DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down';
+  DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
-function arenaFromHead() {
-  arena.position.set(head.p.x, 0, head.p.z);
-  const f = fwd(); arena.rotation.y = Math.abs(f.y) < 0.94 ? yawOf(head.q) : lastStandYaw;
+// Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
+// arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
+const _bu = new V3();
+function bodyYaw() {
+  const f = fwd(); if (Math.abs(f.y) < 0.7) return yawOf(head.q);
+  _bu.set(0, 1, 0).applyQuaternion(head.q); if (f.y > 0) _bu.negate(); _bu.y = 0;
+  return _bu.lengthSq() > 0.04 ? Math.atan2(-_bu.x, -_bu.z) : lastStandYaw;
+}
+function arenaFromHead() { arena.position.set(head.p.x, 0, head.p.z); arena.rotation.y = bodyYaw(); }
+// Mientras calibras, el entorno y los enemigos se van colocando a tu alrededor; al calibrar se fijan
+function arenaFollow(dt) {
+  const k = Math.min(1, dt * 4);
+  arena.position.x += (head.p.x - arena.position.x) * k; arena.position.z += (head.p.z - arena.position.z) * k;
+  arena.rotation.y += wrapAng(bodyYaw() - arena.rotation.y) * k;
 }
 function calibrate() {
   arenaFromHead();
-  const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isPush()) { calibRef = y; lastStandY = y; }
-  for (const s of ['left', 'right']) if (hands[s].ok) DET.curl[s].bottom = hands[s].wrist.y - y;
+  const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isFloor()) { calibRef = y; lastStandY = y; }
+  for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
+  DET.pl.ref = y; DET.su.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 function startWave(i) {
@@ -3422,6 +3724,7 @@ function endRun(win, manual) {
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
+  if (SES.active) { sessionBlockDone(win, manual); return; } // sesión: pasa al siguiente bloque
   endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
 }
 function endMenu(title, lines) {
@@ -3430,7 +3733,7 @@ function endMenu(title, lines) {
   const m = openMenu(rows, { reanchor: true }); m.rebuild = () => endMenu(title, lines);
 }
 function exitAll() {
-  hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
+  endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
   const s = renderer.xr.getSession(); if (s) s.end().catch(() => {});
   if (preview) stopPreview();
   ambientStop(); renderHistory(); syncForm();
@@ -3442,10 +3745,12 @@ function gameStep(dt, t) {
   stateT += dt;
   if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
-    const ok = !isPush() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > 0.15);
+    arenaFollow(dt);
+    const ok = !isFloor() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
+  else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
   if (state === 'play') {
@@ -3476,9 +3781,9 @@ function gameStep(dt, t) {
   }
   if (settings.mode === 'arcs') updateNextArc();
   const f = fwdH();
-  if (isPush() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
+  if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
-  if (chargeOrb.visible) { const s = 0.15 + Math.sin(t * 10) * 0.03; chargeOrb.scale.set(s, s, 1); }
+  if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
 }
 
 
@@ -3492,6 +3797,7 @@ function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
+  if (settings.exercise === 'row' && dipOne()) return Math.abs(l.x) < 1.0 && Math.abs(l.z) < settings.dipLen / 200 + 0.35 && y < settings.dipH / 100 + 0.05;
   if (settings.exercise === 'row') return Math.abs(l.x) < settings.dipGap / 200 + 0.35 && Math.abs(l.z) < settings.dipLen / 200 + 0.9 && y < settings.dipH / 100 + 0.05;
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
@@ -3794,11 +4100,13 @@ function placeConfirm() {
 }
 function placeFromHands(k, L, R) {
   const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
-  e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
+  // barra de puerta y paralela única: las manos van a lo largo de la barra; con dos paralelas, una en cada barra
+  const one = k === 'dip' && dipOne();
+  e.x = mid.x; e.z = mid.z; e.yaw = one ? Math.atan2(dx, dz) : Math.atan2(-dz, dx);
   if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
-  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); if (!one) setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
   equipChanged(k);
-  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
+  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : one ? `Paralela colocada a ${settings.dipH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
 }
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
@@ -3806,15 +4114,16 @@ function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x 
 function adjustMenu(back, reanchor) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
-  const what = door ? 'la barra virtual coincida' : 'las paralelas virtuales coincidan';
-  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${door ? 'está colocada' : 'están colocadas'}: pulsa Colocar con las manos`;
+  const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
+  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${nm.pl ? 'están colocadas' : 'está colocada'}: pulsa Colocar con las manos`;
   const rows = [
-    { t: 'title', text: door ? 'AJUSTAR BARRA' : 'AJUSTAR PARALELAS' },
+    { t: 'title', text: 'AJUSTAR ' + nm.name.toUpperCase() },
     { t: 'text', text: note, color: PLACE.note ? '#3cf0c6' : e.set ? '#d8d3f5' : '#ffd166' },
+    ...(door ? [] : [{ t: 'field', key: 'dipBars', after: () => adjustMenu(back) }]),
     { t: 'field', key: door ? 'doorH' : 'dipH' },
-    { t: 'field', key: door ? 'doorW' : 'dipGap' }
+    door ? { t: 'field', key: 'doorW' } : dipOne() ? { t: 'field', key: 'dipLen' } : { t: 'field', key: 'dipGap' }
   ];
-  if (!door) rows.push({ t: 'field', key: 'dipLen' });
+  if (!door && !dipOne()) rows.push({ t: 'field', key: 'dipLen' });
   rows.push({ t: 'btns', items: [['Izquierda', -0.01, 0], ['Derecha', 0.01, 0], ['Acercar', 0, -0.01], ['Alejar', 0, 0.01]].map(([label, sx, fz]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, 0) })) });
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
@@ -3865,9 +4174,10 @@ function readXR(frame) {
 /* =================== PRUEBA EN EL ORDENADOR =================== */
 const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
 function previewInput(dt) {
-  const dropAmt = isPush() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
+  const dropAmt = isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
   let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
+  if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
@@ -3877,23 +4187,33 @@ function previewInput(dt) {
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
+  // superman: los brazos estirados por delante de la cabeza
+  if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }
+  // plancha con un brazo: las dos manos apoyadas junto a la cabeza; Q y E levantan la izquierda y la derecha
+  if (settings.exercise === 'plank1' && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
+    const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
+    h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
+  }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
 function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
-  PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
-  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
-  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  PV.baseY = !on ? (settings.exercise === 'superman' ? 0.22 : isFloor() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
+  const one = row && dipOne();
+  if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
+  camera.rotation.set(!on ? (isFloor() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {
   audioInit(); ensureRigs();
   Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
-  PV.baseY = isPush() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
-  camera.position.set(0, PV.baseY, 0); camera.rotation.set(isPush() ? -0.7 : -0.12, 0, 0);
+  const sup = settings.exercise === 'superman';
+  PV.baseY = sup ? 0.22 : isFloor() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
+  camera.position.set(0, PV.baseY, 0); camera.rotation.set(sup ? -0.35 : isFloor() ? -0.7 : -0.12, 0, 0);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   arena.position.set(0, 0, 0); arena.rotation.set(0, 0, 0);
@@ -3979,7 +4299,7 @@ async function startXR(ar) {
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
-    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
@@ -4003,7 +4323,7 @@ async function checkXR() {
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

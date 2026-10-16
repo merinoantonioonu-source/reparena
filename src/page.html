@@ -91,6 +91,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfield input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
 .status.sp{margin:8px 0 0}
+.session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
+.seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
 </head>
 <body>
@@ -131,9 +139,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
         <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
         <small>Cada brazo dispara al llegar al hombro. En Enjambre, mira al objetivo mientras subes la mancuerna.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
+        <span class="tag">Asalto · visor y muñecas</span><b>Plancha con un brazo</b>
+        <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-superman" value="superman">
+        <span class="tag">Enjambre · visor y muñecas</span><b>Superman</b>
+        <small>Tumbado boca abajo, sube el tronco con los brazos estirados y aguanta los segundos que elijas: disparas al bicho que vuela bajo hacia ti.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-row" value="row">
         <span class="tag">Paralelas · altura del visor</span><b>Remo invertido</b>
-        <small>Colgado bajo las paralelas, cuerpo casi horizontal y pies en el suelo. Tira hasta que la cabeza suba lo que pidas.</small></label>
+        <small>Colgado bajo una o dos paralelas, cuerpo casi horizontal y pies en el suelo. Tira hasta que la cabeza suba lo que pidas.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-pullup" value="pullup">
         <span class="tag">Barra de puerta · altura del visor</span><b>Dominadas</b>
         <small>Desde colgado con los brazos estirados, sube la cabeza hasta reventar el objetivo que espera arriba.</small></label>
@@ -158,6 +172,19 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <button class="btn small" id="btnReset">Restablecer ajustes</button>
   </div>
   <p class="status" id="xrStatus"></p>
+
+  <section class="session">
+    <h2>Sesión de entrenamiento</h2>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <div class="seslist" id="sesList"></div>
+    <div class="actions">
+      <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
+      <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
+      <button class="btn small" id="btnSesClear">Vaciar</button>
+    </div>
+    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <p class="estimate" id="sesSummary"></p>
+  </section>
 
   <section class="music">
     <h2>Música con Spotify</h2>
@@ -202,7 +229,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>

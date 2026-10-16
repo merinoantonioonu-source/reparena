@@ -96,7 +96,7 @@ const stand = (() => {
   g.visible = false; scene.add(g); return g;
 })();
 function placeAnchor(dist) {
-  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? head.p.y - 0.3 : standHeadY() - 0.42;
+  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.3, head.p.y - 0.3) : standHeadY() - 0.42;
   return { pos, yaw: yawOf(head.q) };
 }
 function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
@@ -261,7 +261,7 @@ function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(
 function updateViewPanels(dt) {
   const k = 1 - Math.exp(-dt * 4);
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, -0.08, -1.0), new V3());
+    const tgt = headLocal(_hl.set(0, menu ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
     center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
   } else center.mesh.userData.init = false;
@@ -278,12 +278,12 @@ function drawCenter() {
     const door = PLACE.kind === 'door';
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left';
     if (PLACE.wait) {
-      c.fillText(door ? '¡BARRA COLOCADA!' : '¡PARALELAS COLOCADAS!', 44, 68);
+      const nm = eqName(PLACE.kind); c.fillText(`¡${nm.name.toUpperCase()} ${nm.pl ? 'COLOCADAS' : 'COLOCADA'}!`, 44, 68);
       c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; [PLACE.note, door ? 'Suéltate: ahora aparecen los ajustes finos.' : 'Ponte de pie: aparecen los ajustes finos.'].forEach((l, i) => { fitFont(c, l, W - 88, 36, '500 %px ' + FB); c.fillText(l, 44, 148 + i * 52); });
       centerBar(c, W, H, 1);
     } else {
-      c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
-      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
+      c.fillText('COLOCAR ' + eqName(PLACE.kind).name.toUpperCase(), 44, 68);
+      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : dipOne() ? ['Túmbate cruzado debajo y agárrala con', `las dos manos, brazos estirados. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
       const st = !PLACE.seen ? ['No veo tus manos: míralas', '#ff8a3d'] : !PLACE.up ? ['Sube las manos por encima de la cabeza', '#ff8a3d'] : !PLACE.ok ? ['Separa más las manos', '#ff8a3d'] : ['Bien: no te muevas', '#3cf0c6'];
       c.font = `500 34px ${FB}`; c.fillStyle = st[1]; c.fillText(st[0], 44, 258);
@@ -295,21 +295,28 @@ function drawCenter() {
     const row = settings.exercise === 'row';
     if (BAR.phase === 'place') {
       c.fillStyle = BAR.resume ? '#3cff8a' : '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(BAR.resume ? (row ? '¡A LAS PARALELAS!' : '¡A LA BARRA!') : row ? 'PARALELAS' : 'BARRA', 44, 68);
-      const L = row ? ['Túmbate bajo las paralelas, agárralas', 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
+      const L = row ? [`Túmbate bajo ${eqName().the}, ${dipOne() ? 'agárrala' : 'agárralas'}`, 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
-      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : row ? 'lejos de las paralelas' : 'lejos de la barra', W - 44, 68);
+      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : 'lejos de ' + eqName().the, W - 44, 68);
       centerBar(c, W, H, BAR.still / 0.8);
     } else {
       c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
       c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
     }
+  } else if (state === 'between') {
+    const nb = SES.blocks[SES.idx + 1];
+    c.textAlign = 'left'; c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.fillText('DESCANSO', 44, 68);
+    c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(0, Math.ceil(SES.wait))), W - 50, 150);
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(`Bloque ${SES.idx + 2} de ${SES.blocks.length}:`, 44, 150);
+    if (nb) { c.fillStyle = '#ffd166'; fitFont(c, blockLabel(nb), W - 300, 40, '500 %px ' + FB); c.fillText(blockLabel(nb), 44, 210); }
+    centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
+    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (settings.exercise === 'curl' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
+    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {
@@ -333,14 +340,15 @@ function drawBoard() {
   c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
   c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
   c.textBaseline = 'middle';
-  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end'].includes(state)) {
+  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
     c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
     board.tex.needsUpdate = true; return;
   }
   const N = settings.waves;
-  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; c.fillText(N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`, 36, 52);
+  const wv = N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`;
+  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; fitFont(c, SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 330, 40, '%px ' + FD); c.fillText(SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 36, 52);
   c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
   c.textAlign = 'right';
   if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
@@ -358,9 +366,10 @@ function drawBoard() {
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
+  else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (charged) { c.fillStyle = '#3cf0c6'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText('● CARGADO', W - 36, 262); }
+  if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
   c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';

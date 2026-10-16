@@ -3,7 +3,10 @@
 Juego de ejercicio físico en realidad virtual y mixta para **Meta Quest 3**, que se juega desde el navegador de las gafas (WebXR) con seguimiento de manos. Cada repetición bien hecha es un disparo.
 
 - **Modos:** Asalto (robots y, en flexiones, arañas), Enjambre (drones y avispas, apuntas con las manos o la mirada), Arcos (solo sentadillas: agáchate para pasar bajo los arcos de energía) y Barras (barra de dominadas de puerta o paralelas: revientas con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza; debajo hay un charco con tentáculos y, si te sueltas, caes en él).
-- **Ejercicios:** sentadillas y flexiones (se detectan por la altura del visor), curl de bíceps (por la posición de las muñecas) y, en Barras, remo invertido en paralelas, dominadas y colgado (altura del visor; la repetición cuenta al subir).
+- **Ejercicios:** sentadillas y flexiones (se detectan por la altura del visor), curl de bíceps (por la posición de las muñecas), plancha con un brazo (solo en Asalto: levantar un brazo dispara a las arañas de su lado, que llegan por los dos costados), superman (solo en Enjambre: tumbado boca abajo, subir el tronco con los brazos estirados y aguantar los segundos elegidos dispara a los bichos que vuelan bajo) y, en Barras, remo invertido en una o dos paralelas, dominadas y colgado (altura del visor; la repetición cuenta al subir).
+- **Flexiones cargadas:** cada 0,8 s que aguantas abajo sube la carga hasta ×4; el disparo hace más daño y desde ×3 estalla alrededor.
+- **Calibración:** mientras calibras, el entorno y los enemigos se colocan a tu alrededor, también tumbado o en plancha (la orientación sale de hacia dónde apunta tu cabeza).
+- **Sesiones:** en la página se arma una secuencia de bloques (modo, ejercicio y repeticiones; en colgado, segundos). En el atril, EMPEZAR SESIÓN los juega seguidos, cada uno en oleadas de unas 10 repeticiones, con descanso entre bloques y resumen final, sin tocar tus ajustes guardados.
 - **Aparatos:** «Colocar barra» (o «Colocar paralelas») en el atril entra en el modo colocación: el atril se oculta, agarras el aparato con las dos manos por encima de la cabeza y, tras 5 s quieto, la media de esas posiciones fija su sitio, su orientación y su altura. Después el atril vuelve con los ajustes finos (altura, ancho, mover 1 cm, girar 1°). El botón de la muñeca o Esc cancelan; en el ordenador, H simula las manos arriba. Se guardan como anclas persistentes de WebXR para que las Quest las recuerden. En VR se ven como modelos completos (con el marco y el muro de la puerta); en realidad mixta, como un contorno luminoso.
 - **Música:** Spotify como mando a distancia (anterior, pausa, siguiente, volumen y canción actual) desde el atril y el menú de pausa. Usa la Web API con inicio de sesión PKCE, sin servidor. Hace falta Spotify Premium y una app propia en developer.spotify.com con la URL de la página como Redirect URI; la página explica los pasos.
 - Todos los ajustes son numéricos: deslizador, botones − / + o teclado.
@@ -27,6 +30,7 @@ Abre la página de GitHub Pages del repositorio en el navegador de las Quest 3 y
 | `src/50_fx.js` | Partículas, explosiones, restos. |
 | `src/60_ui.js` | Menú fijo en atril, botones táctiles, deslizadores, teclado, paneles. |
 | `src/65_music.js` | Spotify como mando a distancia: inicio de sesión PKCE, Web API y filas de los menús. |
+| `src/66_session.js` | Sesiones de entrenamiento: bloques encadenados, descanso, resumen y editor de la página. |
 | `src/70_game.js` | Lógica de partida: enemigos, arcos, detectores de repeticiones, oleadas. |
 | `src/72_bars.js` | Modo Barras: colgarse, detector de subida, caídas, objetivos que se revientan con la cabeza y colocación de los aparatos. |
 | `src/80_main.js` | Entrada XR (manos y mandos), bucle principal, prueba en el ordenador. |

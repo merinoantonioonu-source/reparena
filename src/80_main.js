@@ -37,9 +37,10 @@ function readXR(frame) {
 /* =================== PRUEBA EN EL ORDENADOR =================== */
 const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
 function previewInput(dt) {
-  const dropAmt = isPush() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
+  const dropAmt = isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
   let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
+  if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
@@ -49,23 +50,33 @@ function previewInput(dt) {
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
+  // superman: los brazos estirados por delante de la cabeza
+  if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }
+  // plancha con un brazo: las dos manos apoyadas junto a la cabeza; Q y E levantan la izquierda y la derecha
+  if (settings.exercise === 'plank1' && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
+    const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
+    h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
+  }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
 function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
-  PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
-  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
-  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  PV.baseY = !on ? (settings.exercise === 'superman' ? 0.22 : isFloor() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
+  const one = row && dipOne();
+  if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
+  camera.rotation.set(!on ? (isFloor() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {
   audioInit(); ensureRigs();
   Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
-  PV.baseY = isPush() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
-  camera.position.set(0, PV.baseY, 0); camera.rotation.set(isPush() ? -0.7 : -0.12, 0, 0);
+  const sup = settings.exercise === 'superman';
+  PV.baseY = sup ? 0.22 : isFloor() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
+  camera.position.set(0, PV.baseY, 0); camera.rotation.set(sup ? -0.35 : isFloor() ? -0.7 : -0.12, 0, 0);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   arena.position.set(0, 0, 0); arena.rotation.set(0, 0, 0);
@@ -151,7 +162,7 @@ async function startXR(ar) {
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
-    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
@@ -175,7 +186,7 @@ async function checkXR() {
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

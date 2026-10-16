@@ -9,6 +9,7 @@ function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
+  if (settings.exercise === 'row' && dipOne()) return Math.abs(l.x) < 1.0 && Math.abs(l.z) < settings.dipLen / 200 + 0.35 && y < settings.dipH / 100 + 0.05;
   if (settings.exercise === 'row') return Math.abs(l.x) < settings.dipGap / 200 + 0.35 && Math.abs(l.z) < settings.dipLen / 200 + 0.9 && y < settings.dipH / 100 + 0.05;
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
@@ -311,11 +312,13 @@ function placeConfirm() {
 }
 function placeFromHands(k, L, R) {
   const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
-  e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
+  // barra de puerta y paralela única: las manos van a lo largo de la barra; con dos paralelas, una en cada barra
+  const one = k === 'dip' && dipOne();
+  e.x = mid.x; e.z = mid.z; e.yaw = one ? Math.atan2(dx, dz) : Math.atan2(-dz, dx);
   if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
-  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); if (!one) setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
   equipChanged(k);
-  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
+  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : one ? `Paralela colocada a ${settings.dipH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
 }
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
@@ -323,15 +326,16 @@ function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x 
 function adjustMenu(back, reanchor) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
-  const what = door ? 'la barra virtual coincida' : 'las paralelas virtuales coincidan';
-  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${door ? 'está colocada' : 'están colocadas'}: pulsa Colocar con las manos`;
+  const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
+  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${nm.pl ? 'están colocadas' : 'está colocada'}: pulsa Colocar con las manos`;
   const rows = [
-    { t: 'title', text: door ? 'AJUSTAR BARRA' : 'AJUSTAR PARALELAS' },
+    { t: 'title', text: 'AJUSTAR ' + nm.name.toUpperCase() },
     { t: 'text', text: note, color: PLACE.note ? '#3cf0c6' : e.set ? '#d8d3f5' : '#ffd166' },
+    ...(door ? [] : [{ t: 'field', key: 'dipBars', after: () => adjustMenu(back) }]),
     { t: 'field', key: door ? 'doorH' : 'dipH' },
-    { t: 'field', key: door ? 'doorW' : 'dipGap' }
+    door ? { t: 'field', key: 'doorW' } : dipOne() ? { t: 'field', key: 'dipLen' } : { t: 'field', key: 'dipGap' }
   ];
-  if (!door) rows.push({ t: 'field', key: 'dipLen' });
+  if (!door && !dipOne()) rows.push({ t: 'field', key: 'dipLen' });
   rows.push({ t: 'btns', items: [['Izquierda', -0.01, 0], ['Derecha', 0.01, 0], ['Acercar', 0, -0.01], ['Alejar', 0, 0.01]].map(([label, sx, fz]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, 0) })) });
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });

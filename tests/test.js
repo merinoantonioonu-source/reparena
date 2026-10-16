@@ -47,7 +47,7 @@ const expose = `
 window.__RA = { get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, get score(){return score}, DET, get msg(){return msg},
-  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup };
+  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -68,7 +68,7 @@ function findW(label) { const w = RA.activeWidgets().find(w => w.label === label
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
 
-async function runConfig(name, cfg, simulate, maxSec = 420, check) {
+async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
   for (const k in cfg) RA.setSetting(k, cfg[k]);
   RA.startPreview(); frame(3);
   press('EMPEZAR');
@@ -80,9 +80,10 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check) {
     maxEnemies = Math.max(maxEnemies, RA.enemies.length + RA.arcs.length);
   }
   const s = RA.stats;
-  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
+  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} partial=${s.partial} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
   if (check) { const why = check(s); if (why) errors.push(`${name}: ${why}`); }
-  if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
+  if (RA.state !== 'end' && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
+  else if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
   press('Menú principal'); frame(5);
   RA.exitAll(); frame(1);
 }
@@ -98,6 +99,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
   await runConfig('Asalto+sentadillas', { ...base, mode: 'walkers', exercise: 'squat' }, squatSim());
   await runConfig('Asalto+flexiones', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 6 }, squatSim(2.6));
+  await runConfig('Asalto+flexiones cargadas (3 s abajo)', { ...base, mode: 'walkers', exercise: 'pushup', walkTime: 20, repsWave: 6, perfectTime: 0 }, t => { RA.PV.crouch = (t % 4.4) < 3.4; }, 420, s => s.kills < s.reps * 0.6 ? `la carga no aumenta el daño (${s.kills} muertes con ${s.reps} disparos)` : '');
+  const sides = new Set();
+  await runConfig('Asalto+plancha con un brazo', { ...base, mode: 'walkers', exercise: 'plank1', walkTime: 10 }, t => {
+    RA.PV.keys.KeyQ = (t % 3) > 0.2 && (t % 3) < 1.0; RA.PV.keys.KeyE = (t % 3) > 1.5 && (t % 3) < 2.3;
+    RA.enemies.forEach(e => sides.add(e.pos.x < 0 ? 'izq' : 'der'));
+  }, 420, s => s.kills < 4 ? 'la plancha con un brazo no mata arañas' : sides.size < 2 ? 'las arañas no llegan por los dos lados' : '');
+  RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
+  const supCfg = { ...base, mode: 'flyers', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 8 };
+  await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 420, s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : '');
+  await runConfig('Enjambre+superman demasiado corto', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; }, 30, s => s.reps ? 'subir y bajar rápido no debería disparar' : !s.partial ? 'debería avisar de que hay que aguantar' : '', true);
+  await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
+  RA.PV.keys.KeyR = false;
   await runConfig('Asalto+curl', { ...base, mode: 'walkers', exercise: 'curl' }, curlSim);
   await runConfig('Enjambre+sentadillas', { ...base, mode: 'flyers', exercise: 'squat' }, squatSim());
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, squatSim());
@@ -106,8 +119,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Arcos sin agacharse (golpes)', { ...base, mode: 'arcs', exercise: 'squat', lives: 3, waves: 1 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Asalto con vidas (derrota)', { ...base, mode: 'walkers', exercise: 'squat', lives: 1, walkTime: 4 }, t => { RA.PV.crouch = false; }, 120);
   await runConfig('Jefe en oleada final', { ...base, mode: 'walkers', exercise: 'squat', waves: 1, repsWave: 10 }, squatSim(2.4));
-  const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12 };
+  const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
   await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, pullSim(), 420, s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : '');
+  await runConfig('Barras+remo una paralela', { ...bars, exercise: 'row', dipBars: '1', barTarget: 'bubbles' }, pullSim(), 420, s => s.kills < 4 ? 'con una paralela no revienta las pompas' : '');
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -152,6 +166,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Más ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
   press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
   RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Asalto'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
+  // ---- sesión: tres bloques seguidos, ajustes intactos y resumen ----
+  RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.setSetting('waves', 5); RA.setSetting('repsWave', 12); RA.setSetting('rest', 2); RA.setSetting('lives', 0);
+  RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 6 }, { mode: 'walkers', ex: 'pushup', n: 5 }, { mode: 'bars', ex: 'hang', n: 8 }]; RA.SES.rest = 3;
+  const hist0 = JSON.parse(storage.get('reparena3-history') || '[]').length;
+  RA.lobbyMenu(true); frame(2); log('lobby shows session:', RA.activeWidgets().some(w => /EMPEZAR SESIÓN/.test(w.label)));
+  RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)).onPress(); frame(2);
+  let blocksSeen = new Set(), storedDuring = null;
+  for (let i = 0; i < 9000 && RA.state !== 'end'; i++) {
+    const ex = RA.settings.exercise; blocksSeen.add(RA.SES.idx + ':' + ex);
+    RA.PV.crouch = RA.state === 'play' && (ex === 'squat' ? true : ex === 'pushup' ? (i % 80) < 44 : false);
+    if (RA.SES.idx === 1 && !storedDuring) { RA.setSetting('volume', 75); storedDuring = JSON.parse(storage.get('reparena3-settings')); }
+    frame(1);
+  }
+  RA.PV.crouch = false;
+  const hist1 = JSON.parse(storage.get('reparena3-history') || '[]').length;
+  log('session: state', RA.state, 'blocks played', [...blocksSeen].join(' '), 'results', RA.SES.results.map(r => r.reps).join('/'), 'stored mode during block 2', storedDuring && storedDuring.mode, 'restored', RA.settings.mode, RA.settings.exercise, RA.settings.waves, 'history +', hist1 - hist0);
+  if (RA.state !== 'end' || RA.SES.results.length !== 3) errors.push('la sesión no juega los tres bloques');
+  if (!storedDuring || storedDuring.mode !== 'walkers' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
+  if (RA.settings.mode !== 'walkers' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
+  if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
+  RA.SES.blocks = []; press('Menú principal'); frame(2);
   // pausa durante partida
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.lobbyMenu(); frame(1); press('EMPEZAR'); frame(120);
   RA.openPause(); frame(2); press('Ajustes'); frame(1); press('Volver'); frame(1); press('Continuar'); frame(10);
@@ -225,6 +260,51 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (Math.abs(door.x - oldX - 1) > 0.01) errors.push('el ancla restaurada no mueve la barra');
   RA.exitAll(); frame(2, 16, xrFrame);
 
+  // ---- Plancha con un brazo en XR: cada brazo dispara a su lado; los dos a la vez no cuentan ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'plank1', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 6, maxAlive: 4, spawnGap: 0.5 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  RA.beginRun(); XRS.headY = 0.55; frame(200, 16, xrFrame); frame(250, 16, xrFrame);
+  log('plank1 after calib', RA.state, 'enemies', RA.enemies.length);
+  const sideOf = e => e.pos.x < 0 ? 'left' : 'right', hpSide = s => RA.enemies.filter(e => e.alive && sideOf(e) === s).reduce((a, e) => a + e.hp, 0);
+  const hl0 = hpSide('left'), hr0 = hpSide('right'), pr0 = RA.stats.reps;
+  XRS.lift = 'left'; frame(40, 16, xrFrame); XRS.lift = null; frame(40, 16, xrFrame);
+  log('lift left: reps +' + (RA.stats.reps - pr0), 'left hp', hl0, '→', hpSide('left'), 'right hp', hr0, '→', hpSide('right'));
+  if (RA.stats.reps - pr0 !== 1 || hpSide('right') < hr0) errors.push('plancha: levantar el brazo izquierdo no dispara solo a la izquierda');
+  const r1 = RA.stats.reps; XRS.lift = 'both'; frame(60, 16, xrFrame); XRS.lift = null; frame(30, 16, xrFrame);
+  log('lift both: reps +' + (RA.stats.reps - r1));
+  if (RA.stats.reps !== r1) errors.push('plancha: levantar los dos brazos no debería disparar');
+  RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Una sola paralela: las manos van a lo largo de la barra ----
+  for (const [k, v] of Object.entries({ mode: 'bars', exercise: 'row', dipBars: '1', dipGap: 58 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+  press('Colocar paralela'); frame(2, 16, xrFrame); XRS.headY = 0.45;
+  XRS.grip = { left: new THREE.Vector3(-0.25, 0.95, -0.2), right: new THREE.Vector3(0.25, 0.95, -0.2) }; frame(350, 16, xrFrame); XRS.grip = null;
+  const dip1 = RA.EQ.xr.dip; log('one dip bar from hands: set', dip1.set, 'yaw', dip1.yaw.toFixed(2), 'dipH', RA.settings.dipH, 'gap kept', RA.settings.dipGap);
+  if (!dip1.set || Math.abs(Math.abs(dip1.yaw) - Math.PI / 2) > 0.05 || RA.settings.dipGap !== 58) errors.push('colocar una sola paralela con las manos no funciona');
+  XRS.headY = 1.7; frame(100, 16, xrFrame); press('Listo'); frame(2, 16, xrFrame); RA.setSetting('dipBars', '2'); RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Al calibrar, el entorno se coloca según tu posición y hacia dónde mira tu cuerpo (en plancha, mirando al suelo) ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 4 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+  RA.beginRun(); XRS.headX = 1.0; XRS.headZ = 0.3; XRS.headY = 0.55;
+  XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.4, -Math.PI / 2, 0, 'YXZ')); // cuerpo hacia +X, mirando al suelo
+  frame(200, 16, xrFrame);
+  log('calib follows body: state', RA.state, 'arena pos', RA.arena.position.x.toFixed(2), RA.arena.position.z.toFixed(2), 'yaw', RA.arena.rotation.y.toFixed(2));
+  if (RA.state !== 'ready' || Math.abs(RA.arena.position.x - 1) > 0.02 || Math.abs(RA.arena.position.z - 0.3) > 0.02 || Math.abs(RA.arena.rotation.y + Math.PI / 2) > 0.05) errors.push('al calibrar el entorno no se coloca según el cuerpo');
+  XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Flexiones en XR: calibrar un poco alto o mirar al suelo no debe impedir el disparo ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 6, rest: 0, walkTime: 30, pushDepth: 13 })) RA.setSetting(k, v);
+  for (const [name, calibY, topY, low, want] of [['calibrada a cuatro patas', 0.68, 0.56, 0.22, 4], ['mirando al suelo', 0.56, 0.51, 0.22, 4], ['medias flexiones', 0.56, 0.56, 0.08, 0]]) {
+    XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); XRS.headY = calibY; frame(200, 16, xrFrame); XRS.headY = topY; frame(60, 16, xrFrame);
+    for (let i = 0; i < 1000 && RA.state !== 'end'; i++) { XRS.headY = (i % 150) < 75 ? topY - low : topY; frame(1, 16, xrFrame); }
+    log(`XR push-ups ${name}: reps`, RA.stats.reps, 'partial', RA.stats.partial);
+    if (want ? RA.stats.reps < want : RA.stats.reps) errors.push(`flexiones ${name}: ${RA.stats.reps} repeticiones`);
+    RA.exitAll(); frame(2, 16, xrFrame);
+  }
+
   // ---- Spotify ----
   await sleep(50);
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
@@ -256,7 +336,7 @@ function makeXRFrame() {
     const s = RA.renderer.xr.getSession(); if (s) s.inputSources = sources;
     return {
       session: s || { inputSources: sources },
-      getViewerPose() { return { transform: { position: { x: 0, y: XRS.headY, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
       getPose(space) { if (space.anchorPose) return { transform: space.anchorPose }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
@@ -265,6 +345,7 @@ function makeXRFrame() {
         let ori = { x: 0, y: 0, z: 0, w: 1 };
         if (j.side === 'left' && XRS.wristUp) { pos = { x: -0.1 + (i % 5) * 0.01, y: XRS.headY - 0.3, z: -0.35 - Math.floor(i / 5) * 0.02 }; ori = { x: 0.7071, y: 0, z: 0, w: 0.7071 }; }
         if (j.side === 'right' && i === 9 && XRS.tip) pos = { x: XRS.tip.x, y: XRS.tip.y, z: XRS.tip.z };
+        if (XRS.lift === j.side || XRS.lift === 'both') pos.y += 0.4;
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }
