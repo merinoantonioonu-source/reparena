@@ -9,10 +9,12 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
 const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
 const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
+// Ejercicios que solo se juegan en un modo
+const EX_ONLY = { plank1: 'walkers', superman: 'flyers' };
 
 /* =================== AJUSTES =================== */
 const SCHEMA = [
@@ -29,7 +31,9 @@ const SCHEMA = [
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
-  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
+  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 5, max: 35, step: 1, def: 12, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo.' },
+  { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
+  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['walkers'] },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['flyers'], hint: 'En flexiones los bichos van a escala, unas 7 veces más lentos.' },
@@ -93,7 +97,7 @@ function fmtVal(f, v = settings[f.key]) {
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (settings.mode === 'arcs') settings.exercise = 'squat';
-  if (settings.exercise === 'plank1' && settings.mode !== 'walkers') settings.exercise = 'pushup';
+  if (EX_ONLY[settings.exercise] && settings.mode !== EX_ONLY[settings.exercise]) settings.exercise = 'pushup';
   if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
 function saveSettings() { store(STORE_KEY, settings); }
@@ -102,9 +106,9 @@ function setSetting(key, v) {
   settings[key] = f ? clampSetting(f, v) : v;
   if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
   if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
-  // la plancha con un brazo solo se juega en Asalto (arañas por los dos lados)
-  if (key === 'exercise' && v === 'plank1') settings.mode = 'walkers';
-  if (key === 'mode' && v !== 'walkers' && settings.exercise === 'plank1') settings.exercise = v === 'arcs' ? 'squat' : 'pushup';
+  // la plancha con un brazo solo se juega en Asalto (arañas por los dos lados) y el superman en Enjambre (voladores bajos)
+  if (key === 'exercise' && EX_ONLY[v]) settings.mode = EX_ONLY[v];
+  if (key === 'mode' && EX_ONLY[settings.exercise] && v !== EX_ONLY[settings.exercise]) settings.exercise = v === 'arcs' ? 'squat' : v === 'bars' ? 'row' : 'pushup';
   // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
   if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
   if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
@@ -119,7 +123,9 @@ function fieldVisible(f) {
   return true;
 }
 // Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
-const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
+const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1' || settings.exercise === 'superman';
+// Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
+const isTiny = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -172,7 +178,7 @@ function onFormInput(ev) {
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x) || (x === 'plank1' && settings.mode !== 'walkers'); });
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x) || (!!EX_ONLY[x] && settings.mode !== EX_ONLY[x]); });
   const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
   note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
   for (const f of SCHEMA) {
@@ -190,7 +196,7 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
+function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
 function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
 function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
 function updateSummary() {

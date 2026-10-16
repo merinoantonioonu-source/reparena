@@ -170,7 +170,7 @@ function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
-  const D = arenaDepth(), push = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const D = arenaDepth(), push = isTiny(), low = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
   gates.forEach((g, i) => {
     g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
@@ -189,7 +189,7 @@ function layoutArena() {
   while (boardRig.children.length) boardRig.remove(boardRig.children[0]);
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
-  if (push) {
+  if (low) {
     rig.position.set(0, 0, -1.3);
     for (const s of [-1, 1]) k.add('steel', G.box(0.05, 0.22, 0.05), C.dark, s * 0.3, 0.11, -0.04);
     k.add('steel', G.box(0.88, 0.42, 0.04), C.dark, 0, 0.26, -0.03, -0.25, 0, 0);

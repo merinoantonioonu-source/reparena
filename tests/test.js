@@ -68,7 +68,7 @@ function findW(label) { const w = RA.activeWidgets().find(w => w.label === label
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
 
-async function runConfig(name, cfg, simulate, maxSec = 420, check) {
+async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
   for (const k in cfg) RA.setSetting(k, cfg[k]);
   RA.startPreview(); frame(3);
   press('EMPEZAR');
@@ -80,9 +80,10 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check) {
     maxEnemies = Math.max(maxEnemies, RA.enemies.length + RA.arcs.length);
   }
   const s = RA.stats;
-  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
+  log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} partial=${s.partial} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
   if (check) { const why = check(s); if (why) errors.push(`${name}: ${why}`); }
-  if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
+  if (RA.state !== 'end' && unfinished) RA.endRun(false, true); // prueba que no debe terminar sola
+  else if (RA.state !== 'end') errors.push(`${name}: did not finish (state ${RA.state}, wave ${RA.waveIdx}, queue ${RA.spawnQueue.length}, enemies ${RA.enemies.length})`);
   press('Menú principal'); frame(5);
   RA.exitAll(); frame(1);
 }
@@ -105,6 +106,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.enemies.forEach(e => sides.add(e.pos.x < 0 ? 'izq' : 'der'));
   }, 420, s => s.kills < 4 ? 'la plancha con un brazo no mata arañas' : sides.size < 2 ? 'las arañas no llegan por los dos lados' : '');
   RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
+  const supCfg = { ...base, mode: 'flyers', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 8 };
+  await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 420, s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : '');
+  await runConfig('Enjambre+superman demasiado corto', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; }, 30, s => s.reps ? 'subir y bajar rápido no debería disparar' : !s.partial ? 'debería avisar de que hay que aguantar' : '', true);
+  await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
+  RA.PV.keys.KeyR = false;
   await runConfig('Asalto+curl', { ...base, mode: 'walkers', exercise: 'curl' }, curlSim);
   await runConfig('Enjambre+sentadillas', { ...base, mode: 'flyers', exercise: 'squat' }, squatSim());
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, squatSim());
