@@ -111,7 +111,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section>
     <h2>Modo de juego</h2>
-    <div class="cards four">
+    <div class="cards">
       <label class="card"><input type="radio" name="mode" id="mode-walkers" value="walkers">
         <span class="tag">Disparo automático</span><b>Asalto</b>
         <small>Robots salen de las compuertas y vienen a por ti. En flexiones, arañas que salen del suelo.</small></label>
@@ -123,7 +123,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
-        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Debajo hay un charco con tentáculos: no te sueltes.</small></label>
+        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-touch" value="touch">
+        <span class="tag">Cabeza y manos</span><b>Toques</b>
+        <small>Vienen hacia ti aros que ondulan (mete la cabeza por el hueco) y gemas con una mano (tócalas). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
     </div>
   </section>
 
@@ -154,6 +157,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-hang" value="hang">
         <span class="tag">Barra de puerta · altura del visor</span><b>Colgado</b>
         <small>Aguanta colgado los segundos de cada oleada. Si te sueltas, caes al charco de los tentáculos.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-jump" value="jump">
+        <span class="tag">Toques · visor y manos</span><b>Saltos</b>
+        <small>Los aros llegan por encima de tu cabeza: salta para meterla en el hueco. Las gemas, arriba a los lados, se tocan saltando con el brazo estirado.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-abs" value="abs">
+        <span class="tag">Toques · visor y manos</span><b>Abdominales</b>
+        <small>Boca arriba con las rodillas dobladas. Los aros esperan en el arco que hace tu cabeza al subir el tronco, de frente o girados (oblicuos); las gemas, junto a las rodillas.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-combo" value="combo">
+        <span class="tag">Toques · tú eliges</span><b>Combinado</b>
+        <small>Elige una postura y mezcla movimientos: sentadilla + salto, flexión + plancha aguantada, abdominal + oblicuo… en orden o al azar.</small></label>
     </div>
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
   </section>
@@ -175,7 +187,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
@@ -188,7 +200,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="music">
     <h2>Música con Spotify</h2>
-    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el atril y desde el menú de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
+    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el menú principal y el de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
     <ol class="steps">
       <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
       <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
@@ -208,11 +220,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
-      <li>El menú principal aparece en un atril fijo delante de ti. No te sigue: acércate y pulsa los botones con la punta del índice. La distancia a la que aparece se cambia en Ajustes → Sistema.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de los aros (turquesa, con una cabeza dibujada) y toca con cualquier mano las gemas (naranjas, con una mano dibujada). Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
+      <li><strong>Pistolas</strong> (sentadillas en Asalto o Enjambre, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el atril. El atril se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el atril con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -229,7 +243,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano a la gema (Toques; Espacio lleva la cabeza al aro) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -247,12 +261,20 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado' };
-const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras' };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', barras: 'Barras', sistema: 'Sistema' };
-const BAR_EX = ['row', 'pullup', 'hang']; // ejercicios del modo Barras: el resto no se usa en él
-// Ejercicios que solo se juegan en un modo
-const EX_ONLY = { plank1: 'walkers', superman: 'flyers' };
+const EX_NAMES = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl de bíceps', plank1: 'Plancha con un brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', pushup: 'Flexiones', curl: 'Curl', plank1: 'Plancha 1 brazo', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Sistema' };
+// Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
+const MODE_EX = {
+  walkers: ['squat', 'pushup', 'curl', 'plank1'], flyers: ['squat', 'pushup', 'curl', 'superman'], arcs: ['squat'],
+  bars: ['row', 'pullup', 'hang'], touch: ['squat', 'jump', 'abs', 'pushup', 'combo']
+};
+const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
+const BAR_EX = MODE_EX.bars; // ejercicios del modo Barras: el resto no se usa en él
+// Al cambiar de modo, el ejercicio que se queda: el mismo si vale; si estabas en el suelo, flexiones
+function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'plank1', 'superman', 'abs'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
+const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
 const SCHEMA = [
@@ -264,21 +286,39 @@ const SCHEMA = [
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
-  { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat'], hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
-  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup'] },
+  { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
+  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl'], hint: 'Cuánto debe subir la muñeca.' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
-  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 5, max: 35, step: 1, def: 12, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo.' },
+  { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
+  { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
-  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
+  { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['walkers'] },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['flyers'], hint: 'En flexiones los bichos van a escala, unas 7 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['flyers'] },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['walkers', 'flyers'], hint: 'Bájalo si el juego va a tirones.' },
   { key: 'spawnGap', g: 'enemigos', label: 'Segundos entre apariciones', short: 'Entre apariciones', type: 'num', min: 0, max: 20, step: 0.5, def: 0, unit: 's', zero: 'Auto', modes: ['walkers', 'flyers'] },
-  { key: 'aim', g: 'enemigos', label: 'Apuntar con (sentadillas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
+  { key: 'tchArrive', g: 'toques', label: 'Tiempo que tardan en llegar', short: 'Llegada', type: 'num', min: 1, max: 8, step: 0.5, def: 3, unit: 's', modes: ['touch'], hint: 'Desde que aparecen al fondo hasta que llegan a ti. Menos = más rápidos.' },
+  { key: 'tchWindow', g: 'toques', label: 'Tiempo para tocarlos', short: 'Para tocar', type: 'num', min: 0.4, max: 3, step: 0.1, def: 1.2, unit: 's', modes: ['touch'], hint: 'Lo que esperan quietos delante de ti antes de pasar de largo.' },
+  { key: 'tchGap', g: 'toques', label: 'Separación entre objetivos', short: 'Separación', type: 'num', min: 0.8, max: 6, step: 0.1, def: 2.4, unit: 's', modes: ['touch'], hint: 'Con ritmo (BPM), se redondea a pulsos enteros.' },
+  { key: 'tchHands', g: 'toques', label: 'Gemas para las manos', short: 'Gemas', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['touch'], noEx: ['combo'], hint: 'Parte de los objetivos que se tocan con la mano (gemas). El resto son aros para la cabeza.' },
+  { key: 'tchRing', g: 'toques', label: 'Tamaño del hueco de los aros', short: 'Aros', type: 'num', min: 8, max: 30, step: 1, def: 15, unit: 'cm', modes: ['touch'], hint: 'Radio del hueco por el que pasa la cabeza (en flexiones, algo menos).' },
+  { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch'], ex: ['jump', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie.' },
+  { key: 'abMin', g: 'toques', label: 'Tronco elevado: mínimo', short: 'Ángulo mín.', type: 'num', min: 10, max: 70, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Ángulo del tronco con el suelo al que llegan los aros más bajos.' },
+  { key: 'abMax', g: 'toques', label: 'Tronco elevado: máximo', short: 'Ángulo máx.', type: 'num', min: 20, max: 85, step: 5, def: 55, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: '90° sería sentarse del todo.' },
+  { key: 'abTwist', g: 'toques', label: 'Giro del tronco (oblicuos)', short: 'Giro', type: 'num', min: 0, max: 45, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Cuánto se desvían hacia los lados algunos aros.' },
+  { key: 'comboBase', g: 'toques', label: 'Postura del combinado', short: 'Postura', type: 'choice', opts: [['stand', 'De pie'], ['floor', 'Plancha'], ['abs', 'Boca arriba']], def: 'stand', modes: ['touch'], ex: ['combo'], relayout: true, hint: 'Los movimientos del combinado se hacen todos en esta postura.' },
+  { key: 'comboStand', g: 'toques', label: 'Movimientos (de pie)', short: 'Movimientos', type: 'multi', opts: [['squat', 'Sentadilla'], ['jump', 'Salto'], ['punch', 'Puñetazo'], ['reach', 'Estirarse']], def: 'squat,jump', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'stand', hint: 'Sentadilla: aro bajo · Salto: aro alto · Puñetazo: gema delante · Estirarse: gema arriba.' },
+  { key: 'comboFloor', g: 'toques', label: 'Movimientos (plancha)', short: 'Movimientos', type: 'multi', opts: [['push', 'Flexión'], ['plank', 'Plancha'], ['tap', 'Toque']], def: 'push,plank', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Flexión: aro bajo · Plancha: aro que hay que aguantar · Toque: gema para una mano.' },
+  { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: aro de frente · Oblicuo: aro girado · Rodillas: gema junto a las rodillas.' },
+  { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
+  { key: 'plankHold', g: 'toques', label: 'Segundos en los aros de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro del aro este tiempo.' },
+  { key: 'bpm', g: 'toques', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch'], hint: 'Con un ritmo, los objetivos llegan a ti en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
+  { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['walkers', 'flyers'], ex: ['squat'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
+  { key: 'aim', g: 'enemigos', cond: () => !settings.pistol, label: 'Apuntar con (sentadillas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['flyers'] },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
@@ -287,10 +327,10 @@ const SCHEMA = [
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
-  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que suben del charco, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
+  { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o drones y avispas que vuelan en línea recta hasta donde llegará tu cabeza.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
-  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, caes al charco.' },
+  { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, te has soltado. También cuenta ver las manos por debajo de la barra.' },
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
   { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
   { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
@@ -299,9 +339,11 @@ const SCHEMA = [
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
-  { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', hint: 'El menú se queda fijo: tendrás que acercarte para pulsarlo.' },
+  { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
+  { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'boltLight', g: 'sistema', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
   { key: 'volume', g: 'sistema', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
   { key: 'ambient', g: 'sistema', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' }
@@ -314,6 +356,7 @@ const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
 function clampSetting(f, v) {
+  if (f.type === 'multi') { const on = String(v || '').split(','), out = f.opts.map(o => o[0]).filter(k => on.includes(k)); return out.length ? out.join(',') : f.def; }
   if (f.type === 'choice') return f.opts.some(o => o[0] === v) ? v : f.def;
   if (f.type === 'toggle') return v ? 1 : 0;
   v = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : +v;
@@ -334,23 +377,16 @@ function fmtVal(f, v = settings[f.key]) {
   for (const f of SCHEMA) if (s[f.key] !== undefined) settings[f.key] = clampSetting(f, s[f.key]);
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
-  if (settings.mode === 'arcs') settings.exercise = 'squat';
-  if (EX_ONLY[settings.exercise] && settings.mode !== EX_ONLY[settings.exercise]) settings.exercise = 'pushup';
-  if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
+  settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
 function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
 function setSetting(key, v) {
   const f = FIELD[key];
   settings[key] = f ? clampSetting(f, v) : v;
-  if (key === 'mode' && v === 'arcs') settings.exercise = 'squat';
-  if (key === 'exercise' && v !== 'squat' && settings.mode === 'arcs') settings.mode = 'walkers';
-  // la plancha con un brazo solo se juega en Asalto (arañas por los dos lados) y el superman en Enjambre (voladores bajos)
-  if (key === 'exercise' && EX_ONLY[v]) settings.mode = EX_ONLY[v];
-  if (key === 'mode' && EX_ONLY[settings.exercise] && v !== EX_ONLY[settings.exercise]) settings.exercise = v === 'arcs' ? 'squat' : v === 'bars' ? 'row' : 'pushup';
-  // Barras va con sus propios ejercicios: cambiar uno arrastra al otro
-  if (key === 'mode' && (v === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = v === 'bars' ? 'row' : 'squat';
-  if (key === 'exercise' && BAR_EX.includes(v) !== (settings.mode === 'bars')) settings.mode = BAR_EX.includes(v) ? 'bars' : 'walkers';
+  // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
+  if (key === 'mode') settings.exercise = exFor(v, settings.exercise);
+  if (key === 'exercise' && !exOk(settings.mode, v)) settings.mode = modeFor(v);
   saveSettings();
   onSettingChanged(key);
 }
@@ -362,9 +398,15 @@ function fieldVisible(f) {
   return true;
 }
 // Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
-const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1' || settings.exercise === 'superman';
+// Pistolas: en sentadillas (Asalto y Enjambre) las repeticiones cargan munición y el gatillo dispara
+const pistolOn = () => !!settings.pistol && settings.exercise === 'squat' && (settings.mode === 'walkers' || settings.mode === 'flyers');
+// En Enjambre con las manos o las pistolas cada repetición da dos disparos (uno por mano)
+const twoShots = () => settings.mode === 'flyers' && settings.exercise === 'squat' && (settings.aim === 'hands' || pistolOn());
+const isFloor = () => ['pushup', 'plank1', 'superman', 'abs'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
+// Tumbado boca arriba (abdominales)
+const isSupine = () => settings.exercise === 'abs' || (settings.exercise === 'combo' && settings.comboBase === 'abs');
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
-const isTiny = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
+const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'plank1');
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -390,6 +432,8 @@ function fieldHTML(f) {
     body = `<div class="num"><input type="range" id="${id}-r" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${f.label}">
       <input type="number" id="${id}" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" inputmode="decimal">
       <span class="unit">${f.unit || ''}</span></div>`;
+  } else if (f.type === 'multi') {
+    body = `<div class="seg multi" role="group" aria-label="${f.label}">${f.opts.map((o, i) => `<label><input type="checkbox" name="${id}" id="${id}-${i}" data-key="${f.key}" value="${o[0]}">${o[1]}</label>`).join('')}</div>`;
   } else {
     const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts;
     body = `<div class="seg" role="radiogroup" aria-label="${f.label}">${opts.map((o, i) => `<label><input type="radio" name="${id}" id="${id}-${i}" data-key="${f.key}" value="${o[0]}">${o[1]}</label>`).join('')}</div>`;
@@ -407,6 +451,10 @@ function onFormInput(ev) {
     if (other) other.value = settings[key];
     if (ev.type === 'change' && el.type === 'number') el.value = settings[key];
     const z = $(`#f-${key}-z`); if (z) z.textContent = settings[key] === 0 && f.zero ? f.zero : '';
+  } else if (f.type === 'multi') {
+    const on = [...document.querySelectorAll(`input[name="f-${key}"]:checked`)].map(x => x.value);
+    settings[key] = clampSetting(f, on.join(',')); saveSettings(); onSettingChanged(key);
+    if (!on.length) syncForm(); // no se puede dejar vacío
   } else {
     const v = f.type === 'toggle' ? +el.value : el.value;
     settings[key] = clampSetting(f, v); saveSettings(); onSettingChanged(key);
@@ -417,9 +465,9 @@ function onFormInput(ev) {
 function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) el.disabled = settings.mode === 'arcs' ? x !== 'squat' : (settings.mode === 'bars') !== BAR_EX.includes(x) || (!!EX_ONLY[x] && settings.mode !== EX_ONLY[x]); });
-  const note = $('#exNote'); note.hidden = !['arcs', 'bars'].includes(settings.mode);
-  note.textContent = settings.mode === 'arcs' ? 'El modo Arcos es solo para sentadillas.' : 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.';
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { el.disabled = !exOk(settings.mode, x); const card = el.closest && el.closest('.card'); if (card) card.hidden = !exOk(settings.mode, x); } });
+  const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
+  note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza los aros y con las manos las gemas que vienen hacia ti.' }[settings.mode] || '';
   for (const f of SCHEMA) {
     const wrap = document.querySelector(`[data-field="${f.key}"]`);
     if (wrap) wrap.hidden = !fieldVisible(f);
@@ -427,6 +475,9 @@ function syncForm() {
       const a = $(`#f-${f.key}`), b = $(`#f-${f.key}-r`);
       if (a) a.value = settings[f.key]; if (b) b.value = settings[f.key];
       const z = $(`#f-${f.key}-z`); if (z) z.textContent = settings[f.key] === 0 && f.zero ? f.zero : '';
+    } else if (f.type === 'multi') {
+      const on = String(settings[f.key]).split(',');
+      document.querySelectorAll(`input[name="f-${f.key}"]`).forEach(el => { el.checked = on.includes(el.value); });
     } else {
       const els = document.querySelectorAll(`input[name="f-${f.key}"]`);
       els.forEach(el => { el.checked = String(el.value) === String(settings[f.key]); });
@@ -435,7 +486,7 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTimeOf(ex) { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -451,9 +502,10 @@ function updateSummary() {
   let speed = '';
   if (settings.mode === 'walkers') speed = `Los enemigos tardan ${settings.walkTime} s en alcanzarte.`;
   else if (settings.mode === 'flyers') speed = `Vuelan a ${fmtNum(settings.flySpeed)} km/h.`;
+  else if (settings.mode === 'touch') speed = `Cada objetivo tarda ${fmtNum(settings.tchArrive)} s en llegar y espera ${fmtNum(settings.tchWindow)} s${settings.bpm ? `, al ritmo de ${settings.bpm} BPM` : ''}.`;
   else if (settings.mode === 'bars') speed = hang ? `Si te sueltas, caes al charco.` : `Cada objetivo tarda ${fmtNum(settings.barArrive)} s en llegar a donde subirá tu cabeza.`;
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm.`;
-  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : 'repeticiones'}${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
+  $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
 function renderHistory() {
   const h = store(HIST_KEY) || [];
@@ -1598,7 +1650,7 @@ function poolGrab(at) {
   POOL.tents.forEach(T => { T.lungeV = 1; });
 }
 function updatePool(dt, t) {
-  const show = isBars() && state !== 'idle';
+  const show = isBars() && eqKind() === 'door' && state !== 'idle'; // el charco solo bajo la barra de dominadas
   pool.visible = show; if (!show) return;
   ensureTentacles();
   const e = eqPose();
@@ -1996,7 +2048,7 @@ function updateGloves(dt) {
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
-      g.palm.visible = !h.isHand && h.ok;
+      g.palm.visible = !h.isHand && h.ok && !(pistolOn() && GAME_STATES.includes(state)); // con pistolas se ve el bláster
       if (g.palm.visible) { g.palm.position.copy(h.wrist); g.palm.quaternion.copy(h.wristQ); g.palm.scale.setScalar(1); }
       continue;
     }
@@ -2171,10 +2223,153 @@ function clearFX() {
 }
 
 
+/* =================== RAYOS: LOS DISPAROS SON DESCARGAS ELÉCTRICAS =================== */
+// Cada disparo es un rayo quebrado que avanza hasta el blanco (el «líder») y, al llegar, destella y
+// parpadea unas décimas con ramas que cambian, echando chispas. Ilumina el entorno con una luz puntual y,
+// durante el destello, la luz principal (la que proyecta sombras) se desplaza hacia el rayo, así que las
+// sombras saltan. Color, grosor, ramas y luz crecen con la intensidad del disparo.
+const BOLT_COL = [0x9fd8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
+const boltLevel = (perfect, pow = 1) => Math.max(perfect ? 1 : 0, pow > 1 ? pow : 0);
+const boltRGB = L => { const c = new THREE.Color(BOLT_COL[L]); return [c.r, c.g, c.b]; };
+const boltTex = texFrom((() => { const c = mkCanvas(64, 8), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.3, 'rgba(255,255,255,0.35)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 8); return c; })());
+const boltMatL = new THREE.MeshBasicMaterial({ map: boltTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+const boltLight = new THREE.PointLight(0x9fd8ff, 0, 5, 2); scene.add(boltLight);
+const LT_SEG = 220, LT_FLICK = 0.045;
+const _za = new V3(), _zb = new V3(), _zc = new V3(), _zd = new V3(), _zu = new V3(), _zv = new V3();
+// Línea quebrada de a a b: cada tramo se parte por la mitad y el punto medio se desplaza hacia un lado
+function jag(a, b, levels, rough, out = []) {
+  let pts = [a.clone(), b.clone()];
+  for (let l = 0; l < levels; l++) {
+    const next = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p = pts[i], q = pts[i + 1], len = p.distanceTo(q);
+      _zd.subVectors(q, p).normalize(); _zu.set(0, 1, 0); if (Math.abs(_zd.y) > 0.9) _zu.set(1, 0, 0);
+      _zu.cross(_zd).normalize(); _zv.crossVectors(_zd, _zu);
+      const m = p.clone().lerp(q, 0.5).addScaledVector(_zu, rand(-1, 1) * len * rough).addScaledVector(_zv, rand(-1, 1) * len * rough);
+      next.push(m, q);
+    }
+    pts = next;
+  }
+  out.push(...pts); return out;
+}
+class Lightning {
+  constructor() {
+    const g = new THREE.BufferGeometry(), n = LT_SEG * 6;
+    this.P = new Float32Array(n * 3); this.C = new Float32Array(n * 3); const U = new Float32Array(n * 2);
+    const quad = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]; for (let i = 0; i < LT_SEG; i++) U.set(quad, i * 12);
+    g.setAttribute('position', new THREE.BufferAttribute(this.P, 3)); g.setAttribute('color', new THREE.BufferAttribute(this.C, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+    this.g = g; this.mesh = new THREE.Mesh(g, boltMatL); this.mesh.frustumCulled = false; this.mesh.visible = false; this.mesh.renderOrder = 6; scene.add(this.mesh);
+    this.busy = false; this.from = new V3(); this.to = new V3(); this.paths = []; this.n = 0;
+  }
+  start(from, to, L, scale, miss) {
+    Object.assign(this, { busy: true, L, scale, miss, k: 0, age: 0, fade: -1, flickT: 0, bright: 0.8, col: boltRGB(L) });
+    this.from.copy(from); this.to.copy(to); this.FADE = 0.26 + 0.05 * L; this.restrike = L >= 2 ? rand(0.08, 0.14) : -1;
+    this.gen(); this.mesh.visible = true;
+  }
+  // Rayo principal y ramas; se rehace en cada parpadeo
+  gen() {
+    const len = this.from.distanceTo(this.to), lv = len > 3 ? 6 : len > 0.8 ? 5 : 4;
+    const main = jag(this.from, this.to, lv, 0.2), paths = [{ pts: main, w: 1, a: 1, at: 0 }];
+    const nb = Math.round((1 + this.L * 0.8 + rand(0, 1.5)) * Math.min(1, 0.4 + len / 2));
+    for (let i = 0; i < nb; i++) {
+      const j = Math.floor(rand(0.15, 0.8) * (main.length - 1)), s = main[j];
+      _zd.subVectors(main[Math.min(main.length - 1, j + 2)], s).normalize().add(rv(0.9)).normalize();
+      const e = s.clone().addScaledVector(_zd, len * rand(0.1, 0.28));
+      const b = jag(s, e, 3, 0.25); paths.push({ pts: b, w: 0.5, a: 0.7, at: j / (main.length - 1) });
+      if (this.L >= 3 && Math.random() < 0.5) { const j2 = Math.floor(b.length / 2), s2 = b[j2]; _zd.subVectors(b[b.length - 1], s2).normalize().add(rv(1)).normalize(); paths.push({ pts: jag(s2, s2.clone().addScaledVector(_zd, len * rand(0.05, 0.14)), 2, 0.3), w: 0.3, a: 0.5, at: paths[paths.length - 1].at }); }
+    }
+    this.paths = paths;
+  }
+  // Punto del rayo principal a una fracción t del recorrido
+  pointAt(t, out) { const m = this.paths[0].pts, f = clamp(t, 0, 1) * (m.length - 1), i = Math.min(m.length - 2, Math.floor(f)); return out.copy(m[i]).lerp(m[i + 1], f - i); }
+  update(dt) {
+    this.age += dt;
+    if (this.fade >= 0) {
+      this.fade += dt; if (this.fade >= this.FADE) { this.end(); return; }
+      this.flickT -= dt;
+      if (this.flickT <= 0) { this.flickT = LT_FLICK; this.gen(); if (Math.random() < 0.5) fx.sparks(this.pointAt(Math.random(), _zc), 1 + (this.L >> 1), this.col, 1.2, 0.02 * this.scale); }
+      if (this.restrike > 0 && this.fade > this.restrike) { this.restrike = -1; this.fade = Math.min(this.fade, 0.04); SND.zap(this.to); } // segundo latigazo
+      const f = this.fade / this.FADE; this.bright = Math.pow(1 - f, 1.4) * rand(0.55, 1) * (this.fade < 0.05 ? 1.6 : 1);
+    } else { this.bright = rand(0.6, 0.9); this.flickT -= dt; if (this.flickT <= 0) { this.flickT = LT_FLICK; this.gen(); } }
+    this.build();
+  }
+  arrive() { this.k = 1; this.fade = 0; this.flickT = 0; }
+  build() {
+    const P = this.P, C = this.C, cam = head.p, k = this.k, s = this.scale, L = this.L;
+    const wCore = (0.006 + 0.0035 * L) * s, wGlow = wCore * (7 + L), col = this.col, b = this.bright;
+    let n = 0;
+    const seg = (a, c, w, r, g, bl) => {
+      if (n >= LT_SEG) return;
+      _zd.subVectors(c, a); _za.addVectors(a, c).multiplyScalar(0.5); _zb.subVectors(cam, _za);
+      _zu.crossVectors(_zd, _zb); if (_zu.lengthSq() < 1e-10) return; _zu.normalize().multiplyScalar(w / 2);
+      const o = n * 18;
+      P[o] = a.x - _zu.x; P[o + 1] = a.y - _zu.y; P[o + 2] = a.z - _zu.z; P[o + 3] = a.x + _zu.x; P[o + 4] = a.y + _zu.y; P[o + 5] = a.z + _zu.z;
+      P[o + 6] = c.x + _zu.x; P[o + 7] = c.y + _zu.y; P[o + 8] = c.z + _zu.z; P[o + 9] = a.x - _zu.x; P[o + 10] = a.y - _zu.y; P[o + 11] = a.z - _zu.z;
+      P[o + 12] = c.x + _zu.x; P[o + 13] = c.y + _zu.y; P[o + 14] = c.z + _zu.z; P[o + 15] = c.x - _zu.x; P[o + 16] = c.y - _zu.y; P[o + 17] = c.z - _zu.z;
+      for (let i = 0; i < 6; i++) { C[o + i * 3] = r; C[o + i * 3 + 1] = g; C[o + i * 3 + 2] = bl; }
+      n++;
+    };
+    for (const pass of [0, 1]) { // halo ancho y tenue, y núcleo casi blanco
+      for (const p of this.paths) {
+        if (p.at > k) continue;
+        const pts = p.pts, last = pts.length - 1, a = p.a * b, w = (pass ? wCore : wGlow) * p.w;
+        const r = pass ? (0.55 + col[0] * 0.45) * a : col[0] * a * 0.3, g = pass ? (0.55 + col[1] * 0.45) * a : col[1] * a * 0.3, bl = pass ? (0.55 + col[2] * 0.45) * a : col[2] * a * 0.3;
+        for (let i = 0; i < last; i++) {
+          if (p === this.paths[0]) { const t0 = i / last, t1 = (i + 1) / last; if (t0 >= k) break; if (t1 > k) { _zc.copy(pts[i]).lerp(pts[i + 1], (k - t0) / (t1 - t0)); seg(pts[i], _zc, w, r, g, bl); break; } }
+          seg(pts[i], pts[i + 1], w, r, g, bl);
+        }
+      }
+    }
+    this.n = n; this.g.setDrawRange(0, n * 6);
+    this.g.attributes.position.needsUpdate = true; this.g.attributes.color.needsUpdate = true;
+  }
+  end() { this.busy = false; this.mesh.visible = false; this.g.setDrawRange(0, 0); }
+}
+const BOLTS = [];
+function boltStart(from, to, L, scale = 1, miss = false) {
+  let b = BOLTS.find(x => !x.busy);
+  if (!b) { if (BOLTS.length < 12) { b = new Lightning(); BOLTS.push(b); } else b = BOLTS.reduce((o, x) => x.age > o.age ? x : o); }
+  b.start(from, to, L, scale, miss); return b;
+}
+// Al llegar al blanco: destello, chispas y luz
+function boltArrive(b) {
+  b.arrive();
+  const s = b.scale, L = b.L, c = b.col;
+  if (!b.miss) { fx.sparks(b.to, 6 + L * 5, c, 2 + L * 0.4, 0.035 * s); fx.glow(b.to, c, (0.3 + 0.12 * L) * s, 0.2); if (L >= 2) fx.electric(b.to, 6 + L * 3); }
+  else fx.glow(b.to, c, 0.15 * s, 0.12);
+}
+function boltsClear() { BOLTS.forEach(b => b.end()); boltLight.intensity = 0; KB.w = 0; keyFlash(); }
+// La luz principal se va hacia el rayo durante el destello: las sombras saltan
+const KB = { w: 0, saved: false, pos: new V3(), col: new THREE.Color(), I: 1, at: new V3(), c: new THREE.Color(), last: new V3(), lastI: 0 };
+function keyFlash() {
+  // si el escenario se recolocó entretanto, esa es la nueva posición de reposo
+  if (KB.saved && (keyLight.position.distanceToSquared(KB.last) > 1e-8 || keyLight.intensity !== KB.lastI)) KB.saved = false;
+  if (KB.w <= 0) { if (KB.saved) { keyLight.position.copy(KB.pos); keyLight.color.copy(KB.col); keyLight.intensity = KB.I; KB.saved = false; } return; }
+  if (!KB.saved) { KB.pos.copy(keyLight.position); KB.col.copy(keyLight.color); KB.I = keyLight.intensity; KB.saved = true; }
+  const tg = keyLight.target.position, d = KB.pos.distanceTo(tg);
+  _za.copy(KB.at); arena.worldToLocal(_za); _za.y += 1.2; _za.sub(tg).normalize().multiplyScalar(d).add(tg);
+  keyLight.position.lerpVectors(KB.pos, _za, Math.min(0.9, KB.w));
+  keyLight.color.copy(KB.col).lerp(KB.c, KB.w * 0.6); keyLight.intensity = KB.I * (1 + KB.w * 0.9);
+  KB.last.copy(keyLight.position); KB.lastI = keyLight.intensity;
+}
+function updateBolts(dt) {
+  let best = null, bw = 0;
+  for (const b of BOLTS) if (b.busy) { b.update(dt); const w = b.busy ? b.bright * (1 + b.L * 0.5) * b.scale : 0; if (w > bw) { bw = w; best = b; } }
+  if (best) {
+    best.pointAt(best.fade >= 0 ? 0.75 : best.k, boltLight.position); boltLight.color.setRGB(best.col[0], best.col[1], best.col[2]);
+    boltLight.intensity = (settings.boltLight ? 1 : 0) * bw * 2.6; boltLight.distance = (3 + best.L) * best.scale + 1;
+  } else boltLight.intensity = 0;
+  // sombras: solo con los destellos (rayo ya llegado), si las sombras están activas
+  const fw = settings.boltLight && settings.shadows && best && best.fade >= 0 ? Math.min(1, bw * 0.45) : 0;
+  if (fw > KB.w) { KB.w = fw; best.pointAt(0.6, KB.at); KB.c.setRGB(best.col[0], best.col[1], best.col[2]); } else KB.w = Math.max(0, KB.w - dt * 5);
+  keyFlash();
+}
+
+
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
 const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
-const mkHand = () => ({ ok: false, isHand: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
+const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
 function fwd(q = head.q) { return new V3(0, 0, -1).applyQuaternion(q); }
@@ -2253,8 +2448,11 @@ function pokeWidgets(list, dt, ready = true) {
   return false;
 }
 
-/* =================== MENÚ FIJO EN EL MUNDO =================== */
+/* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */
+// En las Quest el menú sale de la muñeca izquierda al girarla hacia la cara y se pulsa con el índice derecho.
+// Con el ajuste «Atril», o en el ordenador, queda fijo delante de ti.
 let menu = null, menuAnchor = null;
+const wristMenuOn = () => xrActive && !preview && settings.menuWhere === 'wrist';
 const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
 // Capas del atril: son paneles semitransparentes casi pegados y, sin un orden fijo, el fondo
 // tapaba botones según desde dónde se mirara. Se dibujan siempre fondo → botones → teclado → teclas.
@@ -2314,6 +2512,13 @@ function openMenu(rows, opts = {}) {
         row.plus = addW(new Btn('+', bw, h, () => commit(settings[f.key] + f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
         row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
         fieldRows.push(row);
+      } else if (f.type === 'multi') { // varios a la vez (al menos uno)
+        const n = f.opts.length, w = (CW - LABW - GAP * (n - 1)) / n, row = { f, btns: [] }; let x = X0 + LABW;
+        const on = () => String(settings[f.key]).split(',');
+        f.opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => {
+          const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length) return;
+          setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
+        }, { style: on().includes(v) ? 'selected' : 'normal', font: 0.34 }), x + w / 2, cy)); x += w + GAP; });
       } else {
         const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
         const row = { f, btns: [] };
@@ -2323,15 +2528,23 @@ function openMenu(rows, opts = {}) {
     y -= h + GAP;
   });
   bg.tex.needsUpdate = true;
-  group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+  const wrist = wristMenuOn();
   scene.add(group);
-  // atril
-  const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
-  stand.visible = true; stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
-  const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
-  stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
-  stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
-  menu = { group, widgets, fieldRows, H, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
+  if (wrist) { // en la muñeca: la postura la pone updateWristMenu; solo lo pulsa la mano derecha
+    widgets.forEach(w => { w.only = 'right'; });
+    stand.visible = false; wristPose(group, H);
+  } else {
+    group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+    stand.visible = settings.menuWhere === 'stand';
+    if (stand.visible) { // atril
+      const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
+      stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
+      const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
+      stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
+      stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
+    }
+  }
+  menu = { group, widgets, fieldRows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
   return menu;
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
@@ -2348,11 +2561,12 @@ function openKeypad(f, row) {
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
+  if (menu.wrist) cancel.only = ok.only = 'right';
   cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
   menu.keypad = kp; drawKeypad();
 }
@@ -2390,16 +2604,24 @@ function activeWidgets() { if (!menu) return []; return menu.keypad ? menu.keypa
 const watch = new Btn('MENÚ', 0.09, 0.042, () => onWatch(), { depthTest: false, style: 'primary', font: 0.5 });
 watch.only = 'right'; scene.add(watch.mesh); watch.mesh.visible = false;
 const _wu = new V3(), _wh = new V3(), _wo = new V3();
+// ¿Miras la muñeca izquierda? (dorso o palma hacia la cara; con mando, el mando levantado delante)
+function wristLook(h = hands.left, lim = 0.72) {
+  if (!h.ok || state === 'idle') return false;
+  const d = h.wrist.distanceTo(head.p);
+  if (!h.isHand) return d < 0.65 && h.wrist.y < head.p.y - 0.1;
+  _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
+  return Math.abs(_wu.dot(_wh)) > lim && d < 0.7;
+}
 function updateWatch(dt) {
   const h = hands.left;
   let show = false;
-  if (h.ok && state !== 'idle') {
-    const d = h.wrist.distanceTo(head.p);
-    if (h.isHand) {
-      _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
-      const dot = _wu.dot(_wh);
-      if (Math.abs(dot) > 0.72 && d < 0.7) { show = true; watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(dot) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
-    } else if (d < 0.65 && h.wrist.y < head.p.y - 0.1) { show = true; watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0)); }
+  // con mandos, X/Y del mando izquierdo hacen de botón de menú
+  if (h.btnMenu && !watch.btnPrev) onWatch(); watch.btnPrev = h.btnMenu;
+  const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
+  if (wristLook(h) && !(menu && menu.wrist) && !guns) { // con el menú en la muñeca, el propio panel hace de botón
+    show = true;
+    if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
+    else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));
   }
   const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
@@ -2407,6 +2629,41 @@ function updateWatch(dt) {
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
+// Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
+// derecho para pulsar y se recoge al bajar el brazo.
+const WMS = 0.46; // escala del panel: 0,76 m de ancho en el atril → 35 cm en la muñeca
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4() };
+const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
+const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
+function wristPose(group, H, k = 1) {
+  const h = hands.left, s = WMS * (1 - Math.pow(1 - WM.e, 3));
+  if (h.ok && !WM.near) {
+    // encima de la muñeca, un poco hacia la cara, de cara a ti; la parte de abajo nace en la muñeca
+    _wh.copy(head.p).sub(h.wrist); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.set(0, 0, 1); _wh.normalize();
+    _wmt.copy(h.wrist).addScaledVector(_wh, 0.05); _wmt.y += 0.05 + H * WMS / 2;
+    _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
+    if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+  }
+  // al crecer, el centro sube desde la muñeca
+  group.position.copy(WM.pos).add(_wml.set(0, -(H * WMS / 2) * (1 - s / WMS), 0).applyQuaternion(WM.q));
+  group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
+}
+function updateWristMenu(dt) {
+  const look = wristLook(hands.left, 0.6);
+  // ¿está el índice derecho delante del panel? Entonces no se mueve ni se esconde
+  WM.near = false;
+  if (menu && menu.wrist && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
+  WM.gestT = look ? WM.gestT + dt : 0; WM.lostT = look || WM.near ? 0 : WM.lostT + dt;
+  if (!WM.on && WM.gestT > 0.12) { WM.on = true; if (menu && menu.wrist) SND.tick(); }
+  if (WM.on && WM.lostT > 0.5) WM.on = false;
+  if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
+  WM.e = clamp(WM.e + (WM.on ? dt : -dt) / 0.22, 0, 1);
+  wristPose(menu.group, menu.H, 1 - Math.exp(-dt * 14));
+  // aviso: un punto que late en la muñeca mientras hay un menú recogido
+  const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
+  if (wristHint.visible) { wristHint.position.copy(h.wrist).add(_wo.set(0, 0.04, 0)); const p = 0.04 + 0.015 * Math.sin(performance.now() / 160); wristHint.scale.set(p, p, 1); }
+}
+const wristReady = () => !menu || !menu.wrist || WM.e > 0.95;
 function onWatch() {
   if (PLACE.on) { cancelPlace(); return; }
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back, true); return; }
@@ -2433,7 +2690,7 @@ function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(
 function updateViewPanels(dt) {
   const k = 1 - Math.exp(-dt * 4);
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, menu ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
+    const tgt = headLocal(_hl.set(0, menu && !menu.wrist ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
     center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
   } else center.mesh.userData.init = false;
@@ -2484,11 +2741,11 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
+    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
+    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat') || pistolOn()) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {
@@ -2502,8 +2759,9 @@ function drawCenter() {
 function repsLeft() {
   if (settings.exercise === 'hang') return Math.max(0, Math.ceil(BAR.need - BAR.hold));
   if (settings.mode === 'arcs') return spawnQueue.length + arcs.filter(a => !a.judged && !a.second).length;
+  if (settings.mode === 'touch') return spawnQueue.length + touches.filter(x => x.alive && !x.judged).length;
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
-  return Math.ceil(hp / (settings.mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands' ? 2 : 1));
+  return Math.ceil(hp / (twoShots() ? 2 : 1));
 }
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
@@ -2515,7 +2773,7 @@ function drawBoard() {
   if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
-    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
+    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 320);
     board.tex.needsUpdate = true; return;
   }
   const N = settings.waves;
@@ -2541,14 +2799,15 @@ function drawBoard() {
   else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
+  if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
+  else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
   c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';
-  const mid = bars ? `Caídas ${stats.falls}` : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' ? `Golpes recibidos ${stats.taken}` : `Perfectas ${stats.perfect}`;
+  const mid = bars ? `Caídas ${stats.falls}` : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' || settings.mode === 'touch' ? `${settings.mode === 'touch' ? 'Fallos' : 'Golpes recibidos'} ${stats.taken}` : `Perfectas ${stats.perfect}`;
   c.fillText(mid, W / 2, H - 48);
   c.textAlign = 'right';
-  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : settings.mode === 'touch' ? `Objetivos ${touches.filter(x => x.alive && !x.judged).length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
   board.tex.needsUpdate = true;
 }
 
@@ -2644,6 +2903,15 @@ function spVol(d) {
     await spApi('PUT', '/me/player/volume?volume_percent=' + v); dev.volume_percent = v;
   });
 }
+// Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
+// 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
+async function spTempo() {
+  const st = await spApi('GET', '/me/player'), it = st && st.item; if (!it || !it.id) throw new Error('NO_DEVICE');
+  const start = performance.now() / 1000 - (st.progress_ms || 0) / 1000;
+  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : null }; } catch (e) { /* sin permiso */ }
+  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: null }; } catch (e) { /* sin permiso */ }
+  return null;
+}
 function spNowText() {
   if (!spConnected()) return '';
   if (SP.err) return SP.err;
@@ -2653,7 +2921,7 @@ function spNowText() {
   const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
-// Filas para los menús del juego (atril y pausa)
+// Filas para los menús del juego (principal y pausa)
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
@@ -2690,11 +2958,7 @@ function spInitPage() {
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
 const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc'];
-function blockOk(mode, ex) {
-  if (mode === 'arcs') return ex === 'squat';
-  if (mode === 'bars') return BAR_EX.includes(ex);
-  return !BAR_EX.includes(ex) && (!EX_ONLY[ex] || EX_ONLY[ex] === mode);
-}
+const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
 (function loadSession() {
   const s = store(SES_KEY) || {};
@@ -2708,7 +2972,7 @@ function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
   let t = SES.rest * Math.max(0, SES.blocks.length - 1);
-  for (const b of SES.blocks) { const w = splitWaves(b.n, b.ex === 'hang' ? 25 : 10); t += (b.ex === 'hang' ? b.n : b.n * (b.mode === 'arcs' ? 60 / settings.arcRate : repTimeOf(b.ex))) + settings.rest * (w.length - 1); }
+  for (const b of SES.blocks) { const w = splitWaves(b.n, b.ex === 'hang' ? 25 : 10); t += (b.ex === 'hang' ? b.n : b.n * (b.mode === 'arcs' ? 60 / settings.arcRate : repTimeOf(b.ex, b.mode))) + settings.rest * (w.length - 1); }
   return Math.max(1, Math.round(t / 60));
 }
 
@@ -2787,7 +3051,7 @@ function renderSession() {
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
-  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el atril.` : '';
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 function sesInitPage() {
   const host = $('#sesList');
@@ -3264,9 +3528,6 @@ class Arc {
 }
 
 /* =================== DISPAROS =================== */
-const orbGeo = new THREE.SphereGeometry(0.05, 14, 10), boltGeo = new THREE.BoxGeometry(0.014, 0.014, 0.46);
-const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, toneMapped: false });
-const boltMat = new THREE.MeshBasicMaterial({ color: 0xa8fcff, toneMapped: false }), boltPerfMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false });
 function glowSprite(color, size, opacity = 0.8) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); s.scale.set(size, size, 1); return s; }
 const chargeOrb = glowSprite(0x3cf0c6, 0.18, 0.9); chargeOrb.visible = false; scene.add(chargeOrb);
 // side: solo los enemigos de ese lado (plancha con un brazo: cada brazo dispara a su lado)
@@ -3277,47 +3538,44 @@ function pickNearest(side) {
   if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
-function findLock(o, d) {
+function findLock(o, d, any = false) {
   let best = null, bs = 1e9; const cone = settings.assist * Math.PI / 180;
   for (const e of enemies) {
-    if (!e.alive || e.type !== 'flyer') continue;
+    if (!e.alive || (!any && e.type !== 'flyer')) continue;
     const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
     const sc = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
     if (sc < cone && sc < bs) { bs = sc; best = e; }
   }
   return best;
 }
+// Asalto: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
 function fireOrb(origin, dmg, perfect, pow = 1, side) {
-  const e = pickNearest(side);
-  const m = new THREE.Mesh(orbGeo, orbMat); m.add(glowSprite(pow > 1 ? POW_COL[pow - 1] : perfect ? 0x3cf0c6 : 0xff8a2a, (perfect ? 0.55 : 0.4) * (1 + (pow - 1) * 0.45)));
-  m.scale.setScalar(1 + (pow - 1) * 0.4); m.position.copy(origin); scene.add(m);
+  const e = pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
-  const dist = origin.distanceTo(to);
-  const pc = new THREE.Color(POW_COL[pow - 1]), col = pow > 1 ? [pc.r, pc.g, pc.b] : perfect ? [0.25, 1, 0.8] : [1, 0.5, 0.15];
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.22 + dist * 0.035, arc: Math.min(0.7, dist * 0.07), kind: 'orb', col });
+  const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
   SND.plasma(origin); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
+// Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir);
-  const m = new THREE.Mesh(boltGeo, perfect ? boltPerfMat : boltMat); m.add(glowSprite(perfect ? 0xffd166 : 0x5ff5ff, 0.2, 0.8));
-  m.position.copy(origin); scene.add(m);
-  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 30);
+  const e = forced || findLock(lockFrom || origin, dir, pistolOn()), L = boltLevel(perfect), col = boltRGB(L);
+  const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
-  projs.push({ m, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.08, origin.distanceTo(to) / 34), arc: 0, kind: 'bolt', col: perfect ? [1, 0.85, 0.4] : [0.4, 1, 1] });
-  SND.laser(origin); fx.muzzle(origin, perfect ? [1, 0.85, 0.4] : [0.4, 1, 1]);
+  const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
+  SND.laser(origin); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
     const p = projs[i]; p.t += dt;
     if (p.e && p.e.alive) p.e.center(p.to);
     const k = Math.min(1, p.t / p.dur);
-    tmpA.copy(p.m.position);
-    p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
-    if (p.kind === 'bolt') p.m.lookAt(tmpB.copy(p.m.position).multiplyScalar(2).sub(tmpA));
-    fx.trail(p.m.position, p.col, p.kind === 'orb' ? 0.12 * (1 + ((p.pow || 1) - 1) * 0.5) : 0.06, 0.2);
+    // el líder del rayo avanza hacia el blanco (que puede moverse)
+    p.lt.to.copy(p.to); p.lt.k = Math.max(p.lt.k, k);
+    if (k < 1) { const h = p.lt.pointAt(k, tmpA); fx.glow(h, p.col, 0.1 * p.lt.scale, 0.06); }
     if (k >= 1) {
-      scene.remove(p.m); p.m.children.forEach(c => c.material && c.material.dispose()); projs.splice(i, 1);
+      boltArrive(p.lt); projs.splice(i, 1);
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
@@ -3358,6 +3616,7 @@ function onRep(opts, side) {
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
@@ -3393,7 +3652,7 @@ const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   curl: { left: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0 } },
-  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0 },
+  su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0, peak: 0, lift: 0, armT: 0, stillT: 0, lo: 0.2 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -3423,34 +3682,61 @@ function vertDetector(d, y, t, dt, cfg) {
     } else if (!d.charged && d.stillT > 3) { d.ref = y + cfg.back * 0.5; d.state = 'up'; d.stillT = 0; }
   }
 }
-// Superman: ¿están las manos por delante de la cabeza, con los brazos estirados? Sin manos a la vista no se puede saber
-function armsOut() {
-  const fx_ = -Math.sin(arena.rotation.y), fz_ = -Math.cos(arena.rotation.y);
-  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * fx_ + (h.wrist.z - head.p.z) * fz_ < 0.25) return false; }
-  return true;
+// Superman: ¿hay alguna mano claramente recogida junto a la cabeza? La dirección del cuerpo sale de la propia
+// cabeza (hacia dónde apuntan la cara y la coronilla), no del escenario: así da igual hacia dónde te tumbes.
+// Sin manos a la vista (el seguimiento falla mucho tumbado) se da por bueno.
+function armsBack() {
+  if (settings.supArms === 'no') return false;
+  const d = fwd().add(new V3(0, 1, 0).applyQuaternion(head.q)); d.y = 0;
+  if (d.lengthSq() < 1e-4) return false; d.normalize();
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * d.x + (h.wrist.z - head.p.z) * d.z < 0.15) return true; }
+  return false;
 }
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
-  if (settings.mode === 'arcs') return;
+  if (settings.mode === 'arcs' || settings.mode === 'touch') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
     const req = settings.squatDepth / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
   } else if (settings.exercise === 'superman') {
-    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara
+    // superman: tumbado boca abajo; subir el tronco con los brazos estirados y aguantar supHold segundos dispara.
+    // S.ref es la altura de la cabeza tumbado: baja enseguida y sube despacio cuando no estás arriba, así se
+    // corrige sola si al calibrar la cabeza estaba más alta o más baja que al hacer el ejercicio.
     const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
-    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; return; }
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
     S.awayT = 0; S.warnT -= dt;
+    // quieto y sin subir el tronco: esa es tu altura tumbado
+    S.stillT = head.speed < 0.05 ? S.stillT + dt : 0;
+    if (S.state !== 'up') S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 3 : y < S.ref + req * 0.5 ? 0.6 : S.state === 'down' && S.stillT > 1.2 ? 1.5 : 0));
+    S.lo = Math.min(S.lo + (y - S.lo) * Math.min(1, dt * 0.5), y); // lo más bajo de los últimos segundos
+    S.lift = Math.max(0, y - S.ref);
     if (S.state === 'down') {
-      if (y < S.ref + 0.04) S.ref += (y - S.ref) * Math.min(1, dt * (y < S.ref ? 2 : 0.1)); // altura tumbado
-      if (y > S.ref + req) { S.state = 'up'; S.t0 = t; S.sec = 0; onCharge(); }
+      S.peak = Math.max(S.peak, y);
+      // hay que subir de verdad: no basta con una referencia que se quedó baja
+      if (y > S.ref + req && y - S.lo > req * 0.6) { S.state = 'up'; S.t0 = t; S.sec = 0; S.armT = 0; S.peak = y; onCharge(); }
+      else if (y < S.ref + req * 0.3) {
+        // subió pero no lo bastante: dile cuánto le faltó
+        const got = S.peak - S.ref;
+        if (got > req * 0.5 && state === 'play') { say(`Sube un poco más: ${Math.round(got * 100)} de ${Math.round(req * 100)} cm`, '#ff8a3d', 1.6); SND.partial(); }
+        S.peak = y;
+      }
     } else if (S.state === 'up') {
-      const held = t - S.t0;
-      if (y < S.ref + req * 0.7) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; }
-      else if (!armsOut()) { S.t0 = t; S.sec = 0; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
-      else if (held >= hold) { onRep({ perfect: y - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
-      else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
-    } else if (y < S.ref + Math.max(0.04, req * 0.4)) S.state = 'down';
+      const held = t - S.t0; S.peak = Math.max(S.peak, y);
+      if (y < S.ref + req * 0.6) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; S.peak = y; }
+      else {
+        // manos recogidas durante un rato: el tiempo se para (un fallo suelto del seguimiento no cuenta)
+        S.armT = armsBack() ? S.armT + dt : 0;
+        if (S.armT > 0.4) { S.t0 += dt; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
+        else if (held >= hold) { onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
+        else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
+      }
+    } else {
+      // tras disparar hay que volver a bajar: hasta tu altura tumbado o, si la referencia se quedó baja,
+      // al menos lo que pide la elevación desde lo más alto (y entonces la referencia se corrige)
+      if (y < S.ref + Math.max(0.03, req * 0.4)) { S.state = 'down'; S.peak = y; }
+      else if (y < S.peak - req) { S.state = 'down'; S.peak = y; S.ref = Math.max(S.ref, y - req * 0.3); }
+    }
   } else if (settings.exercise === 'plank1') {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
@@ -3507,32 +3793,88 @@ const ringTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d')
 const gazeDot = glowSprite(0xffffff, 0.02, 0.5); gazeDot.visible = false; scene.add(gazeDot);
 function aimSources() {
   const out = [];
+  if (pistolOn()) { for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: gunMuzzle(s), d: hands[s].rayD }); if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() }); return out; }
   if (settings.mode !== 'flyers') return out;
   if (settings.exercise === 'squat' && settings.aim === 'hands') for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: hands[s].rayO, d: hands[s].rayD });
   if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() });
   return out;
 }
 function updateAim(t) {
-  const show = settings.mode === 'flyers' && settings.exercise !== 'superman' && ['ready', 'play', 'rest'].includes(state);
+  const show = (settings.mode === 'flyers' && settings.exercise !== 'superman' || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d), ring = locks[s.key];
+    const e = findLock(s.o, s.d, pistolOn()), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
-      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = charged ? 0.6 : 0.3; l.material.color.setHex(charged ? 0x3cf0c6 : 0x5ff5ff);
+      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
     } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(s.d, 3); }
-    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(charged ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
+    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
     else ring.visible = false;
   }
+}
+
+/* =================== PISTOLAS =================== */
+// Cada sentadilla mete munición (una por mano en Enjambre); el gatillo dispara un rayo donde apuntas.
+// Con mandos se ve un bláster en cada mano con sus celdas de energía; con las manos, se dispara pellizcando.
+const GUN = { ammo: 0, perf: [], emptyT: 0 };
+const gunCap = () => (twoShots() ? 2 : 1) * 3;
+function gunReset() { GUN.ammo = 0; GUN.perf.length = 0; }
+function gunLoad(perfect) {
+  const n = twoShots() ? 2 : 1;
+  for (let i = 0; i < n; i++) { GUN.perf.push(perfect); if (GUN.perf.length > gunCap()) GUN.perf.shift(); }
+  GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
+  for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
+}
+function gunMuzzle(side, out = new V3()) { const h = hands[side]; return out.copy(h.rayO).addScaledVector(h.rayD, h.isHand ? 0.04 : 0.13); }
+function gunFire(src) {
+  if (!['play', 'rest', 'ready'].includes(state)) return;
+  if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
+  const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
+  if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
+  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
+}
+// Modelo del bláster (se sostiene con el mando; apunta por -Z)
+const blasterGlow = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+function makeBlaster() {
+  const k = new Kit();
+  k.add('steel', G.box(0.036, 0.05, 0.13, 0.2), C.gun, 0, 0.012, -0.03);            // cuerpo
+  k.add('steel', G.box(0.03, 0.09, 0.034, 0.2), C.dark, 0, -0.035, 0.03, -0.25, 0, 0); // empuñadura
+  k.add('steel', G.cyl(0.013, 0.015, 0.09, 12, 0.2), C.steel, 0, 0.02, -0.13, Math.PI / 2, 0, 0); // cañón
+  k.add('steel', G.cyl(0.019, 0.019, 0.02, 12, 0.2), C.dark, 0, 0.02, -0.17, Math.PI / 2, 0, 0);
+  k.add('steel', G.box(0.012, 0.02, 0.06, 0.2), C.steel, 0, 0.044, -0.04);           // mira
+  const g = k.build({ steel: gloveMat }, { cast: true });
+  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.018), blasterGlow.clone()); m.position.set(0, 0.012, 0.0 - i * 0.026); g.add(m); return m; });
+  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 4, 16), blasterGlow); tip.position.set(0, 0.02, -0.181); g.add(tip);
+  g.visible = false; g.kick = 0; scene.add(g); return g;
+}
+const BLASTERS = { left: makeBlaster(), right: makeBlaster() };
+function updatePistol(dt) {
+  GUN.emptyT -= dt;
+  const on = pistolOn() && GAME_STATES.includes(state);
+  const per = twoShots() ? 2 : 1, lit = Math.min(3, Math.ceil(GUN.ammo / per));
+  for (const s of ['left', 'right']) {
+    const h = hands[s], b = BLASTERS[s];
+    b.visible = on && h.ok && !h.isHand && h.rayOk;
+    if (b.visible) {
+      b.kick = Math.max(0, b.kick - dt * 8);
+      b.position.copy(h.rayO).addScaledVector(h.rayD, 0.03 + b.kick * 0.02); b.quaternion.copy(h.rayQ); b.rotateX(-b.kick * 0.25);
+      b.cells.forEach((c, i) => { c.material.color.setHex(i < lit ? (GUN.perf[Math.min(GUN.perf.length - 1, i * per)] ? 0xffd166 : 0x3cf0c6) : 0x2a2440); });
+    }
+    // gatillo (o pellizco) al apretar
+    const press = h.trig && !h.trigPrev; h.trigPrev = h.trig;
+    if (on && press && h.rayOk) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
+  }
+  if (on && preview) { const t = !!PV.keys.KeyT; if (t && !GUN.prevT) gunFire({ key: 'gaze', o: head.p, d: fwd() }); GUN.prevT = t; } // en el ordenador: T dispara con la mirada
 }
 
 /* =================== OLEADAS =================== */
 function isBossWave(i) { return settings.waves ? i === settings.waves - 1 : (i + 1) % 5 === 0; }
 function buildWave(i) {
   if (isBars()) return buildBarWave(i);
+  if (settings.mode === 'touch') return buildTouchWave(i);
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
@@ -3540,7 +3882,7 @@ function buildWave(i) {
     for (let n = 0; n < total; n++) list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), hp: 1 });
     return list;
   }
-  if (mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands') total *= 2;
+  if (twoShots()) total *= 2;
   let boss = null;
   if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: mode === 'walkers' ? 'titan' : 'carrier', hp: b }; total -= b; }
   let k = 0;
@@ -3577,14 +3919,14 @@ function updateNextArc() {
 /* =================== FLUJO =================== */
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
-  arcs.forEach(a => a.alive && a.dispose()); arcs = [];
-  projs.forEach(p => scene.remove(p.m)); projs = [];
+  arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
+  projs = []; boltsClear();
   clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
 }
-function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed' }[settings.mode]; }
+function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
 function summaryText() {
   const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
@@ -3600,12 +3942,17 @@ function lobbyMenu(reanchor) {
     { t: 'text', text: summaryText() },
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
-    { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs'], settings.mode === 'flyers' ? ['superman', 'Superman'] : ['plank1', 'Plancha 1 brazo', settings.mode !== 'walkers']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
+    { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: MODE_EX[settings.mode].map(x => [x, EX_SHORT[x]]), onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
+  if (settings.mode === 'touch') {
+    if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
+    else rows.push({ t: 'field', key: 'tchHands' });
+    rows.push(...tempoRows(() => lobbyMenu()));
+  }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   rows.push(...musicRows());
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
@@ -3657,11 +4004,11 @@ function pauseMenu(reanchor) {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats();
+  stats = newStats(); gunReset();
   DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { arenaFromHead(); DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
 }
@@ -3684,16 +4031,17 @@ function calibrate() {
   arenaFromHead();
   const y = head.p.y; DET.sq.ref = y; DET.pu.ref = y; if (!isFloor()) { calibRef = y; lastStandY = y; }
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
-  DET.pl.ref = y; DET.su.ref = y;
+  DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
   if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
   else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
+  else if (settings.mode === 'touch') touchStartWave();
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
-    const auto = settings.mode === 'flyers' ? repTime() * (settings.exercise === 'squat' && settings.aim === 'hands' ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
+    const auto = settings.mode === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : auto;
   }
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
@@ -3718,8 +4066,8 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
-    hang ? `Colgado ${got} s · ${stats.falls} caídas al charco · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
-    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
+    hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
+    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
@@ -3746,18 +4094,19 @@ function gameStep(dt, t) {
   if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     arenaFollow(dt);
-    const ok = !isFloor() ? head.p.y > 1.1 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
+    const ok = !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
+  if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    if (spawnTimer <= 0 && spawnQueue.length && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
-    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : enemies.some(e => e.alive);
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? 1 : rand(0.8, 1.2)); boardDirty = true; }
+    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need : !spawnQueue.length && !anyLeft && !projs.length) {
       if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
       else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : '¡Oleada superada!', '#3cf0c6', 2); }
@@ -3789,11 +4138,11 @@ function gameStep(dt, t) {
 
 /* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
 // La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
-// que espera en el punto más alto del recorrido. Debajo hay un charco con tentáculos: si te sueltas, caes.
-const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+// que espera en el punto más alto del recorrido. Bajo la barra de dominadas hay un charco con tentáculos: si te sueltas, caes.
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -3802,13 +4151,22 @@ function barNear() {
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
 
+// ¿Se ven las manos claramente por debajo de la barra? Agarrado, las muñecas están a su altura (o fuera de la
+// vista, por encima de la cabeza); al soltarte bajan y entran en la vista. Devuelve cuántas se ven abajo y cuántas se ven.
+function handsLow() {
+  const y = eqTopY() - 0.35; let low = 0, ok = 0;
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok) { ok++; if (h.wrist.y < y) low++; } }
+  return { low, ok };
+}
+const handsOff = () => { const h = handsLow(); return h.low >= 2 || (h.low === 1 && h.ok === 1); };
+
 /* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
 function barToMount(next, resume = false) {
   state = 'mount'; stateT = 0; BAR.phase = 'place'; BAR.still = 0; BAR.t = 0; BAR.resume = resume; if (!resume) BAR.nextWave = next;
   center.mesh.visible = true; drawCenter(); boardDirty = true;
 }
 function barMountStep(dt) {
-  const near = barNear(), still = head.speed < 0.08;
+  const near = barNear() && !handsOff(), still = head.speed < 0.08; // de pie bajo la barra con las manos abajo no estás colgado
   if (BAR.phase === 'place') { BAR.still = near && still ? BAR.still + dt : Math.max(0, BAR.still - dt * 2); if (BAR.still >= 0.8) { BAR.phase = 'count'; BAR.t = 0; SND.charge(); } }
   else if (BAR.phase === 'count') { const before = BAR.t; BAR.t += dt; if (!near) { BAR.phase = 'place'; BAR.still = 0; } else if (BAR.t >= 3) { BAR.phase = 'settle'; BAR.t = 0; BAR.still = 0; } else if (Math.floor(before) !== Math.floor(BAR.t)) SND.beep(); }
   else { BAR.t += dt; BAR.still = still ? BAR.still + dt : 0; if (BAR.still >= 0.35 || BAR.t > 2.5) barMounted(); }
@@ -3850,16 +4208,20 @@ function placeRowBoard(fromHead) {
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
   stats.falls++;
-  const at = new V3(head.p.x, 0.03, head.p.z); poolGrab(at);
+  const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
+  if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say('¡AL CHARCO!', '#3cff8a', 1.8);
+  say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
   barToMount(0, true);
 }
 function barDetect(t, dt) {
   if (state !== 'play') return;
   const y = head.p.y, margin = settings.fallMargin / 100;
-  BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
-  if (y < BAR.hangRef - margin || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { barFall(); return; }
+  // la posición colgado solo se reajusta quieto abajo: bajar despacio también cuenta como caída
+  if (BAR.det === 'down' && head.speed < 0.05) BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
+  // soltarse: las manos a la vista por debajo de la barra (al caer de pie la cabeza no siempre baja)
+  const off = handsLow(); BAR.letGo = off.low >= 2 || (off.low === 1 && off.ok === 1) ? BAR.letGo + dt : 0;
+  if (y < BAR.hangRef - margin || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { BAR.letGo = 0; barFall(); return; }
   if (settings.exercise === 'hang') {
     const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
     if (Math.floor(BAR.hold) > Math.floor(before)) {
@@ -3944,11 +4306,12 @@ class HeadTarget {
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
     barSlot(this.slotIndex(), this.slot);
-    if (this.bubble) { // sube del borde del charco más cercano
-      const e = eqPose(), l = eqLocal(e, arena.localToWorld(_bw.copy(this.slot)), _bl);
-      const nx = l.x / POOL.rx, nz = l.z / POOL.rz, n = Math.hypot(nx, nz) || 1;
-      this.pos.copy(arena.worldToLocal(eqWorld(e, nx / n * POOL.rx * 0.85, 0.06, nz / n * POOL.rz * 0.85, _bw)));
-      SND.pop(arena.localToWorld(_bw.copy(this.pos)), false);
+    if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
+      const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
+      if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
+      else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+      w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
+      this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
       const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
@@ -4136,6 +4499,250 @@ function placeDone() {
 }
 
 
+/* =================== MODO TOQUES: AROS PARA LA CABEZA Y GEMAS PARA LAS MANOS =================== */
+// Aquí no se dispara: vienen hacia ti aros que ondulan como burbujas (mete la cabeza por el hueco) y gemas
+// con una mano dibujada (tócalas con cualquier mano). Llegan a la altura que obliga a hacer el movimiento:
+// abajo en la sentadilla o la flexión, arriba en el salto, en el arco del abdominal (o girados, en los
+// oblicuos). Cada uno espera un momento delante de ti; si no lo tocas, pasa de largo y te golpea.
+// Con un ritmo (BPM) llegan justo en el pulso.
+let touches = [];
+const TCH = { ref: 1.6, clock: 0, nextArrive: 0, seq: 0, taps: [], beat0: 0 };
+const TCH_COL = { head: 0x3cf0c6, hand: 0xff9a3c };
+const perfNow = () => performance.now() / 1000;
+const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
+// Movimientos de cada ejercicio: los de la cabeza (aros) y los de las manos (gemas)
+const TCH_MOVES = { squat: [['squat'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], ['tap']] };
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
+const comboMoves = () => String(settings[{ stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase]] || '').split(',').filter(Boolean);
+
+/* ---------- Aspecto ---------- */
+const ringHaloTex = texFrom((() => { const c = mkCanvas(256), x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 60, 128, 128, 128); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.55)'); g.addColorStop(0.62, 'rgba(255,255,255,0.15)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return c; })());
+// Silueta de cabeza dentro del aro y mano dibujada en la gema: la forma dice con qué se toca
+const headIconTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.9)'; x.beginPath(); x.arc(64, 50, 24, 0, TAU); x.fill(); x.beginPath(); x.moveTo(22, 120); x.quadraticCurveTo(26, 82, 64, 80); x.quadraticCurveTo(102, 82, 106, 120); x.closePath(); x.fill(); return c; })());
+const handIconTex = texFrom((() => {
+  const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = '#fff';
+  rr(x, 34, 58, 60, 52, 18); x.fill(); // palma
+  [[36, 22, 46], [52, 12, 52], [68, 14, 50], [84, 24, 42]].forEach(([fx_, fy, fh]) => { rr(x, fx_, fy, 13, fh, 6.5); x.fill(); });
+  x.save(); x.translate(36, 84); x.rotate(-0.9); rr(x, -6, -36, 13, 36, 6.5); x.fill(); x.restore(); // pulgar
+  return c;
+})());
+const gemGeo = new THREE.OctahedronGeometry(1, 0);
+const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3();
+// Aro con el borde grueso que ondula: un toro cuyos vértices se mueven cada fotograma
+function makeWobbleRing() {
+  const geo = new THREE.TorusGeometry(1, 0.2, 8, 40), pos = geo.attributes.position;
+  const base = Float32Array.from(pos.array), ang = new Float32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) ang[i] = Math.atan2(base[i * 3 + 1], base[i * 3]);
+  return { geo, base, ang };
+}
+function wobbleRing(R, t, amp, pulse) {
+  const p = R.geo.attributes.position.array, b = R.base;
+  for (let i = 0; i < R.ang.length; i++) {
+    const a = R.ang[i], cx = Math.cos(a), cy = Math.sin(a);
+    const rr_ = 1 + pulse * 0.08 + amp * (0.07 * Math.sin(3 * a + t * 2.3) + 0.045 * Math.sin(5 * a - t * 3.1));
+    const th = 1 + amp * 0.35 * Math.sin(4 * a - t * 2.7);
+    const ox = b[i * 3] - cx, oy = b[i * 3 + 1] - cy, oz = b[i * 3 + 2];
+    p[i * 3] = cx * rr_ + ox * th; p[i * 3 + 1] = cy * rr_ + oy * th; p[i * 3 + 2] = oz * th;
+  }
+  R.geo.attributes.position.needsUpdate = true;
+}
+
+/* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
+function moveSpec(move) {
+  const r = settings.tchRing / 100, S = TCH.ref, D = arMode ? 4 : 6.5, side = Math.random() < 0.5 ? -1 : 1;
+  const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
+  const o = { move, part: HAND_MOVES.includes(move) ? 'hand' : 'head', n: new V3(0, 0, 1), r, hold: 0 };
+  const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro del aro
+  if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
+  else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
+  else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
+  else if (move === 'reach') o.pos = new V3(side * rand(0.2, 0.35), S + 0.5 + jh, -0.2);
+  else if (move === 'push' || move === 'plank') {
+    o.r = clamp(r * 0.65, 0.07, 0.13); const ri = o.r * 0.75;
+    o.pos = move === 'push' ? new V3(0, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
+    if (move === 'plank') { o.r *= 1.15; o.hold = settings.plankHold; }
+  } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
+  else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
+    const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
+    if (move === 'knee') o.pos = new V3(side * rand(0, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
+    else {
+      const th = rand(settings.abMin, Math.max(settings.abMin, settings.abMax)) * Math.PI / 180;
+      const ph = move === 'twist' ? side * rand(0.5, 1) * settings.abTwist * Math.PI / 180 : 0;
+      o.pos = hip.clone().add(new V3(R * Math.sin(th) * Math.sin(ph), R * Math.sin(th) * Math.cos(ph), R * Math.cos(th)));
+      o.n.set(Math.cos(th) * Math.sin(ph), Math.cos(th) * Math.cos(ph), -Math.sin(th)).normalize().negate(); // de cara a ti
+    }
+  }
+  const far = isFloor() ? 3.5 : D;
+  o.from = isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
+  return o;
+}
+
+/* ---------- Objetivo ---------- */
+class TouchTarget {
+  constructor(move, arriveAt) {
+    Object.assign(this, moveSpec(move));
+    Object.assign(this, { alive: true, judged: false, mode: 'approach', spawnT: TCH.clock, arriveAt, win: settings.tchWindow, held: 0, outT: 0, popT: 0, ph: rand(0, TAU) });
+    const col = TCH_COL[this.part];
+    this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
+    if (this.part === 'head') {
+      this.R = makeWobbleRing();
+      this.mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, toneMapped: false });
+      this.ring = new THREE.Mesh(this.R.geo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
+      this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
+      this.root.quaternion.setFromUnitVectors(_tz, this.n);
+    } else {
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.9, roughness: 0.25, metalness: 0.3, flatShading: true });
+      this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.05, 0.075, 0.05); this.root.add(this.gem);
+      this.glow = glowSprite(col, 0.28, 0.7); this.root.add(this.glow);
+      this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex, color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.07, 0.07, 1); this.icon.position.y = 0.11; this.root.add(this.icon);
+    }
+  }
+  center(out) { return this.root.getWorldPosition(out); }
+  // ¿Está tocando? Cabeza: su centro dentro del hueco del aro; mano: la punta del índice (o la muñeca) en la gema
+  touching() {
+    if (this.part === 'head') {
+      _tv.subVectors(HL, this.root.position); _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion);
+      const dp = _tv.dot(_tw); _tv.addScaledVector(_tw, -dp);
+      this.rad = _tv.length() / (this.r * 0.75);
+      return Math.abs(dp) < 0.15 && this.rad < 1;
+    }
+    for (const s of ['left', 'right']) {
+      const h = hands[s]; if (!h.ok) continue;
+      arena.worldToLocal(_tv.copy(h.tipOk ? h.tip : h.wrist));
+      if (_tv.distanceTo(this.root.position) < 0.11) return true;
+    }
+    return false;
+  }
+  update(dt, t) {
+    const c = TCH.clock, play = state === 'play' || state === 'rest';
+    if (this.mode === 'approach') {
+      const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
+      this.root.position.lerpVectors(this.from, this.pos, e);
+      if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
+      else if (k > 0.85 && play && this.touching() && !this.hold) this.hit();
+    } else if (this.mode === 'wait') {
+      this.root.position.copy(this.pos);
+      if (play && this.touching()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
+      else if (c > this.arriveAt + this.win) this.miss();
+    } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro
+      if (this.touching()) { this.outT = 0; this.held += dt; } else this.outT += dt;
+      if (this.held >= this.hold) this.hit();
+      else if (this.outT > 0.6) this.miss();
+      else if (Math.floor(this.held) !== Math.floor(this.held - dt)) { const left = Math.ceil(this.hold - this.held); say(`Aguanta ${left}`, '#ffd166', 0.6, true); SND.beep(1 + (this.hold - left) * 0.1); }
+    } else if (this.mode === 'pass') {
+      // fallado: se aleja un poco hacia ti, se encoge y se apaga (no te atraviesa la cara)
+      this.popT += dt; this.root.position.addScaledVector(this.dir, dt * 0.8); this.root.position.y -= dt * 0.3;
+      const f = 1 - this.popT / 0.5; this.root.scale.setScalar(Math.max(0.05, 0.3 + 0.7 * f));
+      this.mat.opacity = Math.max(0, f) * 0.9; if (this.haloMat) this.haloMat.opacity = Math.max(0, f) * 0.5;
+      if (f <= 0) { this.dispose(); return; }
+    }
+    // ondula; con ritmo, late en cada pulso
+    const P = tchPeriod(), ph_ = P ? ((((perfNow() - TCH.beat0) / P) % 1) + 1) % 1 : 1, pulse = P ? Math.exp(-ph_ * 6) : 0;
+    if (this.R) {
+      const near = this.mode === 'wait' || this.mode === 'hold';
+      wobbleRing(this.R, t + this.ph, near ? 1.4 : 1, pulse);
+      if (this.mode === 'hold') { const k = this.held / this.hold; this.mat.color.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
+      this.haloMat.opacity = this.mode === 'pass' ? this.haloMat.opacity : (near ? 0.85 : 0.55) + pulse * 0.3;
+    } else if (this.gem) {
+      this.gem.rotation.y += dt * 2.2; this.gem.rotation.x = Math.sin(t * 1.3 + this.ph) * 0.3;
+      const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.05 * s, 0.075 * s, 0.05 * s);
+    }
+  }
+  hit() {
+    if (this.judged) return; this.judged = true;
+    const c = this.center(new V3()), col = TCH_COL[this.part], rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255];
+    const P = tchPeriod(), dt_ = Math.abs(TCH.clock - this.arriveAt);
+    const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.5 : dt_ < 0.3;
+    registerRep(perfect, false); stats.kills++;
+    say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, !perfect);
+    if (perfect) SND.perfect();
+    SND.pop(c, !!this.hold); fx.droplets(c, this.part === 'head' ? 26 : 16, rgb, 1.6, 0.03); fx.sparks(c, 10, rgb, 1.5, 0.025); fx.glow(c, rgb, 0.35, 0.15);
+    this.dispose();
+  }
+  miss() {
+    if (this.judged) return; this.judged = true; this.mode = 'pass'; this.popT = 0;
+    this.dir = this.pos.clone().sub(this.from).normalize(); this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
+    fx.sparks(this.center(new V3()), 8, [1, 0.25, 0.3], 1, 0.02);
+    if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido del aro!' : this.part === 'head' ? '¡Mete la cabeza en el aro!' : '¡Toca la gema!', '#ff3b5c', 1.1); }
+  }
+  dispose() {
+    this.alive = false; arena.remove(this.root);
+    if (this.R) { this.R.geo.dispose(); this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
+    this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose();
+  }
+}
+
+/* ---------- Oleadas y llegada ---------- */
+function buildTouchWave(i) {
+  const n = waveReps(i), list = [];
+  if (settings.exercise === 'combo') {
+    const mv = comboMoves();
+    for (let k = 0; k < n; k++) list.push({ move: settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv), hp: 1 });
+  } else {
+    const [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
+    for (let k = 0; k < n; k++) list.push({ move: Math.random() * 100 < settings.tchHands ? pick(hand) : pick(head), hp: 1 });
+  }
+  return list;
+}
+// Con ritmo, el instante (en el reloj del juego) del primer pulso a partir de c
+function snapBeat(c) {
+  const P = tchPeriod(); if (!P) return c;
+  const off = perfNow() - TCH.clock, at = c + off, k = Math.ceil((at - TCH.beat0) / P - 1e-6);
+  return TCH.beat0 + k * P - off;
+}
+function tchGapFor(move) {
+  const P = tchPeriod(), base = settings.tchGap + (move === 'plank' ? settings.plankHold : 0);
+  return P ? Math.max(1, Math.round(base / P)) * P : base;
+}
+function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + settings.tchArrive + 0.6); }
+function touchStep(dt, t) {
+  if (state !== 'paused') TCH.clock += dt;
+  if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - settings.tchArrive) {
+    const spec = spawnQueue.shift(); touches.push(new TouchTarget(spec.move, Math.max(TCH.nextArrive, TCH.clock + 0.3)));
+    TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
+  }
+  if (state !== 'paused') { for (const x of touches) if (x.alive) x.update(dt, t); touches = touches.filter(x => x.alive); }
+}
+const touchLeft = () => touches.some(x => x.alive && !x.judged);
+function touchClear() { touches.forEach(x => x.alive && x.dispose()); touches = []; }
+// En el ordenador: hacia dónde llevar la cabeza (Espacio) o la mano (G) para tocar el siguiente objetivo
+function touchAssist(part) {
+  let best = null;
+  for (const x of touches) if (x.alive && !x.judged && x.part === part && (x.mode !== 'approach' || TCH.clock > x.arriveAt - 0.6) && (!best || x.arriveAt < best.arriveAt)) best = x;
+  return best ? arena.localToWorld(best.pos.clone()) : null;
+}
+
+/* ---------- Ritmo: tocando al compás o preguntando a Spotify ---------- */
+function tapTempo() {
+  const now = perfNow(); TCH.taps = TCH.taps.filter(x => now - x < 3.5); TCH.taps.push(now); SND.tick();
+  if (TCH.taps.length >= 4) {
+    const d = []; for (let i = 1; i < TCH.taps.length; i++) d.push(TCH.taps[i] - TCH.taps[i - 1]);
+    d.sort((a, b) => a - b); const med = d[d.length >> 1];
+    if (med > 0.25 && med < 1.6) { setSetting('bpm', Math.round(60 / med)); TCH.beat0 = now; return true; }
+  }
+  return false;
+}
+async function spotifyTempo() {
+  try {
+    const r = await spTempo(); if (!r) return 'Spotify no da el ritmo a las apps nuevas: márcalo tocando al compás';
+    setSetting('bpm', Math.round(r.bpm)); if (r.beat0 != null) TCH.beat0 = r.beat0;
+    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM` + (r.beat0 == null ? ' (toca al compás para encajar el pulso)' : '');
+  } catch (e) { return spErrText(e); }
+}
+function tempoRows(back) {
+  const P = settings.bpm;
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · los objetivos llegan en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
+  const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { tapTempo(); back(); } }];
+  if (spConnected()) items.push({ label: 'Ritmo de Spotify', onPress: () => { spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
+  if (P) items.push({ label: 'Sin ritmo', onPress: () => { setSetting('bpm', 0); back(); } });
+  rows.push({ t: 'btns', items });
+  return rows;
+}
+
+
 /* =================== ENTRADA XR =================== */
 let lastStandYaw = 0;
 const _jm = new THREE.Matrix4(), _js = new V3();
@@ -4145,7 +4752,7 @@ function readXR(frame) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; h.J.forEach(j => j.ok = false); }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = false; h.J.forEach(j => j.ok = false); }
   for (const src of frame.session.inputSources) {
     const h = hands[src.handedness]; if (!h) continue;
     if (src.targetRaySpace) { const rp = frame.getPose(src.targetRaySpace, ref); if (rp) { const o = rp.transform.orientation; h.rayOk = true; h.rayO.copy(rp.transform.position); h.rayQ.set(o.x, o.y, o.z, o.w); h.rayD.set(0, 0, -1).applyQuaternion(h.rayQ); } }
@@ -4161,9 +4768,9 @@ function readXR(frame) {
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
-      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02;
+      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
-      h.isHand = false;
+      h.isHand = false; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
@@ -4172,13 +4779,24 @@ function readXR(frame) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null };
+// Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
+const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2 : isFloor() ? 0.45 : 1.6;
+const pvPitch = () => settings.exercise === 'superman' ? -0.35 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
+function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
+const _pvw = new V3();
 function previewInput(dt) {
   const dropAmt = isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
   let target = PV.crouch && settings.exercise !== 'curl' ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
+  // Toques: Espacio lleva la cabeza al aro que toca y la devuelve después
+  if (settings.mode === 'touch' && GAME_STATES.includes(state) && PV.home) {
+    const want = (PV.crouch && touchAssist('head')) || PV.home; _pvw.subVectors(want, camera.position); const d = _pvw.length();
+    if (d > 1e-4) camera.position.addScaledVector(_pvw, Math.min(1, 1.4 * dt / d));
+    target = PV.y = camera.position.y;
+  }
   PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
@@ -4194,17 +4812,21 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  // Toques: G lleva la mano derecha a la gema que toca
+  if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands.right; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(g); h.tip.copy(g); } }
+  // barras: agarrado, las manos quedan fuera de la vista; al soltarte (F) bajan y se ven
+  if (PV.bar && PV.fall) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.25); h.wrist.y -= 0.5; h.wristQ.copy(camera.quaternion); }
   if (PV.handsUp) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wrist.copy(camera.position).addScaledVector(r, sg * 0.3).addScaledVector(f, 0.12); h.wrist.y += 0.5; h.wristQ.copy(camera.quaternion); }
 }
 // En el ordenador, el modo Barras te pone colgado de la barra o tumbado bajo las paralelas
 function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
-  PV.baseY = !on ? (settings.exercise === 'superman' ? 0.22 : isFloor() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
+  PV.baseY = !on ? pvBaseY() : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
   // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
   const one = row && dipOne();
   if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
-  camera.rotation.set(!on ? (isFloor() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
+  camera.rotation.set(!on ? pvPitch() : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {
@@ -4212,8 +4834,8 @@ function startPreview() {
   Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
   preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
   const sup = settings.exercise === 'superman';
-  PV.baseY = sup ? 0.22 : isFloor() ? 0.45 : 1.6; PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
-  camera.position.set(0, PV.baseY, 0); camera.rotation.set(sup ? -0.35 : isFloor() ? -0.7 : -0.12, 0, 0);
+  PV.baseY = pvBaseY(); PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
+  camera.position.set(0, PV.baseY, 0); camera.rotation.set(pvPitch(), 0, 0);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   arena.position.set(0, 0, 0); arena.rotation.set(0, 0, 0);
@@ -4275,12 +4897,12 @@ renderer.setAnimationLoop((time, frame) => {
   updateListener(head.p, head.q);
   fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
   gameStep(dt, t);
-  updateFX(dt);
+  updateFX(dt); updateBolts(dt);
   updateGloves(dt);
-  updateAim(t);
-  updateWatch(dt);
+  updateAim(t); updatePistol(dt);
+  updateWatch(dt); updateWristMenu(dt);
   updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
-  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5); }
+  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);
   if (!arMode && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }

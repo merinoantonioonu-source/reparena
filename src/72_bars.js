@@ -1,11 +1,11 @@
 
 /* =================== MODO BARRAS: REMO INVERTIDO, DOMINADAS Y COLGADO =================== */
 // La repetición se mide por la altura del visor y cuenta al subir. Cada una revienta con la cabeza el objetivo
-// que espera en el punto más alto del recorrido. Debajo hay un charco con tentáculos: si te sueltas, caes.
-const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
+// que espera en el punto más alto del recorrido. Bajo la barra de dominadas hay un charco con tentáculos: si te sueltas, caes.
+const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -14,13 +14,22 @@ function barNear() {
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
 
+// ¿Se ven las manos claramente por debajo de la barra? Agarrado, las muñecas están a su altura (o fuera de la
+// vista, por encima de la cabeza); al soltarte bajan y entran en la vista. Devuelve cuántas se ven abajo y cuántas se ven.
+function handsLow() {
+  const y = eqTopY() - 0.35; let low = 0, ok = 0;
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok) { ok++; if (h.wrist.y < y) low++; } }
+  return { low, ok };
+}
+const handsOff = () => { const h = handsLow(); return h.low >= 2 || (h.low === 1 && h.ok === 1); };
+
 /* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
 function barToMount(next, resume = false) {
   state = 'mount'; stateT = 0; BAR.phase = 'place'; BAR.still = 0; BAR.t = 0; BAR.resume = resume; if (!resume) BAR.nextWave = next;
   center.mesh.visible = true; drawCenter(); boardDirty = true;
 }
 function barMountStep(dt) {
-  const near = barNear(), still = head.speed < 0.08;
+  const near = barNear() && !handsOff(), still = head.speed < 0.08; // de pie bajo la barra con las manos abajo no estás colgado
   if (BAR.phase === 'place') { BAR.still = near && still ? BAR.still + dt : Math.max(0, BAR.still - dt * 2); if (BAR.still >= 0.8) { BAR.phase = 'count'; BAR.t = 0; SND.charge(); } }
   else if (BAR.phase === 'count') { const before = BAR.t; BAR.t += dt; if (!near) { BAR.phase = 'place'; BAR.still = 0; } else if (BAR.t >= 3) { BAR.phase = 'settle'; BAR.t = 0; BAR.still = 0; } else if (Math.floor(before) !== Math.floor(BAR.t)) SND.beep(); }
   else { BAR.t += dt; BAR.still = still ? BAR.still + dt : 0; if (BAR.still >= 0.35 || BAR.t > 2.5) barMounted(); }
@@ -62,16 +71,20 @@ function placeRowBoard(fromHead) {
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
   stats.falls++;
-  const at = new V3(head.p.x, 0.03, head.p.z); poolGrab(at);
+  const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
+  if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say('¡AL CHARCO!', '#3cff8a', 1.8);
+  say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
   barToMount(0, true);
 }
 function barDetect(t, dt) {
   if (state !== 'play') return;
   const y = head.p.y, margin = settings.fallMargin / 100;
-  BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
-  if (y < BAR.hangRef - margin || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { barFall(); return; }
+  // la posición colgado solo se reajusta quieto abajo: bajar despacio también cuenta como caída
+  if (BAR.det === 'down' && head.speed < 0.05) BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
+  // soltarse: las manos a la vista por debajo de la barra (al caer de pie la cabeza no siempre baja)
+  const off = handsLow(); BAR.letGo = off.low >= 2 || (off.low === 1 && off.ok === 1) ? BAR.letGo + dt : 0;
+  if (y < BAR.hangRef - margin || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { BAR.letGo = 0; barFall(); return; }
   if (settings.exercise === 'hang') {
     const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
     if (Math.floor(BAR.hold) > Math.floor(before)) {
@@ -156,11 +169,12 @@ class HeadTarget {
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
     barSlot(this.slotIndex(), this.slot);
-    if (this.bubble) { // sube del borde del charco más cercano
-      const e = eqPose(), l = eqLocal(e, arena.localToWorld(_bw.copy(this.slot)), _bl);
-      const nx = l.x / POOL.rx, nz = l.z / POOL.rz, n = Math.hypot(nx, nz) || 1;
-      this.pos.copy(arena.worldToLocal(eqWorld(e, nx / n * POOL.rx * 0.85, 0.06, nz / n * POOL.rz * 0.85, _bw)));
-      SND.pop(arena.localToWorld(_bw.copy(this.pos)), false);
+    if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
+      const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
+      if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
+      else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+      w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
+      this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
       const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));

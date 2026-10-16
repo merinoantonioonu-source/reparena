@@ -90,6 +90,15 @@ function spVol(d) {
     await spApi('PUT', '/me/player/volume?volume_percent=' + v); dev.volume_percent = v;
   });
 }
+// Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
+// 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
+async function spTempo() {
+  const st = await spApi('GET', '/me/player'), it = st && st.item; if (!it || !it.id) throw new Error('NO_DEVICE');
+  const start = performance.now() / 1000 - (st.progress_ms || 0) / 1000;
+  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : null }; } catch (e) { /* sin permiso */ }
+  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: null }; } catch (e) { /* sin permiso */ }
+  return null;
+}
 function spNowText() {
   if (!spConnected()) return '';
   if (SP.err) return SP.err;
@@ -99,7 +108,7 @@ function spNowText() {
   const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
-// Filas para los menús del juego (atril y pausa)
+// Filas para los menús del juego (principal y pausa)
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;

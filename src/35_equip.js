@@ -160,7 +160,7 @@ function poolGrab(at) {
   POOL.tents.forEach(T => { T.lungeV = 1; });
 }
 function updatePool(dt, t) {
-  const show = isBars() && state !== 'idle';
+  const show = isBars() && eqKind() === 'door' && state !== 'idle'; // el charco solo bajo la barra de dominadas
   pool.visible = show; if (!show) return;
   ensureTentacles();
   const e = eqPose();

@@ -111,7 +111,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section>
     <h2>Modo de juego</h2>
-    <div class="cards four">
+    <div class="cards">
       <label class="card"><input type="radio" name="mode" id="mode-walkers" value="walkers">
         <span class="tag">Disparo automático</span><b>Asalto</b>
         <small>Robots salen de las compuertas y vienen a por ti. En flexiones, arañas que salen del suelo.</small></label>
@@ -123,7 +123,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
-        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Debajo hay un charco con tentáculos: no te sueltes.</small></label>
+        <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-touch" value="touch">
+        <span class="tag">Cabeza y manos</span><b>Toques</b>
+        <small>Vienen hacia ti aros que ondulan (mete la cabeza por el hueco) y gemas con una mano (tócalas). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
     </div>
   </section>
 
@@ -154,6 +157,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-hang" value="hang">
         <span class="tag">Barra de puerta · altura del visor</span><b>Colgado</b>
         <small>Aguanta colgado los segundos de cada oleada. Si te sueltas, caes al charco de los tentáculos.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-jump" value="jump">
+        <span class="tag">Toques · visor y manos</span><b>Saltos</b>
+        <small>Los aros llegan por encima de tu cabeza: salta para meterla en el hueco. Las gemas, arriba a los lados, se tocan saltando con el brazo estirado.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-abs" value="abs">
+        <span class="tag">Toques · visor y manos</span><b>Abdominales</b>
+        <small>Boca arriba con las rodillas dobladas. Los aros esperan en el arco que hace tu cabeza al subir el tronco, de frente o girados (oblicuos); las gemas, junto a las rodillas.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-combo" value="combo">
+        <span class="tag">Toques · tú eliges</span><b>Combinado</b>
+        <small>Elige una postura y mezcla movimientos: sentadilla + salto, flexión + plancha aguantada, abdominal + oblicuo… en orden o al azar.</small></label>
     </div>
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
   </section>
@@ -175,7 +187,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
@@ -188,7 +200,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="music">
     <h2>Música con Spotify</h2>
-    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el atril y desde el menú de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
+    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el menú principal y el de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
     <ol class="steps">
       <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
       <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
@@ -208,11 +220,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
-      <li>El menú principal aparece en un atril fijo delante de ti. No te sigue: acércate y pulsa los botones con la punta del índice. La distancia a la que aparece se cambia en Ajustes → Sistema.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de los aros (turquesa, con una cabeza dibujada) y toca con cualquier mano las gemas (naranjas, con una mano dibujada). Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
+      <li><strong>Pistolas</strong> (sentadillas en Asalto o Enjambre, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el atril. El atril se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el atril con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -229,7 +243,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano a la gema (Toques; Espacio lleva la cabeza al aro) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
