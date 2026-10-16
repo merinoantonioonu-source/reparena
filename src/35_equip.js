@@ -13,7 +13,9 @@ const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(
 function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle }; } store(EQUIP_KEY, o); }
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
-const EQ_NAMES = { door: 'barra', dip: 'paralelas' };
+const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
+// Nombre del aparato para los textos
+function eqName(k = eqKind()) { return k === 'door' ? { the: 'la barra', name: 'barra', pl: false } : dipOne() ? { the: 'la paralela', name: 'paralela', pl: false } : { the: 'las paralelas', name: 'paralelas', pl: true }; }
 // Ejes horizontales del aparato: a lo largo de la barra (X local) y perpendicular (Z local)
 function eqAxes(e, ax, az) { const c = Math.cos(e.yaw), s = Math.sin(e.yaw); if (ax) ax.set(c, 0, -s); if (az) az.set(s, 0, c); }
 // Coordenadas locales (horizontales) de un punto del mundo respecto al aparato
@@ -52,11 +54,10 @@ function buildEquipVis() {
   EQV.door.vr.add(k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete }, { cast: true, receive: true }));
   glowBar(EQV.door.mr, new V3(-W / 2, H, 0), new V3(W / 2, H, 0));
   for (const s of [-1, 1]) glowBar(EQV.door.mr, new V3(s * W / 2, H - 0.12, 0), new V3(s * W / 2, H + 0.04, 0));
-  // Paralelas: dos barras con postes y patas
-  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100;
+  // Paralelas: una o dos barras con postes y patas
+  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100, xs = dipOne() ? [0] : [-gap / 2, gap / 2];
   k = new Kit();
-  for (const s of [-1, 1]) {
-    const x = s * gap / 2;
+  for (const x of xs) {
     k.add('steel', G.cyl(0.02, 0.02, L, 14), C.chrome, x, dH, 0, Math.PI / 2, 0, 0);
     k.add('rubber', G.cyl(0.025, 0.025, Math.min(0.32, L * 0.5), 14), C.white, x, dH, 0, Math.PI / 2, 0, 0);
     for (const e of [-1, 1]) {
@@ -67,10 +68,10 @@ function buildEquipVis() {
     k.add('paint', G.box(0.085, 0.045, 0.12), C.hazard, x, 0.022, (L + 0.3) / 2 - 0.06);
   }
   EQV.dip.vr.add(k.build({ steel: M.steel, rubber: M.rubber, paint: M.paint }, { cast: true, receive: true }));
-  for (const s of [-1, 1]) { glowBar(EQV.dip.mr, new V3(s * gap / 2, dH, -L / 2), new V3(s * gap / 2, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(s * gap / 2, dH - 0.12, e * L / 2), new V3(s * gap / 2, dH, e * L / 2)); }
+  for (const x of xs) { glowBar(EQV.dip.mr, new V3(x, dH, -L / 2), new V3(x, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(x, dH - 0.12, e * L / 2), new V3(x, dH, e * L / 2)); }
   layoutPool();
 }
-settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', '*'].includes(k)) buildEquipVis(); });
+settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', 'dipBars', '*'].includes(k)) buildEquipVis(); });
 function updateEquip(dt, t) {
   const show = isBars() && state !== 'idle';
   eqGroup.visible = show; if (!show) return;
@@ -135,7 +136,8 @@ const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transpa
 for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
 // Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
 function layoutPool() {
-  if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
+  if (eqKind() === 'dip' && dipOne()) { POOL.rx = 0.95; POOL.rz = settings.dipLen / 200 + 0.35; } // cuerpo cruzado bajo la barra
+  else if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
   else { POOL.rx = POOL.rz = 0.8; }
   pool.scale.set(1, 1, 1); poolDisc.scale.set(POOL.rx, POOL.rz, 1); poolRim.scale.set(POOL.rx, POOL.rz, 1);
   POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });

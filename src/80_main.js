@@ -56,8 +56,10 @@ function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
   PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
-  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
-  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
+  const one = row && dipOne();
+  if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
+  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {

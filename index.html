@@ -263,7 +263,8 @@ const SCHEMA = [
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
   { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
   { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
-  { key: 'dipGap', g: 'barras', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
+  { key: 'dipBars', g: 'barras', label: 'Paralelas que usas', short: 'Paralelas', type: 'choice', opts: [['2', 'Dos'], ['1', 'Una']], def: '2', modes: ['bars'], ex: ['row'], relayout: true, hint: 'Con una sola te tumbas cruzado debajo y la agarras con las dos manos.' },
+  { key: 'dipGap', g: 'barras', cond: () => settings.dipBars !== '1', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
@@ -321,6 +322,7 @@ function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
   if (f.noEx && f.noEx.includes(settings.exercise)) return false;
+  if (f.cond && !f.cond()) return false;
   return true;
 }
 const isPush = () => settings.exercise === 'pushup';
@@ -369,6 +371,7 @@ function onFormInput(ev) {
   } else {
     const v = f.type === 'toggle' ? +el.value : el.value;
     settings[key] = clampSetting(f, v); saveSettings(); onSettingChanged(key);
+    if (f.relayout) syncForm(); // cambia qué otros campos se ven
   }
   updateSummary();
 }
@@ -1404,7 +1407,9 @@ const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(
 function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle }; } store(EQUIP_KEY, o); }
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
-const EQ_NAMES = { door: 'barra', dip: 'paralelas' };
+const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
+// Nombre del aparato para los textos
+function eqName(k = eqKind()) { return k === 'door' ? { the: 'la barra', name: 'barra', pl: false } : dipOne() ? { the: 'la paralela', name: 'paralela', pl: false } : { the: 'las paralelas', name: 'paralelas', pl: true }; }
 // Ejes horizontales del aparato: a lo largo de la barra (X local) y perpendicular (Z local)
 function eqAxes(e, ax, az) { const c = Math.cos(e.yaw), s = Math.sin(e.yaw); if (ax) ax.set(c, 0, -s); if (az) az.set(s, 0, c); }
 // Coordenadas locales (horizontales) de un punto del mundo respecto al aparato
@@ -1443,11 +1448,10 @@ function buildEquipVis() {
   EQV.door.vr.add(k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete }, { cast: true, receive: true }));
   glowBar(EQV.door.mr, new V3(-W / 2, H, 0), new V3(W / 2, H, 0));
   for (const s of [-1, 1]) glowBar(EQV.door.mr, new V3(s * W / 2, H - 0.12, 0), new V3(s * W / 2, H + 0.04, 0));
-  // Paralelas: dos barras con postes y patas
-  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100;
+  // Paralelas: una o dos barras con postes y patas
+  const dH = settings.dipH / 100, gap = settings.dipGap / 100, L = settings.dipLen / 100, xs = dipOne() ? [0] : [-gap / 2, gap / 2];
   k = new Kit();
-  for (const s of [-1, 1]) {
-    const x = s * gap / 2;
+  for (const x of xs) {
     k.add('steel', G.cyl(0.02, 0.02, L, 14), C.chrome, x, dH, 0, Math.PI / 2, 0, 0);
     k.add('rubber', G.cyl(0.025, 0.025, Math.min(0.32, L * 0.5), 14), C.white, x, dH, 0, Math.PI / 2, 0, 0);
     for (const e of [-1, 1]) {
@@ -1458,10 +1462,10 @@ function buildEquipVis() {
     k.add('paint', G.box(0.085, 0.045, 0.12), C.hazard, x, 0.022, (L + 0.3) / 2 - 0.06);
   }
   EQV.dip.vr.add(k.build({ steel: M.steel, rubber: M.rubber, paint: M.paint }, { cast: true, receive: true }));
-  for (const s of [-1, 1]) { glowBar(EQV.dip.mr, new V3(s * gap / 2, dH, -L / 2), new V3(s * gap / 2, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(s * gap / 2, dH - 0.12, e * L / 2), new V3(s * gap / 2, dH, e * L / 2)); }
+  for (const x of xs) { glowBar(EQV.dip.mr, new V3(x, dH, -L / 2), new V3(x, dH, L / 2)); for (const e of [-1, 1]) glowBar(EQV.dip.mr, new V3(x, dH - 0.12, e * L / 2), new V3(x, dH, e * L / 2)); }
   layoutPool();
 }
-settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', '*'].includes(k)) buildEquipVis(); });
+settingHooks.push(k => { if (['doorH', 'doorW', 'dipH', 'dipGap', 'dipLen', 'dipBars', '*'].includes(k)) buildEquipVis(); });
 function updateEquip(dt, t) {
   const show = isBars() && state !== 'idle';
   eqGroup.visible = show; if (!show) return;
@@ -1526,7 +1530,8 @@ const eyeMat = new THREE.SpriteMaterial({ map: TX.halo, color: 0xffe14a, transpa
 for (let i = 0; i < 4; i++) { const pair = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Sprite(eyeMat); e.scale.set(0.05, 0.035, 1); e.position.set(s * 0.035, 0.012, 0); pair.add(e); } pool.add(pair); POOL.eyes.push({ g: pair, a: i * 1.7 + 0.4, r: 0.25 + (i % 2) * 0.3, t: rand(0, 4) }); }
 // Tamaño y sitio: bajo la barra (círculo) o bajo las paralelas y el cuerpo tumbado (elipse)
 function layoutPool() {
-  if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
+  if (eqKind() === 'dip' && dipOne()) { POOL.rx = 0.95; POOL.rz = settings.dipLen / 200 + 0.35; } // cuerpo cruzado bajo la barra
+  else if (eqKind() === 'dip') { POOL.rx = settings.dipGap / 200 + 0.35; POOL.rz = settings.dipLen / 200 + 0.85; }
   else { POOL.rx = POOL.rz = 0.8; }
   pool.scale.set(1, 1, 1); poolDisc.scale.set(POOL.rx, POOL.rz, 1); poolRim.scale.set(POOL.rx, POOL.rz, 1);
   POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });
@@ -2401,12 +2406,12 @@ function drawCenter() {
     const door = PLACE.kind === 'door';
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left';
     if (PLACE.wait) {
-      c.fillText(door ? '¡BARRA COLOCADA!' : '¡PARALELAS COLOCADAS!', 44, 68);
+      const nm = eqName(PLACE.kind); c.fillText(`¡${nm.name.toUpperCase()} ${nm.pl ? 'COLOCADAS' : 'COLOCADA'}!`, 44, 68);
       c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; [PLACE.note, door ? 'Suéltate: ahora aparecen los ajustes finos.' : 'Ponte de pie: aparecen los ajustes finos.'].forEach((l, i) => { fitFont(c, l, W - 88, 36, '500 %px ' + FB); c.fillText(l, 44, 148 + i * 52); });
       centerBar(c, W, H, 1);
     } else {
-      c.fillText(door ? 'COLOCAR BARRA' : 'COLOCAR PARALELAS', 44, 68);
-      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
+      c.fillText('COLOCAR ' + eqName(PLACE.kind).name.toUpperCase(), 44, 68);
+      const L = door ? ['Agárrala con las dos manos por', `encima de la cabeza. Quieto ${PLACE_HOLD} s.`] : dipOne() ? ['Túmbate cruzado debajo y agárrala con', `las dos manos, brazos estirados. Quieto ${PLACE_HOLD} s.`] : ['Túmbate debajo y agárralas con los', `brazos estirados. Quieto ${PLACE_HOLD} s.`];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
       const st = !PLACE.seen ? ['No veo tus manos: míralas', '#ff8a3d'] : !PLACE.up ? ['Sube las manos por encima de la cabeza', '#ff8a3d'] : !PLACE.ok ? ['Separa más las manos', '#ff8a3d'] : ['Bien: no te muevas', '#3cf0c6'];
       c.font = `500 34px ${FB}`; c.fillStyle = st[1]; c.fillText(st[0], 44, 258);
@@ -2418,9 +2423,9 @@ function drawCenter() {
     const row = settings.exercise === 'row';
     if (BAR.phase === 'place') {
       c.fillStyle = BAR.resume ? '#3cff8a' : '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText(BAR.resume ? (row ? '¡A LAS PARALELAS!' : '¡A LA BARRA!') : row ? 'PARALELAS' : 'BARRA', 44, 68);
-      const L = row ? ['Túmbate bajo las paralelas, agárralas', 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
+      const L = row ? [`Túmbate bajo ${eqName().the}, ${dipOne() ? 'agárrala' : 'agárralas'}`, 'y estira los brazos. Quieto 1 s.'] : ['Ponte bajo la barra, o cuélgate', 'ya de ella. Quieto 1 s.'];
       c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
-      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : row ? 'lejos de las paralelas' : 'lejos de la barra', W - 44, 68);
+      const near = barNear(); c.font = `32px ${FB}`; c.fillStyle = near ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(near ? 'en posición' : 'lejos de ' + eqName().the, W - 44, 68);
       centerBar(c, W, H, BAR.still / 0.8);
     } else {
       c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
@@ -3336,7 +3341,7 @@ function summaryText() {
 function lobbyMenu(reanchor) {
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
-  const start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${k === 'door' ? 'la barra' : 'las paralelas'}`); else beginRun(); };
+  const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
@@ -3347,10 +3352,10 @@ function lobbyMenu(reanchor) {
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  if (bars) rows.push({ t: 'btns', items: [{ label: k === 'door' ? 'Colocar barra' : 'Colocar paralelas', style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
+  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   rows.push(...musicRows());
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
-  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${k === 'door' ? 'la barra' : 'las paralelas'}: pulsa Colocar` : `Comprueba que ${k === 'door' ? 'la barra virtual coincide' : 'las paralelas virtuales coinciden'} con la real; si no, pulsa Colocar`;
+  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows, { reanchor });
   m.rebuild = () => lobbyMenu();
@@ -3360,7 +3365,7 @@ function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
-  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key }));
+  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });
   const m = openMenu(rows); m.rebuild = () => settingsMenu(back, tab);
@@ -3389,7 +3394,7 @@ function pauseMenu(reanchor) {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...musicRows(),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: eqKind() === 'door' ? 'Ajustar barra' : 'Ajustar paralelas', onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
@@ -3522,6 +3527,7 @@ function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
+  if (settings.exercise === 'row' && dipOne()) return Math.abs(l.x) < 1.0 && Math.abs(l.z) < settings.dipLen / 200 + 0.35 && y < settings.dipH / 100 + 0.05;
   if (settings.exercise === 'row') return Math.abs(l.x) < settings.dipGap / 200 + 0.35 && Math.abs(l.z) < settings.dipLen / 200 + 0.9 && y < settings.dipH / 100 + 0.05;
   return Math.abs(l.x) < settings.doorW / 200 + 0.2 && Math.abs(l.z) < 0.6 && y < settings.doorH / 100 - 0.12;
 }
@@ -3824,11 +3830,13 @@ function placeConfirm() {
 }
 function placeFromHands(k, L, R) {
   const e = eqPose(k), dx = R.x - L.x, dz = R.z - L.z, mid = _pl3.addVectors(L, R).multiplyScalar(0.5);
-  e.x = mid.x; e.z = mid.z; e.yaw = Math.atan2(-dz, dx);
+  // barra de puerta y paralela única: las manos van a lo largo de la barra; con dos paralelas, una en cada barra
+  const one = k === 'dip' && dipOne();
+  e.x = mid.x; e.z = mid.z; e.yaw = one ? Math.atan2(dx, dz) : Math.atan2(-dz, dx);
   if (k === 'door') setSetting('doorH', Math.round((mid.y + 0.015) * 100));
-  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
+  else { setSetting('dipH', Math.round((mid.y + 0.015) * 100)); if (!one) setSetting('dipGap', Math.round(Math.hypot(dx, dz) * 100)); }
   equipChanged(k);
-  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
+  PLACE.note = k === 'door' ? `Barra colocada a ${settings.doorH} cm de altura` : one ? `Paralela colocada a ${settings.dipH} cm de altura` : `Paralelas colocadas: ${settings.dipH} cm de alto, ${settings.dipGap} cm entre ellas`;
 }
 function placeInFront(k) { const e = eqPose(k), f = fwdH(), d = k === 'door' ? 0.25 : 0.55; e.x = head.p.x + f.x * d; e.z = head.p.z + f.z * d; e.yaw = yawOf(head.q); equipChanged(k); }
 function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x += -f.z * side + f.x * ahead; e.z += f.x * side + f.z * ahead; e.yaw += rot; equipChanged(k); PLACE.note = ''; }
@@ -3836,15 +3844,16 @@ function nudgeEquip(k, side, ahead, rot) { const e = eqPose(k), f = fwdH(); e.x 
 function adjustMenu(back, reanchor) {
   const k = eqKind(), door = k === 'door', e = eqPose(k), deg = Math.PI / 180;
   if (EQ.edit !== k) { EQ.edit = k; e.anchor = null; }
-  const what = door ? 'la barra virtual coincida' : 'las paralelas virtuales coincidan';
-  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${door ? 'está colocada' : 'están colocadas'}: pulsa Colocar con las manos`;
+  const nm = eqName(k), what = `${nm.the} ${nm.pl ? 'virtuales coincidan' : 'virtual coincida'}`;
+  const note = PLACE.note ? `${PLACE.note}. Ajusta hasta que ${what} con la real.` : e.set ? `Ajusta hasta que ${what} con la real` : `Aún no ${nm.pl ? 'están colocadas' : 'está colocada'}: pulsa Colocar con las manos`;
   const rows = [
-    { t: 'title', text: door ? 'AJUSTAR BARRA' : 'AJUSTAR PARALELAS' },
+    { t: 'title', text: 'AJUSTAR ' + nm.name.toUpperCase() },
     { t: 'text', text: note, color: PLACE.note ? '#3cf0c6' : e.set ? '#d8d3f5' : '#ffd166' },
+    ...(door ? [] : [{ t: 'field', key: 'dipBars', after: () => adjustMenu(back) }]),
     { t: 'field', key: door ? 'doorH' : 'dipH' },
-    { t: 'field', key: door ? 'doorW' : 'dipGap' }
+    door ? { t: 'field', key: 'doorW' } : dipOne() ? { t: 'field', key: 'dipLen' } : { t: 'field', key: 'dipGap' }
   ];
-  if (!door) rows.push({ t: 'field', key: 'dipLen' });
+  if (!door && !dipOne()) rows.push({ t: 'field', key: 'dipLen' });
   rows.push({ t: 'btns', items: [['Izquierda', -0.01, 0], ['Derecha', 0.01, 0], ['Acercar', 0, -0.01], ['Alejar', 0, 0.01]].map(([label, sx, fz]) => ({ label, onPress: () => nudgeEquip(k, sx, fz, 0) })) });
   rows.push({ t: 'btns', items: [{ label: 'Girar izquierda', onPress: () => nudgeEquip(k, 0, 0, deg) }, { label: 'Girar derecha', onPress: () => nudgeEquip(k, 0, 0, -deg) }, { label: 'Delante de mí', onPress: () => { placeInFront(k); PLACE.note = ''; adjustMenu(back); } }] });
   rows.push({ t: 'text', text: 'Cada pulsación mueve 1 cm o gira 1°', color: '#a49fc8' });
@@ -3914,8 +3923,10 @@ function previewBarPose(on) {
   if (on === PV.bar) return; PV.bar = on;
   const row = settings.exercise === 'row', e = eqPose();
   PV.baseY = !on ? (isPush() ? 0.45 : 1.6) : row ? Math.max(0.2, settings.dipH / 100 - 0.5) : settings.doorH / 100 - 0.62; PV.y = PV.baseY;
-  if (on) eqWorld(e, 0, PV.baseY, row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0); // tumbado con la cabeza junto al agarre, o colgado justo detrás de la barra
-  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw : 0, 0);
+  // tumbado con la cabeza junto al agarre (con una paralela, cruzado: la cabeza pasa la barra), o colgado justo detrás de la barra
+  const one = row && dipOne();
+  if (on) eqWorld(e, one ? 0.3 : 0, PV.baseY, one ? 0 : row ? 0.3 : 0.2, camera.position); else camera.position.set(0, PV.baseY, 0);
+  camera.rotation.set(!on ? (isPush() ? -0.7 : -0.12) : row ? 1.2 : 0.5, on ? e.yaw + (one ? Math.PI / 2 : 0) : 0, 0);
   head.p.copy(camera.position); head.prev.copy(head.p);
 }
 function startPreview() {

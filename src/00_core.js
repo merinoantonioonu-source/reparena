@@ -52,7 +52,8 @@ const SCHEMA = [
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
   { key: 'doorW', g: 'barras', label: 'Ancho de la barra de dominadas', short: 'Ancho barra', type: 'num', min: 50, max: 140, step: 1, def: 90, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'] },
   { key: 'dipH', g: 'barras', label: 'Altura de las paralelas', short: 'Altura paralelas', type: 'num', min: 50, max: 150, step: 1, def: 95, unit: 'cm', modes: ['bars'], ex: ['row'], hint: 'Se ajusta sola al colocarlas con las manos.' },
-  { key: 'dipGap', g: 'barras', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
+  { key: 'dipBars', g: 'barras', label: 'Paralelas que usas', short: 'Paralelas', type: 'choice', opts: [['2', 'Dos'], ['1', 'Una']], def: '2', modes: ['bars'], ex: ['row'], relayout: true, hint: 'Con una sola te tumbas cruzado debajo y la agarras con las dos manos.' },
+  { key: 'dipGap', g: 'barras', cond: () => settings.dipBars !== '1', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
@@ -110,6 +111,7 @@ function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
   if (f.noEx && f.noEx.includes(settings.exercise)) return false;
+  if (f.cond && !f.cond()) return false;
   return true;
 }
 const isPush = () => settings.exercise === 'pushup';
@@ -158,6 +160,7 @@ function onFormInput(ev) {
   } else {
     const v = f.type === 'toggle' ? +el.value : el.value;
     settings[key] = clampSetting(f, v); saveSettings(); onSettingChanged(key);
+    if (f.relayout) syncForm(); // cambia qué otros campos se ven
   }
   updateSummary();
 }
