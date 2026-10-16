@@ -229,7 +229,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>T</kbd> gatillo (pistolas) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -279,7 +279,8 @@ const SCHEMA = [
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['flyers'] },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['walkers', 'flyers'], hint: 'Bájalo si el juego va a tirones.' },
   { key: 'spawnGap', g: 'enemigos', label: 'Segundos entre apariciones', short: 'Entre apariciones', type: 'num', min: 0, max: 20, step: 0.5, def: 0, unit: 's', zero: 'Auto', modes: ['walkers', 'flyers'] },
-  { key: 'aim', g: 'enemigos', label: 'Apuntar con (sentadillas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
+  { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['walkers', 'flyers'], ex: ['squat'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
+  { key: 'aim', g: 'enemigos', cond: () => !settings.pistol, label: 'Apuntar con (sentadillas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['flyers'] },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
@@ -365,6 +366,10 @@ function fieldVisible(f) {
   return true;
 }
 // Postura en el suelo (flexiones y plancha): arañas, trampillas, calibración y marcador bajos
+// Pistolas: en sentadillas (Asalto y Enjambre) las repeticiones cargan munición y el gatillo dispara
+const pistolOn = () => !!settings.pistol && settings.exercise === 'squat' && (settings.mode === 'walkers' || settings.mode === 'flyers');
+// En Enjambre con las manos o las pistolas cada repetición da dos disparos (uno por mano)
+const twoShots = () => settings.mode === 'flyers' && settings.exercise === 'squat' && (settings.aim === 'hands' || pistolOn());
 const isFloor = () => settings.exercise === 'pushup' || settings.exercise === 'plank1' || settings.exercise === 'superman';
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
 const isTiny = () => settings.exercise === 'pushup' || settings.exercise === 'plank1';
@@ -1999,7 +2004,7 @@ function updateGloves(dt) {
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
-      g.palm.visible = !h.isHand && h.ok;
+      g.palm.visible = !h.isHand && h.ok && !(pistolOn() && GAME_STATES.includes(state)); // con pistolas se ve el bláster
       if (g.palm.visible) { g.palm.position.copy(h.wrist); g.palm.quaternion.copy(h.wristQ); g.palm.scale.setScalar(1); }
       continue;
     }
@@ -2320,7 +2325,7 @@ function updateBolts(dt) {
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
 const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
-const mkHand = () => ({ ok: false, isHand: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
+const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
 function fwd(q = head.q) { return new V3(0, 0, -1).applyQuaternion(q); }
@@ -2559,7 +2564,10 @@ function wristLook(h = hands.left, lim = 0.72) {
 function updateWatch(dt) {
   const h = hands.left;
   let show = false;
-  if (wristLook(h) && !(menu && menu.wrist)) { // con el menú en la muñeca, el propio panel hace de botón
+  // con mandos, X/Y del mando izquierdo hacen de botón de menú
+  if (h.btnMenu && !watch.btnPrev) onWatch(); watch.btnPrev = h.btnMenu;
+  const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
+  if (wristLook(h) && !(menu && menu.wrist) && !guns) { // con el menú en la muñeca, el propio panel hace de botón
     show = true;
     if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));
@@ -2686,7 +2694,7 @@ function drawCenter() {
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat')) {
+    if (settings.exercise === 'curl' || settings.exercise === 'plank1' || settings.exercise === 'superman' || (settings.mode === 'flyers' && settings.aim === 'hands' && settings.exercise === 'squat') || pistolOn()) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {
@@ -2701,7 +2709,7 @@ function repsLeft() {
   if (settings.exercise === 'hang') return Math.max(0, Math.ceil(BAR.need - BAR.hold));
   if (settings.mode === 'arcs') return spawnQueue.length + arcs.filter(a => !a.judged && !a.second).length;
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
-  return Math.ceil(hp / (settings.mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands' ? 2 : 1));
+  return Math.ceil(hp / (twoShots() ? 2 : 1));
 }
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
@@ -2739,7 +2747,8 @@ function drawBoard() {
   else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
+  if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
+  else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
   c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
   c.textAlign = 'center'; c.fillStyle = '#eeeaff';
@@ -3472,10 +3481,10 @@ function pickNearest(side) {
   if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
-function findLock(o, d) {
+function findLock(o, d, any = false) {
   let best = null, bs = 1e9; const cone = settings.assist * Math.PI / 180;
   for (const e of enemies) {
-    if (!e.alive || e.type !== 'flyer') continue;
+    if (!e.alive || (!any && e.type !== 'flyer')) continue;
     const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
     const sc = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
     if (sc < cone && sc < bs) { bs = sc; best = e; }
@@ -3493,7 +3502,7 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
 }
 // Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
+  const e = forced || findLock(lockFrom || origin, dir, pistolOn()), L = boltLevel(perfect), col = boltRGB(L);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
@@ -3550,6 +3559,7 @@ function onRep(opts, side) {
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
@@ -3726,26 +3736,81 @@ const ringTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d')
 const gazeDot = glowSprite(0xffffff, 0.02, 0.5); gazeDot.visible = false; scene.add(gazeDot);
 function aimSources() {
   const out = [];
+  if (pistolOn()) { for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: gunMuzzle(s), d: hands[s].rayD }); if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() }); return out; }
   if (settings.mode !== 'flyers') return out;
   if (settings.exercise === 'squat' && settings.aim === 'hands') for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: hands[s].rayO, d: hands[s].rayD });
   if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() });
   return out;
 }
 function updateAim(t) {
-  const show = settings.mode === 'flyers' && settings.exercise !== 'superman' && ['ready', 'play', 'rest'].includes(state);
+  const show = (settings.mode === 'flyers' && settings.exercise !== 'superman' || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d), ring = locks[s.key];
+    const e = findLock(s.o, s.d, pistolOn()), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
-      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = charged ? 0.6 : 0.3; l.material.color.setHex(charged ? 0x3cf0c6 : 0x5ff5ff);
+      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
     } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(s.d, 3); }
-    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(charged ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
+    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
     else ring.visible = false;
   }
+}
+
+/* =================== PISTOLAS =================== */
+// Cada sentadilla mete munición (una por mano en Enjambre); el gatillo dispara un rayo donde apuntas.
+// Con mandos se ve un bláster en cada mano con sus celdas de energía; con las manos, se dispara pellizcando.
+const GUN = { ammo: 0, perf: [], emptyT: 0 };
+const gunCap = () => (twoShots() ? 2 : 1) * 3;
+function gunReset() { GUN.ammo = 0; GUN.perf.length = 0; }
+function gunLoad(perfect) {
+  const n = twoShots() ? 2 : 1;
+  for (let i = 0; i < n; i++) { GUN.perf.push(perfect); if (GUN.perf.length > gunCap()) GUN.perf.shift(); }
+  GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
+  for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
+}
+function gunMuzzle(side, out = new V3()) { const h = hands[side]; return out.copy(h.rayO).addScaledVector(h.rayD, h.isHand ? 0.04 : 0.13); }
+function gunFire(src) {
+  if (!['play', 'rest', 'ready'].includes(state)) return;
+  if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
+  const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
+  if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
+  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
+}
+// Modelo del bláster (se sostiene con el mando; apunta por -Z)
+const blasterGlow = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+function makeBlaster() {
+  const k = new Kit();
+  k.add('steel', G.box(0.036, 0.05, 0.13, 0.2), C.gun, 0, 0.012, -0.03);            // cuerpo
+  k.add('steel', G.box(0.03, 0.09, 0.034, 0.2), C.dark, 0, -0.035, 0.03, -0.25, 0, 0); // empuñadura
+  k.add('steel', G.cyl(0.013, 0.015, 0.09, 12, 0.2), C.steel, 0, 0.02, -0.13, Math.PI / 2, 0, 0); // cañón
+  k.add('steel', G.cyl(0.019, 0.019, 0.02, 12, 0.2), C.dark, 0, 0.02, -0.17, Math.PI / 2, 0, 0);
+  k.add('steel', G.box(0.012, 0.02, 0.06, 0.2), C.steel, 0, 0.044, -0.04);           // mira
+  const g = k.build({ steel: gloveMat }, { cast: true });
+  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.018), blasterGlow.clone()); m.position.set(0, 0.012, 0.0 - i * 0.026); g.add(m); return m; });
+  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 4, 16), blasterGlow); tip.position.set(0, 0.02, -0.181); g.add(tip);
+  g.visible = false; g.kick = 0; scene.add(g); return g;
+}
+const BLASTERS = { left: makeBlaster(), right: makeBlaster() };
+function updatePistol(dt) {
+  GUN.emptyT -= dt;
+  const on = pistolOn() && GAME_STATES.includes(state);
+  const per = twoShots() ? 2 : 1, lit = Math.min(3, Math.ceil(GUN.ammo / per));
+  for (const s of ['left', 'right']) {
+    const h = hands[s], b = BLASTERS[s];
+    b.visible = on && h.ok && !h.isHand && h.rayOk;
+    if (b.visible) {
+      b.kick = Math.max(0, b.kick - dt * 8);
+      b.position.copy(h.rayO).addScaledVector(h.rayD, 0.03 + b.kick * 0.02); b.quaternion.copy(h.rayQ); b.rotateX(-b.kick * 0.25);
+      b.cells.forEach((c, i) => { c.material.color.setHex(i < lit ? (GUN.perf[Math.min(GUN.perf.length - 1, i * per)] ? 0xffd166 : 0x3cf0c6) : 0x2a2440); });
+    }
+    // gatillo (o pellizco) al apretar
+    const press = h.trig && !h.trigPrev; h.trigPrev = h.trig;
+    if (on && press && h.rayOk) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
+  }
+  if (on && preview) { const t = !!PV.keys.KeyT; if (t && !GUN.prevT) gunFire({ key: 'gaze', o: head.p, d: fwd() }); GUN.prevT = t; } // en el ordenador: T dispara con la mirada
 }
 
 /* =================== OLEADAS =================== */
@@ -3759,7 +3824,7 @@ function buildWave(i) {
     for (let n = 0; n < total; n++) list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), hp: 1 });
     return list;
   }
-  if (mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands') total *= 2;
+  if (twoShots()) total *= 2;
   let boss = null;
   if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: mode === 'walkers' ? 'titan' : 'carrier', hp: b }; total -= b; }
   let k = 0;
@@ -3876,7 +3941,7 @@ function pauseMenu(reanchor) {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats();
+  stats = newStats(); gunReset();
   DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
@@ -3912,7 +3977,7 @@ function startWave(i) {
   else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
-    const auto = settings.mode === 'flyers' ? repTime() * (settings.exercise === 'squat' && settings.aim === 'hands' ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
+    const auto = settings.mode === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : auto;
   }
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
@@ -4378,7 +4443,7 @@ function readXR(frame) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; h.J.forEach(j => j.ok = false); }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = false; h.J.forEach(j => j.ok = false); }
   for (const src of frame.session.inputSources) {
     const h = hands[src.handedness]; if (!h) continue;
     if (src.targetRaySpace) { const rp = frame.getPose(src.targetRaySpace, ref); if (rp) { const o = rp.transform.orientation; h.rayOk = true; h.rayO.copy(rp.transform.position); h.rayQ.set(o.x, o.y, o.z, o.w); h.rayD.set(0, 0, -1).applyQuaternion(h.rayQ); } }
@@ -4394,9 +4459,9 @@ function readXR(frame) {
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
-      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02;
+      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
-      h.isHand = false;
+      h.isHand = false; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
@@ -4512,7 +4577,7 @@ renderer.setAnimationLoop((time, frame) => {
   gameStep(dt, t);
   updateFX(dt); updateBolts(dt);
   updateGloves(dt);
-  updateAim(t);
+  updateAim(t); updatePistol(dt);
   updateWatch(dt); updateWristMenu(dt);
   updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }

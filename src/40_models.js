@@ -366,7 +366,7 @@ function updateGloves(dt) {
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
-      g.palm.visible = !h.isHand && h.ok;
+      g.palm.visible = !h.isHand && h.ok && !(pistolOn() && GAME_STATES.includes(state)); // con pistolas se ve el bláster
       if (g.palm.visible) { g.palm.position.copy(h.wrist); g.palm.quaternion.copy(h.wristQ); g.palm.scale.setScalar(1); }
       continue;
     }

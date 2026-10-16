@@ -460,10 +460,10 @@ function pickNearest(side) {
   if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
-function findLock(o, d) {
+function findLock(o, d, any = false) {
   let best = null, bs = 1e9; const cone = settings.assist * Math.PI / 180;
   for (const e of enemies) {
-    if (!e.alive || e.type !== 'flyer') continue;
+    if (!e.alive || (!any && e.type !== 'flyer')) continue;
     const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
     const sc = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
     if (sc < cone && sc < bs) { bs = sc; best = e; }
@@ -481,7 +481,7 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
 }
 // Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
+  const e = forced || findLock(lockFrom || origin, dir, pistolOn()), L = boltLevel(perfect), col = boltRGB(L);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
@@ -538,6 +538,7 @@ function onRep(opts, side) {
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
@@ -714,26 +715,81 @@ const ringTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d')
 const gazeDot = glowSprite(0xffffff, 0.02, 0.5); gazeDot.visible = false; scene.add(gazeDot);
 function aimSources() {
   const out = [];
+  if (pistolOn()) { for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: gunMuzzle(s), d: hands[s].rayD }); if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() }); return out; }
   if (settings.mode !== 'flyers') return out;
   if (settings.exercise === 'squat' && settings.aim === 'hands') for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: hands[s].rayO, d: hands[s].rayD });
   if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() });
   return out;
 }
 function updateAim(t) {
-  const show = settings.mode === 'flyers' && settings.exercise !== 'superman' && ['ready', 'play', 'rest'].includes(state);
+  const show = (settings.mode === 'flyers' && settings.exercise !== 'superman' || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d), ring = locks[s.key];
+    const e = findLock(s.o, s.d, pistolOn()), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
-      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = charged ? 0.6 : 0.3; l.material.color.setHex(charged ? 0x3cf0c6 : 0x5ff5ff);
+      l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
     } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(s.d, 3); }
-    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(charged ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
+    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
     else ring.visible = false;
   }
+}
+
+/* =================== PISTOLAS =================== */
+// Cada sentadilla mete munición (una por mano en Enjambre); el gatillo dispara un rayo donde apuntas.
+// Con mandos se ve un bláster en cada mano con sus celdas de energía; con las manos, se dispara pellizcando.
+const GUN = { ammo: 0, perf: [], emptyT: 0 };
+const gunCap = () => (twoShots() ? 2 : 1) * 3;
+function gunReset() { GUN.ammo = 0; GUN.perf.length = 0; }
+function gunLoad(perfect) {
+  const n = twoShots() ? 2 : 1;
+  for (let i = 0; i < n; i++) { GUN.perf.push(perfect); if (GUN.perf.length > gunCap()) GUN.perf.shift(); }
+  GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
+  for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
+}
+function gunMuzzle(side, out = new V3()) { const h = hands[side]; return out.copy(h.rayO).addScaledVector(h.rayD, h.isHand ? 0.04 : 0.13); }
+function gunFire(src) {
+  if (!['play', 'rest', 'ready'].includes(state)) return;
+  if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
+  const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
+  if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
+  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
+}
+// Modelo del bláster (se sostiene con el mando; apunta por -Z)
+const blasterGlow = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+function makeBlaster() {
+  const k = new Kit();
+  k.add('steel', G.box(0.036, 0.05, 0.13, 0.2), C.gun, 0, 0.012, -0.03);            // cuerpo
+  k.add('steel', G.box(0.03, 0.09, 0.034, 0.2), C.dark, 0, -0.035, 0.03, -0.25, 0, 0); // empuñadura
+  k.add('steel', G.cyl(0.013, 0.015, 0.09, 12, 0.2), C.steel, 0, 0.02, -0.13, Math.PI / 2, 0, 0); // cañón
+  k.add('steel', G.cyl(0.019, 0.019, 0.02, 12, 0.2), C.dark, 0, 0.02, -0.17, Math.PI / 2, 0, 0);
+  k.add('steel', G.box(0.012, 0.02, 0.06, 0.2), C.steel, 0, 0.044, -0.04);           // mira
+  const g = k.build({ steel: gloveMat }, { cast: true });
+  g.cells = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.018), blasterGlow.clone()); m.position.set(0, 0.012, 0.0 - i * 0.026); g.add(m); return m; });
+  const tip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 4, 16), blasterGlow); tip.position.set(0, 0.02, -0.181); g.add(tip);
+  g.visible = false; g.kick = 0; scene.add(g); return g;
+}
+const BLASTERS = { left: makeBlaster(), right: makeBlaster() };
+function updatePistol(dt) {
+  GUN.emptyT -= dt;
+  const on = pistolOn() && GAME_STATES.includes(state);
+  const per = twoShots() ? 2 : 1, lit = Math.min(3, Math.ceil(GUN.ammo / per));
+  for (const s of ['left', 'right']) {
+    const h = hands[s], b = BLASTERS[s];
+    b.visible = on && h.ok && !h.isHand && h.rayOk;
+    if (b.visible) {
+      b.kick = Math.max(0, b.kick - dt * 8);
+      b.position.copy(h.rayO).addScaledVector(h.rayD, 0.03 + b.kick * 0.02); b.quaternion.copy(h.rayQ); b.rotateX(-b.kick * 0.25);
+      b.cells.forEach((c, i) => { c.material.color.setHex(i < lit ? (GUN.perf[Math.min(GUN.perf.length - 1, i * per)] ? 0xffd166 : 0x3cf0c6) : 0x2a2440); });
+    }
+    // gatillo (o pellizco) al apretar
+    const press = h.trig && !h.trigPrev; h.trigPrev = h.trig;
+    if (on && press && h.rayOk) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
+  }
+  if (on && preview) { const t = !!PV.keys.KeyT; if (t && !GUN.prevT) gunFire({ key: 'gaze', o: head.p, d: fwd() }); GUN.prevT = t; } // en el ordenador: T dispara con la mirada
 }
 
 /* =================== OLEADAS =================== */
@@ -747,7 +803,7 @@ function buildWave(i) {
     for (let n = 0; n < total; n++) list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), hp: 1 });
     return list;
   }
-  if (mode === 'flyers' && settings.exercise === 'squat' && settings.aim === 'hands') total *= 2;
+  if (twoShots()) total *= 2;
   let boss = null;
   if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: mode === 'walkers' ? 'titan' : 'carrier', hp: b }; total -= b; }
   let k = 0;
@@ -864,7 +920,7 @@ function pauseMenu(reanchor) {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats();
+  stats = newStats(); gunReset();
   DET.sq.state = DET.pu.state = 'up'; DET.curl.left.state = DET.curl.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
@@ -900,7 +956,7 @@ function startWave(i) {
   else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
-    const auto = settings.mode === 'flyers' ? repTime() * (settings.exercise === 'squat' && settings.aim === 'hands' ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
+    const auto = settings.mode === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : auto;
   }
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
