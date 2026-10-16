@@ -100,7 +100,8 @@ function fmtVal(f, v = settings[f.key]) {
   if (EX_ONLY[settings.exercise] && settings.mode !== EX_ONLY[settings.exercise]) settings.exercise = 'pushup';
   if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
-function saveSettings() { store(STORE_KEY, settings); }
+// Durante una sesión se guardan los valores de antes, no los del bloque en curso
+function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
 function setSetting(key, v) {
   const f = FIELD[key];
   settings[key] = f ? clampSetting(f, v) : v;
@@ -196,9 +197,12 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
-function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
-function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
+function repTimeOf(ex) { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[ex]; }
+function repTime() { return repTimeOf(settings.exercise); }
+// En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
+const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
+function waveReps(i) { return sesWave(i) || Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
+function hangSecs(i) { return sesWave(i) || settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
   const n = settings.waves || 5;
   const hang = settings.exercise === 'hang';

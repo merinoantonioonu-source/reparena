@@ -91,6 +91,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfield input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
 .status.sp{margin:8px 0 0}
+.session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
+.seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
 </head>
 <body>
@@ -164,6 +172,19 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <button class="btn small" id="btnReset">Restablecer ajustes</button>
   </div>
   <p class="status" id="xrStatus"></p>
+
+  <section class="session">
+    <h2>Sesión de entrenamiento</h2>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <div class="seslist" id="sesList"></div>
+    <div class="actions">
+      <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
+      <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
+      <button class="btn small" id="btnSesClear">Vaciar</button>
+    </div>
+    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <p class="estimate" id="sesSummary"></p>
+  </section>
 
   <section class="music">
     <h2>Música con Spotify</h2>

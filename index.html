@@ -91,6 +91,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfield input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
 .status.sp{margin:8px 0 0}
+.session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
+.seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
 </head>
 <body>
@@ -164,6 +172,19 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <button class="btn small" id="btnReset">Restablecer ajustes</button>
   </div>
   <p class="status" id="xrStatus"></p>
+
+  <section class="session">
+    <h2>Sesión de entrenamiento</h2>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el atril: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <div class="seslist" id="sesList"></div>
+    <div class="actions">
+      <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
+      <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
+      <button class="btn small" id="btnSesClear">Vaciar</button>
+    </div>
+    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <p class="estimate" id="sesSummary"></p>
+  </section>
 
   <section class="music">
     <h2>Música con Spotify</h2>
@@ -317,7 +338,8 @@ function fmtVal(f, v = settings[f.key]) {
   if (EX_ONLY[settings.exercise] && settings.mode !== EX_ONLY[settings.exercise]) settings.exercise = 'pushup';
   if ((settings.mode === 'bars') !== BAR_EX.includes(settings.exercise)) settings.exercise = settings.mode === 'bars' ? 'row' : 'squat';
 })();
-function saveSettings() { store(STORE_KEY, settings); }
+// Durante una sesión se guardan los valores de antes, no los del bloque en curso
+function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
 function setSetting(key, v) {
   const f = FIELD[key];
   settings[key] = f ? clampSetting(f, v) : v;
@@ -413,9 +435,12 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
   updateSummary();
 }
-function repTime() { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[settings.exercise]; }
-function waveReps(i) { return Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
-function hangSecs(i) { return settings.hangTime + settings.hangInc * i; }
+function repTimeOf(ex) { return { squat: 2.3, pushup: 2.4, curl: 1.3, plank1: 2.2, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1 }[ex]; }
+function repTime() { return repTimeOf(settings.exercise); }
+// En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
+const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
+function waveReps(i) { return sesWave(i) || Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
+function hangSecs(i) { return sesWave(i) || settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
   const n = settings.waves || 5;
   const hang = settings.exercise === 'hang';
@@ -2408,7 +2433,7 @@ function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(
 function updateViewPanels(dt) {
   const k = 1 - Math.exp(-dt * 4);
   if (center.mesh.visible) {
-    const tgt = headLocal(_hl.set(0, -0.08, -1.0), new V3());
+    const tgt = headLocal(_hl.set(0, menu ? 0.2 : -0.08, -1.0), new V3()); // con el atril abierto, por encima para no taparlo
     if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
     center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k);
   } else center.mesh.userData.init = false;
@@ -2450,6 +2475,13 @@ function drawCenter() {
       c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText(row ? '¡AGÁRRATE!' : '¡CUÉLGATE!', W / 2, 80);
       c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
     }
+  } else if (state === 'between') {
+    const nb = SES.blocks[SES.idx + 1];
+    c.textAlign = 'left'; c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.fillText('DESCANSO', 44, 68);
+    c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(0, Math.ceil(SES.wait))), W - 50, 150);
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(`Bloque ${SES.idx + 2} de ${SES.blocks.length}:`, 44, 150);
+    if (nb) { c.fillStyle = '#ffd166'; fitFont(c, blockLabel(nb), W - 300, 40, '500 %px ' + FB); c.fillText(blockLabel(nb), 44, 210); }
+    centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
     const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'] }[settings.exercise];
@@ -2480,14 +2512,15 @@ function drawBoard() {
   c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
   c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
   c.textBaseline = 'middle';
-  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end'].includes(state)) {
+  if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
     c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText('Acércate al atril y pulsa EMPEZAR', W / 2, 320);
     board.tex.needsUpdate = true; return;
   }
   const N = settings.waves;
-  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; c.fillText(N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`, 36, 52);
+  const wv = N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`;
+  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; fitFont(c, SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 330, 40, '%px ' + FD); c.fillText(SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 36, 52);
   c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
   c.textAlign = 'right';
   if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
@@ -2505,6 +2538,7 @@ function drawBoard() {
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
   else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
+  else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && nextArcDrop) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(`PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
   if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
@@ -2646,6 +2680,136 @@ function spInitPage() {
   $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
   spPage();
   spHandleRedirect();
+}
+
+
+/* =================== SESIÓN DE ENTRENAMIENTO: BLOQUES ENCADENADOS =================== */
+// Una sesión es una lista de bloques {mode, ex, n}: n repeticiones (en colgado, segundos). Cada bloque se juega
+// como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
+// Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
+const SES_KEY = 'reparena3-session';
+const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
+const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc'];
+function blockOk(mode, ex) {
+  if (mode === 'arcs') return ex === 'squat';
+  if (mode === 'bars') return BAR_EX.includes(ex);
+  return !BAR_EX.includes(ex) && (!EX_ONLY[ex] || EX_ONLY[ex] === mode);
+}
+const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
+(function loadSession() {
+  const s = store(SES_KEY) || {};
+  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500) }));
+  if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
+})();
+function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
+const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
+function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}`; }
+// Reparte n en oleadas de unas `per` repeticiones, con el total exacto
+function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
+function sessionMinutes() {
+  let t = SES.rest * Math.max(0, SES.blocks.length - 1);
+  for (const b of SES.blocks) { const w = splitWaves(b.n, b.ex === 'hang' ? 25 : 10); t += (b.ex === 'hang' ? b.n : b.n * (b.mode === 'arcs' ? 60 / settings.arcRate : repTimeOf(b.ex))) + settings.rest * (w.length - 1); }
+  return Math.max(1, Math.round(t / 60));
+}
+
+/* ---------- Durante el juego ---------- */
+function applyBlock(i) {
+  const b = SES.blocks[i]; SES.idx = i;
+  SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
+  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 });
+  onSettingChanged('mode'); onSettingChanged('exercise');
+}
+function startSession() {
+  if (!SES.blocks.length) return;
+  // los bloques de barras necesitan su aparato colocado
+  if (!preview) for (const b of SES.blocks) if (b.mode === 'bars' && !EQ.xr[b.ex === 'row' ? 'dip' : 'door'].set) {
+    setSetting('mode', 'bars'); setSetting('exercise', b.ex); startPlace(lobbyMenu, `Para la sesión, coloca ${eqName().the}`); return;
+  }
+  SES.orig = {}; SES_KEYS.forEach(k => { SES.orig[k] = settings[k]; });
+  Object.assign(SES, { active: true, results: [], stop: false });
+  applyBlock(0); beginRun();
+}
+// Se llama al terminar la partida de un bloque (en lugar del menú de fin)
+function sessionBlockDone(win, manual) {
+  const b = SES.blocks[SES.idx];
+  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, score, win, manual });
+  if (SES.stop || SES.idx + 1 >= SES.blocks.length) { finishSession(); return; }
+  state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
+  betweenMenu();
+}
+function betweenMenu() {
+  const r = SES.results[SES.results.length - 1], nb = SES.blocks[SES.idx + 1];
+  const m = openMenu([
+    { t: 'title', text: `BLOQUE ${SES.idx + 1}/${SES.blocks.length} ${r.win ? 'SUPERADO' : 'TERMINADO'}` },
+    { t: 'text', text: `${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)} · ${r.perfect} perfectas · ${r.score} puntos` },
+    { t: 'text', text: `Siguiente: ${blockLabel(nb)}`, color: '#ffd166' },
+    { t: 'btns', items: [{ label: 'Empezar ya', style: 'primary', onPress: () => nextBlock(false) }, { label: 'Repetir bloque', onPress: () => { SES.results.pop(); nextBlock(true); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Terminar sesión', style: 'danger', onPress: finishSession }] }
+  ], { reanchor: true });
+  m.rebuild = betweenMenu;
+}
+function sessionStep(dt) { // descanso entre bloques
+  SES.wait -= dt; if (SES.wait <= 0) nextBlock(false);
+}
+function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock(repeat ? SES.idx : SES.idx + 1); beginRun(); }
+function finishSession() {
+  const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
+  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
+  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, score: 0 });
+  const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
+  if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
+  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ${tot.score} puntos`);
+  if (all) SND.victory();
+  endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', lines);
+}
+// Devuelve los ajustes como estaban antes de la sesión
+function endSession() {
+  if (!SES.active) return;
+  SES.active = false; SES.waves = null; Object.assign(settings, SES.orig); SES.orig = null;
+  saveSettings(); onSettingChanged('mode'); onSettingChanged('exercise');
+}
+function sessionRows() {
+  if (!SES.blocks.length || SES.active) return [];
+  const txt = SES.blocks.map(b => `${b.n} ${b.ex === 'hang' ? 's colgado' : EX_NAMES[b.ex].toLowerCase()}`).join(' → ');
+  return [{ t: 'text', text: `Sesión: ${txt}`, color: '#ffd166' }, { t: 'btns', items: [{ label: `EMPEZAR SESIÓN (${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, ~${sessionMinutes()} min)`, style: 'primary', onPress: startSession }] }];
+}
+
+/* ---------- Editor de la página ---------- */
+const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'walkers', ex: 'plank1', n: 30 }, { mode: 'walkers', ex: 'pushup', n: 30 }];
+function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
+function renderSession() {
+  const host = $('#sesList'); if (!host) return;
+  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
+    <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
+    <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
+    <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
+    <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
+    : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
+  const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
+  const sum = $('#sesSummary');
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el atril.` : '';
+}
+function sesInitPage() {
+  const host = $('#sesList');
+  host.addEventListener('change', ev => {
+    const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
+    const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
+    if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); }
+    else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
+    else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
+    saveSession(); renderSession();
+  });
+  host.addEventListener('click', ev => {
+    const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
+    const i = +btn.closest('.sesrow').dataset.i;
+    if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
+    saveSession(); renderSession();
+  });
+  $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; SES.blocks.push({ mode: blockOk(settings.mode, ex) ? settings.mode : 'walkers', ex, n: ex === 'hang' ? 30 : 20 }); saveSession(); renderSession(); });
+  $('#btnSesExample').addEventListener('click', () => { SES.blocks = SES_EXAMPLE.map(b => ({ ...b })); saveSession(); renderSession(); });
+  $('#btnSesClear').addEventListener('click', () => { SES.blocks = []; saveSession(); renderSession(); });
+  $('#sesRest').addEventListener('change', ev => { SES.rest = clamp(Math.round(+ev.target.value) || 0, 0, 600); saveSession(); renderSession(); });
+  renderSession();
 }
 
 
@@ -3389,6 +3553,8 @@ function buildWave(i) {
   if (boss) list.push(boss);
   return list;
 }
+// Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
+function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
@@ -3398,7 +3564,7 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers') e = isTiny() ? new Spider(spec, settings.exercise === 'plank1' ? pick(hatches.filter(h => (h.x < 0) === (stats.spawned++ % 2 === 0))) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
+  else if (settings.mode === 'walkers') e = isTiny() ? new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches)) : new Robot(spec, spec.kind === 'titan' ? gates[1] : pick(gates));
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -3425,6 +3591,7 @@ function summaryText() {
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
 function lobbyMenu(reanchor) {
+  endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
   const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
@@ -3432,6 +3599,7 @@ function lobbyMenu(reanchor) {
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
+    ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: [['walkers', 'Asalto'], ['flyers', 'Enjambre'], ['arcs', 'Arcos'], ['bars', 'Barras']], onPick: v => { setSetting('mode', v); lobbyMenu(); } },
     { t: 'choice', label: 'Ejercicio', value: settings.exercise, opts: bars ? [['row', 'Remo invertido'], ['pullup', 'Dominadas'], ['hang', 'Colgado']] : [['squat', 'Sentadillas'], ['pushup', 'Flexiones', settings.mode === 'arcs'], ['curl', 'Curl', settings.mode === 'arcs'], settings.mode === 'flyers' ? ['superman', 'Superman'] : ['plank1', 'Plancha 1 brazo', settings.mode !== 'walkers']], onPick: v => { setSetting('exercise', v); lobbyMenu(); } },
     { t: 'field', key: speedKey() },
@@ -3481,7 +3649,8 @@ function pauseMenu(reanchor) {
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...musicRows(),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
-    { t: 'btns', items: [{ label: 'Terminar ronda', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
+    ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
+    { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(true); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(true); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { reanchor, border: '#ffd166' });
   m.rebuild = () => pauseMenu();
 }
@@ -3555,6 +3724,7 @@ function endRun(win, manual) {
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
+  if (SES.active) { sessionBlockDone(win, manual); return; } // sesión: pasa al siguiente bloque
   endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
 }
 function endMenu(title, lines) {
@@ -3563,7 +3733,7 @@ function endMenu(title, lines) {
   const m = openMenu(rows, { reanchor: true }); m.rebuild = () => endMenu(title, lines);
 }
 function exitAll() {
-  hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
+  endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
   const s = renderer.xr.getSession(); if (s) s.end().catch(() => {});
   if (preview) stopPreview();
   ambientStop(); renderHistory(); syncForm();
@@ -3580,6 +3750,7 @@ function gameStep(dt, t) {
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
+  else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
   if (state === 'play') {
@@ -4128,7 +4299,7 @@ async function startXR(ar) {
     arMode = ar; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
-    session.addEventListener('end', () => { xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state)) openPause(); });
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(true); }, 600);
@@ -4152,7 +4323,7 @@ async function checkXR() {
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();
