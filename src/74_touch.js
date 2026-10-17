@@ -15,10 +15,10 @@ const HAND_NAME = { left: 'izquierda', right: 'derecha' };
 const perfNow = () => performance.now() / 1000;
 const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Movimientos de cada ejercicio: los de la cabeza (amebas) y los de las manos (diamantes)
-const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], ['tap']] };
+const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
 const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
 const comboMoves = () => String(settings[{ stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase]] || '').split(',').filter(Boolean);
-const GEM_R = 0.13; // radio de toque del diamante (más el grosor de los dedos)
+const GEM_R = 0.15; // radio de toque del diamante (más el grosor de los dedos)
 
 /* ---------- Aspecto ---------- */
 const ringHaloTex = texFrom((() => { const c = mkCanvas(256), x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 60, 128, 128, 128); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.55)'); g.addColorStop(0.62, 'rgba(255,255,255,0.15)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return c; })());
@@ -94,7 +94,9 @@ function moveSpec(move) {
   else if (move === 'reach') o.pos = new V3(side * rand(0.2, 0.35), S + 0.5 + jh, -0.2);
   else if (move === 'push' || move === 'plank') {
     o.r = clamp(r * 0.65, 0.07, 0.13); const ri = o.r * 0.75;
-    o.pos = move === 'push' ? new V3(0, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
+    // en la flexión, a veces algo desplazada hacia un hombro: obliga a cargar el peso en ese brazo
+    const px = move === 'push' && Math.random() < 0.6 ? side * rand(0.07, 0.14) : 0;
+    o.pos = move === 'push' ? new V3(px, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
     if (move === 'plank') { o.r *= 1.15; o.hold = settings.plankHold; }
   } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
@@ -120,23 +122,27 @@ function sampleHands(dt) {
   for (const s of ['left', 'right']) {
     const h = hands[s], A = TCH.arm[s];
     [A.prev, A.cur] = [A.cur, A.prev]; const had = A.had; A.had = false;
-    if (!h.ok) { A.n = 0; A.lostT += dt; if (A.lostT > 0.4) A.armed = true; continue; } // fuera de la vista: ha vuelto
+    if (!h.ok) { A.n = 0; A.lostT += dt; if (A.lostT > 0.3) A.armed = true; continue; } // fuera de la vista: ha vuelto
     A.lostT = 0; let n = 0;
     const put = p => { const v = A.cur[n] || (A.cur[n] = new V3()); arena.worldToLocal(v.copy(p)); n++; };
     if (h.isHand) { for (const j of TOUCH_J) if (h.J[j].ok) put(h.J[j].p); if (!n) put(h.wrist); } else { put(h.wrist); if (h.tipOk) put(h.tip); }
     if (!had || A.n !== n) for (let i = 0; i < n; i++) (A.prev[i] || (A.prev[i] = new V3())).copy(A.cur[i]);
     A.n = n; A.had = true;
     if (!A.armed) {
-      const w = A.cur[0], P = A.hitP; // la muñeca: vuelve hacia el cuerpo o baja desde donde tocó
-      const back = A.move === 'punch' ? w.z - P.z > 0.18 || w.y < P.y - 0.3 : A.move === 'reach' ? w.y < HL.y - 0.05 || w.y < P.y - 0.45 : A.move === 'tap' ? w.y < 0.17 || w.y < P.y - 0.15 : A.move === 'knee' ? w.y < P.y - 0.2 || w.y < TCH.ref + 0.1 : true;
+      // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
+      const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : true;
       if (back) A.armed = true;
     }
   }
   const H = TCH.headArm;
-  if (!H.armed) { // la cabeza vuelve a su altura de partida (o recorre de vuelta casi todo el movimiento)
-    const d = Math.abs(H.d), thr = clamp(d * 0.3, 0.04, 0.09);
-    if (Math.abs(HL.y - TCH.ref) < thr || (HL.y - H.hitY) * -Math.sign(H.d || -1) > d * 0.8) { H.armed = true; }
+  if (!H.armed) { // la cabeza vuelve cerca de su altura de partida (o deshace buena parte del movimiento)
+    const d = Math.abs(H.d), thr = clamp(d * 0.4, 0.05, 0.12);
+    if (Math.abs(HL.y - TCH.ref) < thr || (HL.y - H.hitY) * -Math.sign(H.d || -1) > d * 0.6) { H.armed = true; }
   }
+  // la altura de partida se ajusta despacio a tu postura real cuando estás quieto en ella (cansado, de pie se baja un poco)
+  TCH.stillT = head.speed < 0.05 ? (TCH.stillT || 0) + dt : 0;
+  if (H.armed && TCH.stillT > 0.8 && Math.abs(HL.y - TCH.ref) < 0.12 && !touches.some(x => x.mode === 'hold')) TCH.ref += (HL.y - TCH.ref) * Math.min(1, dt * 0.4);
 }
 // Distancia mínima al origen del segmento a→b
 function segDist(a, b) { _tu.subVectors(b, a); const L2 = _tu.lengthSq(), k = L2 > 1e-9 ? clamp(-a.dot(_tu) / L2, 0, 1) : 0; return _ta.copy(a).addScaledVector(_tu, k).length(); }
@@ -169,9 +175,9 @@ class TouchTarget {
   // mano: la que pide el diamante, con cualquier dedo, nudillo o la muñeca, en todo su recorrido desde el fotograma anterior
   touching() {
     if (this.part === 'head') {
-      _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion); const lim = this.r * 0.75;
+      _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion); const lim = this.r; // todo el hueco que se ve
       _tv.subVectors(HL, this.root.position); const dp = _tv.dot(_tw); _tv.addScaledVector(_tw, -dp); this.rad = _tv.length() / lim;
-      if (Math.abs(dp) < 0.15 && this.rad < 1) return true;
+      if (Math.abs(dp) < 0.2 && this.rad < 1) return true;
       if (!TCH.hadHL) return false;
       _tb.subVectors(TCH.prevHL, this.prevPos); const dq = _tb.dot(_tw);
       if (dp * dq >= 0) return false; // no ha cruzado el plano
@@ -240,7 +246,7 @@ class TouchTarget {
     if (this.judged) return; this.judged = true;
     const c = this.center(new V3()), col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand], rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255];
     const P = tchPeriod(), dt_ = Math.abs(TCH.clock - this.arriveAt);
-    const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.5 : dt_ < 0.3;
+    const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.4 : dt_ < 0.3;
     registerRep(perfect, false); stats.kills++;
     say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, !perfect);
     if (perfect) SND.perfect();
@@ -251,7 +257,7 @@ class TouchTarget {
       fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
       this.mode = 'burst'; this.popT = 0; return;
     }
-    const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos);
+    const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos); A.hitD = A.hitP.distanceTo(HL);
     SND.pop(c, false); fx.droplets(c, 16, rgb, 1.6, 0.03); fx.sparks(c, 12, rgb, 1.6, 0.025); fx.glow(c, rgb, 0.4, 0.15);
     this.dispose();
   }
@@ -276,7 +282,7 @@ function buildTouchWave(i) {
     for (let k = 0; k < n; k++) list.push({ move: settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv), hp: 1 });
   } else {
     const [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
-    for (let k = 0; k < n; k++) list.push({ move: Math.random() * 100 < settings.tchHands ? pick(hand) : pick(head), hp: 1 });
+    for (let k = 0; k < n; k++) list.push({ move: hand.length && Math.random() * 100 < settings.tchHands ? pick(hand) : pick(head), hp: 1 });
   }
   return list;
 }

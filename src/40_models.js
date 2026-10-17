@@ -274,7 +274,7 @@ function buildStinger() {
   const R = new Rig();
   R.bone('body', null).bone('head', 'body', 0, 0.012, 0.05).bone('jaw', 'head', 0, -0.024, 0.024)
    .bone('mandL', 'head', 0.022, -0.014, 0.022).bone('mandR', 'head', -0.022, -0.014, 0.022)
-   .bone('abd', 'body', 0, -0.004, -0.045).bone('sting', 'abd', 0, -0.012, -0.118);
+   .bone('abd', 'body', 0, -0.024, -0.04).bone('sting', 'abd', 0, -0.012, -0.118); // abdomen bajo: se dobla por debajo para picar
   for (const [sd, sx] of [['L', 1], ['R', -1]]) R.bone('w' + sd + '1', 'body', sx * 0.02, 0.035, 0.012).bone('w' + sd + '2', 'body', sx * 0.02, 0.03, -0.012);
   const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GS = (b, g, c, ...t) => R.add(b, 'gloss', g, c, ...t), GL = (b, g, c, ...t) => R.add(b, 'glow', g, c, ...t);
   const dark = C.waspK, yel = C.waspY, org = C.waspO, tooth = col(0.92, 0.88, 0.74), gum = col(0.35, 0.03, 0.04);

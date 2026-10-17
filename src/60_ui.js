@@ -56,11 +56,18 @@ class Slider {
 }
 const fingers = [];
 const _wl = new V3();
+// Para que no se pulsen botones sin querer: tras una pulsación, ese dedo no pulsa nada más hasta que se aleja un poco
+// (POKE_MOVE) del sitio donde pulsó, y entre dos pulsaciones pasa un momento. En cada fotograma cuenta como mucho una
+// pulsación, la del botón en cuyo centro está más metido el dedo (con el dedo entre dos botones no se pulsan los dos).
+const POKE = { lock: { left: null, right: null }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45;
 function pokeWidgets(list, dt, ready = true) {
+  const now = performance.now() / 1000;
+  for (const f of fingers) { const L = POKE.lock[f.side]; if (L && f.p.distanceTo(L) > POKE_MOVE) POKE.lock[f.side] = null; }
+  let best = null, bestD = Infinity;
   for (const w of list) {
     if (!w.mesh.visible) continue;
     w.cool = Math.max(0, (w.cool || 0) - dt);
-    let hover = false, press = false, touching = false, drag = null;
+    let hover = false, touching = false, drag = null;
     for (const f of fingers) {
       if (w.only && w.only !== f.side) continue;
       const l = w.mesh.worldToLocal(_wl.copy(f.p));
@@ -68,17 +75,21 @@ function pokeWidgets(list, dt, ready = true) {
       if (inX && inY && l.z < 0.07 && l.z > -0.05) hover = true;
       if (w.kind === 'slider') {
         if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
-      } else {
-        if (inX && inY && l.z < 0.012 && l.z > -0.07) { touching = true; if (prev !== undefined && prev >= 0.012) press = true; }
+      } else if (inX && inY && l.z < 0.012 && l.z > -0.07) {
+        touching = true;
+        // pulsa al cruzar la superficie desde delante, con el dedo ya dentro del botón (no en su borde)
+        const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2));
+        if (prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
       }
       w.prevZ[f.side] = l.z;
     }
     if (hover !== w.hover) { w.hover = hover; w.draw(); }
     w.mesh.position.z = w.baseZ - (touching ? 0.004 : 0);
-    if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); continue; }
-    if (press && ready && w.cool <= 0) { w.cool = 0.35; SND.click(); w.onPress(); return true; }
+    if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); }
   }
-  return false;
+  if (!best || !ready || best.w.cool > 0 || now < POKE.until) return false;
+  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35;
+  SND.click(); best.w.onPress(); return true;
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */

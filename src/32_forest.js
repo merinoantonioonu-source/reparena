@@ -2,8 +2,9 @@
 /* =================== BOSQUE ENCANTADO (Barras · Colgado, en VR) =================== */
 // Colgado de la barra no tiene sentido el almacén: es de noche en un bosque sombrío y húmedo, con niebla entre los
 // troncos, luz de luna, luciérnagas y setas que brillan. La barra es una rama gruesa de un árbol enorme de la que
-// cuelgas, y debajo espera la ciénaga con los tentáculos. Solo en VR: en realidad mixta se ve tu habitación.
-const forestOn = () => !arMode && isBars() && settings.exercise === 'hang';
+// cuelgas, y debajo espera la ciénaga con los tentáculos. También en realidad mixta: mientras estás colgado, el bosque
+// tapa la habitación.
+const forestOn = () => isBars() && settings.exercise === 'hang';
 SURF.bark = surface(256, 256, 83, S => {
   fillAll(S, '#4a3b30', 128, 0.92, 0);
   const { a, h, r, rnd } = S;
@@ -125,9 +126,9 @@ function applyForest() {
     hemi.color.setHex(0x4a68a0); hemi.groundColor.setHex(0x080e08); hemi.intensity = 0.4;
     keyLight.color.setHex(0x9db6ff); keyLight.intensity = 0.5; rimLight.color.setHex(0x3cff9a); rimLight.intensity = 0.2; renderer.toneMappingExposure = 1.15;
   } else {
-    hemi.color.setHex(LIGHT0.hemiC); hemi.groundColor.setHex(LIGHT0.hemiG); keyLight.color.setHex(LIGHT0.key); rimLight.color.setHex(LIGHT0.rim);
+    hemi.color.setHex(arMode ? 0xdfe6ff : LIGHT0.hemiC); hemi.groundColor.setHex(LIGHT0.hemiG); keyLight.color.setHex(LIGHT0.key); rimLight.color.setHex(LIGHT0.rim);
   }
-  ambientRefresh();
+  applyVolume(); ambientRefresh();
 }
 function updateForest(dt, t) {
   if (!forest.visible) return;

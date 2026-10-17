@@ -89,7 +89,7 @@ function updateEquip(dt, t) {
     const v = EQV[k], e = eqPose(k), on = k === eqKind();
     v.grp.visible = on; if (!on) continue;
     v.grp.position.set(e.x, 0, e.z); v.grp.rotation.set(0, e.yaw, 0);
-    v.vr.visible = !arMode && !(k === 'door' && forestOn()); v.mr.visible = arMode || EQ.edit === k; // en el bosque, la barra es la rama de un árbol
+    v.vr.visible = !arMode && !(k === 'door' && forestOn()); v.mr.visible = (arMode && !(k === 'door' && forestOn())) || EQ.edit === k; // en el bosque, la barra es la rama de un árbol
   }
   eqBeamMat.opacity = EQ.edit ? 0.55 + 0.4 * Math.sin(t * 8) : 0.75;
 }

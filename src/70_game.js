@@ -1050,7 +1050,7 @@ function lobbyMenu() {
     rows.push(...tempoRows(() => lobbyMenu()));
   }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
-  rows.push(...musicRows());
+  rows.push(...musicRows(), ...viewRows(() => lobbyMenu()));
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
@@ -1090,7 +1090,7 @@ function pauseMenu() {
     { t: 'title', text: 'PAUSA' },
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
-    ...musicRows(),
+    ...musicRows(), ...viewRows(() => pauseMenu()),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
     { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }

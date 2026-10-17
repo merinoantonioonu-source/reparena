@@ -157,7 +157,15 @@ const guideMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: tru
 const eyeWhite = std({ color: 0xf2eee6, roughness: 0.25 }), eyeIris = new THREE.MeshBasicMaterial({ color: 0xff3020, toneMapped: false }), eyePupil = new THREE.MeshBasicMaterial({ color: 0x050303 });
 const frontTarget = () => enemies.find(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait'));
 // Punto más alto previsto de la cabeza (coordenadas de la arena) y hueco de espera del siguiente
+// En el remo: un cuarto de la altura de la barra por debajo de ella y pasado su borde hacia tu cabeza (con una paralela,
+// al otro lado de la barra; con dos, más allá de su extremo), que es donde llega la cabeza al subir
+const _bt = new V3();
 function barTopPoint(out) {
+  if (settings.exercise === 'row') {
+    const e = eqPose(), L = settings.dipLen / 200, l = eqLocal(e, _bt.copy(BAR.mountXZ), _bt), y = Math.max(BAR.ref + 0.1, settings.dipH / 100 * 0.75);
+    if (dipOne()) eqWorld(e, (Math.sign(l.x) || 1) * 0.12, y, clamp(l.z, -L, L), out); else eqWorld(e, l.x, y, (Math.sign(l.z) || 1) * (L + 0.1), out);
+    return arena.worldToLocal(out);
+  }
   out.set(BAR.refXZ.x + BAR.drift.x + BAR.front.x, BAR.ref + barReq() + 0.04, BAR.refXZ.z + BAR.drift.z + BAR.front.z);
   if (settings.exercise !== 'row') out.y = Math.min(out.y, settings.doorH / 100 - 0.06);
   return out;
@@ -268,8 +276,9 @@ class HeadTarget {
     if (this.bar) this.bar.g.lookAt(head.p);
     if (this.guide) { this.guide.visible = (this.mode === 'wait' || this.mode === 'approach') && !idx; if (this.root.quaternion) this.guide.quaternion.copy(this.root.quaternion).invert(); }
   }
-  // Avispa: zigzaguea al acercarse, se queda zumbando en su sitio y amaga picarte: se lanza hacia tu cara con el
-  // aguijón por delante y se retira. Cuanto más esperas, más a menudo. El cabezazo cuenta en su sitio, no en el amago.
+  // Avispa: vuela nivelada, como un insecto, girada hacia ti; su cara te mira sin parar y el abdomen va doblado por
+  // debajo con el aguijón apuntando a tu cara mientras se acerca. En su sitio amaga picarte: se lanza hacia ti y se
+  // retira, más a menudo cuanto más esperas. El cabezazo cuenta en su sitio, no en el amago.
   animWasp(dt, t, idx, play) {
     const B = this.B, wait = this.mode === 'wait', toH = _bq.subVectors(HL, this.pos), dist = toH.length();
     if (wait && play && !idx) {
@@ -282,17 +291,20 @@ class HeadTarget {
     this.off.set(Math.sin(t * 3.1 + this.ph) * zig, Math.sin(t * 4.3 + this.ph * 2) * zig * 0.6, Math.sin(t * 2.3 + this.ph) * zig * 0.5);
     if (dist > 1e-3) this.off.addScaledVector(toH, f * reach / dist);
     this.root.position.add(this.off);
-    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((this.feintOn ? 1 : 0.15 + 0.1 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
-    // mira a tu cara, inclinada hacia delante para apuntar con el aguijón
-    const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, look.y, look.z)));
-    this.root.rotateX(-0.25 * this.curl);
+    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((this.feintOn ? 1 : 0.85 + 0.08 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
+    // el cuerpo, casi horizontal y girado hacia ti (solo se inclina un poco); la cabeza y el aguijón te apuntan
+    const rp = this.root.position, lx = HL.x - rp.x, ly = HL.y - rp.y, lz = HL.z - rp.z, hd = Math.hypot(lx, lz), pitch = Math.atan2(ly, Math.max(1e-3, hd));
+    this.root.rotation.set(0, 0, 0); this.root.rotation.order = 'YXZ'; this.root.rotation.y = Math.atan2(lx, lz); this.root.rotation.x = -clamp(pitch, -0.35, 0.35);
+    this.root.updateMatrixWorld(); const fc = this.root.worldToLocal(_bt.copy(head.p)); // tu cara, vista desde la avispa
     const w = Math.sin(this.t * TAU * 24) * 0.95, w2 = Math.sin(this.t * TAU * 24 + 0.7) * 0.85;
     B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2;
     B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2; B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
-    B.abd.rotation.x = -this.curl * 1.9 + Math.sin(t * 5 + this.ph) * 0.08; B.sting.rotation.x = -this.curl * 0.6;
+    // el aguijón sale de la punta del abdomen doblado y se orienta hacia tu cara
+    const abd = -this.curl * 2.45 + Math.sin(t * 5 + this.ph) * 0.05, sy = -0.024 - 0.012 * Math.cos(abd) + 0.118 * Math.sin(abd), sz = -0.04 - 0.012 * Math.sin(abd) - 0.118 * Math.cos(abd);
+    B.abd.rotation.x = abd; B.sting.rotation.x = clamp(wrapAng(Math.PI - Math.atan2(fc.y - sy, fc.z - sz) - abd), -2.3, 0.9);
     const bite = 0.25 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.3;
     B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite; B.jaw.rotation.x = 0.2 + 0.25 * Math.max(0, Math.sin(t * 7 + this.ph)) + f * 0.4;
-    B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.15; B.head.rotation.z = Math.sin(t * 2.7) * 0.1;
+    B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.012, fc.z - 0.05), -1.2, 1.2); B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08; B.head.rotation.z = Math.sin(t * 2.7) * 0.08;
     if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
     if (this.buzz) this.buzz.set(this.center(tmpB));
   }

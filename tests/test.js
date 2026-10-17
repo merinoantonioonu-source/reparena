@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -110,6 +110,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 (async () => {
   await sleep(150);
   log('boot ok; renders so far', RA.renderer.renders);
+  // ---- Botones táctiles: un toque pulsa un solo botón, y para pulsar otra vez hay que mover el dedo ----
+  {
+    const hits = [], a = new RA.Btn('A', 0.1, 0.06, () => hits.push('A')), b = new RA.Btn('B', 0.1, 0.06, () => hits.push('B'));
+    a.mesh.position.set(-0.05, 1.5, -0.5); b.mesh.position.set(0.051, 1.5, -0.5); a.baseZ = b.baseZ = -0.5;
+    const poke = (x, z, n = 1) => { for (let i = 0; i < n; i++) { a.mesh.updateMatrixWorld(); b.mesh.updateMatrixWorld(); RA.fingers.length = 0; RA.fingers.push({ side: 'right', p: new THREE.Vector3(x, 1.5, -0.5 + z) }); RA.pokeWidgets([a, b], 0.016); } };
+    const tap = x => { poke(x, 0.04, 3); for (let k = 0; k <= 10; k++) poke(x, 0.04 - k * 0.006); poke(x, -0.02, 5); poke(x, 0.04, 5); };
+    tap(0.0005); const edge = hits.length;            // justo entre los dos
+    await sleep(500); tap(-0.05); const one = hits.join('');
+    await sleep(500); tap(-0.05 + 0.01); const same = hits.join(''); // otra vez casi en el mismo sitio: no cuenta
+    poke(0.05, 0.05, 3); await sleep(500); tap(0.05); const other = hits.join(''); // tras mover el dedo, sí
+    RA.fingers.length = 0;
+    log('buttons: edge', edge, 'tap A', one, 'again same spot', same, 'after moving', other);
+    if (edge > 1 || one !== 'A' || same !== 'A' || other !== 'AB') errors.push(`botones táctiles: pulsaciones de más o de menos (${edge}, ${one}, ${same}, ${other})`);
+  }
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
   // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
   const bringMenu = () => {
@@ -214,6 +228,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }, 60, s => s.reps !== want ? `${s.reps} diamantes tocados (deberían ser ${want})` : '');
   }
   RA.PV.handSide = null;
+  // en la vida real la cabeza no pasa justo por el centro ni vuelve exactamente a su altura: también tiene que contar
+  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+    if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
+    const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'wait'), w = x && RA.TCH.headArm.armed ? RA.arena.localToWorld(x.pos.clone()).add(new THREE.Vector3(0.12, 0.02, 0.05)) : home.clone().add(new THREE.Vector3(0.05, -0.07, 0));
+    RA.camera.position.copy(w); RA.PV.y = w.y;
+  }, 60, s => s.reps < 5 ? `descentrado 12 cm o volviendo a 7 cm de la altura de pie solo cuentan ${s.reps} de 5` : '');
+  // flexiones: solo amebas, algunas desplazadas hacia un hombro
+  let maxX = 0, gems = 0;
+  await runConfig('Toques flexiones hacia los hombros', { ...base, mode: 'touch', exercise: 'pushup', waves: 1, repsWave: 12, lives: 0, tchArrive: 2, tchGap: 1.5, tchHands: 100 }, t => { RA.PV.crouch = true; RA.touches.forEach(x => { maxX = Math.max(maxX, Math.abs(x.pos.x)); if (x.part === 'hand') gems++; }); }, 60,
+    s => gems ? 'en flexiones no debería haber diamantes' : maxX < 0.06 ? 'las amebas de las flexiones siempre van al centro' : '');
   RA.PV.handAt = null;
   await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
@@ -246,6 +270,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
   await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, watchPanels(pullSim()), 420, panelCheck('remo', s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : ''));
   await runConfig('Barras+remo una paralela', { ...bars, exercise: 'row', dipBars: '1', barTarget: 'bubbles' }, pullSim(), 420, s => s.kills < 4 ? 'con una paralela no revienta las pompas' : '');
+  // remo con avispas: esperan a 3/4 de la altura de la barra, pasado su borde hacia la cabeza, y vuelan niveladas mirándote
+  for (const bars_ of ['2', '1']) {
+    const W = { n: 0, bad: [], maxPitch: 0 };
+    await runConfig('Barras+remo avispas (' + bars_ + ' paralela' + (bars_ === '1' ? ')' : 's)'), { ...bars, exercise: 'row', dipBars: bars_, barTarget: 'bugs' }, t => {
+      pullSim()(t);
+      for (const e of RA.enemies) if (e.alive && e.K && e.K.wasp && e.mode === 'wait' && e.slotIndex() === 0) { // la primera: las demás esperan detrás
+        const w = RA.arena.localToWorld(e.slot.clone()), l = RA.eqLocal(RA.eqPose('dip'), w, new THREE.Vector3()), m = RA.eqLocal(RA.eqPose('dip'), RA.BAR.mountXZ.clone(), new THREE.Vector3());
+        const H = RA.settings.dipH / 100, L = RA.settings.dipLen / 200;
+        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + 0.1, H * 0.75)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
+        if (!(okY && okXZ)) W.bad.push(`${l.x.toFixed(2)},${w.y.toFixed(2)},${l.z.toFixed(2)}`);
+        W.maxPitch = Math.max(W.maxPitch, Math.abs(e.root.rotation.x)); W.n++;
+      }
+    }, 420, s => { log(`   avispas: ${W.n} fotogramas esperando, fuera de sitio ${W.bad.length} ${W.bad.slice(0, 2).join(' ')}, inclinación máx. ${W.maxPitch.toFixed(2)} rad`);
+      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
+  }
+  RA.setSetting('dipBars', '2');
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -561,6 +601,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (want ? got < want : got) errors.push(`superman XR (${name}): ${got} disparos`);
     XRS.hands = null; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
   }
+  // ---- Dentro del juego se pasa de VR a realidad mixta y al revés; colgado de la barra, el bosque se ve en las dos ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat' })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  const vr0 = !RA.arMode && RA.env.visible; press('Realidad mixta'); frame(2, 16, xrFrame);
+  const mr = RA.arMode && !RA.env.visible; press('Realidad virtual'); frame(2, 16, xrFrame);
+  const vr1 = !RA.arMode && RA.env.visible; press('Realidad mixta'); frame(2, 16, xrFrame);
+  RA.setSetting('mode', 'bars'); RA.setSetting('exercise', 'hang'); frame(2, 16, xrFrame);
+  const forestMR = RA.arMode && RA.forest.visible && !RA.env.visible;
+  RA.setSetting('exercise', 'pullup'); frame(2, 16, xrFrame); const noForest = !RA.forest.visible;
+  log('view switch: VR', vr0, '→ MR', mr, '→ VR', vr1, '· forest in MR while hanging', forestMR, '· gone for pull-ups', noForest);
+  if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
+  if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
+  RA.exitAll(); frame(2, 16, xrFrame);
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
 })().catch(e => { console.log('FATAL', e.stack); console.log('ERRORS so far:\n' + errors.join('\n')); });
