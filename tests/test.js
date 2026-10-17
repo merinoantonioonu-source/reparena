@@ -228,6 +228,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }, 60, s => s.reps !== want ? `${s.reps} diamantes tocados (deberían ser ${want})` : '');
   }
   RA.PV.handSide = null;
+  // en la vida real la cabeza no pasa justo por el centro ni vuelve exactamente a su altura: también tiene que contar
+  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+    if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
+    const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'wait'), w = x && RA.TCH.headArm.armed ? RA.arena.localToWorld(x.pos.clone()).add(new THREE.Vector3(0.12, 0.02, 0.05)) : home.clone().add(new THREE.Vector3(0.05, -0.07, 0));
+    RA.camera.position.copy(w); RA.PV.y = w.y;
+  }, 60, s => s.reps < 5 ? `descentrado 12 cm o volviendo a 7 cm de la altura de pie solo cuentan ${s.reps} de 5` : '');
+  // flexiones: solo amebas, algunas desplazadas hacia un hombro
+  let maxX = 0, gems = 0;
+  await runConfig('Toques flexiones hacia los hombros', { ...base, mode: 'touch', exercise: 'pushup', waves: 1, repsWave: 12, lives: 0, tchArrive: 2, tchGap: 1.5, tchHands: 100 }, t => { RA.PV.crouch = true; RA.touches.forEach(x => { maxX = Math.max(maxX, Math.abs(x.pos.x)); if (x.part === 'hand') gems++; }); }, 60,
+    s => gems ? 'en flexiones no debería haber diamantes' : maxX < 0.06 ? 'las amebas de las flexiones siempre van al centro' : '');
   RA.PV.handAt = null;
   await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
