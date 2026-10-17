@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -601,6 +601,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (want ? got < want : got) errors.push(`superman XR (${name}): ${got} disparos`);
     XRS.hands = null; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
   }
+  // ---- Dentro del juego se pasa de VR a realidad mixta y al revés; colgado de la barra, el bosque se ve en las dos ----
+  for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat' })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  const vr0 = !RA.arMode && RA.env.visible; press('Realidad mixta'); frame(2, 16, xrFrame);
+  const mr = RA.arMode && !RA.env.visible; press('Realidad virtual'); frame(2, 16, xrFrame);
+  const vr1 = !RA.arMode && RA.env.visible; press('Realidad mixta'); frame(2, 16, xrFrame);
+  RA.setSetting('mode', 'bars'); RA.setSetting('exercise', 'hang'); frame(2, 16, xrFrame);
+  const forestMR = RA.arMode && RA.forest.visible && !RA.env.visible;
+  RA.setSetting('exercise', 'pullup'); frame(2, 16, xrFrame); const noForest = !RA.forest.visible;
+  log('view switch: VR', vr0, '→ MR', mr, '→ VR', vr1, '· forest in MR while hanging', forestMR, '· gone for pull-ups', noForest);
+  if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
+  if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
+  RA.exitAll(); frame(2, 16, xrFrame);
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
 })().catch(e => { console.log('FATAL', e.stack); console.log('ERRORS so far:\n' + errors.join('\n')); });

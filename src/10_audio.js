@@ -59,7 +59,7 @@ function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}
 function applyVolume() {
   if (!AUD.C) return;
   AUD.sfx.gain.value = settings.volume / 100;
-  AUD.amb.gain.value = (settings.ambient / 100) * (arMode ? 0.35 : 1);
+  AUD.amb.gain.value = (settings.ambient / 100) * (arMode && !forestOn() ? 0.35 : 1);
 }
 settingHooks.push(k => { if (k === 'volume' || k === 'ambient' || k === '*') applyVolume(); });
 const sndOK = () => AUD.C && AUD.C.state === 'running' && settings.volume > 0;

@@ -181,11 +181,26 @@ renderer.setAnimationLoop((time, frame) => {
 /* =================== ENTRAR EN XR =================== */
 let rigsBuilt = false;
 function ensureRigs() { if (!rigsBuilt) { rigsBuilt = true; buildRigs(); } }
+// La VR también va en una sesión de realidad mixta cuando las gafas la admiten: con el entorno opaco tapando la
+// habitación es VR, y así se puede pasar de una a otra dentro del juego sin salir (setView)
+const XRSUP = { ar: false, vr: false };
+let xrAR = false;
+function setView(v) {
+  if (!xrAR || (v === 'mr') === arMode) return;
+  arMode = v === 'mr'; applyEnvMode(); applyShadows(); boardDirty = true;
+  say(arMode ? 'Realidad mixta' : 'Realidad virtual', '#3cf0c6', 1.2);
+}
+// Fila de los menús para cambiar de vista (solo si la sesión lo permite)
+function viewRows(back) {
+  if (!xrActive || preview || !xrAR) return [];
+  return [{ t: 'choice', label: 'Vista', value: arMode ? 'mr' : 'vr', opts: [['mr', 'Realidad mixta'], ['vr', 'Realidad virtual']], onPick: v => { setView(v); back(); } }];
+}
 async function startXR(ar) {
   audioInit(); ensureRigs();
   try {
-    const session = await navigator.xr.requestSession(ar ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor'] });
-    arMode = ar; applyEnvMode(); applyShadows();
+    const useAR = ar || XRSUP.ar;
+    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor'] });
+    xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
@@ -207,7 +222,8 @@ async function checkXR() {
     return;
   }
   const [arOk, vrOk] = await Promise.all([navigator.xr.isSessionSupported('immersive-ar').catch(() => false), navigator.xr.isSessionSupported('immersive-vr').catch(() => false)]);
-  $('#btnAR').disabled = !arOk; $('#btnVR').disabled = !vrOk;
+  XRSUP.ar = !!arOk; XRSUP.vr = !!vrOk;
+  $('#btnAR').disabled = !arOk; $('#btnVR').disabled = !vrOk && !arOk;
   if (!arOk && !vrOk) st.textContent = 'Este dispositivo no admite sesiones inmersivas. Usa la prueba en el ordenador o abre la página en las Quest 3.';
 }
 settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });

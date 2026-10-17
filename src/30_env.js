@@ -183,7 +183,7 @@ function layoutArena() {
   safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
-  catcher.visible = arMode && !!settings.shadows;
+  catcher.visible = arMode && !!settings.shadows && !forestOn();
   keyLight.target.position.set(0, 0, -D * 0.45);
   const ext = Math.max(6, D * 0.65); Object.assign(keyLight.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); keyLight.shadow.camera.updateProjectionMatrix();
   keyLight.position.set(-5, 10, 4 - D * 0.45);
@@ -244,7 +244,7 @@ function applyEnvMode() {
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
   scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); });
-  catcher.visible = arMode && !!settings.shadows;
+  catcher.visible = arMode && !!settings.shadows && !forestOn();
 }
 settingHooks.push(k => {
   if (['depth', 'board', 'mode', 'exercise', '*'].includes(k)) layoutArena();
