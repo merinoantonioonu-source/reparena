@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -270,6 +270,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
   await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, watchPanels(pullSim()), 420, panelCheck('remo', s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : ''));
   await runConfig('Barras+remo una paralela', { ...bars, exercise: 'row', dipBars: '1', barTarget: 'bubbles' }, pullSim(), 420, s => s.kills < 4 ? 'con una paralela no revienta las pompas' : '');
+  // remo con avispas: esperan a 3/4 de la altura de la barra, pasado su borde hacia la cabeza, y vuelan niveladas mirándote
+  for (const bars_ of ['2', '1']) {
+    const W = { n: 0, bad: [], maxPitch: 0 };
+    await runConfig('Barras+remo avispas (' + bars_ + ' paralela' + (bars_ === '1' ? ')' : 's)'), { ...bars, exercise: 'row', dipBars: bars_, barTarget: 'bugs' }, t => {
+      pullSim()(t);
+      for (const e of RA.enemies) if (e.alive && e.K && e.K.wasp && e.mode === 'wait' && e.slotIndex() === 0) { // la primera: las demás esperan detrás
+        const w = RA.arena.localToWorld(e.slot.clone()), l = RA.eqLocal(RA.eqPose('dip'), w, new THREE.Vector3()), m = RA.eqLocal(RA.eqPose('dip'), RA.BAR.mountXZ.clone(), new THREE.Vector3());
+        const H = RA.settings.dipH / 100, L = RA.settings.dipLen / 200;
+        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + 0.1, H * 0.75)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
+        if (!(okY && okXZ)) W.bad.push(`${l.x.toFixed(2)},${w.y.toFixed(2)},${l.z.toFixed(2)}`);
+        W.maxPitch = Math.max(W.maxPitch, Math.abs(e.root.rotation.x)); W.n++;
+      }
+    }, 420, s => { log(`   avispas: ${W.n} fotogramas esperando, fuera de sitio ${W.bad.length} ${W.bad.slice(0, 2).join(' ')}, inclinación máx. ${W.maxPitch.toFixed(2)} rad`);
+      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
+  }
+  RA.setSetting('dipBars', '2');
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
