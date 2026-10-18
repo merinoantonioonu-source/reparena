@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, boardLooked, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -96,7 +96,7 @@ const watchPanels = sim => t => {
   const n = RA.collectThreats();
   const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, 0.34, 0.06, true, n);
   if (b) PAN.behind++; if (bt) PAN.toast++;
-  const bad = (b && RA.board.mesh.material.opacity > 0.5) || (bt && RA.toastP.mesh.material.opacity > 0.5);
+  const bad = (b && RA.board.mesh.material.opacity > (RA.boardLooked() ? 0.85 : 0.5)) || (bt && RA.toastP.mesh.material.opacity > 0.5);
   PAN.streak = bad ? PAN.streak + 0.033 : 0; PAN.worst = Math.max(PAN.worst, PAN.streak);
   sim(t);
 };

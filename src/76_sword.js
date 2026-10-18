@@ -181,7 +181,7 @@ function blockPoint(r, out) {
 function blockStep(r, t) {
   const p = blockPoint(r, _hp), Z = BLOCK_Z[r.zone], s = 0.38 + 0.08 * Math.sin(t * 14);
   r.zoneSpr.position.copy(p); r.zoneSpr.scale.set(s, s, 1);
-  const low = head.p.y < calibRef - Z.crouch * settings.squatDepth / 100;
+  const low = !Z.crouch || head.p.y < calibRef - Z.crouch * settings.squatDepth / 100; // el alto se para de pie
   if (r.blocked) return;
   for (const side of ['left', 'right']) {
     if (!swordIn(side)) continue; const S = SWD.s[side];
