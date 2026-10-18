@@ -59,11 +59,13 @@ const _wl = new V3();
 // Para que no se pulsen botones sin querer: tras una pulsación, ese dedo no pulsa nada más hasta que se aleja un poco
 // (POKE_MOVE) del sitio donde pulsó, y entre dos pulsaciones pasa un momento. En cada fotograma cuenta como mucho una
 // pulsación, la del botón en cuyo centro está más metido el dedo (con el dedo entre dos botones no se pulsan los dos).
-const POKE = { lock: { left: null, right: null }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45;
-function pokeWidgets(list, dt, ready = true) {
+// Tras pulsar (o al abrirse un menú), ese dedo no vuelve a pulsar ni a arrastrar hasta que se retira un poco del menú
+// (POKE_BACK por delante de los botones o fuera de ellos): así la misma pulsación no toca el menú que se abre
+const POKE = { lock: { left: null, right: null }, need: { left: false, right: false }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45, POKE_BACK = 0.02;
+function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000;
   for (const f of fingers) { const L = POKE.lock[f.side]; if (L && f.p.distanceTo(L) > POKE_MOVE) POKE.lock[f.side] = null; }
-  let best = null, bestD = Infinity;
+  let best = null, bestD = Infinity; const near = { left: false, right: false };
   for (const w of list) {
     if (!w.mesh.visible) continue;
     w.cool = Math.max(0, (w.cool || 0) - dt);
@@ -71,15 +73,16 @@ function pokeWidgets(list, dt, ready = true) {
     for (const f of fingers) {
       if (w.only && w.only !== f.side) continue;
       const l = w.mesh.worldToLocal(_wl.copy(f.p));
-      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side];
+      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side], held = isMenu && POKE.need[f.side];
+      if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.03 && l.z < POKE_BACK && l.z > -0.15) near[f.side] = true;
       if (inX && inY && l.z < 0.07 && l.z > -0.05) hover = true;
       if (w.kind === 'slider') {
-        if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
+        if (!held && Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
       } else if (inX && inY && l.z < 0.012 && l.z > -0.07) {
         touching = true;
         // pulsa al cruzar la superficie desde delante, con el dedo ya dentro del botón (no en su borde)
         const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2));
-        if (prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
+        if (!held && prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
       }
       w.prevZ[f.side] = l.z;
     }
@@ -87,8 +90,13 @@ function pokeWidgets(list, dt, ready = true) {
     w.mesh.position.z = w.baseZ - (touching ? 0.004 : 0);
     if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); }
   }
+  if (isMenu) for (const f of fingers) {
+    // retirado (más de POKE_BACK por delante del menú, o lejos de él): ya puede volver a pulsar
+    if (!near[f.side] && menu && menu.group) { const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near[f.side] = true; }
+    if (!near[f.side]) POKE.need[f.side] = false;
+  }
   if (!best || !ready || best.w.cool > 0 || now < POKE.until) return false;
-  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35;
+  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35; if (isMenu) POKE.need[best.f.side] = true;
   SND.click(); haptic(best.f.side, 0.15, 15); best.w.onPress(); return true;
 }
 
@@ -109,22 +117,28 @@ const stand = (() => {
   const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1, 0.012), M.glow); tint(strip.geometry, C.teal); g.add(strip); g.strip = strip;
   g.visible = false; scene.add(g); return g;
 })();
+// Dónde sale un menú nuevo: el punto es el centro de su borde de arriba (el menú cuelga de ahí, inclinado hacia ti), a
+// la altura del pecho y a tu alcance; así, por alto que sea el menú, lo de arriba no se aleja ni se sube
 function placeAnchor(dist) {
-  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.3, head.p.y - 0.3) : standHeadY() - 0.42;
+  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
 function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+// Al cerrar un menú se recuerda su sitio un momento: si enseguida se abre otro (de un menú a otro), sale en el mismo sitio
+let lastAnchor = null, lastAnchorT = -9;
 function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
-  if (!keepAnchor) { menuAnchor = null; stand.visible = false; }
+  if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 function openMenu(rows, opts = {}) {
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
-  const reuse = menu && menuAnchor;
+  const reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
   hideMenu(true);
-  if (!reuse) menuAnchor = opts.anchor || placeAnchor((opts.dist || settings.menuDist) / 100);
+  if (recent) menuAnchor = lastAnchor;
+  else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
+  POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
@@ -180,12 +194,13 @@ function openMenu(rows, opts = {}) {
     widgets.forEach(w => { w.only = 'right'; });
     stand.visible = false; wristPose(group, H);
   } else {
-    group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+    group.rotation.set(-0.38, menuAnchor.yaw, 0); const hz = H / 2 * Math.sin(0.38); // cuelga de su borde de arriba: el centro, más abajo y algo más cerca de ti
+    group.position.set(menuAnchor.pos.x + hz * Math.sin(menuAnchor.yaw), menuAnchor.pos.y - H / 2 * Math.cos(0.38), menuAnchor.pos.z + hz * Math.cos(menuAnchor.yaw));
     stand.visible = settings.menuWhere === 'stand';
     if (stand.visible) { // atril
       const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
-      stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
-      const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
+      stand.position.set(group.position.x + n.x * 0.06, 0, group.position.z + n.z * 0.06);
+      const postH = Math.max(0.1, group.position.y - H / 2 * Math.cos(0.38) - 0.02);
       stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
       stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
     }
@@ -361,9 +376,6 @@ function panelHides(obj, w, h, always, n) {
   }
   return false;
 }
-// ¿Lo miras de frente? (el centro del marcador a menos de ~14° de donde apunta la vista)
-const _blP = new V3();
-function boardLooked() { board.mesh.getWorldPosition(_blP).sub(head.p); const d = _blP.length(); return d > 0.1 && _blP.dot(fwd()) / d > 0.97; }
 // Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
 const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
@@ -388,10 +400,7 @@ function updateViewPanels(dt) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
     toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
   }
-  // el marcador está fijo: si algo de lo que viene queda detrás de él, se aclara hasta que pasa; si lo estás mirando para leerlo, se queda legible
-  const hide = n > 0 && board.mesh.parent && panelHides(board.mesh, 1.06, 0.5, false, n);
-  HUD.board += ((hide ? (boardLooked() ? 0.8 : 0.35) : 1) - HUD.board) * Math.min(1, dt * 8);
-  board.mesh.material.opacity = HUD.board; boardFrameMat.opacity = HUD.board; boardFrameMat.depthWrite = HUD.board > 0.98;
+  // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }
@@ -498,6 +507,7 @@ function drawBoard() {
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
   if (isCombat() && swordActive() && ['play', 'rest', 'ready'].includes(state)) { const n = SWD.perf.length; c.fillStyle = n ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', W - 36, 262); }
+  else if (throwAim() && ['play', 'rest', 'ready'].includes(state)) { const n = HTH.q.length; c.fillStyle = n ? '#3cf0c6' : '#a49fc8'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', W - 36, 262); }
   else if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
   else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);

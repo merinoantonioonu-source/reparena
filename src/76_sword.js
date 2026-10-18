@@ -27,15 +27,48 @@ const hapticBoth = (v, ms) => { haptic('left', v, ms); haptic('right', v, ms); }
 
 /* ---------- Modelos ---------- */
 // El origen es el agarre del mando y la hoja sale por −Z (como un objeto que se sostiene en el puño)
-const M_BLADE = std({ color: 0xdfe4ea, metalness: 1, roughness: 0.14, envMapIntensity: 1.8 });
-const M_GUARD = std({ color: 0xb08a3c, metalness: 1, roughness: 0.3, envMapIntensity: 1.4 });
+// Reflejos del acero: un entorno propio, más luminoso que el de la arena (cielo claro, suelo oscuro y paneles de luz
+// blanca y de colores), para que la hoja brille y cada faceta refleje distinto según cómo la gires
+const ENV_STEEL = (() => {
+  const s = new THREE.Scene(), g = new THREE.SphereGeometry(10, 32, 16), cols = [], c = new THREE.Color(), top = new THREE.Color(0x56607a), mid = new THREE.Color(0x23262f), bot = new THREE.Color(0x0a080c);
+  for (let i = 0; i < g.attributes.position.count; i++) { const y = g.attributes.position.getY(i) / 10; if (y > 0) c.copy(mid).lerp(top, Math.min(1, y * 1.6)); else c.copy(mid).lerp(bot, Math.min(1, -y * 3)); cols.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  s.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  // tiras de luz estrechas: dan los destellos alargados del acero pulido sobre un fondo más oscuro
+  for (const [col, x, y, z, w, h] of [[0xffffff, 0, 8, 1, 10, 0.8], [0xffffff, -7, 4, 4, 0.6, 7], [0xfff0d8, 7, 3, -3, 0.8, 6], [0xffffff, 2, 6, -6, 6, 0.5], [0xff6a40, -6, 1, -7, 4, 0.6], [0x8fb8ff, 5, 2, 7, 4, 0.8]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); s.add(m);
+  }
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(s, 0.02).texture; pm.dispose(); return t;
+})();
+const M_BLADE = std({ color: 0xdfe5ec, metalness: 1, roughness: 0.12, envMap: ENV_STEEL, envMapIntensity: 1.5 });
+const M_GUARD = std({ color: 0xc89a48, metalness: 1, roughness: 0.28, envMap: ENV_STEEL, envMapIntensity: 1.3 });
 const M_GRIP = std({ color: 0x2a1a12, metalness: 0, roughness: 0.85 });
-const M_HILT = std({ color: 0x9aa0aa, metalness: 1, roughness: 0.25, envMapIntensity: 1.4 });
+const M_HILT = std({ color: 0x9aa0aa, metalness: 1, roughness: 0.25, envMap: ENV_STEEL, envMapIntensity: 1.4 });
+// Hoja de acero de verdad: sección de rombo (dos filos y un nervio central) que se estrecha poco a poco y acaba en una
+// punta centrada; caras planas, así cada faceta refleja la luz por su lado. z0 es la guarda; la hoja sale por −Z
+function bladeGeo(L, z0) {
+  const st = [], N = 14, P = [], Nn = [];
+  for (let i = 0; i <= N; i++) { // estaciones a lo largo: anchura y grosor (la punta, en ojiva corta)
+    const k = i / N, tip = Math.max(0, (k - 0.86) / 0.14), w = 0.023 * (1 - 0.18 * k) * Math.sqrt(Math.max(0, 1 - tip * tip)), t = 0.0042 * (1 - 0.3 * k) * (1 - tip);
+    st.push({ z: z0 - L * k, w, t });
+  }
+  const tri = (a, b, c) => { const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(c, a)).normalize(); for (const v of [a, b, c]) { P.push(v.x, v.y, v.z); Nn.push(n.x, n.y, n.z); } };
+  // sección: cara central plana (la mitad de la anchura) y biseles marcados hasta cada filo
+  const ring = s => { const c = s.w * 0.5; return [new THREE.Vector3(s.w, 0, s.z), new THREE.Vector3(c, s.t, s.z), new THREE.Vector3(-c, s.t, s.z), new THREE.Vector3(-s.w, 0, s.z), new THREE.Vector3(-c, -s.t, s.z), new THREE.Vector3(c, -s.t, s.z)]; };
+  for (let i = 0; i < N; i++) {
+    const a = ring(st[i]), b = ring(st[i + 1]);
+    for (let j = 0; j < 6; j++) { const j2 = (j + 1) % 6; tri(a[j], b[j], b[j2]); tri(a[j], b[j2], a[j2]); }
+  }
+  const base = ring(st[0]); for (let j = 1; j < 5; j++) tri(base[0], base[j + 1], base[j]); // tapa junto a la guarda
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
+  const uv = new Float32Array(P.length / 3 * 2); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
 function makeSword(side) {
   const col = SWORD_COL[side], g = new THREE.Group(), S = { side, g, prev: [], cur: [], had: false, speed: 0, vel: new V3(), tipPrev: new V3(), swishT: 0, hitCool: new Map(), hum: null, glow: 0 };
   // metálica: hoja de acero con nervio central, guarda dorada, empuñadura de cuero y pomo; filo que brilla cargada
   const L = 0.85, met = new THREE.Group(); g.add(met); S.metal = met;
-  const blade = new THREE.Mesh(mergeGeos([xform(G.box(0.044, 0.005, L - 0.09), 0, 0, -0.1 - (L - 0.09) / 2), xform(G.box(0.01, 0.009, L - 0.12), 0, 0, -0.1 - (L - 0.12) / 2), xform(new THREE.ConeGeometry(0.022, 0.09, 4), 0, 0, -0.1 - L + 0.045, -Math.PI / 2, Math.PI / 4, 0, 1, 1, 0.16)]), M_BLADE);
+  const blade = new THREE.Mesh(bladeGeo(L, -0.1), M_BLADE); // la punta, centrada con el resto de la hoja
   blade.castShadow = true; met.add(blade);
   const guard = new THREE.Mesh(mergeGeos([xform(G.box(0.2, 0.022, 0.03), 0, 0, -0.088), xform(G.sph(0.016, 10, 8), 0.1, 0, -0.088), xform(G.sph(0.016, 10, 8), -0.1, 0, -0.088), xform(G.sph(0.022, 12, 10), 0, 0, 0.1)]), M_GUARD); guard.castShadow = true; met.add(guard);
   const grip = new THREE.Mesh(xform(G.cyl(0.019, 0.021, 0.17, 12), 0, 0, 0.003, Math.PI / 2, 0, 0), M_GRIP); grip.castShadow = true; met.add(grip);

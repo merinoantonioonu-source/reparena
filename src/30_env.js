@@ -167,9 +167,9 @@ const rails = [-1.12, 1.12].map(x => { const m = new THREE.Mesh(new THREE.BoxGeo
 const trackFloor = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), std({ color: 0x0c0a0c, roughness: 0.4, metalness: 0.6, transparent: true, opacity: 0.7 })); trackFloor.rotation.x = -Math.PI / 2; trackFloor.position.y = 0.003; trackFloor.receiveShadow = true; arcTrack.add(trackFloor);
 
 /* ---------- Marcador fijo ---------- */
-const board = makePanel(1, 0.445, 1024);
+const board = makePanel(1, 0.445, 1024); board.mesh.material.transparent = false; board.mesh.material.depthWrite = true; // siempre visible y opaco
 const boardRig = new THREE.Group(); arena.add(boardRig);
-const boardFrameMat = M.steel.clone(); boardFrameMat.transparent = true; // el marco se desvanece con el marcador si tapa algo
+const boardFrameMat = M.steel.clone();
 let boardDirty = true;
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
