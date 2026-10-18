@@ -168,7 +168,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt);
-  updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); updateForest(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);

@@ -1055,7 +1055,8 @@ function lobbyMenu() {
     ...MODE_EX[settings.mode].reduce((rows_, x, i) => { if (i % 4 === 0) rows_.push([]); rows_[rows_.length - 1].push([x, EX_SHORT[x]]); return rows_; }, [])
       .map((opts, i) => ({ t: 'choice', label: i ? '' : 'Ejercicio', value: settings.exercise, opts, onPick: v => { setSetting('exercise', v); lobbyMenu(); } })),
     { t: 'field', key: speedKey() },
-    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
+    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
+    ...(bars && hang ? [{ t: 'field', key: 'hangPit' }] : [])
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
   // espadas (Asalto con sentadillas o zancadas, Toques de pie)
@@ -1222,8 +1223,10 @@ function gameStep(dt, t) {
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
-    if (settings.exercise === 'hang' ? BAR.hold >= BAR.need : !spawnQueue.length && !anyLeft && !projs.length) {
-      if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
+    if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
+      // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
+      if (BAR.failed) { const last = settings.waves && waveIdx >= settings.waves - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
+      else if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
       else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); }
       else startWave(waveIdx + 1);
     }
