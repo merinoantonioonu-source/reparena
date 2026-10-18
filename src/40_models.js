@@ -224,7 +224,7 @@ function buildDrone(v) {
   return R.build();
 }
 
-/* ---------- Avispón gigante (Enjambre y Barras · «Bichos») ---------- */
+/* ---------- Avispón gigante (Combate y Barras · «Bichos») ---------- */
 // Como un avispón gigante asiático, del tamaño de una mano: cabeza naranja con grandes ojos compuestos negros y
 // brillantes, tórax oscuro y peludo, abdomen a bandas naranjas y negras, patas negras y naranjas y alas veteadas.
 // El abdomen tiene dos articulaciones para doblarse en «C» por debajo y cargar el aguijón hacia delante; las patas

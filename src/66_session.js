@@ -1,21 +1,25 @@
 
 /* =================== SESIÓN DE ENTRENAMIENTO: BLOQUES ENCADENADOS =================== */
-// Una sesión es una lista de bloques {mode, ex, n}: n repeticiones (en colgado, segundos). Cada bloque se juega
+// Una sesión es una lista de bloques {mode, ex, n} (en Combate, también foes: robots, voladores o mezcla): n repeticiones (en colgado, segundos). Cada bloque se juega
 // como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
-const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc'];
+const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foes', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
 (function loadSession() {
   const s = store(SES_KEY) || {};
-  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500) }));
+  // los bloques de Asalto y Enjambre pasan a Combate con sus enemigos y su puntería
+  const mig = b => b && LEGACY_MODES[b.mode] ? { ...b, mode: 'combat', ...LEGACY_MODES[b.mode] } : b;
+  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.map(mig).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b) }));
   if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
 })();
+// En Combate el bloque guarda sus enemigos (y, si venía de Enjambre o Asalto, su puntería)
+function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: clampSetting(FIELD.foes, b.foes || settings.foes) }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
 function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}`; }
+function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${b.foes ? ` (${fmtVal(FIELD.foes, b.foes).toLowerCase()})` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
@@ -28,7 +32,7 @@ function sessionMinutes() {
 function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 });
+  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockExtra(b));
   onSettingChanged('mode'); onSettingChanged('exercise');
 }
 function startSession() {
@@ -87,13 +91,14 @@ function sessionRows() {
 }
 
 /* ---------- Editor de la página ---------- */
-const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'walkers', ex: 'plank1', n: 30 }, { mode: 'walkers', ex: 'pushup', n: 30 }];
+const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'combat', ex: 'plank1', n: 30, foes: 'robots' }, { mode: 'combat', ex: 'pushup', n: 30, foes: 'robots' }];
 function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
   host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
+    ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FIELD.foes.opts, b.foes)}</select>` : ''}
     <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
     <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
@@ -106,7 +111,8 @@ function sesInitPage() {
   host.addEventListener('change', ev => {
     const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
     const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
-    if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); }
+    if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); delete b.foes; delete b.aim; Object.assign(b, blockExtra(b)); }
+    else if (f === 'foes') b.foes = clampSetting(FIELD.foes, ev.target.value);
     else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
     saveSession(); renderSession();
@@ -117,7 +123,7 @@ function sesInitPage() {
     if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
     saveSession(); renderSession();
   });
-  $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; SES.blocks.push({ mode: blockOk(settings.mode, ex) ? settings.mode : 'walkers', ex, n: ex === 'hang' ? 30 : 20 }); saveSession(); renderSession(); });
+  $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; const b = { mode: blockOk(settings.mode, ex) ? settings.mode : 'combat', ex, n: ex === 'hang' ? 30 : 20 }; SES.blocks.push({ ...b, ...blockExtra(b) }); saveSession(); renderSession(); });
   $('#btnSesExample').addEventListener('click', () => { SES.blocks = SES_EXAMPLE.map(b => ({ ...b })); saveSession(); renderSession(); });
   $('#btnSesClear').addEventListener('click', () => { SES.blocks = []; saveSession(); renderSession(); });
   $('#sesRest').addEventListener('change', ev => { SES.rest = clamp(Math.round(+ev.target.value) || 0, 0, 600); saveSession(); renderSession(); });

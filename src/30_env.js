@@ -98,7 +98,7 @@ const hazardLine = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.16), M.hazard);
 M.hazard.map.repeat.set(8, 1);
 
 function makeGate() {
-  const g = new THREE.Group(), k = new Kit();
+  const g = new THREE.Group(), k = new Kit(), ks = new Kit();
   for (const s of [-1, 1]) {
     k.add('steel', G.box(0.55, 3.7, 0.9), C.dark, s * 1.5, 1.85, 0);
     k.add('steel', G.box(0.62, 0.35, 1.0), C.gun, s * 1.5, 0.17, 0);
@@ -106,7 +106,7 @@ function makeGate() {
     k.add('steel', G.cyl(0.05, 0.05, 2.6, 10), C.chrome, s * 1.78, 1.6, 0.32);
     k.add('steel', G.cyl(0.08, 0.08, 0.6, 10), C.dark, s * 1.78, 0.4, 0.32);
     k.add('steel', G.box(0.2, 0.2, 0.2), C.gun, s * 1.78, 2.95, 0.32);
-    k.add('concrete', G.box(1.2, 1.2, 2.2, 2), C.concrete, s * 2.2, 0.6, -0.3, 0, s * 0.15, 0);
+    ks.add('concrete', G.box(1.2, 1.2, 2.2, 2), C.concrete, s * 2.2, 0.6, -0.3, 0, s * 0.15, 0); // bloques a los lados: fuera cuando la compuerta va en una pared real
     k.add('glow', G.box(0.03, 2.4, 0.02), C.red, s * 1.22, 1.6, 0.46);
   }
   k.add('paint', G.box(3.5, 0.55, 0.95), C.hazard, 0, 3.42, 0);
@@ -120,6 +120,7 @@ function makeGate() {
   k.add('halo', G.plane(3.4, 3.4), col(0.55, 0.06, 0.02), 0, 1.5, -1.38);
   const frame = k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete, glow: M.glow, halo: M.halo }, { cast: true, receive: true });
   g.add(frame);
+  const side = ks.build({ concrete: M.concrete }, { cast: true, receive: true }); g.add(side);
   const ramp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.35), M.hazard); ramp.rotation.x = -Math.PI / 2; ramp.position.set(0, 0.006, 0.75); g.add(ramp);
   const doorGeo = new THREE.BoxGeometry(1.26, 3.0, 0.16);
   const doorL = new THREE.Mesh(doorGeo, M.door), doorR = new THREE.Mesh(doorGeo, M.door);
@@ -136,12 +137,14 @@ function makeGate() {
   const glowSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color: 0xff4010, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
   glowSpr.scale.set(1.6, 1.6, 1); beacon.add(glowSpr);
   arena.add(g);
-  return { g, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false };
+  return { g, side, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false, on: true };
 }
 const gates = [makeGate(), makeGate(), makeGate()];
+// Las compuertas en uso (en una habitación pequeña puede que solo quepan una o dos)
+const liveGates = () => { const l = gates.filter(g => g.on); return l.length ? l : gates; };
 
-// Agujeros del suelo para las arañas (modo flexiones)
-const hatchPos = [[-0.62, -1.02], [0.62, -1.02], [-0.98, -0.55], [0.98, -0.55]], hatchSide = [[-1.0, -0.4], [1.0, -0.4], [-0.95, 0.3], [0.95, 0.3]];
+// Agujeros del suelo para las arañas (flexiones y plancha): a unos 2 m, lejos de las manos, para verlas venir
+const hatchPos = [[-0.75, -1.85], [0.75, -1.85], [-1.6, -1.15], [1.6, -1.15]], hatchSide = [[-1.75, -0.55], [1.75, -0.55], [-1.7, 0.35], [1.7, 0.35]];
 const hatches = hatchPos.map(([x, z]) => {
   const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
   const k = new Kit();
@@ -167,20 +170,25 @@ const board = makePanel(1, 0.445, 1024);
 const boardRig = new THREE.Group(); arena.add(boardRig);
 const boardFrameMat = M.steel.clone(); boardFrameMat.transparent = true; // el marco se desvanece con el marcador si tapa algo
 let boardDirty = true;
-function arenaDepth() { return settings.depth > 0 ? settings.depth : (arMode ? 6 : 11); }
+function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
   const D = arenaDepth(), push = isTiny(), low = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
+  const plan = roomPlan(), roomGates = plan && plan.gates.some(Boolean); // realidad mixta: en tus paredes
   gates.forEach((g, i) => {
-    g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(gs);
-    g.g.rotation.y = Math.atan2(-g.x, D); g.g.visible = !push && !forestOn();
+    const P = roomGates ? plan.gates[i] : null; g.on = !roomGates || !!P;
+    if (P) { g.x = P.x; g.z = P.z; g.scale = plan.gs; g.g.rotation.y = P.rot; }
+    else { g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.rotation.y = Math.atan2(-g.x, D); }
+    g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(g.scale); g.side.visible = !roomGates;
+    g.g.visible = g.on && !push && !forestOn();
   });
-  gateLight.position.set(0, 1.6 * gs, -D - 0.6);
+  const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
+  gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
   const hp = settings.exercise === 'plank1' ? hatchSide : hatchPos; // en la plancha, dos a cada lado
-  hatches.forEach((h, i) => { h.x = hp[i][0]; h.z = hp[i][1]; h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs'; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && settings.mode === 'walkers';
+  const taken = []; hatches.forEach((h, i) => { [h.x, h.z] = plan ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs'; });
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots');
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && !forestOn();
@@ -217,6 +225,13 @@ function layoutArena() {
     k.add('steel', G.box(W + 0.22, H + 0.22, 0.12), C.gun, 0, yc, -0.08, tilt, 0, 0);
     rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
+  } else if (plan && plan.board && boardMode() === 'column') {
+    // realidad mixta con la habitación escaneada: colgado en una de tus paredes, a la altura de los ojos
+    const B = plan.board, W = 1.1, tilt = 0.06;
+    rig.position.set(B.x, 0, B.z); rig.rotation.y = B.rot;
+    k.add('steel', G.box(W + 0.1, W * 0.445 + 0.1, 0.05), C.gun, 0, 1.75, 0.0, tilt, 0, 0);
+    rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
+    board.mesh.position.set(0, 1.75, 0.03); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else {
     const cx = -Math.min(2.4, D * 0.3 + 0.7), cz = -Math.min(3.0, D * 0.55);
     rig.position.set(cx, 0, cz); rig.rotation.y = Math.atan2(-cx, -cz);
@@ -270,7 +285,7 @@ function updateEnv(dt, t) {
       for (const p of smokeCols) if (Math.random() < 0.5) fx.bigSmoke(p);
     }
   }
-  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + gates[1].open * 1.5;
+  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + Math.max(...gates.map(g => g.open)) * 1.5;
 }
 function updateGates(dt, t) {
   for (const g of gates) {

@@ -59,6 +59,7 @@ function robotSlot(r) {
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
       _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
       if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
+      if (roomBlocked(_rs.x, _rs.z, r.radius)) continue; // en tu habitación, ni dentro de un mueble ni detrás de una pared
       const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
     }
@@ -71,9 +72,10 @@ class Robot {
   constructor(spec, gate) {
     const K = ROBOT_KIND[spec.kind]; this.K = K; this.type = 'robot'; this.kind = spec.kind;
     this.rig = RIGS[K.rig]; this.inst = this.rig.instance(MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
-    this.root.scale.setScalar(K.scale); arena.add(this.root);
-    const gr = gate.g.rotation.y; this.pos = new V3(gate.x - Math.sin(gr) * 1.0, 0, gate.z - Math.cos(gr) * 1.0);
-    Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * K.scale, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
+    // cabe por el hueco de su compuerta (en realidad mixta, con el techo de tu habitación, las compuertas son más bajas)
+    this.sc = K.scale * Math.min(1, 3.0 * gate.scale / (1.95 * K.scale)); this.root.scale.setScalar(this.sc); arena.add(this.root);
+    const gr = gate.g.rotation.y, back = 1.3 * gate.scale; this.pos = new V3(gate.x - Math.sin(gr) * back, 0, gate.z - Math.cos(gr) * back); // sale de dentro del túnel
+    Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * this.sc, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
     // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
@@ -93,7 +95,7 @@ class Robot {
     const B = this.B, K = this.K, isR = this.rig.kind === 'ripper', L = this.rig.legL;
     if (spd === true) spd = this.vWalk; // pose de prueba
     const amp = clamp(spd / Math.max(0.2, this.vWalk * 0.7), 0, 1), run = this.run;
-    this.phase += TAU * clamp(spd / (K.stride * K.scale * (1 + run * 0.35)), 0, 2.8) * dt;
+    this.phase += TAU * clamp(spd / (K.stride * this.sc * (1 + run * 0.35)), 0, 2.8) * dt;
     const p = this.phase, drops = [], la = 1 + run * 0.55;
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
@@ -102,7 +104,7 @@ class Robot {
       else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
-      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * K.scale * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
+      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
       this.lastCos[i] = c;
     });
     // cadera: sube y baja con los pasos, gira y cae hacia la pierna que se levanta
@@ -132,7 +134,7 @@ class Robot {
     }
     // la cabeza sigue al jugador (con espasmos); en la amenaza, echada atrás rugiendo
     const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw - B.spine.rotation.y), dist = Math.hypot(toP.x, toP.z);
-    const pitch = Math.atan2(HL.y - K.head * K.scale, Math.max(0.3, dist));
+    const pitch = Math.atan2(HL.y - K.head * this.sc, Math.max(0.3, dist));
     B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw + tn * Math.sin(t * 9) * 0.25;
     B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4 - tn * 0.5 + lean * 0.5;
     B.jaw.rotation.x = Math.max(this.jaw, tn) * (isR ? 0.55 : 0.35);
@@ -434,8 +436,8 @@ class Flyer {
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
     if (push) { const h = pick(hatches); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
-    const sp = settings.flySpeed / 3.6 * (push ? 0.15 : 1);
-    if (!push) { const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
+    const sp = settings.flySpeed / 3.6 * (push ? 0.27 : 1);
+    if (!push) { const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
     this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
@@ -570,17 +572,17 @@ function pickNearest(side) {
   if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
   return best;
 }
-function findLock(o, d, any = false) {
+function findLock(o, d) {
   let best = null, bs = 1e9; const cone = settings.assist * Math.PI / 180;
   for (const e of enemies) {
-    if (!e.alive || (!any && e.type !== 'flyer')) continue;
+    if (!e.alive) continue;
     const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
     const sc = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
     if (sc < cone && sc < bs) { bs = sc; best = e; }
   }
   return best;
 }
-// Asalto: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
+// Puntería automática: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
 function fireOrb(origin, dmg, perfect, pow = 1, side) {
   const e = pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
@@ -589,9 +591,9 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
   SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
-// Enjambre: el rayo sale hacia donde apuntas y se engancha al bicho fijado
+// Apuntando tú: el rayo sale hacia donde apuntas y se engancha al enemigo fijado
 function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
-  const e = forced || findLock(lockFrom || origin, dir, pistolOn()), L = boltLevel(perfect), col = boltRGB(L);
+  const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
@@ -649,15 +651,12 @@ function onRep(opts, side) {
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
-  if (settings.mode === 'walkers' && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
+  if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
-  if (settings.mode === 'walkers') {
-    const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
+  if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
+    const sup = settings.exercise === 'superman', origin = sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, settings.exercise === 'plank1' ? side : undefined);
-  } else if (settings.exercise === 'superman') { // tumbado no se apunta: va al bicho más cercano
-    const e = pickNearest(), o = hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3);
-    fireBolt(o, e ? e.center(new V3()).sub(o).normalize() : fwdH(), null, dmg, opts.perfect, e);
   } else {
     for (const s of aimSources()) {
       let o = s.o.clone();
@@ -680,7 +679,7 @@ function onPower(pow) {
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = settings.mode === 'walkers'; SND.charge(); boardDirty = true;
+  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim(); SND.charge(); boardDirty = true;
 }
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
@@ -871,7 +870,7 @@ function runDetectors(t, dt) {
   }
 }
 
-/* =================== APUNTADO (Enjambre) =================== */
+/* =================== APUNTADO (puntería manual y pistolas) =================== */
 const laserGeo = new THREE.BoxGeometry(0.003, 0.003, 1); laserGeo.translate(0, 0, -0.5);
 const lasers = {}, locks = {};
 const ringTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.strokeStyle = '#fff'; x.lineWidth = 6; x.beginPath(); x.arc(64, 64, 52, 0, TAU); x.stroke(); x.lineWidth = 5; for (let a = 0; a < 4; a++) { const r = a * Math.PI / 2; x.beginPath(); x.moveTo(64 + Math.cos(r) * 38, 64 + Math.sin(r) * 38); x.lineTo(64 + Math.cos(r) * 62, 64 + Math.sin(r) * 62); x.stroke(); } return c; })());
@@ -883,19 +882,19 @@ const gazeDot = glowSprite(0xffffff, 0.02, 0.5); gazeDot.visible = false; scene.
 function aimSources() {
   const out = [];
   if (pistolOn()) { for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: gunMuzzle(s), d: hands[s].rayD }); if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() }); return out; }
-  if (settings.mode !== 'flyers') return out;
+  if (!aimManual()) return out;
   if (handsFree() && settings.aim === 'hands') for (const s of ['left', 'right']) if (hands[s].rayOk) out.push({ key: s, o: hands[s].rayO, d: hands[s].rayD });
   if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() });
   return out;
 }
 function updateAim(t) {
-  const show = (settings.mode === 'flyers' && settings.exercise !== 'superman' || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
+  const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d, pistolOn()), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
+    const e = findLock(s.o, s.d), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
       l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
@@ -906,7 +905,7 @@ function updateAim(t) {
 }
 
 /* =================== PISTOLAS =================== */
-// Cada sentadilla mete munición (una por mano en Enjambre); el gatillo dispara un rayo donde apuntas.
+// Cada sentadilla mete munición (una por mano contra voladores); el gatillo dispara un rayo donde apuntas.
 // Con mandos se ve un bláster en cada mano con sus celdas de energía; con las manos, se dispara pellizcando.
 const GUN = { ammo: 0, perf: [], emptyT: 0 };
 const gunCap = () => (twoShots() ? 2 : 1) * 3;
@@ -988,11 +987,12 @@ function buildWave(i) {
   }
   if (twoShots()) total *= 2;
   let boss = null;
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: mode === 'walkers' ? 'titan' : 'carrier', hp: b }; total -= b; }
+  const F = foes();
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? 'titan' : 'carrier', hp: b }; total -= b; }
   let k = 0;
   while (total > 0) {
     let kind, hp;
-    if (mode === 'walkers') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+    if (F === 'robots' || (F === 'mix' && k % 2 === 0)) { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     else { kind = (i >= 1 && k % 4 === 3) ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; }
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
   }
@@ -1002,7 +1002,7 @@ function buildWave(i) {
 // Robots: una compuerta con la salida despejada (dos no aparecen uno encima de otro)
 function freeGate() {
   const clear = g => !enemies.some(e => e.alive && e.type === 'robot' && Math.hypot(e.pos.x - g.x, e.pos.z - g.z) < 2.2 * g.scale);
-  const ok = gates.filter(clear); return ok.length ? pick(ok) : null;
+  const ok = liveGates().filter(clear); return ok.length ? pick(ok) : null;
 }
 // Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
 function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
@@ -1015,8 +1015,8 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (settings.mode === 'walkers' && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches));
-  else if (settings.mode === 'walkers') { const g = spec.kind === 'titan' ? gates[1] : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
+  else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches));
+  else if (ROBOT_KIND[spec.kind]) { const g = spec.kind === 'titan' ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -1043,7 +1043,7 @@ function resetWorld() {
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
 }
-function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { walkers: 'walkTime', flyers: 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
+function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { combat: foesHas('robots') ? 'walkTime' : 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
 function summaryText() {
   const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
@@ -1063,12 +1063,14 @@ function lobbyMenu() {
     // los ejercicios, de cuatro en cuatro por fila
     ...MODE_EX[settings.mode].reduce((rows_, x, i) => { if (i % 4 === 0) rows_.push([]); rows_[rows_.length - 1].push([x, EX_SHORT[x]]); return rows_; }, [])
       .map((opts, i) => ({ t: 'choice', label: i ? '' : 'Ejercicio', value: settings.exercise, opts, onPick: v => { setSetting('exercise', v); lobbyMenu(); } })),
+    ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : [])] : []),
     { t: 'field', key: speedKey() },
+    ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
     ...(bars && hang ? [{ t: 'field', key: 'hangPit' }] : [])
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  // espadas (Asalto con sentadillas o zancadas, Toques de pie)
+  // espadas (Combate contra robots con sentadillas o zancadas, Toques de pie)
   if (fieldVisible(FIELD.sword)) { rows.push({ t: 'field', key: 'sword', after: () => lobbyMenu() }); if (swordSet()) rows.push({ t: 'field', key: 'swordKind' }); }
   if (settings.mode === 'touch') {
     if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
@@ -1076,7 +1078,7 @@ function lobbyMenu() {
     rows.push(...tempoRows(() => lobbyMenu()));
   }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
-  rows.push(...musicRows(), ...viewRows(() => lobbyMenu()));
+  rows.push(...musicRows(), ...viewRows(() => lobbyMenu()), ...roomRows(() => lobbyMenu()));
   rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
   const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
   rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
@@ -1165,7 +1167,7 @@ function startWave(i) {
   else if (settings.mode === 'touch') touchStartWave();
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
-    const auto = settings.mode === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
+    const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : auto;
   }
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
@@ -1192,7 +1194,7 @@ function endRun(win, manual) {
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
     hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
-    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : settings.mode === 'flyers' ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
+    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ${score} puntos`,
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
