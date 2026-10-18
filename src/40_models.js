@@ -224,50 +224,7 @@ function buildDrone(v) {
   return R.build();
 }
 
-/* ---------- Avispa gigante ---------- */
-function buildHornet() {
-  const R = new Rig();
-  R.bone('body', null).bone('head', 'body', 0, 0.004, 0.05).bone('abd', 'body', 0, -0.004, -0.032)
-   .bone('mandL', 'head', 0.008, -0.012, 0.018).bone('mandR', 'head', -0.008, -0.012, 0.018);
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) R.bone('w' + sd + '1', 'body', sx * 0.012, 0.02, 0.014).bone('w' + sd + '2', 'body', sx * 0.012, 0.018, -0.002);
-  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GS = (b, g, c, ...t) => R.add(b, 'gloss', g, c, ...t);
-  P('body', G.sph(1, 14, 10), C.waspK, 0, 0, 0, 0, 0, 0, 0.024, 0.022, 0.032);
-  P('body', spikes(0, 0, 0, 0.024, 0.022, 0.032, 140, 0.004, 0.0007), col(0.45, 0.3, 0.12));
-  P('body', G.sph(1, 10, 8), C.waspY, 0, 0.017, 0.006, 0, 0, 0, 0.012, 0.006, 0.012);
-  for (const s of [-1, 1]) P('body', G.sph(1, 8, 6), C.waspO, s * 0.016, 0.012, 0.02, 0, 0, 0, 0.006, 0.005, 0.006);
-  P('head', G.sph(1, 14, 10), C.waspY, 0, 0, 0.008, 0, 0, 0, 0.02, 0.019, 0.014);
-  for (const s of [-1, 1]) {
-    GS('head', G.sph(1, 12, 10), C.eyeWasp, s * 0.014, 0.004, 0.006, 0, 0, s * 0.3, 0.008, 0.015, 0.011);
-    P('head', G.tube([new V3(s * 0.005, 0.014, 0.018), new V3(s * 0.012, 0.03, 0.034), new V3(s * 0.024, 0.036, 0.052), new V3(s * 0.03, 0.03, 0.066)], 0.0012, 10, 4), C.black);
-    const md = s > 0 ? 'mandL' : 'mandR';
-    P(md, G.box(0.012, 0.004, 0.008), C.waspO, -s * 0.003, 0, 0.004, 0, s * 0.5, 0); P(md, G.cone(0.003, 0.008, 4), C.black, -s * 0.008, 0, 0.009, Math.PI / 2, 0, 0);
-  }
-  for (let i = 0; i < 3; i++) GS('head', G.sph(0.0018, 5, 4), C.eyeWasp, (i - 1) * 0.005, 0.018, 0.004);
-  // patas colgando
-  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) {
-    const a = new V3(s * 0.012, -0.016, 0.016 - i * 0.012), b = new V3(s * 0.03, -0.03, 0.02 - i * 0.016), c = new V3(s * 0.034, -0.058, 0.012 - i * 0.022), d = new V3(s * 0.036, -0.078, 0.004 - i * 0.03);
-    P('body', limbBetween(a, b, 0.0024, 0.002), C.waspK); P('body', limbBetween(b, c, 0.002, 0.0016), C.waspY); P('body', limbBetween(c, d, 0.0014, 0.001), C.waspO);
-  }
-  // abdomen con bandas
-  P('abd', G.cyl(0.004, 0.004, 0.01, 8), C.waspK, 0, 0, -0.004, Math.PI / 2, 0, 0);
-  const prof = t => 0.023 * Math.pow(Math.sin(Math.PI * (t * 0.92 + 0.06)), 0.7);
-  const N = 7, Lz = 0.075;
-  for (let k = 0; k < N; k++) {
-    const t0 = k / N, t1 = (k + 1) / N, z0 = -0.009 - t0 * Lz, z1 = -0.009 - t1 * Lz;
-    const mid = (t0 + t1) / 2, zm = -0.009 - mid * Lz;
-    P('abd', G.cyl(prof(mid), prof(t0), z0 - zm, 14), C.waspY, 0, 0, (z0 + zm) / 2, -Math.PI / 2, 0, 0);
-    P('abd', G.cyl(prof(t1), prof(mid), zm - z1, 14), C.waspK, 0, 0, (zm + z1) / 2, -Math.PI / 2, 0, 0);
-  }
-  GS('abd', G.cone(0.0022, 0.014, 6), C.waspK, 0, -0.002, -0.09, -Math.PI / 2, 0, 0);
-  // alas
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) for (const [k, w, h] of [[1, 0.06, 0.018], [2, 0.042, 0.013]]) {
-    const g = new THREE.PlaneGeometry(w, h); g.translate(w / 2, 0, 0); g.rotateX(-Math.PI / 2); if (sx < 0) g.scale(-1, 1, 1); g.rotateY(sx * -0.35);
-    R.add('w' + sd + k, 'wing', g, C.white);
-  }
-  return R.build();
-}
-
-/* ---------- Avispa gigante (modo Barras, «Bichos») ---------- */
+/* ---------- Avispón gigante (Enjambre y Barras · «Bichos») ---------- */
 // Como un avispón gigante asiático, del tamaño de una mano: cabeza naranja con grandes ojos compuestos negros y
 // brillantes, tórax oscuro y peludo, abdomen a bandas naranjas y negras, patas negras y naranjas y alas veteadas.
 // El abdomen tiene dos articulaciones para doblarse en «C» por debajo y cargar el aguijón hacia delante; las patas
@@ -312,7 +269,7 @@ function buildStinger() {
     P('head', limbBetween(new V3(ant * 0.008, 0.006, 0.036), new V3(ant * 0.012, 0.03, 0.052), 0.0028, 0.0024), org); // escapo
     P('head', G.tube([new V3(ant * 0.012, 0.03, 0.052), new V3(ant * 0.018, 0.046, 0.066), new V3(ant * 0.036, 0.052, 0.084), new V3(ant * 0.056, 0.04, 0.098)], 0.0022, 14, 5), col(0.15, 0.03, 0.01)); // flagelo
     const md = s > 0 ? 'mandL' : 'mandR'; // mandíbula: naranja, ancha, con dientes negros
-    P(md, G.box(0.013, 0.008, 0.024), org, -s * 0.003, 0, 0.01, 0, -s * 0.35, 0);
+    P(md, G.cone(0.0075, 0.026, 7), org, -s * 0.004, 0, 0.012, Math.PI / 2, 0, 0, 1.3, 1, 0.75);
     for (let k = 0; k < 3; k++) GS(md, G.cone(0.0026, 0.008, 4), blk, -s * (0.006 + k * 0.004), -0.002, 0.018 + k * 0.004, 0, 0, s * Math.PI / 2);
   }
   for (const [x, y, z] of [[0, 0.033, 0.024], [0.008, 0.03, 0.017], [-0.008, 0.03, 0.017]]) GS('head', G.sph(0.0028, 6, 5), eye, x, y, z); // ocelos
@@ -345,6 +302,26 @@ function buildStinger() {
   }
   return R.build();
 }
+
+const stingerSkin = M.waspSkin.clone(); stingerSkin.normalScale = new THREE.Vector2(0.3, 0.3); // quitina lisa, con pelusa
+const MAT_STINGER = { main: stingerSkin, gloss: M.glossSkin, wing: new THREE.MeshBasicMaterial({ map: TX.hornetWing, transparent: true, depthWrite: false, side: THREE.DoubleSide, skinning: true, opacity: 0.8 }), glow: M.glowSkin };
+// Pose del avispón. curl: abdomen doblado por debajo (0..1); ch: carga antes de picar (0..1): el tórax se encabrita,
+// el abdomen se dobla en «C» hasta que el aguijón asoma por delante bajo la cabeza agachada, las patas se adelantan
+// y las mandíbulas se abren. La cabeza y el aguijón te apuntan a la cara. Las alas, el balanceo y el resto, fuera.
+const _wfc = new V3(), _wsp = new V3();
+function poseStinger(B, root, t, ph, curl, ch) {
+  B.body.rotation.x = -ch * 0.4;
+  const A = curl * 2.2 + ch * 1.0 + Math.sin(t * 5 + ph) * 0.05;
+  B.abd.rotation.x = -A * 0.42; B.abd2.rotation.x = -A * 0.58;
+  for (let i = 0; i < 3; i++) B['lg' + i].rotation.x = -(0.15 + ch * (1.1 - i * 0.25)) + Math.sin(t * 6 + ph + i) * 0.06;
+  root.updateMatrixWorld(true);
+  const fc = root.worldToLocal(_wfc.copy(head.p)), sp = root.worldToLocal(B.sting.getWorldPosition(_wsp)); // tu cara y la punta, vistas desde el avispón
+  B.sting.rotation.x = clamp(wrapAng(Math.atan2(fc.y - sp.y, -(fc.z - sp.z)) - (B.body.rotation.x + B.abd.rotation.x + B.abd2.rotation.x)), -1.2, 1.2);
+  const bite = 0.2 + 0.3 * Math.max(0, Math.sin(t * 12 + ph)) + curl * 0.15 + ch * 0.6;
+  B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite;
+  B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.014, fc.z - 0.05), -1.2, 1.2) + ch * 0.7;
+}
+function flapStinger(B, t) { const w = Math.sin(t * TAU * 24) * 0.95, w2 = Math.sin(t * TAU * 24 + 0.7) * 0.85; B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2; }
 
 /* ---------- Tentáculo del charco (modo Barras) ---------- */
 function buildTentacle() {
@@ -474,7 +451,7 @@ function updateGloves(dt) {
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
   RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true);
-  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.hornet = buildHornet(); RIGS.stinger = buildStinger();
+  RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
   for (const [x, z, ry, kind] of [[-6.5, -4, 0.6, 'scout'], [7.5, -5.5, 2.2, 'heavy'], [-11, -9, 1.4, 'scout'], [12, 6, -0.8, 'heavy']]) {

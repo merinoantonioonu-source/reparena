@@ -129,9 +129,7 @@ function barRep(opts) {
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
-const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
-const stingerSkin = M.waspSkin.clone(); stingerSkin.normalScale = new THREE.Vector2(0.3, 0.3); // quitina lisa, con pelusa
-const MAT_STINGER = { main: stingerSkin, gloss: M.glossSkin, wing: new THREE.MeshBasicMaterial({ map: TX.hornetWing, transparent: true, depthWrite: false, side: THREE.DoubleSide, skinning: true, opacity: 0.8 }), glow: M.glowSkin };
+const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'stinger', scale: 0.8, r: 0.09, wasp: true }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
 // Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
 // con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
@@ -197,7 +195,7 @@ class HeadTarget {
         const pupil = new THREE.Mesh(bubbleGeo, eyePupil); pupil.scale.set(0.012, 0.016, 0.006); pupil.position.z = 0.058; this.eye.add(pupil);
       }
     } else {
-      this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+      this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
       this.root.scale.setScalar(K.scale);
     }
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
@@ -254,7 +252,7 @@ class HeadTarget {
       const k = Math.min(1, this.t / 0.3); this.pos.lerpVectors(this.from, HL, k);
       if (k >= 1) {
         const c = this.center(new V3());
-        if (this.kind === 'hornet') { fx.ichor(c, 10, 1); SND.hiss(c, 0.7); } else { fx.explosion(c, 0.3, false); SND.explosion(c, false); }
+        fx.explosion(c, 0.3, false); SND.explosion(c, false);
         hurtPlayer(this); this.alive = false; this.dispose(); return;
       }
     } else if (this.mode === 'leave') {
@@ -274,8 +272,7 @@ class HeadTarget {
     else {
       const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
       const B = this.B;
-      if (this.kind === 'hornet') { const f = Math.sin(this.t * 2 * Math.PI * 22) * 0.9, f2 = Math.sin(this.t * 2 * Math.PI * 22 + 0.6) * 0.8; B.wL1.rotation.z = f; B.wR1.rotation.z = -f; B.wL2.rotation.z = f2; B.wR2.rotation.z = -f2; B.abd.rotation.x = 0.25 + Math.sin(this.t * 4) * 0.12; }
-      else { for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); } }
+      for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); }
       if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
       if (this.buzz) this.buzz.set(this.center(tmpB));
     }
@@ -309,20 +306,10 @@ class HeadTarget {
     // el cuerpo, casi horizontal y girado hacia ti (solo se inclina un poco); la cabeza y el aguijón te apuntan
     const rp = this.root.position, lx = HL.x - rp.x, ly = HL.y - rp.y, lz = HL.z - rp.z, hd = Math.hypot(lx, lz), pitch = Math.atan2(ly, Math.max(1e-3, hd));
     this.root.rotation.set(0, 0, 0); this.root.rotation.order = 'YXZ'; this.root.rotation.y = Math.atan2(lx, lz); this.root.rotation.x = -clamp(pitch, -0.35, 0.35);
-    const w = Math.sin(this.t * TAU * 24) * 0.95, w2 = Math.sin(this.t * TAU * 24 + 0.7) * 0.85;
-    B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2;
-    // al cargar se encabrita: el tórax se levanta, el abdomen se dobla en «C» hasta que el aguijón apunta hacia
-    // delante por debajo de la cabeza, la cabeza se agacha, las patas se adelantan y las mandíbulas se abren
-    B.body.rotation.set(-ch * 0.4, 0, Math.sin(t * 3.1 + this.ph) * 0.2 * (1 - ch)); B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
-    const A = this.curl * 2.2 + ch * 1.0 + Math.sin(t * 5 + this.ph) * 0.05;
-    B.abd.rotation.x = -A * 0.42; B.abd2.rotation.x = -A * 0.58;
-    for (let i = 0; i < 3; i++) B['lg' + i].rotation.x = -(0.15 + ch * (1.1 - i * 0.25)) + Math.sin(t * 6 + this.ph + i) * 0.06;
-    this.root.updateMatrixWorld(true);
-    const fc = this.root.worldToLocal(_bt.copy(head.p)), sp = this.root.worldToLocal(B.sting.getWorldPosition(_bw)); // tu cara y la punta, vistas desde la avispa
-    B.sting.rotation.x = clamp(wrapAng(Math.atan2(fc.y - sp.y, -(fc.z - sp.z)) - (B.body.rotation.x + B.abd.rotation.x + B.abd2.rotation.x)), -1.2, 1.2);
-    const bite = 0.2 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.15 + ch * 0.6;
-    B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite;
-    B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.014, fc.z - 0.05), -1.2, 1.2) + ch * 0.7; B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08 * (1 - ch); B.head.rotation.z = Math.sin(t * 2.7) * 0.08 * (1 - ch);
+    flapStinger(B, this.t);
+    B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2 * (1 - ch); B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
+    poseStinger(B, this.root, t, this.ph, this.curl, ch);
+    B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08 * (1 - ch); B.head.rotation.z = Math.sin(t * 2.7) * 0.08 * (1 - ch);
     if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
     if (this.buzz) this.buzz.set(this.center(tmpB));
   }
@@ -339,7 +326,6 @@ class HeadTarget {
       fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
     }
     else if (this.K.wasp) { fx.ichor(c, big ? 30 : 20, big ? 1.8 : 1.3); fx.glow(c, [0.6, 1, 0.3], big ? 0.5 : 0.3, 0.12); SND.squish(c); rigDebris(this.inst, c, big ? 2.4 : 1.7, 0, { main: M.robotStaticWasp }); }
-    else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
     this.dispose();
   }

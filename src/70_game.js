@@ -419,26 +419,25 @@ class Spider {
 /* =================== BICHOS VOLADORES =================== */
 const FLYER_KIND = {
   drone: { rig: 'drone', speed: 1.0, erratic: 1.0, scale: 1.0, kamikaze: true },
-  hornet: { rig: 'hornet', speed: 1.45, erratic: 1.6, scale: 2.6 },
+  hornet: { rig: 'stinger', speed: 1.45, erratic: 1.6, scale: 1.5 },
   bomber: { rig: 'bomber', speed: 0.75, erratic: 0.6, scale: 1.25, kamikaze: true },
   carrier: { rig: 'carrier', speed: 0.5, erratic: 0.35, scale: 2.1, kamikaze: true, boss: true }
 };
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
-const MAT_WASP = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
 const lowFly = () => settings.exercise === 'superman' || settings.exercise === 'splank';
 const lowFlyY = () => clamp(settings.exercise === 'splank' ? DET.sp.ref + 0.03 : DET.su.ref + settings.supRange / 100 + 0.08, 0.3, 0.8);
 class Flyer {
   constructor(spec) {
     const K = FLYER_KIND[spec.kind], push = isTiny(), low = lowFly(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
-    this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+    this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
     if (push) { const h = pick(hatches); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = settings.flySpeed / 3.6 * (push ? 0.15 : 1);
     if (!push) { const g = pick(gates), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
-    Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.45 : 1), bank: 0, flickT: 0 });
-    this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.06 : 0.17, spec.kind === 'hornet' ? 0.1 : 0.3); if (K.boss) setHpBar(this.bar, 1);
+    Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
+    this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
   }
@@ -454,9 +453,14 @@ class Flyer {
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
-        hurtPlayer(this); this.retreat = 2.5; SND.hiss(this.center(tmpC), 0.6);
+        if (!this.windT) { this.windT = 1e-3; SND.hiss(this.center(tmpC), 0.8); } // el avispón carga antes de picar (y te da un momento para dispararle)
       }
-      if (this.t > this.nextDart) {
+      if (this.windT > 0 && state !== 'play') this.windT = 0;
+      if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
+        const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
+        if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5; this.windT = 0; }
+      }
+      if (this.t > this.nextDart && !this.windT) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
         this.dartT.set(rand(-1, 1) * A, rand(-0.4, 0.6) * A * (low ? 0.2 : 0.7), rand(-0.5, 0.5) * A * 0.4);
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
@@ -469,16 +473,21 @@ class Flyer {
     this.pos.copy(this.base).addScaledVector(right, this.dart.x + Math.sin(this.t * this.w1 + this.ph1) * wob).addScaledVector(dir, this.dart.z);
     this.pos.y += this.dart.y + Math.sin(this.t * this.w2 * 1.7 + this.ph2) * wob * 0.6;
     this.pos.y = Math.max(push ? 0.06 : low ? 0.2 : 0.45, this.pos.y); if (low) this.pos.y = Math.min(this.pos.y, 1.0);
+    if (this.windT > 0) { // echarse atrás y lanzarse hacia tu cara
+      const to = tmpA.subVectors(HL, this.pos), d = to.length(), w = this.windT, s = push ? 0.42 : 1;
+      const k = w < 0.45 ? -0.1 * s * smooth(w / 0.45) : -0.1 * s + (Math.max(0, d - 0.12 * s) + 0.1 * s) * smooth(Math.min(1, (w - 0.45) / 0.25));
+      if (d > 1e-3) this.pos.addScaledVector(to, k / d);
+    }
     this.root.position.copy(this.pos);
     const look = arena.worldToLocal(tmpA.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpA.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
     const lat = ((this.pos.x - this.last.x) * right.x + (this.pos.z - this.last.z) * right.z) / Math.max(dt, 1e-3);
     this.bank += (clamp(-lat * 0.25, -0.7, 0.7) - this.bank) * Math.min(1, dt * 5);
     const B = this.B; B.body.rotation.z = this.bank; B.body.position.y = Math.sin(this.t * 3) * 0.01;
     if (this.kind === 'hornet') {
-      const f = Math.sin(this.t * 2 * Math.PI * 22) * 0.9, f2 = Math.sin(this.t * 2 * Math.PI * 22 + 0.6) * 0.8;
-      B.wL1.rotation.z = f; B.wR1.rotation.z = -f; B.wL2.rotation.z = f2; B.wR2.rotation.z = -f2;
-      B.abd.rotation.x = 0.25 + Math.sin(this.t * 4) * 0.12 + (this.retreat > 2 ? 0.6 : 0); B.head.rotation.y = Math.sin(this.t * 1.3) * 0.25;
-      B.mandL.rotation.y = Math.sin(this.t * 14) * 0.3; B.mandR.rotation.y = -Math.sin(this.t * 14) * 0.3;
+      const ch = this.windT > 0 ? (this.windT < 0.45 ? smooth(this.windT / 0.45) : 1) : Math.max(0, (this.retreat - 2.2) / 0.3);
+      flapStinger(B, this.t); B.body.rotation.z = this.bank * (1 - ch);
+      poseStinger(B, this.root, this.t, this.ph1, 0.5 + 0.5 * ch + Math.sin(this.t * 4) * 0.05, ch);
+      B.head.rotation.y = Math.sin(this.t * 1.3) * 0.2 * (1 - ch);
     } else {
       for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); }
       if (B.cam) B.cam.rotation.x = Math.sin(this.t * 0.7) * 0.2;
