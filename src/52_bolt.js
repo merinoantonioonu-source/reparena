@@ -1,17 +1,18 @@
 
 /* =================== RAYOS: LOS DISPAROS SON DESCARGAS ELÉCTRICAS =================== */
-// Cada disparo es un rayo quebrado que avanza hasta el blanco (el «líder») y, al llegar, destella y
-// parpadea unas décimas con ramas que cambian, echando chispas. Ilumina el entorno con una luz puntual y,
+// Cada disparo es un haz concentrado, casi recto, que avanza hasta el blanco con una cabeza brillante y una estela
+// que se apaga detrás; alrededor del haz chisporrotean filamentos finos y cortos que cambian en cada parpadeo (nada
+// de ramas grandes). Al llegar, destella y se apaga en unas décimas, echando chispas. Ilumina el entorno con una luz puntual y,
 // durante el destello, la luz principal (la que proyecta sombras) se desplaza hacia el rayo, así que las
 // sombras saltan. Color, grosor, ramas y luz crecen con la intensidad del disparo.
-const BOLT_COL = [0x9fd8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
+const BOLT_COL = [0x4aa8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
 const boltLevel = (perfect, pow = 1) => Math.max(perfect ? 1 : 0, pow > 1 ? pow : 0);
 const boltRGB = L => { const c = new THREE.Color(BOLT_COL[L]); return [c.r, c.g, c.b]; };
 const boltTex = texFrom((() => { const c = mkCanvas(64, 8), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.3, 'rgba(255,255,255,0.35)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 8); return c; })());
 const boltMatL = new THREE.MeshBasicMaterial({ map: boltTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
 const boltLight = new THREE.PointLight(0x9fd8ff, 0, 5, 2); scene.add(boltLight);
-const LT_SEG = 220, LT_FLICK = 0.045;
-const _za = new V3(), _zb = new V3(), _zc = new V3(), _zd = new V3(), _zu = new V3(), _zv = new V3();
+const LT_SEG = 420, LT_FLICK = 0.045, TAIL = 0.55; // TAIL: largo de la estela (fracción del recorrido)
+const _zh0 = new V3(), _zh1 = new V3(), _za = new V3(), _zb = new V3(), _zc = new V3(), _zd = new V3(), _zu = new V3(), _zv = new V3();
 // Línea quebrada de a a b: cada tramo se parte por la mitad y el punto medio se desplaza hacia un lado
 function jag(a, b, levels, rough, out = []) {
   let pts = [a.clone(), b.clone()];
@@ -42,19 +43,21 @@ class Lightning {
     this.from.copy(from); this.to.copy(to); this.FADE = 0.26 + 0.05 * L; this.restrike = L >= 2 ? rand(0.08, 0.14) : -1;
     this.gen(); this.mesh.visible = true;
   }
-  // Rayo principal y ramas; se rehace en cada parpadeo
+  // Haz principal (apenas quebrado) y filamentos pegados a él que siguen su dirección; se rehace en cada parpadeo
   gen() {
     const len = this.from.distanceTo(this.to), lv = len > 3 ? 6 : len > 0.8 ? 5 : 4;
-    const main = jag(this.from, this.to, lv, 0.2), paths = [{ pts: main, w: 1, a: 1, at: 0 }];
-    const nb = Math.round((1 + this.L * 0.8 + rand(0, 1.5)) * Math.min(1, 0.4 + len / 2));
-    for (let i = 0; i < nb; i++) {
-      const j = Math.floor(rand(0.15, 0.8) * (main.length - 1)), s = main[j];
-      _zd.subVectors(main[Math.min(main.length - 1, j + 2)], s).normalize().add(rv(0.9)).normalize();
-      const e = s.clone().addScaledVector(_zd, len * rand(0.1, 0.28));
-      const b = jag(s, e, 3, 0.25); paths.push({ pts: b, w: 0.5, a: 0.7, at: j / (main.length - 1) });
-      if (this.L >= 3 && Math.random() < 0.5) { const j2 = Math.floor(b.length / 2), s2 = b[j2]; _zd.subVectors(b[b.length - 1], s2).normalize().add(rv(1)).normalize(); paths.push({ pts: jag(s2, s2.clone().addScaledVector(_zd, len * rand(0.05, 0.14)), 2, 0.3), w: 0.3, a: 0.5, at: paths[paths.length - 1].at }); }
-    }
+    const main = jag(this.from, this.to, lv, 0.018), paths = [{ pts: main, w: 1, a: 1, at: 0, main: true }];
     this.paths = paths;
+    const nf = Math.round((5 + this.L * 2 + rand(0, 2)) * Math.min(1, 0.35 + len / 2.5)), off = Math.min(0.055, 0.012 + len * 0.012) * (1 + this.L * 0.2) * this.scale;
+    for (let i = 0; i < nf; i++) {
+      const t0 = rand(0.04, 0.88), t1 = Math.min(1, t0 + Math.min(rand(0.06, 0.18), 0.45 / Math.max(len, 0.1))), s0 = this.pointAt(t0, new V3()), s1 = this.pointAt(t1, new V3());
+      _zd.subVectors(s1, s0).normalize(); _zu.set(0, 1, 0); if (Math.abs(_zd.y) > 0.9) _zu.set(1, 0, 0); _zu.cross(_zd).normalize(); _zv.crossVectors(_zd, _zu);
+      const ang = rand(0, TAU), r0 = off * rand(0.2, 1), r1 = off * rand(0, 0.6); // sale de cerca del haz, se separa un poco y vuelve
+      s0.addScaledVector(_zu, Math.cos(ang) * r0 * 0.3).addScaledVector(_zv, Math.sin(ang) * r0 * 0.3);
+      s1.addScaledVector(_zu, Math.cos(ang + 1) * r1).addScaledVector(_zv, Math.sin(ang + 1) * r1);
+      const mid = s0.clone().lerp(s1, 0.5).addScaledVector(_zu, Math.cos(ang) * r0).addScaledVector(_zv, Math.sin(ang) * r0);
+      paths.push({ pts: [...jag(s0, mid, 2, 0.14), ...jag(mid, s1, 2, 0.14).slice(1)], w: 0.22, a: rand(0.5, 0.9), at: t1 });
+    }
   }
   // Punto del rayo principal a una fracción t del recorrido
   pointAt(t, out) { const m = this.paths[0].pts, f = clamp(t, 0, 1) * (m.length - 1), i = Math.min(m.length - 2, Math.floor(f)); return out.copy(m[i]).lerp(m[i + 1], f - i); }
@@ -72,7 +75,7 @@ class Lightning {
   arrive() { this.k = 1; this.fade = 0; this.flickT = 0; }
   build() {
     const P = this.P, C = this.C, cam = head.p, k = this.k, s = this.scale, L = this.L;
-    const wCore = (0.006 + 0.0035 * L) * s, wGlow = wCore * (7 + L), col = this.col, b = this.bright;
+    const wCore = (0.011 + 0.004 * L) * s, wGlow = wCore * (5 + L * 0.8), col = this.col, b = this.bright;
     let n = 0;
     const seg = (a, c, w, r, g, bl) => {
       if (n >= LT_SEG) return;
@@ -88,14 +91,22 @@ class Lightning {
     for (const pass of [0, 1]) { // halo ancho y tenue, y núcleo casi blanco
       for (const p of this.paths) {
         if (p.at > k) continue;
-        const pts = p.pts, last = pts.length - 1, a = p.a * b, w = (pass ? wCore : wGlow) * p.w;
-        const r = pass ? (0.55 + col[0] * 0.45) * a : col[0] * a * 0.3, g = pass ? (0.55 + col[1] * 0.45) * a : col[1] * a * 0.3, bl = pass ? (0.55 + col[2] * 0.45) * a : col[2] * a * 0.3;
+        const pts = p.pts, last = pts.length - 1;
+        // mientras viaja, la estela se apaga detrás de la cabeza (y el haz se estrecha); los filamentos, igual según dónde están
+        const tail = t => k >= 1 ? 1 : clamp(1 - (k - t) / TAIL, 0.18, 1);
+        const put = (a0, c0, t) => {
+          const f = tail(t), a = p.a * b * f, w = (pass ? wCore : wGlow) * p.w * (0.55 + 0.45 * f);
+          const r = pass ? (0.55 + col[0] * 0.45) * a : col[0] * a * 0.6, g = pass ? (0.55 + col[1] * 0.45) * a : col[1] * a * 0.6, bl = pass ? (0.55 + col[2] * 0.45) * a : col[2] * a * 0.6;
+          seg(a0, c0, w, r, g, bl);
+        };
         for (let i = 0; i < last; i++) {
-          if (p === this.paths[0]) { const t0 = i / last, t1 = (i + 1) / last; if (t0 >= k) break; if (t1 > k) { _zc.copy(pts[i]).lerp(pts[i + 1], (k - t0) / (t1 - t0)); seg(pts[i], _zc, w, r, g, bl); break; } }
-          seg(pts[i], pts[i + 1], w, r, g, bl);
+          if (p.main) { const t0 = i / last, t1 = (i + 1) / last; if (t0 >= k) break; if (t1 > k) { _zc.copy(pts[i]).lerp(pts[i + 1], (k - t0) / (t1 - t0)); put(pts[i], _zc, k); break; } put(pts[i], pts[i + 1], t1); }
+          else put(pts[i], pts[i + 1], p.at);
         }
       }
     }
+    // la cabeza: un tramo corto, ancho y casi blanco en la punta mientras viaja
+    if (k < 1) { this.pointAt(Math.max(0, k - 0.025), _zh0); this.pointAt(k, _zh1); const hb = Math.min(1, b * 1.2); seg(_zh0, _zh1, wGlow * 1.3, col[0] * hb * 0.6, col[1] * hb * 0.6, col[2] * hb * 0.6); seg(_zh0, _zh1, wCore * 3, hb, hb, hb); }
     this.n = n; this.g.setDrawRange(0, n * 6);
     this.g.attributes.position.needsUpdate = true; this.g.attributes.color.needsUpdate = true;
   }
