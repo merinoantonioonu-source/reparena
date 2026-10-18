@@ -7,7 +7,7 @@ let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedF
 const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
-let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, calibRef = 1.6, runSaved = false;
+let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
 // Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
 const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
@@ -435,7 +435,7 @@ class Flyer {
     this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
-    if (push) { const h = pick(hatches); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
+    if (push) { const h = pick(liveHatches()); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = settings.flySpeed / 3.6 * (push ? 0.27 : 1);
     if (!push) { const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
@@ -520,12 +520,20 @@ M.robotStaticWasp = std({ vertexColors: true, normalMap: SURF.chitin.normal, rou
 const HEAD_TOP = 0.10;
 // tilt (radianes, + = el lado derecho más alto): la bajada normal vale con la cabeza apartada arcShift hacia el
 // lado alto; en el centro hay que bajar más, y en el lado bajo, más aún
+// Salto: la cabeza sube deprisa. fastT es el tiempo desde la última subida rápida (más de 0,6 m/s hacia arriba);
+// ponerse de puntillas despacio no cuenta
+const JUMP = { vy: 0, lastY: 0, fastT: 9 };
+function jumpTrack(dt) {
+  if (dt <= 0) return; const v = (head.p.y - JUMP.lastY) / dt; JUMP.lastY = head.p.y;
+  JUMP.vy = JUMP.vy * 0.5 + v * 0.5; JUMP.fastT = JUMP.vy > 0.6 ? 0 : JUMP.fastT + dt;
+}
 class Arc {
-  constructor(drop, offset = 0, second = false, tilt = 0) {
+  // jump: valla baja que llega a ras de suelo y hay que saltar
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false) {
     const H = arMode ? 2.25 : 2.55;
-    this.drop = drop; this.tilt = tilt;
-    this.barY = Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
-    this.o = makeArcObj(this.barY, H, tilt); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
+    this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
+    this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
+    this.o = makeArcObj(this.barY, H, tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     Object.assign(this, { speed: settings.arcSpeed / 3.6, judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
     if (!second) gates[1].openT = 1.6;
@@ -536,13 +544,16 @@ class Arc {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
     const appear = Math.min(1, this.t / 0.4); this.o.grp.scale.set(appear, 1, 1);
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); }
-    const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, danger = !this.judged && this.z < hz && this.z > hz - 2.4 && HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02;
+    const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
+    const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
     const flick = 0.75 + Math.random() * 0.25;
     this.o.glowMat.opacity = (danger ? 1 : 0.7) * flick; this.o.curtainMat.opacity = danger ? 0.32 + 0.15 * Math.sin(t * 30) : 0.18;
     this.o.coreMat.color.setHex(danger ? 0xffffff : 0xffb0a0);
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
     if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(clamp(HL.x, -0.95, 0.95), this.barAt(HL.x), this.z)));
-    if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; const top = HL.y + HEAD_TOP, b = this.barAt(HL.x); if (top > b) this.hit = true; this.minClear = Math.min(this.minClear, b - top); }
+    // valla: mientras pasa por debajo de ti (con algo de margen, el salto dura poco) cuenta lo más alto que llegaste
+    if (this.jump) { if (!this.judged && Math.abs(this.z - hz) < 0.4 && inLane) { this.checked = true; this.maxUp = Math.max(this.maxUp, up); if (JUMP.fastT < 0.6) this.fast = true; } }
+    else if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; const top = HL.y + HEAD_TOP, b = this.barAt(HL.x); if (top > b) this.hit = true; this.minClear = Math.min(this.minClear, b - top); }
     if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
     if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
   }
@@ -550,6 +561,13 @@ class Arc {
     if (!(state === 'play' || state === 'rest')) return;
     const hp = arena.localToWorld(tmpA.set(HL.x, this.barAt(HL.x), HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
+    if (this.jump) {
+      const need = settings.jumpHeight / 100;
+      if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
+      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp); registerRep(perfect, false);
+      say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
+      return;
+    }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp);
@@ -689,6 +707,8 @@ const DET = {
   lu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, leg: 0 },
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 } },
+  pair: { side: null, t: 0, perfect: false, fast: false },
+  th: { pending: null, hold: null, t0: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, lostT: { left: 0, right: 0 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
@@ -712,7 +732,7 @@ function vertDetector(d, y, t, dt, cfg) {
     const stuck = d.charged && d.stillT > 0.8 && y - d.min >= cfg.req * 0.7;
     if (y > upAt || stuck) {
       const dur = t - d.t0;
-      if (d.charged) onRep({ perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5, pow: cfg.power ? d.pow : 1 });
+      if (d.charged) { const o = { perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5, pow: cfg.power ? d.pow : 1 }; if (cfg.defer) cfg.defer(o); else onRep(o); }
       else if (drop > cfg.partial) onPartial(cfg.partialMsg);
       if (stuck) d.ref = y;
       d.state = 'up';
@@ -728,6 +748,67 @@ function armsBack() {
   if (d.lengthSq() < 1e-4) return false; d.normalize();
   for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && (h.wrist.x - head.p.x) * d.x + (h.wrist.z - head.p.z) * d.z < 0.15) return true; }
   return false;
+}
+// Un brazo de curl o de press: devuelve { top, perfect, fast } al completar la subida, { msg } si se quedó a medias
+// y nada mientras tanto. En el press, por encima de la cabeza las manos suelen salirse de la vista de las cámaras:
+// si se pierde una mano que ya subía bien, cuenta igual
+function armStep(kind, side, t, dt) {
+  const press = kind === 'press', h = hands[side], d = (press ? DET.pr : DET.curl)[side], pt = settings.perfectTime;
+  const range = (press ? settings.pressRange : settings.curlRange) / 100;
+  if (!h.ok) {
+    d.lost += dt;
+    if (press) {
+      if (d.state === 'rising' && d.lost > 0.15 && d.max - d.bottom >= range * 0.6) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
+      if (d.lost > 1.5 && d.state !== 'rising') d.state = 'down';
+    } else if (d.lost > 0.5) d.state = 'down';
+    return null;
+  }
+  d.lost = 0;
+  const r = h.wrist.y - head.p.y;
+  d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
+  if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; if (press) onCharge(); } }
+  else if (d.state === 'rising') {
+    d.max = Math.max(d.max, r);
+    if (r - d.bottom >= range) { const dur = t - d.t0; d.state = 'top'; return { top: true, perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }; }
+    if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
+  } else if (r < d.bottom + 0.08) d.state = 'down';
+  return null;
+}
+// Los dos brazos a la vez (barra o kettlebell): cada uno con su paso, y la repetición cuenta cuando los dos llegan
+// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra
+const PAIR_WIN = 0.6;
+function pairStep(kind, t, dt) {
+  const P = DET.pair;
+  for (const side of ['left', 'right']) {
+    const ev = armStep(kind, side, t, dt); if (!ev) continue;
+    if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
+    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast }); P.side = null; }
+    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast });
+  }
+  if (P.side) {
+    const other = P.side === 'left' ? 'right' : 'left', lost = hands[other].ok ? 0 : (kind === 'press' ? DET.pr : DET.curl)[other].lost;
+    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast }); P.side = null; } // la otra mano no se ve: vale con una
+    else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
+  }
+}
+// Sentadilla con press (thruster): la sentadilla carga como siempre; al volver arriba, las dos manos tienen que pasar
+// por encima de la cabeza (thrUp cm sobre los ojos) en THR_WIN segundos. Por encima de la cabeza las cámaras pueden
+// perder las manos: si se pierde una que ya subía por encima de la frente, cuenta como arriba
+const THR_WIN = 2.5;
+function thrusterStep(t, dt) {
+  const T = DET.th, req = settings.squatDepth / 100, up = settings.thrUp / 100;
+  // la parte de sentadilla: en vez de disparar al subir, deja la repetición pendiente de las manos
+  T.hold = null;
+  vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: '¡Baja más!', defer: o => { T.hold = o; } });
+  if (T.hold) { T.pending = T.hold; T.t0 = t; T.seen = { left: false, right: false }; }
+  if (!T.pending) return;
+  for (const side of ['left', 'right']) {
+    const h = hands[side];
+    if (h.ok) { const r = h.wrist.y - head.p.y; if (r >= up) T.seen[side] = true; T.last[side] = r; T.lostT[side] = 0; }
+    else { T.lostT[side] += dt; if (T.lostT[side] > 0.15 && T.last[side] > -0.02) T.seen[side] = true; }
+  }
+  if (T.seen.left && T.seen.right) { onRep(T.pending); T.pending = null; }
+  else if (t - T.t0 > THR_WIN) { onPartial('¡Sube las pesas por encima de la cabeza!'); T.pending = null; }
 }
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
@@ -747,28 +828,15 @@ function runDetectors(t, dt) {
     if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
-  } else if (settings.exercise === 'press') {
-    // press de hombro: cada mancuerna, de los hombros a arriba del todo. Por encima de la cabeza las manos
-    // suelen salirse de la vista de las cámaras: si se pierde una mano que ya subía bien, cuenta igual
-    const range = settings.pressRange / 100;
-    for (const side of ['left', 'right']) {
-      const h = hands[side], d = DET.pr[side];
-      if (!h.ok) {
-        d.lost += dt;
-        if (d.state === 'rising' && d.lost > 0.15 && d.max - d.bottom >= range * 0.6) { d.state = 'top'; onCharge(); onRep({ perfect: false, fast: false }, side); }
-        if (d.lost > 1.5 && d.state !== 'rising') d.state = 'down';
-        continue;
-      }
-      d.lost = 0;
-      const r = h.wrist.y - head.p.y;
-      d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0015); // los hombros: lo más bajo del recorrido
-      if (d.state === 'down') { if (r > d.bottom + Math.min(0.1, range * 0.35)) { d.state = 'rising'; d.max = r; d.t0 = t; onCharge(); } }
-      else if (d.state === 'rising') {
-        d.max = Math.max(d.max, r);
-        if (r - d.bottom >= range) { const dur = t - d.t0; d.state = 'top'; onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }, side); }
-        else if (r < d.bottom + 0.06) { if (d.max - d.bottom > range * 0.55) onPartial('Estira el brazo del todo arriba'); d.state = 'down'; }
-      } else if (r < d.bottom + 0.08) d.state = 'down';
-    }
+  } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
+    // cada brazo por su cuenta: dispara al llegar arriba (press) o al hombro (curl)
+    for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
+  } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
+    // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
+    pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
+  } else if (settings.exercise === 'thruster') {
+    // sentadilla con press: bajar carga; al subir hay que llevar las pesas por encima de la cabeza para disparar
+    thrusterStep(t, dt);
   } else if (settings.exercise === 'splank') {
     // plancha lateral: aguantar con la cadera arriba; cada splHold segundos seguidos, un disparo.
     // Si la cabeza baja splDrop desde tu postura, la cadera ha caído y el tiempo vuelve a empezar
@@ -852,21 +920,6 @@ function runDetectors(t, dt) {
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
-  } else {
-    const range = settings.curlRange / 100;
-    for (const side of ['left', 'right']) {
-      const h = hands[side], d = DET.curl[side];
-      if (!h.ok) { d.lost += dt; if (d.lost > 0.5) d.state = 'down'; continue; }
-      d.lost = 0;
-      const r = h.wrist.y - head.p.y;
-      d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0012);
-      if (d.state === 'down') { if (r > d.bottom + Math.min(0.12, range * 0.45)) { d.state = 'rising'; d.max = r; d.t0 = t; } }
-      else if (d.state === 'rising') {
-        d.max = Math.max(d.max, r);
-        if (r - d.bottom >= range) { const dur = t - d.t0; d.state = 'top'; onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }, side); }
-        else if (r < d.bottom + 0.07) { if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta el hombro'); d.state = 'down'; }
-      } else if (d.state === 'top') { if (r < d.bottom + 0.08) d.state = 'down'; }
-    }
   }
 }
 
@@ -981,6 +1034,7 @@ function buildWave(i) {
     const lo = Math.min(settings.arcMin, settings.arcMax) / 100, hi = Math.max(settings.arcMin, settings.arcMax) / 100;
     for (let n = 0; n < total; n++) {
       const tilt = Math.random() * 100 < settings.arcTilt ? (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180 : 0;
+      if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
     return list;
@@ -1005,17 +1059,17 @@ function freeGate() {
   const ok = liveGates().filter(clear); return ok.length ? pick(ok) : null;
 }
 // Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
-function sideHatch(left) { return pick(hatches.filter(h => (h.x < 0) === left)); }
+function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 0) === left); return pick(side.length ? side : l); }
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
-    const a = new Arc(spec.drop, 0, false, spec.tilt || 0); arcs.push(a);
+    const a = new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump'); arcs.push(a);
     if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0));
     return;
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(hatches));
+  else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, settings.exercise === 'plank1' ? sideHatch(stats.spawned++ % 2 === 0) : pick(liveHatches()));
   else if (ROBOT_KIND[spec.kind]) { const g = spec.kind === 'titan' ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
@@ -1029,8 +1083,8 @@ function arcGap() {
 }
 function updateNextArc() {
   let best = null; for (const a of arcs) if (!a.judged && !a.second && (!best || a.z > best.z)) best = a;
-  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tilt || 0) : 0;
-  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt) { nextArcDrop = d; nextArcTilt = tl; boardDirty = true; }
+  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
+  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; boardDirty = true; }
 }
 
 /* =================== FLUJO =================== */
@@ -1038,7 +1092,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
   projs = []; boltsClear();
-  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0;
+  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
@@ -1048,6 +1102,14 @@ function summaryText() {
   const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
+}
+// Los ejercicios, de cuatro en cuatro por fila: los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
+function exerciseRows(back) {
+  const pick = v => { setSetting('exercise', v); back(); }, rows = [];
+  const add = (label, list) => list.forEach((x, i) => { if (i % 4 === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); });
+  if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x]));
+  else add('Ejercicio', MODE_EX[settings.mode]);
+  return rows;
 }
 function lobbyMenu() {
   endSession();
@@ -1060,9 +1122,7 @@ function lobbyMenu() {
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    // los ejercicios, de cuatro en cuatro por fila
-    ...MODE_EX[settings.mode].reduce((rows_, x, i) => { if (i % 4 === 0) rows_.push([]); rows_[rows_.length - 1].push([x, EX_SHORT[x]]); return rows_; }, [])
-      .map((opts, i) => ({ t: 'choice', label: i ? '' : 'Ejercicio', value: settings.exercise, opts, onPick: v => { setSetting('exercise', v); lobbyMenu(); } })),
+    ...exerciseRows(() => lobbyMenu()),
     ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : [])] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
@@ -1218,7 +1278,7 @@ function exitAll() {
 function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
-  if (GAME_STATES.includes(state) && settings.exercise !== 'curl' && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
+  if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     arenaFollow(dt);
     const ok = isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
@@ -1257,7 +1317,7 @@ function gameStep(dt, t) {
     SPLEGS.n = 0; for (const e of enemies) if (e.type === 'spider') e.drawLegs();
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
-  if (settings.mode === 'arcs') updateNextArc();
+  if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

@@ -9,15 +9,17 @@
 const EQUIP_KEY = 'reparena3-equip';
 const mkPose = (z) => ({ x: 0, z, yaw: 0, set: false, handle: null, anchor: null, b: null, synced: false });
 // bref: espacio bounded-floor; b2l: dónde está su origen en local-floor (x, z, yaw), al día en cada fotograma
-const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45) }, pv: { door: mkPose(-0.2), dip: mkPose(-0.45) }, edit: null, pending: [], bref: null, b2l: null, ref: null };
+// spot: el sitio de juego de la habitación colocada a mano (realidad mixta); lo demás se guarda respecto a él
+const EQ_KINDS = ['door', 'dip', 'spot'];
+const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45), spot: mkPose(0) }, pv: { door: mkPose(-0.2), dip: mkPose(-0.45), spot: mkPose(0) }, edit: null, pending: [], bref: null, b2l: null, ref: null };
 (function loadEquip() {
   const s = store(EQUIP_KEY) || {};
-  for (const k of ['door', 'dip']) {
+  for (const k of EQ_KINDS) {
     const e = s[k]; if (!e || ![e.x, e.z, e.yaw].every(isFinite)) continue;
     Object.assign(EQ.xr[k], { x: e.x, z: e.z, yaw: e.yaw, set: !!e.set, handle: typeof e.handle === 'string' ? e.handle : null, b: e.b && [e.b.x, e.b.z, e.b.yaw].every(isFinite) ? { x: e.b.x, z: e.b.z, yaw: e.b.yaw } : null });
   }
 })();
-function saveEquip() { const o = {}; for (const k of ['door', 'dip']) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle, b: e.b }; } store(EQUIP_KEY, o); }
+function saveEquip() { const o = {}; for (const k of EQ_KINDS) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle, b: e.b }; } store(EQUIP_KEY, o); }
 // Pose respecto al suelo del guardián ↔ pose en local-floor
 function eqToBounded(e) { const T = EQ.b2l; if (!T) return; const dx = e.x - T.x, dz = e.z - T.z, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.b = { x: dx * c - dz * s, z: dx * s + dz * c, yaw: e.yaw - T.yaw }; }
 function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.x = T.x + b.x * c + b.z * s; e.z = T.z - b.x * s + b.z * c; e.yaw = b.yaw + T.yaw; }
@@ -98,7 +100,7 @@ function updateEquip(dt, t) {
 function anchorsInit(session) {
   EQ.bref = EQ.b2l = EQ.ref = null;
   if (session.requestReferenceSpace) session.requestReferenceSpace('bounded-floor').then(r => { EQ.bref = r; }).catch(() => {});
-  for (const k of ['door', 'dip']) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; if (e.handle) restoreAnchor(session, e, 0); }
+  for (const k of EQ_KINDS) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; if (e.handle) restoreAnchor(session, e, 0); }
 }
 // Al empezar la sesión las Quest pueden no haber reconocido aún la habitación: se reintenta antes de dar el ancla por perdida
 function restoreAnchor(session, e, tries) {
@@ -110,14 +112,14 @@ function restoreAnchor(session, e, tries) {
     else if (e.b) { e.handle = null; saveEquip(); } // queda la pose respecto al guardián
   });
 }
-function anchorsEnd() { for (const k of ['door', 'dip']) EQ.xr[k].anchor = null; EQ.pending.length = 0; EQ.bref = EQ.b2l = EQ.ref = null; }
+function anchorsEnd() { for (const k of EQ_KINDS) EQ.xr[k].anchor = null; EQ.pending.length = 0; EQ.bref = EQ.b2l = EQ.ref = null; }
 // Recentrar mueve el origen de local-floor: lo que no tiene ancla ni guardián se lleva al mismo sitio de la habitación
 const _rq = new Q4(), _rm = new THREE.Matrix4(), _rv3 = new V3();
 function onRefReset(ev) {
   const T = ev && ev.transform; if (!T) return;
   _rm.compose(_rv3.set(T.position.x, T.position.y, T.position.z), _rq.set(T.orientation.x, T.orientation.y, T.orientation.z, T.orientation.w), new V3(1, 1, 1)).invert();
   const dyaw = -yawOf(_rq);
-  for (const k of ['door', 'dip']) {
+  for (const k of EQ_KINDS) {
     const e = EQ.xr[k]; if (e.anchor || (e.b && EQ.bref)) continue;
     _rv3.set(e.x, 0, e.z).applyMatrix4(_rm); e.x = _rv3.x; e.z = _rv3.z; e.yaw += dyaw;
   }
@@ -138,7 +140,7 @@ function anchorsFrame(frame, ref) {
       if (a.requestPersistentHandle) a.requestPersistentHandle().then(h => { e.handle = h; saveEquip(); }).catch(() => {});
     }).catch(() => {});
   }
-  for (const k of ['door', 'dip']) {
+  for (const k of EQ_KINDS) {
     const e = EQ.xr[k]; if (!e.set || EQ.edit === k) continue;
     const pose = e.anchor && e.anchor.anchorSpace && frame.getPose(e.anchor.anchorSpace, ref);
     if (pose) {

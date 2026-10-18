@@ -359,7 +359,7 @@ function arcFrame(H) {
   const g = k.build({ steel: M.steel, paint: M.paint, glow: M.glow }, { cast: true, receive: true });
   ARC_FRAMES[key] = g; return g.clone();
 }
-function makeArcObj(barY, H, tilt = 0) {
+function makeArcObj(barY, H, tilt = 0, low = false) {
   const grp = new THREE.Group(); grp.add(arcFrame(H));
   const bar = new THREE.Group(); bar.position.y = barY; bar.rotation.z = tilt; grp.add(bar);
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb0a0, toneMapped: false });
@@ -369,7 +369,8 @@ function makeArcObj(barY, H, tilt = 0) {
   for (const s of [-1, 1]) { const e = new THREE.Mesh(G.box(0.1, 0.12, 0.2), M.steel); tint(e.geometry, C.gun); e.position.x = s * 0.98; bar.add(e); }
   const lines = [0, 1].map(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 3), 3)); const l = new THREE.Line(g, arcLineMat); l.frustumCulled = false; bar.add(l); return l; });
   const curtainMat = new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2010, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
-  const ch = Math.max(0.05, H - barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = barY + ch / 2 + 0.02; grp.add(curtain);
+  // la cortina de energía va por encima de la barra; en las vallas, por debajo (hasta el suelo)
+  const ch = low ? Math.max(0.05, barY - 0.02) : Math.max(0.05, H - barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = low ? ch / 2 + 0.01 : barY + ch / 2 + 0.02; grp.add(curtain);
   if (tilt) { // cortina trapezoidal: el borde de abajo sigue a la barra inclinada
     const p = curtain.geometry.attributes.position;
     for (let i = 0; i < p.count; i++) if (p.getY(i) < 0) p.setY(i, Math.min(ch / 2 - 0.02, p.getY(i) + Math.tan(tilt) * p.getX(i)));

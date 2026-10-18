@@ -54,7 +54,7 @@ function makeSword(side) {
 }
 SWD.s.left = makeSword('left'); SWD.s.right = makeSword('right');
 // Puntos de la hoja (de la guarda a la punta) en el mundo
-const _wv1 = new V3(), _wv2 = new V3(), _sr = new V3(), _swm4 = new THREE.Matrix4();
+const _wv1 = new V3(), _wv2 = new V3(), _sr = new V3();
 function bladePoint(S, k, out) { const L = swordLen(), z = settings.swordKind === 'laser' ? -0.14 - L * k : -0.1 - L * k; return S.g.localToWorld(out.set(0, 0, z)); }
 const BLADE_N = 6;
 
@@ -215,9 +215,9 @@ function swordCutTest(x) {
     if (!hit) continue; tried = true;
     if (S.speed < settings.swordSpeed * 0.8) { haptic(side, 0.2, 15); continue; }
     // dirección del tajo en coordenadas de la arena, proyectada en el plano del bloque
-    _sr.copy(S.vel).transformDirection(_swm4.copy(arena.matrixWorld).invert()); const n = x.normal; _sr.addScaledVector(n, -_sr.dot(n));
-    // lo que cuenta es el tajo de lado a lado del bloque, no la estocada hacia él
-    if (_sr.length() < settings.swordSpeed * 0.6) { haptic(side, 0.2, 15); continue; }
+    _sr.copy(S.vel).applyAxisAngle(_up, -arena.rotation.y); const n = x.normal, full = _sr.length(); _sr.addScaledVector(n, -_sr.dot(n)); // sin normalizar: es una velocidad
+    // lo que cuenta es el tajo de lado a lado del bloque (deprisa y casi todo en su plano), no la estocada hacia él
+    if (_sr.length() < settings.swordSpeed * 0.6 || _sr.length() < full * 0.7) { haptic(side, 0.2, 15); continue; }
     if (_sr.normalize().dot(x.cutDir) < 0.4) { touchHint('Corta en la dirección de la flecha'); continue; }
     return side;
   }

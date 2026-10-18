@@ -156,8 +156,9 @@ const hatches = hatchPos.map(([x, z]) => {
   const lk = new Kit(); for (let i = 0; i < 5; i++) lk.add('steel', G.box(0.3, 0.012, 0.03), C.steel, 0, 0, (i - 2) * 0.055);
   lk.add('steel', G.box(0.03, 0.014, 0.3), C.dark, 0, 0, 0);
   const lid = lk.build({ steel: M.steel }, { cast: true }); lid.position.y = 0.035; g.add(lid);
-  return { g, lid, open: 0, openT: 0, x, z };
+  return { g, lid, open: 0, openT: 0, x, z, on: true };
 });
+const liveHatches = () => { const l = hatches.filter(h => h.on); return l.length ? l : hatches; };
 
 // Vía de los arcos
 const arcTrack = new THREE.Group(); arena.add(arcTrack);
@@ -187,7 +188,9 @@ function layoutArena() {
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
   const hp = settings.exercise === 'plank1' ? hatchSide : hatchPos; // en la plancha, dos a cada lado
-  const taken = []; hatches.forEach((h, i) => { [h.x, h.z] = plan ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs'; });
+  // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
+  const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
+  hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
   safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots');
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
@@ -225,7 +228,7 @@ function layoutArena() {
     k.add('steel', G.box(W + 0.22, H + 0.22, 0.12), C.gun, 0, yc, -0.08, tilt, 0, 0);
     rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
-  } else if (plan && plan.board && boardMode() === 'column') {
+  } else if (plan && plan.board && plan.board.wall !== false && boardMode() === 'column') {
     // realidad mixta con la habitación escaneada: colgado en una de tus paredes, a la altura de los ojos
     const B = plan.board, W = 1.1, tilt = 0.06;
     rig.position.set(B.x, 0, B.z); rig.rotation.y = B.rot;
@@ -233,7 +236,7 @@ function layoutArena() {
     rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, 1.75, 0.03); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else {
-    const cx = -Math.min(2.4, D * 0.3 + 0.7), cz = -Math.min(3.0, D * 0.55);
+    const B = plan && plan.board, cx = B ? B.x : -Math.min(2.4, D * 0.3 + 0.7), cz = B ? B.z : -Math.min(3.0, D * 0.55); // colocado a mano en medio de la habitación: en su columna
     rig.position.set(cx, 0, cz); rig.rotation.y = Math.atan2(-cx, -cz);
     k.add('steel', G.cyl(0.3, 0.36, 0.12, 20), C.dark, 0, 0.06, 0);
     k.add('steel', G.cyl(0.1, 0.12, 2.0, 16), C.steel, 0, 1.06, 0);
