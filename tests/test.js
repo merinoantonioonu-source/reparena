@@ -806,6 +806,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('room off → default', offOk, '· VR → default', vrOk);
   if (!offOk || !vrOk) errors.push('sin adaptar a la habitación (o en VR) las compuertas no vuelven a su sitio');
   RA.exitAll(); frame(2, 16, xrFrame); XRS.room = null;
+  // ---- Coste por fotograma de la habitación: aunque el escaneo «cambie» sin parar, no puede pesar ----
+  {
+    const BIG = { planes: new Set(ROOMSIM.planes), meshes: new Set() }, nv = 20000, vv = new Float32Array(nv * 3), ii = new Uint32Array(nv * 3);
+    for (let i = 0; i < nv * 3; i++) { vv[i] = Math.random() * 3 - 1.5; ii[i] = i % nv; }
+    const big = { semanticLabel: 'other', lastChangedTime: 1, meshSpace: { room: { position: { x: 1.2, y: 0, z: -1.0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, vertices: vv, indices: ii }; BIG.meshes.add(big);
+    for (const m of ROOMSIM.meshes) BIG.meshes.add(m);
+    const ms = (n, churn) => { const t0 = process.hrtime.bigint(); for (let i = 0; i < n; i++) { if (churn) { big.lastChangedTime++; for (const p of BIG.planes) p.lastChangedTime++; } frame(1, 16, xrFrame); } return Number(process.hrtime.bigint() - t0) / 1e6 / n; };
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', roomMode: 'scan', lives: 0, waves: 1, repsWave: 30 })) RA.setSetting(k, v);
+    XRS.room = null; await RA.startXR(true); await sleep(700); frame(30, 16, xrFrame); const base = ms(200, false);
+    XRS.room = BIG; frame(30, 16, xrFrame); const stat = ms(200, false), churnMR = ms(200, true);
+    RA.lobbyMenu(); frame(2, 16, xrFrame); press('Realidad virtual'); frame(5, 16, xrFrame); const churnVR = ms(200, true);
+    RA.lobbyMenu(); frame(2, 16, xrFrame); press('Realidad mixta'); RA.beginRun(); frame(200, 16, xrFrame); const churnPlay = ms(200, true);
+    log(`perf habitación (ms/fotograma, JS): sin habitación ${base.toFixed(2)} · estática ${stat.toFixed(2)} · cambiando en RM ${churnMR.toFixed(2)} · cambiando en VR ${churnVR.toFixed(2)} · cambiando en partida ${churnPlay.toFixed(2)}`);
+    if (churnMR > base + 1.5 || churnVR > base + 1.5 || churnPlay > base + 1.5) errors.push('la habitación pesa demasiado por fotograma cuando el escaneo cambia');
+    XRS.room = null; RA.exitAll(); frame(2, 16, xrFrame);
+  }
   // ---- Habitación pequeña: no cumple los requisitos y se coloca a mano (y se recuerda) ----
   const TINY = { planes: new Set(), meshes: new Set() };
   for (const [x, z, yaw] of [[0, -1.2, 0], [0, 1.2, Math.PI], [-1.2, 0, Math.PI / 2], [1.2, 0, -Math.PI / 2]]) TINY.planes.add({ semanticLabel: 'wall', orientation: 'vertical', lastChangedTime: 2, planeSpace: { room: { position: { x, y: 0, z }, orientation: roomQ(yaw) } }, polygon: [[-1.2, -2.5], [1.2, -2.5], [1.2, 0], [-1.2, 0]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
