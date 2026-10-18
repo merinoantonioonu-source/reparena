@@ -2451,64 +2451,80 @@ function buildHornet() {
   return R.build();
 }
 
-/* ---------- Avispa monstruo (modo Barras, «Bichos») ---------- */
-// Del tamaño de una mano, con cara de monstruo: ojos rojos que brillan bajo unas cejas en uve, boca abierta llena de
-// dientes, mandíbulas en gancho y un aguijón brillante en la punta del abdomen, que dobla por debajo para picar.
+/* ---------- Avispa gigante (modo Barras, «Bichos») ---------- */
+// Como un avispón gigante asiático, del tamaño de una mano: cabeza naranja con grandes ojos compuestos negros y
+// brillantes, tórax oscuro y peludo, abdomen a bandas naranjas y negras, patas negras y naranjas y alas veteadas.
+// El abdomen tiene dos articulaciones para doblarse en «C» por debajo y cargar el aguijón hacia delante; las patas
+// se adelantan por parejas y las mandíbulas se abren al atacar.
+TX.hornetWing = new THREE.CanvasTexture((() => {
+  const c = mkCanvas(256, 80), x = c.getContext('2d');
+  x.beginPath(); x.moveTo(2, 42); x.bezierCurveTo(50, 6, 200, 2, 252, 30); x.bezierCurveTo(240, 62, 120, 78, 2, 46); x.closePath();
+  const g = x.createLinearGradient(0, 0, 256, 0); g.addColorStop(0, 'rgba(150,120,80,0.7)'); g.addColorStop(0.35, 'rgba(215,210,200,0.45)'); g.addColorStop(1, 'rgba(230,235,240,0.32)');
+  x.fillStyle = g; x.fill(); x.save(); x.clip();
+  x.strokeStyle = 'rgba(70,45,20,0.95)'; x.lineWidth = 3; x.beginPath(); x.moveTo(2, 40); x.bezierCurveTo(60, 12, 140, 10, 170, 16); x.stroke(); // borde de ataque
+  x.lineWidth = 1.6; for (const [y0, y1, x1] of [[42, 26, 200], [43, 34, 215], [44, 44, 205], [45, 54, 180], [46, 62, 140]]) { x.beginPath(); x.moveTo(4, y0); x.quadraticCurveTo(80, (y0 + y1) / 2 - 4, x1, y1); x.stroke(); } // venas largas
+  x.lineWidth = 1.2; for (const [px, py, qx, qy] of [[60, 24, 66, 50], [95, 20, 104, 58], [128, 18, 140, 30], [140, 30, 150, 44], [118, 46, 126, 62], [160, 16, 176, 34], [176, 34, 186, 50], [150, 44, 176, 34]]) { x.beginPath(); x.moveTo(px, py); x.lineTo(qx, qy); x.stroke(); } // celdas
+  x.fillStyle = 'rgba(60,40,20,0.7)'; x.beginPath(); x.ellipse(168, 17, 9, 3, -0.1, 0, TAU); x.fill(); // pterostigma
+  x.strokeStyle = 'rgba(120,100,80,0.18)'; x.lineWidth = 1; for (let i = 0; i < 9; i++) { x.beginPath(); x.moveTo(200 + i * 5, 20 + i * 2); x.lineTo(214 + i * 4, 60 - i); x.stroke(); } // arrugas de la punta
+  x.restore(); return c;
+})());
 function buildStinger() {
   const R = new Rig();
-  R.bone('body', null).bone('head', 'body', 0, 0.012, 0.05).bone('jaw', 'head', 0, -0.024, 0.024)
-   .bone('mandL', 'head', 0.022, -0.014, 0.022).bone('mandR', 'head', -0.022, -0.014, 0.022)
-   .bone('abd', 'body', 0, -0.024, -0.04).bone('sting', 'abd', 0, -0.012, -0.118); // abdomen bajo: se dobla por debajo para picar
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) R.bone('w' + sd + '1', 'body', sx * 0.02, 0.035, 0.012).bone('w' + sd + '2', 'body', sx * 0.02, 0.03, -0.012);
+  R.bone('body', null).bone('head', 'body', 0, 0.014, 0.05)
+   .bone('mandL', 'head', 0.013, -0.027, 0.03).bone('mandR', 'head', -0.013, -0.027, 0.03)
+   .bone('abd', 'body', 0, -0.02, -0.044).bone('abd2', 'abd', 0, -0.004, -0.056).bone('sting', 'abd2', 0, -0.006, -0.062);
+  for (let i = 0; i < 3; i++) R.bone('lg' + i, 'body', 0, -0.03, 0.024 - i * 0.02);
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) R.bone('w' + sd + '1', 'body', sx * 0.022, 0.034, 0.016).bone('w' + sd + '2', 'body', sx * 0.022, 0.03, -0.006);
   const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GS = (b, g, c, ...t) => R.add(b, 'gloss', g, c, ...t), GL = (b, g, c, ...t) => R.add(b, 'glow', g, c, ...t);
-  const dark = C.waspK, yel = C.waspY, org = C.waspO, tooth = col(0.92, 0.88, 0.74), gum = col(0.35, 0.03, 0.04);
-  // tórax peludo
-  P('body', G.sph(1, 16, 12), dark, 0, 0, 0, 0, 0, 0, 0.046, 0.042, 0.054);
-  P('body', spikes(0, 0, 0, 0.046, 0.042, 0.054, 220, 0.008, 0.0012), col(0.45, 0.3, 0.12));
-  for (const s of [-1, 1]) P('body', G.sph(1, 10, 8), yel, s * 0.03, 0.025, 0.02, 0, 0, 0, 0.012, 0.008, 0.016);
-  P('body', G.sph(1, 10, 8), yel, 0, 0.038, -0.01, 0, 0, 0, 0.018, 0.008, 0.024);
-  // cabeza: cráneo negro con máscara, ojos rojos rasgados bajo cejas en uve, boca abierta llena de colmillos, cuernos
-  P('head', G.sph(1, 16, 12), dark, 0, 0.006, 0.008, 0, 0, 0, 0.048, 0.042, 0.032);
-  P('head', G.sph(1, 16, 12), org, 0, -0.004, 0.022, 0, 0, 0, 0.041, 0.034, 0.024);
+  const blk = col(0.06, 0.04, 0.03), brn = col(0.13, 0.07, 0.04), red = col(0.1, 0.025, 0.01), org = col(0.72, 0.16, 0.01), orgD = col(0.28, 0.05, 0.005), yel = col(0.8, 0.4, 0.015), band = col(0.76, 0.18, 0.01), eye = col(0.05, 0.035, 0.03), hair = col(0.3, 0.2, 0.1);
+  // tórax oscuro y peludo, con manchas rojizas en los hombros
+  P('body', G.sph(1, 18, 14), blk, 0, 0.004, 0, 0, 0, 0, 0.038, 0.038, 0.05);
+  P('body', G.sph(1, 12, 10), blk, 0, 0.028, -0.03, 0, 0, 0, 0.02, 0.012, 0.014); // escudete
+  for (const s of [-1, 1]) P('body', G.sph(1, 10, 8), red, s * 0.028, 0.026, 0.004, 0, 0, s * 0.6, 0.01, 0.005, 0.016);
+  P('body', G.cyl(0.012, 0.015, 0.02, 10), blk, 0, 0.01, 0.045, Math.PI / 2, 0, 0); // cuello
+  P('body', G.sph(1, 10, 8), blk, 0, -0.02, -0.042, 0, 0, 0, 0.011, 0.011, 0.012);    // peciolo
+  P('body', spikes(0, 0.004, 0, 0.038, 0.038, 0.05, 260, 0.008, 0.0012), hair);
+  // cabeza naranja: ojos compuestos grandes y brillantes, ocelos, clípeo con líneas, antenas y mandíbulas
+  P('head', G.sph(1, 18, 14), org, 0, 0, 0.012, 0, 0, 0, 0.04, 0.038, 0.028);
+  P('head', G.sph(1, 14, 10), org, 0, -0.016, 0.03, 0, 0, 0, 0.026, 0.019, 0.013);      // clípeo
   for (const s of [-1, 1]) {
-    P('head', G.sph(1, 12, 10), C.black, s * 0.021, 0.011, 0.04, 0, 0, s * 0.45, 0.019, 0.012, 0.009);          // cuenca
-    GL('head', G.sph(1, 12, 10), C.red, s * 0.021, 0.011, 0.045, 0, 0, s * 0.45, 0.015, 0.008, 0.006);         // ojo rasgado que brilla
-    P('head', G.box(0.003, 0.01, 0.003), C.black, s * 0.02, 0.011, 0.0505, 0, 0, s * 0.2);                       // pupila de reptil
-    P('head', G.box(0.034, 0.009, 0.014), dark, s * 0.02, 0.024, 0.043, 0.3, 0, -s * 0.55);                     // ceja fruncida
-    for (let k = 0; k < 2; k++) P('head', G.cone(0.007 - k * 0.002, 0.04 - k * 0.012, 6), dark, s * (0.024 + k * 0.012), 0.04 - k * 0.004, -0.004 - k * 0.006, -0.9, 0, -s * (0.35 + k * 0.35)); // cuernos
-    P('head', G.tube([new V3(s * 0.01, 0.034, 0.028), new V3(s * 0.022, 0.065, 0.04), new V3(s * 0.045, 0.08, 0.05), new V3(s * 0.062, 0.072, 0.07)], 0.0016, 10, 4), C.black); // antena
-    const md = s > 0 ? 'mandL' : 'mandR'; // mandíbula en gancho
-    P(md, G.box(0.012, 0.01, 0.026), org, 0, 0, 0.012, 0, -s * 0.4, 0);
-    GS(md, G.cone(0.006, 0.032, 6), C.black, -s * 0.01, 0, 0.03, Math.PI / 2, 0, s * 0.9);
-    for (let k = 0; k < 3; k++) GS(md, G.cone(0.0024, 0.009, 4), tooth, -s * (0.003 + k * 0.004), 0, 0.012 + k * 0.007, 0, 0, s * Math.PI / 2);
+    GS('head', G.sph(1, 16, 12), eye, s * 0.031, 0.002, 0.017, 0, s * 0.3, s * 0.15, 0.015, 0.029, 0.019); // ojo compuesto
+    GS('head', G.sph(1, 10, 8), eye, s * 0.024, 0.022, 0.024, 0, 0, s * 0.5, 0.009, 0.01, 0.01);           // su lóbulo de arriba
+    P('head', G.box(0.0018, 0.02, 0.003), orgD, s * 0.009, -0.014, 0.0405, -0.3, 0, s * 0.45);               // líneas del clípeo
+    P('head', G.box(0.014, 0.0018, 0.003), orgD, s * 0.011, -0.023, 0.0395, -0.6, 0, -s * 0.2);
+    const ant = s > 0 ? 1 : -1;
+    P('head', limbBetween(new V3(ant * 0.008, 0.006, 0.036), new V3(ant * 0.012, 0.03, 0.052), 0.0028, 0.0024), org); // escapo
+    P('head', G.tube([new V3(ant * 0.012, 0.03, 0.052), new V3(ant * 0.018, 0.046, 0.066), new V3(ant * 0.036, 0.052, 0.084), new V3(ant * 0.056, 0.04, 0.098)], 0.0022, 14, 5), col(0.15, 0.03, 0.01)); // flagelo
+    const md = s > 0 ? 'mandL' : 'mandR'; // mandíbula: naranja, ancha, con dientes negros
+    P(md, G.box(0.013, 0.008, 0.024), org, -s * 0.003, 0, 0.01, 0, -s * 0.35, 0);
+    for (let k = 0; k < 3; k++) GS(md, G.cone(0.0026, 0.008, 4), blk, -s * (0.006 + k * 0.004), -0.002, 0.018 + k * 0.004, 0, 0, s * Math.PI / 2);
   }
-  P('head', G.sph(1, 14, 10), gum, 0, -0.019, 0.047, 0, 0, 0, 0.027, 0.014, 0.011); // boca abierta
-  P('head', G.sph(1, 10, 8), C.black, 0, -0.019, 0.051, 0, 0, 0, 0.019, 0.008, 0.009);  // garganta
-  for (let i = 0; i < 9; i++) { const x = (i - 4) * 0.0055, big = i === 1 || i === 7; GS('head', G.cone(big ? 0.0034 : 0.0022, big ? 0.02 : 0.01, 5), tooth, x, -0.008 - (big ? 0.008 : 0.004), 0.056 - Math.abs(i - 4) * 0.0018, Math.PI, 0, 0); } // colmillos de arriba
-  P('jaw', G.box(0.044, 0.008, 0.026), org, 0, -0.008, 0.018);
-  for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.0062, big = i === 1 || i === 5; GS('jaw', G.cone(big ? 0.003 : 0.0022, big ? 0.016 : 0.009, 5), tooth, x, -0.002 + (big ? 0.006 : 0.003), 0.03 - Math.abs(i - 3) * 0.0016); }
-  // patas colgando, con garras
+  for (const [x, y, z] of [[0, 0.033, 0.024], [0.008, 0.03, 0.017], [-0.008, 0.03, 0.017]]) GS('head', G.sph(0.0028, 6, 5), eye, x, y, z); // ocelos
+  // patas por parejas: negras arriba, naranjas abajo, con tarsos articulados y uñas
   for (let i = 0; i < 3; i++) for (const s of [-1, 1]) {
-    const a = new V3(s * 0.025, -0.028, 0.025 - i * 0.022), b = new V3(s * 0.055, -0.045, 0.03 - i * 0.026), c = new V3(s * 0.06, -0.085, 0.018 - i * 0.032), d = new V3(s * 0.058, -0.12, 0.01 - i * 0.04);
-    P('body', limbBetween(a, b, 0.0042, 0.0034), dark); P('body', limbBetween(b, c, 0.0034, 0.0026), yel); P('body', limbBetween(c, d, 0.0024, 0.0016), org);
-    GS('body', G.cone(0.0022, 0.012, 4), C.black, d.x, d.y - 0.004, d.z + 0.003, 2.6, 0, 0);
+    const b = 'lg' + i, back = i * 0.012, a = new V3(s * 0.012, 0, 0), c1 = new V3(s * 0.026, -0.006, 0.002 - back * 0.3), c2 = new V3(s * 0.044, -0.022, 0.012 - back), c3 = new V3(s * 0.05, -0.05, 0.0 - back * 1.8), c4 = new V3(s * 0.05, -0.072, 0.012 - back * 2.6);
+    P(b, limbBetween(a, c1, 0.0052, 0.0044), blk); P(b, limbBetween(c1, c2, 0.0044, 0.0036), i ? blk : brn); P(b, limbBetween(c2, c3, 0.0034, 0.0028), org);
+    for (let k = 0; k < 4; k++) { const p0 = c3.clone().lerp(c4, k / 4), p1 = c3.clone().lerp(c4, (k + 1) / 4); P(b, limbBetween(p0, p1, 0.0026, 0.002), org); P(b, G.sph(0.0026, 6, 4), orgD, p1.x, p1.y, p1.z); }
+    GS(b, G.cone(0.0018, 0.009, 4), blk, c4.x, c4.y - 0.004, c4.z + 0.002, 2.7, 0, 0);
   }
-  // abdomen a bandas, algo curvado hacia abajo
-  P('abd', G.cyl(0.008, 0.008, 0.016, 8), dark, 0, 0, -0.004, Math.PI / 2, 0, 0);
-  const prof = t => 0.036 * Math.pow(Math.sin(Math.PI * (t * 0.9 + 0.08)), 0.7), N = 7, Lz = 0.11;
+  // abdomen a bandas (negro delante, naranja detrás en cada segmento), en dos mitades que se doblan
+  const prof = t => 0.03 * Math.pow(Math.sin(Math.PI * (t * 0.86 + 0.1)), 0.6) + 0.004, N = 6, L = 0.12;
+  const seg = (bone, z0, z1, r0, r1, c) => P(bone, G.cyl(r1, r0, z0 - z1, 16), c, 0, 0, (z0 + z1) / 2, -Math.PI / 2, 0, 0);
   for (let k = 0; k < N; k++) {
-    const t0 = k / N, t1 = (k + 1) / N, z0 = -0.012 - t0 * Lz, z1 = -0.012 - t1 * Lz, y0 = -t0 * t0 * 0.012, y1 = -t1 * t1 * 0.012;
-    const mid = (t0 + t1) / 2, zm = -0.012 - mid * Lz, ym = -mid * mid * 0.012;
-    P('abd', G.cyl(prof(mid), prof(t0), z0 - zm, 14), yel, 0, (y0 + ym) / 2, (z0 + zm) / 2, -Math.PI / 2, 0, 0);
-    P('abd', G.cyl(prof(t1), prof(mid), zm - z1, 14), dark, 0, (ym + y1) / 2, (zm + z1) / 2, -Math.PI / 2, 0, 0);
+    const bone = k < N / 2 ? 'abd' : 'abd2', zo = k < N / 2 ? 0 : -0.056, t0 = k / N, t1 = (k + 1) / N, tm = t0 + (t1 - t0) * (k ? 0.32 : 0.5);
+    const z0 = -0.004 - t0 * L - zo, zm = -0.004 - tm * L - zo, z1 = -0.004 - t1 * L - zo;
+    seg(bone, z0, zm, prof(t0), prof(tm), k === N - 1 ? band : blk);
+    seg(bone, zm, z1, prof(tm), prof(t1), k === 0 ? yel : band);
   }
-  P('abd', spikes(0, -0.004, -0.06, 0.034, 0.03, 0.05, 160, 0.006, 0.001, { back: -0.4 }), col(0.45, 0.3, 0.12));
-  // aguijón con una gota de veneno que brilla
-  GS('sting', G.cone(0.0055, 0.045, 8), C.black, 0, 0, -0.02, -Math.PI / 2, 0, 0);
-  GL('sting', G.sph(0.004, 8, 6), C.green, 0, 0, -0.044);
-  // alas
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) for (const [k, w, h] of [[1, 0.1, 0.03], [2, 0.07, 0.022]]) {
-    const g = new THREE.PlaneGeometry(w, h); g.translate(w / 2, 0, 0); g.rotateX(-Math.PI / 2); if (sx < 0) g.scale(-1, 1, 1); g.rotateY(sx * -0.4);
+  P('abd2', G.sph(1, 14, 10), blk, 0, 0, 0, 0, 0, 0, prof(0.5) * 0.98, prof(0.5) * 0.98, 0.012); // la articulación no deja hueco al doblarse
+  P('abd', spikes(0, 0, -0.03, 0.03, 0.03, 0.03, 110, 0.005, 0.001, { back: -0.5 }), brn);
+  P('abd2', spikes(0, 0, -0.026, 0.027, 0.027, 0.03, 90, 0.004, 0.001, { back: -0.5 }), brn);
+  // aguijón negro y brillante con una gota de veneno
+  GS('sting', G.cone(0.004, 0.034, 8), blk, 0, 0, -0.012, -Math.PI / 2, 0, 0);
+  GL('sting', G.sph(0.003, 8, 6), C.green, 0, 0, -0.03);
+  // alas veteadas
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) for (const [k, w, h] of [[1, 0.118, 0.034], [2, 0.078, 0.023]]) {
+    const g = new THREE.PlaneGeometry(w, h); g.translate(w / 2, 0, 0); g.rotateX(-Math.PI / 2); if (sx < 0) g.scale(-1, 1, 1); g.rotateY(sx * -0.42);
     R.add('w' + sd + k, 'wing', g, C.white);
   }
   return R.build();
@@ -5131,7 +5147,8 @@ function barRep(opts) {
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
 const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
-const MAT_STINGER = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin, glow: M.glowSkin };
+const stingerSkin = M.waspSkin.clone(); stingerSkin.normalScale = new THREE.Vector2(0.3, 0.3); // quitina lisa, con pelusa
+const MAT_STINGER = { main: stingerSkin, gloss: M.glossSkin, wing: new THREE.MeshBasicMaterial({ map: TX.hornetWing, transparent: true, depthWrite: false, side: THREE.DoubleSide, skinning: true, opacity: 0.8 }), glow: M.glowSkin };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
 // Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
 // con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
@@ -5184,7 +5201,7 @@ class HeadTarget {
     const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
     Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
     // avispa: amagos de picar (se lanza hacia tu cara y se retira) y el abdomen que se dobla para clavar el aguijón
-    Object.assign(this, { feint: 0, feintT: rand(1.2, 2.2), feintOn: false, curl: 0, off: new V3() });
+    Object.assign(this, { feint: 0, feintT: rand(1.2, 2.2), feintOn: false, curl: 0, ch: 0, off: new V3() });
     if (this.bubble) {
       this.root = new THREE.Group();
       this.mat = bubbleMat();
@@ -5239,11 +5256,15 @@ class HeadTarget {
     } else if (this.mode === 'wait') {
       this.pos.lerp(this.slot, 1 - Math.exp(-dt * 6));
       if (!idx && play && settings.barWait > 0) { this.waitT += dt; if (this.waitT > settings.barWait) this.timeout(); }
-    } else if (this.mode === 'attack' && this.K.wasp) { // se lanza a picarte en la cara y se va (vuelve más tarde)
-      const k = Math.min(1, this.t / 0.35); this.curl = Math.min(1, this.t / 0.2); this.pos.lerpVectors(this.from, _bq.copy(HL).add(_ba.set(0, -0.05, 0)), smooth(k));
-      if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+    } else if (this.mode === 'attack' && this.K.wasp) { // carga (se echa atrás doblada) y se lanza a picarte en la cara
+      const W = 0.45, aim = _ba.copy(HL).add(_bw.set(0, -0.05, 0)), back = _bq.subVectors(aim, this.from).normalize().multiplyScalar(-0.12);
+      if (this.t < W) { const k = smooth(this.t / W); this.ch = k; this.curl = Math.max(this.curl, 0.85); this.pos.copy(this.from).addScaledVector(back, k); }
+      else {
+        const k = Math.min(1, (this.t - W) / 0.3); this.ch = 1; this.curl = 1; this.pos.copy(this.from).add(back).lerp(aim, smooth(k));
+        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+      }
     } else if (this.mode === 'flee') {
-      const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2);
+      const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2); this.ch = Math.max(0, 1 - this.t * 3);
       this.pos.copy(this.from).add(_bq.set(Math.sin(this.ph) * 1.5 * k, 1.2 * k, -2.2 * k)); this.root.scale.setScalar(this.K.scale * (1 - k * 0.7));
       if (k >= 1) { this.alive = false; this.dispose(); return; }
     } else if (this.mode === 'attack') {
@@ -5283,30 +5304,42 @@ class HeadTarget {
   // retira, más a menudo cuanto más esperas. El cabezazo cuenta en su sitio, no en el amago.
   animWasp(dt, t, idx, play) {
     const B = this.B, wait = this.mode === 'wait', toH = _bq.subVectors(HL, this.pos), dist = toH.length();
+    // amago: carga (se echa un poco atrás con el aguijón y la cabeza cargados), se lanza hacia ti y vuelve
     if (wait && play && !idx) {
       this.feintT -= dt * (1 + Math.min(2, this.waitT / 4));
-      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; SND.whoosh(this.center(_bw)); if (Math.random() < 0.5) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
-      if (this.feintOn) { this.feint += dt / 0.55; if (this.feint >= 1 || BAR.det === 'rising') { this.feintOn = false; this.feint = 0; this.feintT = rand(1.2, 2.6); } }
+      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
+      if (this.feintOn) {
+        const was = this.feint; this.feint += dt / 1.0;
+        if (was < 0.45 && this.feint >= 0.45) SND.whoosh(this.center(_bw));
+        if (this.feint >= 1 || BAR.det === 'rising') { this.feintOn = false; this.feint = 0; this.feintT = rand(1.2, 2.6); }
+      }
     } else { this.feintOn = false; this.feint = 0; }
-    const f = this.feintOn ? Math.sin(Math.PI * Math.min(1, this.feint)) : 0, reach = Math.max(0, dist - 0.3) * 0.75;
-    const zig = this.mode === 'approach' ? 0.12 : 0.025;
+    const p = this.feint, F = this.feintOn;
+    const lunge = !F ? 0 : p < 0.45 ? -smooth(p / 0.45) * 0.3 : p < 0.6 ? -0.3 + 1.3 * smooth((p - 0.45) / 0.15) : p < 0.75 ? 1 : 1 - smooth((p - 0.75) / 0.25);
+    if (this.mode !== 'attack' && this.mode !== 'flee') this.ch += ((F ? (p < 0.75 ? Math.min(1, p / 0.4) : 1 - smooth((p - 0.75) / 0.25)) : 0) - this.ch) * Math.min(1, dt * 12);
+    const ch = this.ch, reach = Math.max(0, dist - 0.3) * 0.75;
+    const zig = this.mode === 'approach' ? 0.12 : 0.025 * (1 - ch);
     this.off.set(Math.sin(t * 3.1 + this.ph) * zig, Math.sin(t * 4.3 + this.ph * 2) * zig * 0.6, Math.sin(t * 2.3 + this.ph) * zig * 0.5);
-    if (dist > 1e-3) this.off.addScaledVector(toH, f * reach / dist);
+    if (dist > 1e-3) this.off.addScaledVector(toH, (lunge > 0 ? lunge * reach : lunge * 0.3) / dist);
     this.root.position.add(this.off);
-    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((this.feintOn ? 1 : 0.85 + 0.08 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
+    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((F ? 1 : 0.85 + 0.08 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
     // el cuerpo, casi horizontal y girado hacia ti (solo se inclina un poco); la cabeza y el aguijón te apuntan
     const rp = this.root.position, lx = HL.x - rp.x, ly = HL.y - rp.y, lz = HL.z - rp.z, hd = Math.hypot(lx, lz), pitch = Math.atan2(ly, Math.max(1e-3, hd));
     this.root.rotation.set(0, 0, 0); this.root.rotation.order = 'YXZ'; this.root.rotation.y = Math.atan2(lx, lz); this.root.rotation.x = -clamp(pitch, -0.35, 0.35);
-    this.root.updateMatrixWorld(); const fc = this.root.worldToLocal(_bt.copy(head.p)); // tu cara, vista desde la avispa
     const w = Math.sin(this.t * TAU * 24) * 0.95, w2 = Math.sin(this.t * TAU * 24 + 0.7) * 0.85;
     B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2;
-    B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2; B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
-    // el aguijón sale de la punta del abdomen doblado y se orienta hacia tu cara
-    const abd = -this.curl * 2.45 + Math.sin(t * 5 + this.ph) * 0.05, sy = -0.024 - 0.012 * Math.cos(abd) + 0.118 * Math.sin(abd), sz = -0.04 - 0.012 * Math.sin(abd) - 0.118 * Math.cos(abd);
-    B.abd.rotation.x = abd; B.sting.rotation.x = clamp(wrapAng(Math.PI - Math.atan2(fc.y - sy, fc.z - sz) - abd), -2.3, 0.9);
-    const bite = 0.25 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.3;
-    B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite; B.jaw.rotation.x = 0.2 + 0.25 * Math.max(0, Math.sin(t * 7 + this.ph)) + f * 0.4;
-    B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.012, fc.z - 0.05), -1.2, 1.2); B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08; B.head.rotation.z = Math.sin(t * 2.7) * 0.08;
+    // al cargar se encabrita: el tórax se levanta, el abdomen se dobla en «C» hasta que el aguijón apunta hacia
+    // delante por debajo de la cabeza, la cabeza se agacha, las patas se adelantan y las mandíbulas se abren
+    B.body.rotation.set(-ch * 0.4, 0, Math.sin(t * 3.1 + this.ph) * 0.2 * (1 - ch)); B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
+    const A = this.curl * 2.2 + ch * 1.0 + Math.sin(t * 5 + this.ph) * 0.05;
+    B.abd.rotation.x = -A * 0.42; B.abd2.rotation.x = -A * 0.58;
+    for (let i = 0; i < 3; i++) B['lg' + i].rotation.x = -(0.15 + ch * (1.1 - i * 0.25)) + Math.sin(t * 6 + this.ph + i) * 0.06;
+    this.root.updateMatrixWorld(true);
+    const fc = this.root.worldToLocal(_bt.copy(head.p)), sp = this.root.worldToLocal(B.sting.getWorldPosition(_bw)); // tu cara y la punta, vistas desde la avispa
+    B.sting.rotation.x = clamp(wrapAng(Math.atan2(fc.y - sp.y, -(fc.z - sp.z)) - (B.body.rotation.x + B.abd.rotation.x + B.abd2.rotation.x)), -1.2, 1.2);
+    const bite = 0.2 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.15 + ch * 0.6;
+    B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite;
+    B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.014, fc.z - 0.05), -1.2, 1.2) + ch * 0.7; B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08 * (1 - ch); B.head.rotation.z = Math.sin(t * 2.7) * 0.08 * (1 - ch);
     if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
     if (this.buzz) this.buzz.set(this.center(tmpB));
   }
