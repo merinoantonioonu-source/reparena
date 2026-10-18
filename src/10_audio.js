@@ -282,6 +282,12 @@ const SND = {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.9, ref: 0.8 });
     noise(o, { type: 'bandpass', f: laser ? 1500 : 2600, to: laser ? 300 : 800, q: 1.4, d: 0.18, gain: 0.55 }); tone(o, { type: laser ? 'sawtooth' : 'triangle', f: laser ? 300 : 700, to: laser ? 80 : 200, d: 0.2, gain: 0.15 });
   },
+  // remolino: te traga (zumbido que cae a un rugido) y se cierra de golpe
+  engulf(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.9, gain: 1, ref: 1.5 });
+    noise(o, { brown: true, f: 1600, to: 60, a: 0.05, d: 1.4, gain: 1 }); tone(shaper(o, true), { type: 'sawtooth', f: 160, to: 30, d: 1.3, gain: 0.35 }); noise(o, { type: 'bandpass', f: 2400, to: 200, q: 1.2, d: 1.0, gain: 0.4 });
+  },
+  vortexClose(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 1.5 }); tone(shaper(o), { f: 90, to: 35, d: 0.5, gain: 0.5 }); noise(o, { brown: true, f: 700, to: 100, d: 0.4, gain: 0.6 }); tone(o, { type: 'triangle', f: 660, to: 990, t: 0.05, d: 0.4, gain: 0.05 }); },
   // bosque: un búho que ulula a lo lejos y una rama que cruje
   owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
   creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
@@ -333,6 +339,18 @@ function saberLoop(pos) {
   });
   const set = L.set.bind(L);
   L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.6), T, 0.03)); L.lp.frequency.setTargetAtTime(600 + k * 1800, T, 0.03); L.out.gain.setTargetAtTime(0.12 + k * 0.25, T, 0.03); };
+  return L;
+}
+// Succión del remolino: viento grave que gira; k (0-1) es lo abierto que está
+function suctionLoop(pos) {
+  if (!sndOK()) return null;
+  const L = new Loop(pos, 0.3, (L, C) => {
+    const n = L.src(true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 260; bp.Q.value = 0.7; n.connect(bp); bp.connect(L.out);
+    const lfo = L.osc('sine', 0.6), lg = C.createGain(); lg.gain.value = 120; lfo.connect(lg).connect(bp.frequency);
+    const d = L.osc('sine', 42), dg = C.createGain(); dg.gain.value = 0.5; d.connect(dg).connect(L.out); L.lfo = lfo;
+  });
+  const set = L.set.bind(L);
+  L.set = (p, k = 1) => { set(p); if (L.dead) return; const T = AUD.C.currentTime; L.out.gain.setTargetAtTime(0.05 + 0.35 * k, T, 0.1); L.lfo.frequency.setTargetAtTime(0.6 + (1 - k) * 2, T, 0.2); };
   return L;
 }
 function humLoop(pos) {

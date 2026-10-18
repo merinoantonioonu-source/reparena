@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -289,6 +289,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
+  // remolino: se cierra al ritmo del tiempo colgado y queda cerrado justo al cumplirlo
+  const VR = { half: null, closedAtRest: null, openMount: 0, noPool: true };
+  await runConfig('Barras+colgado remolino', { ...bars, exercise: 'hang', hangPit: 'vortex', hangTime: 10, hangInc: 0, waves: 2, rest: 5 }, t => {
+    if (RA.state === 'mount') VR.openMount = Math.max(VR.openMount, RA.VX.R);
+    if (RA.state === 'play' && RA.waveIdx === 0 && VR.half === null && RA.BAR.hold >= RA.BAR.need / 2) VR.half = RA.VX.R;
+    if (RA.state === 'rest' && RA.stateT > 0.5 && VR.closedAtRest === null) VR.closedAtRest = RA.VX.R;
+    if (RA.pool.visible) VR.noPool = false;
+  }, 120, s => { log(`   remolino: abierto al colgarse ${VR.openMount.toFixed(2)}, a mitad de tiempo ${VR.half && VR.half.toFixed(2)}, en el descanso ${VR.closedAtRest && VR.closedAtRest.toFixed(2)}, charco oculto ${VR.noPool}`);
+    return VR.openMount < 0.95 ? 'el remolino no se abre al colgarse' : Math.abs(VR.half - 0.5) > 0.08 ? 'el remolino no se cierra al ritmo del tiempo' : VR.closedAtRest > 0.05 ? 'el remolino no se cierra al cumplir el tiempo' : !VR.noPool ? 'con el remolino no debería verse el charco' : s.hold < 19 ? 'no cuenta el tiempo colgado' : ''; });
+  // soltarse con el remolino: te engulle, pierdes una vida y esa oleada termina (pasa a la siguiente)
+  const VF = { failedWave: -1, holdAtFail: 0, lives0: 0, waves: new Set() };
+  await runConfig('Barras+colgado remolino soltándose', { ...bars, exercise: 'hang', hangPit: 'vortex', hangTime: 10, hangInc: 0, waves: 2, rest: 5, lives: 3 }, fallOnce(9, t => {
+    VF.waves.add(RA.waveIdx); if (RA.state === 'play' && RA.stats.falls === 0) { VF.holdAtFail = RA.BAR.hold; VF.failedWave = RA.waveIdx; }
+  }), 120, s => { log(`   soltándose: caídas ${s.falls}, vidas ${RA.lives}, aguantado ${VF.holdAtFail.toFixed(1)} s de 10 en la oleada ${VF.failedWave + 1}, oleadas jugadas ${[...VF.waves].map(w => w + 1)}`);
+    return s.falls !== 1 ? 'la caída no se detecta' : RA.lives !== 2 ? 'te engulle sin quitar una vida' : !VF.waves.has(1) || s.hold > 16 ? 'la oleada no termina al engullirte' : ''; });
   await runConfig('Barras+colgado caída (derrota)', { ...bars, exercise: 'hang', lives: 1, hangTime: 30 }, fallOnce(6, t => {}), 120, s => s.falls !== 1 ? 'la caída no se detecta' : '');
   await runConfig('Barras bichos sin reventar (pican)', { ...bars, exercise: 'pullup', barTarget: 'bugs', barWait: 2, lives: 2 }, t => {}, 120, s => s.taken < 2 ? 'los bichos no pican al agotarse el tiempo' : '');
   await runConfig('Barras pompas sin reventar (se escapan)', { ...bars, exercise: 'row', barTarget: 'bubbles', barWait: 2, waves: 1, repsWave: 3 }, (t => { RA.PV.crouch = RA.state === 'play' && t > 25 && (t % 2.6) < 1.3; }), 200, s => s.taken !== 0 ? 'las pompas no deberían hacer daño' : '');

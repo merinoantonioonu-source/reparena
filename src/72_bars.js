@@ -5,7 +5,7 @@
 const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, contact: false, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { failed: false, phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -72,6 +72,7 @@ function placeRowBoard(fromHead) {
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
   stats.falls++;
+  if (vortexOn()) { vortexEngulf(); return; } // el remolino te engulle: la oleada termina
   const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
