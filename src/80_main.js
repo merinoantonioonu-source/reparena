@@ -83,7 +83,7 @@ function previewInput(dt) {
   // curl con barra: las dos manos a la altura de la cadera; Espacio las sube juntas hasta los hombros
   if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }
   // sentadilla con press: las pesas en los hombros; al subir de la sentadilla, por encima de la cabeza
-  if (settings.exercise === 'thruster' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.15).addScaledVector(f, 0.12); h.wrist.y += PV.thrUp > 0 ? 0.32 : -0.25; }
+  if (settings.exercise === 'thruster' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.15).addScaledVector(f, 0.12); h.wrist.y += PV.thrUp > 0 && !PV.noArms ? 0.32 : -0.25; }
   // swing, sentadilla con elevación y peso muerto con remo: abajo, las pesas cuelgan; al subir, al frente o tirando de los codos (PV.noArms: no)
   if (['swing', 'frontsq', 'dlrow'].includes(ex) && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) {
     const h = hands[s], up = PV.thrUp > 0 && !PV.noArms; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
