@@ -129,8 +129,7 @@ function barRep(opts) {
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
-const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'hornet', scale: 1.7, r: 0.09 }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
-const MAT_STINGER = { main: M.waspSkin, gloss: M.glossSkin, wing: M.wingSkin, glow: M.glowSkin };
+const TGT = { bubble: { r: 0.1 }, bigbubble: { r: 0.17, boss: true }, wasp: { rig: 'stinger', scale: 1.0, r: 0.11, wasp: true }, queen: { rig: 'stinger', scale: 1.8, r: 0.19, wasp: true, boss: true }, drone: { rig: 'drone', scale: 0.65, r: 0.13 }, hornet: { rig: 'stinger', scale: 0.8, r: 0.09, wasp: true }, carrier: { rig: 'carrier', scale: 1.3, r: 0.28, boss: true } };
 const bubbleGeo = new THREE.SphereGeometry(1, 28, 18);
 // Pompa de jabón: película irisada cuyo color cambia con el ángulo y se arremolina, más opaca en el borde,
 // con brillos de reflejo; así se ve bien también sobre el fondo de la realidad mixta
@@ -183,7 +182,7 @@ class HeadTarget {
     const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
     Object.assign(this, { hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, mode: 'approach', t: 0, waitT: 0, radius: K.r, slot: new V3(), pos: new V3(), from: new V3(), flick: 0, ph: rand(0, TAU) });
     // avispa: amagos de picar (se lanza hacia tu cara y se retira) y el abdomen que se dobla para clavar el aguijón
-    Object.assign(this, { feint: 0, feintT: rand(1.2, 2.2), feintOn: false, curl: 0, off: new V3() });
+    Object.assign(this, { feint: 0, feintT: rand(1.2, 2.2), feintOn: false, curl: 0, ch: 0, off: new V3() });
     if (this.bubble) {
       this.root = new THREE.Group();
       this.mat = bubbleMat();
@@ -196,7 +195,7 @@ class HeadTarget {
         const pupil = new THREE.Mesh(bubbleGeo, eyePupil); pupil.scale.set(0.012, 0.016, 0.006); pupil.position.z = 0.058; this.eye.add(pupil);
       }
     } else {
-      this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : spec.kind === 'hornet' ? MAT_WASP : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+      this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
       this.root.scale.setScalar(K.scale);
     }
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
@@ -238,18 +237,22 @@ class HeadTarget {
     } else if (this.mode === 'wait') {
       this.pos.lerp(this.slot, 1 - Math.exp(-dt * 6));
       if (!idx && play && settings.barWait > 0) { this.waitT += dt; if (this.waitT > settings.barWait) this.timeout(); }
-    } else if (this.mode === 'attack' && this.K.wasp) { // se lanza a picarte en la cara y se va (vuelve más tarde)
-      const k = Math.min(1, this.t / 0.35); this.curl = Math.min(1, this.t / 0.2); this.pos.lerpVectors(this.from, _bq.copy(HL).add(_ba.set(0, -0.05, 0)), smooth(k));
-      if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+    } else if (this.mode === 'attack' && this.K.wasp) { // carga (se echa atrás doblada) y se lanza a picarte en la cara
+      const W = 0.45, aim = _ba.copy(HL).add(_bw.set(0, -0.05, 0)), back = _bq.subVectors(aim, this.from).normalize().multiplyScalar(-0.12);
+      if (this.t < W) { const k = smooth(this.t / W); this.ch = k; this.curl = Math.max(this.curl, 0.85); this.pos.copy(this.from).addScaledVector(back, k); }
+      else {
+        const k = Math.min(1, (this.t - W) / 0.3); this.ch = 1; this.curl = 1; this.pos.copy(this.from).add(back).lerp(aim, smooth(k));
+        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+      }
     } else if (this.mode === 'flee') {
-      const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2);
+      const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2); this.ch = Math.max(0, 1 - this.t * 3);
       this.pos.copy(this.from).add(_bq.set(Math.sin(this.ph) * 1.5 * k, 1.2 * k, -2.2 * k)); this.root.scale.setScalar(this.K.scale * (1 - k * 0.7));
       if (k >= 1) { this.alive = false; this.dispose(); return; }
     } else if (this.mode === 'attack') {
       const k = Math.min(1, this.t / 0.3); this.pos.lerpVectors(this.from, HL, k);
       if (k >= 1) {
         const c = this.center(new V3());
-        if (this.kind === 'hornet') { fx.ichor(c, 10, 1); SND.hiss(c, 0.7); } else { fx.explosion(c, 0.3, false); SND.explosion(c, false); }
+        fx.explosion(c, 0.3, false); SND.explosion(c, false);
         hurtPlayer(this); this.alive = false; this.dispose(); return;
       }
     } else if (this.mode === 'leave') {
@@ -269,8 +272,7 @@ class HeadTarget {
     else {
       const look = arena.worldToLocal(tmpB.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpB.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
       const B = this.B;
-      if (this.kind === 'hornet') { const f = Math.sin(this.t * 2 * Math.PI * 22) * 0.9, f2 = Math.sin(this.t * 2 * Math.PI * 22 + 0.6) * 0.8; B.wL1.rotation.z = f; B.wR1.rotation.z = -f; B.wL2.rotation.z = f2; B.wR2.rotation.z = -f2; B.abd.rotation.x = 0.25 + Math.sin(this.t * 4) * 0.12; }
-      else { for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); } }
+      for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); }
       if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
       if (this.buzz) this.buzz.set(this.center(tmpB));
     }
@@ -282,30 +284,32 @@ class HeadTarget {
   // retira, más a menudo cuanto más esperas. El cabezazo cuenta en su sitio, no en el amago.
   animWasp(dt, t, idx, play) {
     const B = this.B, wait = this.mode === 'wait', toH = _bq.subVectors(HL, this.pos), dist = toH.length();
+    // amago: carga (se echa un poco atrás con el aguijón y la cabeza cargados), se lanza hacia ti y vuelve
     if (wait && play && !idx) {
       this.feintT -= dt * (1 + Math.min(2, this.waitT / 4));
-      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; SND.whoosh(this.center(_bw)); if (Math.random() < 0.5) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
-      if (this.feintOn) { this.feint += dt / 0.55; if (this.feint >= 1 || BAR.det === 'rising') { this.feintOn = false; this.feint = 0; this.feintT = rand(1.2, 2.6); } }
+      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
+      if (this.feintOn) {
+        const was = this.feint; this.feint += dt / 1.0;
+        if (was < 0.45 && this.feint >= 0.45) SND.whoosh(this.center(_bw));
+        if (this.feint >= 1 || BAR.det === 'rising') { this.feintOn = false; this.feint = 0; this.feintT = rand(1.2, 2.6); }
+      }
     } else { this.feintOn = false; this.feint = 0; }
-    const f = this.feintOn ? Math.sin(Math.PI * Math.min(1, this.feint)) : 0, reach = Math.max(0, dist - 0.3) * 0.75;
-    const zig = this.mode === 'approach' ? 0.12 : 0.025;
+    const p = this.feint, F = this.feintOn;
+    const lunge = !F ? 0 : p < 0.45 ? -smooth(p / 0.45) * 0.3 : p < 0.6 ? -0.3 + 1.3 * smooth((p - 0.45) / 0.15) : p < 0.75 ? 1 : 1 - smooth((p - 0.75) / 0.25);
+    if (this.mode !== 'attack' && this.mode !== 'flee') this.ch += ((F ? (p < 0.75 ? Math.min(1, p / 0.4) : 1 - smooth((p - 0.75) / 0.25)) : 0) - this.ch) * Math.min(1, dt * 12);
+    const ch = this.ch, reach = Math.max(0, dist - 0.3) * 0.75;
+    const zig = this.mode === 'approach' ? 0.12 : 0.025 * (1 - ch);
     this.off.set(Math.sin(t * 3.1 + this.ph) * zig, Math.sin(t * 4.3 + this.ph * 2) * zig * 0.6, Math.sin(t * 2.3 + this.ph) * zig * 0.5);
-    if (dist > 1e-3) this.off.addScaledVector(toH, f * reach / dist);
+    if (dist > 1e-3) this.off.addScaledVector(toH, (lunge > 0 ? lunge * reach : lunge * 0.3) / dist);
     this.root.position.add(this.off);
-    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((this.feintOn ? 1 : 0.85 + 0.08 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
+    if (this.mode === 'approach' || this.mode === 'wait') this.curl += ((F ? 1 : 0.85 + 0.08 * Math.sin(t * 2 + this.ph)) - this.curl) * Math.min(1, dt * 8);
     // el cuerpo, casi horizontal y girado hacia ti (solo se inclina un poco); la cabeza y el aguijón te apuntan
     const rp = this.root.position, lx = HL.x - rp.x, ly = HL.y - rp.y, lz = HL.z - rp.z, hd = Math.hypot(lx, lz), pitch = Math.atan2(ly, Math.max(1e-3, hd));
     this.root.rotation.set(0, 0, 0); this.root.rotation.order = 'YXZ'; this.root.rotation.y = Math.atan2(lx, lz); this.root.rotation.x = -clamp(pitch, -0.35, 0.35);
-    this.root.updateMatrixWorld(); const fc = this.root.worldToLocal(_bt.copy(head.p)); // tu cara, vista desde la avispa
-    const w = Math.sin(this.t * TAU * 24) * 0.95, w2 = Math.sin(this.t * TAU * 24 + 0.7) * 0.85;
-    B.wL1.rotation.z = w; B.wR1.rotation.z = -w; B.wL2.rotation.z = w2; B.wR2.rotation.z = -w2;
-    B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2; B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
-    // el aguijón sale de la punta del abdomen doblado y se orienta hacia tu cara
-    const abd = -this.curl * 2.45 + Math.sin(t * 5 + this.ph) * 0.05, sy = -0.024 - 0.012 * Math.cos(abd) + 0.118 * Math.sin(abd), sz = -0.04 - 0.012 * Math.sin(abd) - 0.118 * Math.cos(abd);
-    B.abd.rotation.x = abd; B.sting.rotation.x = clamp(wrapAng(Math.PI - Math.atan2(fc.y - sy, fc.z - sz) - abd), -2.3, 0.9);
-    const bite = 0.25 + 0.3 * Math.max(0, Math.sin(t * 12 + this.ph)) + this.curl * 0.3;
-    B.mandL.rotation.y = bite; B.mandR.rotation.y = -bite; B.jaw.rotation.x = 0.2 + 0.25 * Math.max(0, Math.sin(t * 7 + this.ph)) + f * 0.4;
-    B.head.rotation.x = -clamp(Math.atan2(fc.y - 0.012, fc.z - 0.05), -1.2, 1.2); B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08; B.head.rotation.z = Math.sin(t * 2.7) * 0.08;
+    flapStinger(B, this.t);
+    B.body.rotation.z = Math.sin(t * 3.1 + this.ph) * 0.2 * (1 - ch); B.body.position.y = Math.sin(t * 9 + this.ph) * 0.004;
+    poseStinger(B, this.root, t, this.ph, this.curl, ch);
+    B.head.rotation.y = Math.sin(t * 1.9 + this.ph) * 0.08 * (1 - ch); B.head.rotation.z = Math.sin(t * 2.7) * 0.08 * (1 - ch);
     if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
     if (this.buzz) this.buzz.set(this.center(tmpB));
   }
@@ -322,7 +326,6 @@ class HeadTarget {
       fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
     }
     else if (this.K.wasp) { fx.ichor(c, big ? 30 : 20, big ? 1.8 : 1.3); fx.glow(c, [0.6, 1, 0.3], big ? 0.5 : 0.3, 0.12); SND.squish(c); rigDebris(this.inst, c, big ? 2.4 : 1.7, 0, { main: M.robotStaticWasp }); }
-    else if (this.kind === 'hornet') { fx.ichor(c, 18, 1.2); fx.glow(c, [1, 0.8, 0.3], 0.3, 0.1); SND.squish(c); rigDebris(this.inst, c, 1.6, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }
     this.dispose();
   }
