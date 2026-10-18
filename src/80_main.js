@@ -4,7 +4,7 @@ let lastStandYaw = 0;
 const _jm = new THREE.Matrix4(), _js = new V3();
 let poseBuf = new Float32Array(25 * 16), radBuf = new Float32Array(25);
 const jointCache = new WeakMap();
-function readXR(frame) {
+function readXR(frame, t = 0) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
@@ -31,7 +31,7 @@ function readXR(frame) {
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
   }
-  anchorsFrame(frame, ref); roomFrame(frame, ref);
+  anchorsFrame(frame, ref); roomFrame(frame, ref, t);
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
@@ -167,7 +167,7 @@ const AMBX = { clank: 6 };
 renderer.setAnimationLoop((time, frame) => {
   const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
   if (!xrActive && !preview) return;
-  if (frame) readXR(frame); else previewInput(dt);
+  if (frame) readXR(frame, t); else previewInput(dt);
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
@@ -209,10 +209,10 @@ async function startXR(ar) {
   audioInit(); ensureRigs();
   try {
     const useAR = ar || XRSUP.ar;
-    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', 'plane-detection', 'mesh-detection'] });
+    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session);
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet()) openPause(); });

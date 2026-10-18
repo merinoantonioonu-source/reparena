@@ -8,7 +8,7 @@
 //  · las paredes y los muebles tapan lo que pasa por detrás (con un hueco en cada compuerta, por el que se ve el túnel).
 // Si la habitación no cumple los requisitos (o lo prefieres), «Colocada a mano»: pones tú el sitio de juego, las
 // compuertas, las trampillas y el marcador, y se recuerda entre sesiones. En VR o con el ajuste en No, todo como siempre.
-const ROOM = { walls: [], furn: [], feats: [], ceilY: 0, sig: '', refs: new WeakSet(), plan: null, applied: false, at: null, wait: 0, occl: new THREE.Group(), wallOcc: new THREE.Group() };
+const ROOM = { walls: [], furn: [], feats: [], ceilY: 0, sig: '', fp: '', read: false, pollT: -1e9, refs: new WeakSet(), plan: null, applied: false, at: null, wait: 0, occl: new THREE.Group(), wallOcc: new THREE.Group() };
 ROOM.occl.add(ROOM.wallOcc); ROOM.occl.visible = false; scene.add(ROOM.occl);
 const roomMode = () => arMode && !forestOn() ? settings.roomMode : 'off';
 const roomOn = () => { const m = roomMode(); return m === 'scan' ? ROOM.walls.length > 0 : m === 'manual' ? manualReady() : false; };
@@ -32,11 +32,20 @@ function hull2(pts) {
   return lo.slice(0, -1).concat(up.slice(0, -1));
 }
 
-/* ---------- Leer el escaneo (cada fotograma, pero solo se rehace si algo cambió) ---------- */
-function roomFrame(frame, ref) {
+/* ---------- Leer el escaneo ---------- */
+// Tiene que costar casi nada: las Quest pueden ir actualizando el escaneo sin parar (la malla de la habitación se
+// refina), y releerlo en cada fotograma daba tirones también en VR. Así que solo se lee cuando sirve (realidad mixta con
+// la escala de habitación, fuera del bosque y fuera de la partida, salvo la primera vez), como mucho una vez por
+// segundo, sin copiar vértices; y si el resultado no cambia de verdad (al centímetro), no se toca nada más.
+// featOff: la sesión empezó con la escala de habitación en No y no pidió el escaneo (hay que volver a entrar)
+function roomSessionStart(session) { const f = session && session.enabledFeatures; Object.assign(ROOM, { sig: '', fp: '', read: false, pollT: -1e9, featOff: !!f && !f.includes('plane-detection') && !f.includes('mesh-detection') }); }
+const roomWants = () => arMode && settings.roomMode !== 'off' && !forestOn() && (!ROOM.read || !['play', 'rest', 'paused'].includes(state));
+function roomFrame(frame, ref, t) {
+  // al recentrar, las poses cambian: se vuelve a leer todo (al empezar otra sesión, también: roomSessionStart)
+  if (!ROOM.refs.has(ref)) { ROOM.refs.add(ref); if (ref.addEventListener) ref.addEventListener('reset', () => { ROOM.sig = ''; ROOM.fp = ''; ROOM.pollT = -1e9; }); }
+  if (!roomWants() || t - ROOM.pollT < 1) return;
   const planes = frame.detectedPlanes, meshes = frame.detectedMeshes; if (!planes && !meshes) return;
-  // al recentrar, las poses cambian: se vuelve a leer todo
-  if (!ROOM.refs.has(ref)) { ROOM.refs.add(ref); if (ref.addEventListener) ref.addEventListener('reset', () => { ROOM.sig = ''; }); }
+  ROOM.pollT = t;
   let sig = '';
   if (planes) planes.forEach(p => { sig += (p.lastChangedTime || 0) + ','; });
   sig += '|'; if (meshes) meshes.forEach(m => { sig += (m.lastChangedTime || 0) + ','; });
@@ -63,11 +72,18 @@ function roomFrame(frame, ref) {
   if (meshes) meshes.forEach(me => {
     const L = roomLabel(me); if (NOT_FURN.includes(L) || !me.vertices || me.vertices.length < 9) return;
     const M = poseMatrix(frame, me.meshSpace, ref); if (!M) return;
-    const v = me.vertices, pts = []; let y0 = Infinity, y1 = -Infinity;
-    for (let i = 0; i + 2 < v.length; i += 3) { const q = new V3(v[i], v[i + 1], v[i + 2]).applyMatrix4(M); pts.push(q); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+    // la caja del mueble en su propio espacio, en una pasada y sin crear nada; luego sus 8 esquinas en el mundo
+    const v = me.vertices, lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i + 2 < v.length; i += 3) for (let k = 0; k < 3; k++) { const c = v[i + k]; if (c < lo[k]) lo[k] = c; if (c > hi[k]) hi[k] = c; }
+    const pts = []; let y0 = Infinity, y1 = -Infinity;
+    for (let c = 0; c < 8; c++) { const q = new V3(c & 1 ? hi[0] : lo[0], c & 2 ? hi[1] : lo[1], c & 4 ? hi[2] : lo[2]).applyMatrix4(M); pts.push(q); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
     if (y1 < 0.05 || y0 > 2.2) return; // lo que cuelga del techo no estorba
-    furn.push({ poly: hull2(pts), y0: Math.max(0, y0), y1, label: L, mesh: { v: Float32Array.from(v), idx: me.indices ? Array.from(me.indices) : null, M: M.clone() } });
+    furn.push({ poly: hull2(pts), y0: Math.max(0, y0), y1, label: L });
   });
+  ROOM.read = true;
+  // ¿cambió algo de verdad? (al centímetro)
+  const r = x => Math.round(x * 100), fp = [walls.map(w => [w.a.x, w.a.z, w.b.x, w.b.z, w.y1].map(r).join(',')).join(';'), feats.map(w => [w.a.x, w.a.z, w.b.x, w.b.z].map(r).join(',')).join(';'), furn.map(f => f.poly.map(([x, z]) => r(x) + ',' + r(z)).join(' ') + '^' + r(f.y1)).join(';'), r(ceil)].join('|');
+  if (fp === ROOM.fp) return; ROOM.fp = fp;
   Object.assign(ROOM, { walls, furn, feats, ceilY: ceil, applied: false, plan: null });
   buildFurnOccluders();
 }
@@ -181,8 +197,7 @@ function buildFurnOccluders() {
   clearOccl(ROOM.occl);
   for (const f of ROOM.furn) {
     let g;
-    if (f.mesh && f.mesh.idx && f.mesh.idx.length >= 3) { g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(Array.from(f.mesh.v), 3)); g.setIndex(f.mesh.idx); g.applyMatrix4(f.mesh.M); }
-    else if (f.poly.length >= 3) g = prismGeo(f.poly, f.y0, f.y1);
+    if (f.poly.length >= 3) g = prismGeo(f.poly, f.y0, f.y1);
     if (g) ROOM.occl.add(occMesh(g));
   }
 }
@@ -373,7 +388,8 @@ function roomRows(back) {
   else if (m === 'manual') {
     if (manualReady()) { ok = true; txt = `Colocada a mano: ${RSET.gates.length} ${RSET.gates.length === 1 ? 'compuerta' : 'compuertas'}, ${RSET.hatches.length} ${RSET.hatches.length === 1 ? 'trampilla' : 'trampillas'}${RSET.board ? ' y el marcador' : ''}. Ponte en el círculo del suelo para jugar`; btns.push(place('Recolocar')); }
     else { txt = 'Aún no has colocado nada: pon el sitio de juego, las compuertas, las trampillas y el marcador'; btns.push(place('Colocar a mano', 'primary')); }
-  } else if (!ROOM.walls.length) { txt = 'Habitación sin escanear: escanéala para que las compuertas salgan de tus paredes, o colócala a mano'; btns.push(place('Colocar a mano')); }
+  } else if (ROOM.featOff && !ROOM.walls.length) { txt = 'Para usar el escaneo, sal y vuelve a entrar en realidad mixta (al entrar estaba en «No»). O colócala a mano'; btns.push(place('Colocar a mano')); }
+  else if (!ROOM.walls.length) { txt = 'Habitación sin escanear: escanéala para que las compuertas salgan de tus paredes, o colócala a mano'; btns.push(place('Colocar a mano')); }
   else if (!n) { txt = `La habitación no cumple los requisitos: ${P && P.why ? P.why : 'no cabe ninguna compuerta'}. Hace falta una pared libre de al menos ${fmtNum(2 * 1.85 * (P ? P.gs : 0.55) + 0.1)} m de ancho a 1,7–7,5 m delante de ti, con el camino despejado. Puedes colocarla a mano`; btns.push(place('Colocar a mano', 'primary')); }
   else { ok = true; txt = `Habitación: ${ROOM.walls.length} ${ROOM.walls.length === 1 ? 'pared' : 'paredes'}, ${ROOM.furn.length} ${ROOM.furn.length === 1 ? 'mueble' : 'muebles'} · ${n} ${n === 1 ? 'compuerta' : 'compuertas'} en tus paredes`; }
   rows.push({ t: 'text', text: txt, color: ok ? '#3cf0c6' : m === 'off' ? '#a49fc8' : '#ffd166' });
