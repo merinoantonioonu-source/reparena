@@ -256,6 +256,32 @@ const SND = {
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
   },
+  // espadas: silbido del tajo (más agudo y fuerte cuanto más rápido), choque, impacto, bloqueo y corte
+  swordSwish(pos, laser, v) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.15, gain: clamp(0.35 + v * 0.12, 0.35, 1), ref: 0.8 });
+    if (laser) { tone(o, { type: 'sawtooth', f: 110, to: 70 + v * 25, a: 0.02, d: 0.28, gain: 0.12 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 2, a: 0.03, d: 0.25, gain: 0.15 }); }
+    else noise(o, { type: 'bandpass', f: 1200 + v * 300, to: 600, q: 1.6, a: 0.04, d: 0.22, gain: 0.45 });
+  },
+  swordClang(pos, laser, v = 1) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: clamp(0.3 + v * 0.15, 0.3, 1), ref: 0.8 });
+    if (laser) { tone(shaper(o, true), { type: 'sawtooth', f: 160, to: 90, d: 0.18, gain: 0.25 }); for (let i = 0; i < 8; i++) noise(o, { t: Math.random() * 0.15, type: 'highpass', f: 3000, d: 0.015, gain: 0.25 }); return; }
+    [1870, 2630, 3410, 4980].forEach((f, i) => tone(o, { type: 'triangle', f: f * rand(0.97, 1.03), d: 0.5 - i * 0.08, gain: 0.07 })); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 });
+  },
+  swordHit(pos, laser) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.4, gain: 1, ref: 1 });
+    if (laser) { tone(shaper(o, true), { type: 'sawtooth', f: 220, to: 60, d: 0.3, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1800, to: 300, q: 1.5, d: 0.3, gain: 0.4 }); for (let i = 0; i < 10; i++) noise(o, { t: Math.random() * 0.25, type: 'highpass', f: 2500, d: 0.02, gain: 0.3 }); return; }
+    noise(o, { brown: true, f: 1400, to: 200, d: 0.25, gain: 0.7 }); [980, 1520, 2340].forEach((f, i) => tone(o, { type: 'triangle', f, d: 0.35 - i * 0.07, gain: 0.08 })); noise(o, { type: 'highpass', f: 3500, d: 0.06, gain: 0.3 });
+  },
+  swordBlock(pos, laser) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 1, ref: 1 });
+    tone(shaper(o, true), { type: 'square', f: laser ? 140 : 90, to: 45, d: 0.35, gain: 0.3 }); noise(o, { brown: true, f: 900, to: 150, d: 0.3, gain: 0.6 });
+    if (laser) for (let i = 0; i < 12; i++) noise(o, { t: Math.random() * 0.3, type: 'highpass', f: 3000, d: 0.02, gain: 0.3 });
+    else [1240, 1980, 2890, 4100].forEach((f, i) => tone(o, { type: 'triangle', f, d: 0.8 - i * 0.12, gain: 0.08 }));
+  },
+  swordSlice(pos, laser) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.9, ref: 0.8 });
+    noise(o, { type: 'bandpass', f: laser ? 1500 : 2600, to: laser ? 300 : 800, q: 1.4, d: 0.18, gain: 0.55 }); tone(o, { type: laser ? 'sawtooth' : 'triangle', f: laser ? 300 : 700, to: laser ? 80 : 200, d: 0.2, gain: 0.15 });
+  },
   // bosque: un búho que ulula a lo lejos y una rama que cruje
   owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
   creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
@@ -295,6 +321,19 @@ function buzzLoop(kind, pos) {
     else { const w = L.osc('triangle', f0 * 7.1), wg = C.createGain(); wg.gain.value = 0.05; w.connect(wg).connect(L.out); }
     L.freqs = [a, b];
   });
+}
+// Zumbido de la espada láser: grave y continuo; al moverla sube de tono y de volumen
+function saberLoop(pos) {
+  if (!sndOK()) return null;
+  const L = new Loop(pos, 0.12, (L, C) => {
+    const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600; lp.connect(L.out);
+    const a = L.osc('sawtooth', 88), b = L.osc('sawtooth', 89.3), g = C.createGain(); g.gain.value = 0.5; a.connect(g); b.connect(g); g.connect(lp);
+    const c = L.osc('sine', 176), cg = C.createGain(); cg.gain.value = 0.3; c.connect(cg).connect(lp);
+    L.oscs = [a, b, c]; L.lp = lp;
+  });
+  const set = L.set.bind(L);
+  L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.6), T, 0.03)); L.lp.frequency.setTargetAtTime(600 + k * 1800, T, 0.03); L.out.gain.setTargetAtTime(0.12 + k * 0.25, T, 0.03); };
+  return L;
 }
 function humLoop(pos) {
   if (!sndOK()) return null;

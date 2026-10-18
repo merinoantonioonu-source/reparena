@@ -17,6 +17,14 @@ const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Movimientos de cada ejercicio: los de la cabeza (amebas) y los de las manos (diamantes)
 const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
 const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
+// Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
+// bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
+const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
+const SWORD_CUTS = { squat: ['cutLow', 'cutSide'], lunge: ['cutFwd', 'cutLow', 'cutSide'], jump: ['cutHigh', 'cutSide'] };
+const CUT_POSE = { cutLow: '¡Agáchate para cortarlo!', cutFwd: '¡Da un paso adelante!', cutSide: '¡Inclínate hacia ese lado!', cutHigh: '¡Salta para cortarlo!' };
+const arrowTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(112, 64); x.lineTo(62, 18); x.lineTo(62, 46); x.lineTo(16, 46); x.lineTo(16, 82); x.lineTo(62, 82); x.lineTo(62, 110); x.closePath(); x.fill(); return c; })());
+const cutGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18), cutHalfGeo = new THREE.BoxGeometry(0.09, 0.18, 0.18), cutShellGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+const cutHalfMat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
 const comboMoves = () => String(settings[{ stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase]] || '').split(',').filter(Boolean);
 const GEM_R = 0.15; // radio de toque del diamante (más el grosor de los dedos)
 
@@ -85,7 +93,7 @@ const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { valu
 function moveSpec(move) {
   const r = settings.tchRing / 100, S = TCH.ref, D = arMode ? 4 : 6.5, side = Math.random() < 0.5 ? -1 : 1;
   const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
-  const o = { move, part: HAND_MOVES.includes(move) ? 'hand' : 'head', hand: side < 0 ? 'left' : 'right', n: new V3(0, 0, 1), r, hold: 0 };
+  const o = { move, part: CUT_MOVES.includes(move) ? 'cut' : HAND_MOVES.includes(move) ? 'hand' : 'head', hand: side < 0 ? 'left' : 'right', n: new V3(0, 0, 1), r, hold: 0 };
   const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro de la ameba
   if (move === 'lunge') { const ld = settings.lungeDepth / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
@@ -99,6 +107,10 @@ function moveSpec(move) {
     o.pos = move === 'push' ? new V3(px, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
     if (move === 'plank') { o.r *= 1.15; o.hold = settings.plankHold; }
   } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
+  else if (move === 'cutLow') o.pos = new V3(side * rand(0.1, 0.3), S - sd - 0.3, -0.55);
+  else if (move === 'cutFwd') o.pos = new V3(side * rand(0, 0.2), S - 0.4, -1.05);
+  else if (move === 'cutSide') o.pos = new V3(side * 0.8, S - 0.35, -0.35);
+  else if (move === 'cutHigh') o.pos = new V3(side * rand(0, 0.2), S + 0.45 + jh, -0.55);
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
     const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
     if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
@@ -108,6 +120,13 @@ function moveSpec(move) {
       o.pos = hip.clone().add(new V3(R * Math.sin(th) * Math.sin(ph), R * Math.sin(th) * Math.cos(ph), R * Math.cos(th)));
       o.n.set(Math.cos(th) * Math.sin(ph), Math.cos(th) * Math.cos(ph), -Math.sin(th)).normalize().negate(); // de cara a ti
     }
+  }
+  if (o.part === 'cut') { // la flecha: hacia dónde hay que cortar (en el plano del bloque, que te mira)
+    const dirs = { cutLow: [-90, -90, 0, 180, -45, -135], cutFwd: [-90, 0, 180], cutSide: [-90, 90, side > 0 ? 0 : 180], cutHigh: [-90, 90, -45, -135] }[move];
+    o.ang = pick(dirs) * Math.PI / 180; o.yaw = Math.atan2(-o.pos.x, -o.pos.z);
+    const c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+    o.normal = new V3(s, 0, c); o.cutDir = new V3(c * Math.cos(o.ang), Math.sin(o.ang), -s * Math.cos(o.ang));
+    if (settings.sword !== 'two') o.hand = settings.swordHand;
   }
   const far = isFloor() ? 3.5 : D;
   o.from = isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
@@ -151,6 +170,7 @@ function touchHint(text) { if (TCH.hintT > 0) return; TCH.hintT = 1.6; say(text,
 /* ---------- Objetivo ---------- */
 class TouchTarget {
   constructor(move, arriveAt) {
+    if (CUT_MOVES.includes(move) && !swordActive()) move = 'punch'; // sin mandos no hay espada: diamante
     Object.assign(this, moveSpec(move));
     Object.assign(this, { alive: true, judged: false, mode: 'approach', spawnT: TCH.clock, arriveAt, win: settings.tchWindow, held: 0, outT: 0, popT: 0, ph: rand(0, TAU), prevPos: this.from.clone() });
     const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
@@ -163,6 +183,14 @@ class TouchTarget {
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
       this.root.quaternion.setFromUnitVectors(_tz, this.n);
+    } else if (this.part === 'cut') { // bloque metálico con aristas que brillan y una flecha: corta en su dirección
+      this.mat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
+      this.box = new THREE.Mesh(cutGeo, this.mat); this.box.castShadow = true; this.root.add(this.box);
+      this.shellMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      this.root.add(new THREE.Mesh(cutShellGeo, this.shellMat));
+      this.arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, color: col, transparent: true, depthWrite: false, toneMapped: false });
+      const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), this.arrowMat); ar.position.z = 0.092; ar.rotation.z = this.ang; this.root.add(ar);
+      this.root.rotation.y = this.yaw;
     } else {
       this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false });
       this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.085, 0.125, 0.085); this.root.add(this.gem);
@@ -174,6 +202,13 @@ class TouchTarget {
   // ¿Está tocando? Cabeza: su centro dentro del hueco de la ameba (también si la cruza entre dos fotogramas);
   // mano: la que pide el diamante, con cualquier dedo, nudillo o la muñeca, en todo su recorrido desde el fotograma anterior
   touching() {
+    if (this.part === 'cut') { // la espada lo atraviesa deprisa y en la dirección de la flecha, en la postura que pide
+      const side = swordCutTest(this); if (!side) return false;
+      const S = TCH.ref, sd = settings.squatDepth / 100, jh = settings.jumpHeight / 100;
+      const ok = { cutLow: HL.y < S - sd * 0.6, cutFwd: HL.z < -0.12, cutSide: HL.x * Math.sign(this.pos.x) > 0.1, cutHigh: HL.y > S + jh * 0.5 }[this.move];
+      if (!ok) { touchHint(CUT_POSE[this.move]); haptic(side, 0.2, 20); return false; }
+      this.by = side; return true;
+    }
     if (this.part === 'head') {
       _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion); const lim = this.r; // todo el hueco que se ve
       _tv.subVectors(HL, this.root.position); const dp = _tv.dot(_tw); _tv.addScaledVector(_tw, -dp); this.rad = _tv.length() / lim;
@@ -237,6 +272,9 @@ class TouchTarget {
       U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 1.4 : 1) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
       if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
+    } else if (this.box) {
+      const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
+      if (this.mode !== 'pass') this.shellMat.opacity = 0.14 + pulse * 0.25 + (this.mode === 'wait' ? 0.1 : 0);
     } else if (this.gem) {
       this.gem.rotation.y += dt * 2.2; this.gem.rotation.x = Math.sin(t * 1.3 + this.ph) * 0.3;
       const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.085 * s, 0.125 * s, 0.085 * s);
@@ -257,20 +295,36 @@ class TouchTarget {
       fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
       this.mode = 'burst'; this.popT = 0; return;
     }
+    if (this.part === 'cut') { this.split(c, rgb); return; }
+    haptic(this.by || this.hand, 0.5, 50);
     const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos); A.hitD = A.hitP.distanceTo(HL);
     SND.pop(c, false); fx.droplets(c, 16, rgb, 1.6, 0.03); fx.sparks(c, 12, rgb, 1.6, 0.025); fx.glow(c, rgb, 0.4, 0.15);
+    this.dispose();
+  }
+  // cortado: se parte en dos mitades por la línea del tajo, que salen despedidas
+  split(c, rgb) {
+    const laser = settings.swordKind === 'laser', q = new Q4();
+    this.root.updateMatrixWorld(true); this.root.matrixWorld.decompose(_ta, q, _tb);
+    const zq = new Q4().setFromAxisAngle(_tz, this.ang + Math.PI / 2), hq = q.clone().multiply(zq);
+    const perp = new V3(1, 0, 0).applyQuaternion(hq), dir = new V3(0, 1, 0).applyQuaternion(hq);
+    for (const s of [-1, 1]) {
+      const m = new THREE.Mesh(cutHalfGeo, cutHalfMat); m.castShadow = true; m.quaternion.copy(hq); m.position.copy(c).addScaledVector(perp, s * 0.05);
+      addDebris(m, perp.clone().multiplyScalar(s * rand(1, 1.6)).addScaledVector(dir, -0.6).add(new V3(0, 0.8, 0)), new V3(rand(-6, 6), rand(-6, 6), rand(-6, 6)), 1.6, false);
+    }
+    haptic(this.by, 0.7, 60); SND.swordSlice(c, laser);
+    fx.sparks(c, 18, laser ? rgb : [1, 0.8, 0.5], 2.2, 0.03); fx.glow(c, rgb, 0.45, 0.12);
     this.dispose();
   }
   miss() {
     if (this.judged) return; this.judged = true; this.mode = 'pass'; this.popT = 0;
     this.dir = this.pos.clone().sub(this.from).normalize(); if (this.ring) this.mat.uniforms.uColor.value.setHex(0xff3b5c); else this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
     fx.sparks(this.center(new V3()), 8, [1, 0.25, 0.3], 1, 0.02);
-    if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido de la ameba!' : this.part === 'head' ? '¡Mete la cabeza en la ameba!' : `¡Toca el diamante con la ${HAND_NAME[this.hand]}!`, '#ff3b5c', 1.1); }
+    if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido de la ameba!' : this.part === 'head' ? '¡Mete la cabeza en la ameba!' : this.part === 'cut' ? '¡Corta el bloque con la espada!' : `¡Toca el diamante con la ${HAND_NAME[this.hand]}!`, '#ff3b5c', 1.1); }
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
     if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
-    this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose();
+    this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose(); if (this.box) { this.shellMat.dispose(); this.arrowMat.dispose(); }
   }
 }
 
@@ -279,10 +333,11 @@ function buildTouchWave(i) {
   const n = waveReps(i), list = [];
   if (settings.exercise === 'combo') {
     const mv = comboMoves();
-    for (let k = 0; k < n; k++) list.push({ move: settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv), hp: 1 });
+    for (let k = 0; k < n; k++) { let m = settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv); if (swordSet() && (m === 'punch' || m === 'reach')) m = pick(CUT_MOVES); list.push({ move: m, hp: 1 }); }
   } else {
     const [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
-    for (let k = 0; k < n; k++) list.push({ move: hand.length && Math.random() * 100 < settings.tchHands ? pick(hand) : pick(head), hp: 1 });
+    const hm = swordSet() && SWORD_CUTS[settings.exercise] ? SWORD_CUTS[settings.exercise] : hand;
+    for (let k = 0; k < n; k++) list.push({ move: hm.length && Math.random() * 100 < settings.tchHands ? pick(hm) : pick(head), hp: 1 });
   }
   return list;
 }

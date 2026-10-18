@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -554,7 +554,89 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (let i = 0; i < 2400 && RA.state !== 'end'; i++) { const ph = i % 160; XRS.headY = ph < 70 ? 1.38 : 1.7; XRS.trig = ph > 100 && ph < 104 ? 'right' : ph > 120 && ph < 124 ? 'left' : null; frame(1, 16, xrFrame); }
   log('pistol XR: shots', RA.stats.shots, 'hits', RA.stats.hits, 'kills', RA.stats.kills, 'reps', RA.stats.reps, 'state', RA.state);
   if (RA.stats.shots < 4) errors.push('pistolas XR: el gatillo de los mandos no dispara');
+  { const strong = (XRS.haptics || []).filter(h => h[1] >= 0.7).length; log('pistol XR: strong haptic pulses', strong); if (strong < RA.stats.shots - 1) errors.push('pistolas XR: el mando no vibra al disparar'); }
   XRS.controllers = false; XRS.trig = null; RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Espadas en XR con mandos ----
+  // La hoja sale del agarre por −Z: para un tajo se coloca el mando de modo que la hoja apunte a `center` y se barre en `sweep`
+  const _Z = new THREE.Vector3(0, 0, -1);
+  const holdSword = (side, center, bladeDir, sweep, s) => { const p = center.clone().addScaledVector(bladeDir, -0.55).addScaledVector(sweep, s); XRS.ctrl = XRS.ctrl || {}; XRS.ctrl[side] = { p, q: new THREE.Quaternion().setFromUnitVectors(_Z, bladeDir.clone().normalize()) }; };
+  const restSword = side => holdSword(side, new THREE.Vector3(side === 'left' ? -0.3 : 0.3, 1.0, -0.6), new THREE.Vector3(0, -0.3, -1).normalize(), new THREE.Vector3(1, 0, 0), 0);
+  const swingAt = (side, c, n = 8) => { const to = c.clone().sub(new THREE.Vector3(0, c.y, 0)); to.y = 0; to.normalize(); const sw = new THREE.Vector3(to.z, 0, -to.x); for (let k = 0; k <= n; k++) { holdSword(side, c, to, sw, -0.45 + 0.9 * k / n); frame(1, 16, xrFrame); } };
+  for (const [name, kind, charge, block] of [['metálica con carga', 'metal', true, 0], ['láser sin cargar', 'laser', false, 0], ['metálica bloqueando', 'metal', true, 1]]) {
+    const reps_ = block ? 12 : 6;
+    for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: kind, swordBlock: block, swordSpeed: 1.6, pistol: 0, lives: 0, waves: 1, repsWave: reps_, rest: 0, walkTime: 6, maxAlive: 2, spawnGap: 1, squatDepth: 25 })) RA.setSetting(k, v);
+    XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(250, 16, xrFrame);
+    const vis = RA.SWD.s.right.g.visible && !RA.SWD.s.left.g.visible && !RA.gloves.right.palm.visible;
+    let parries = 0, wasStun = new Set(), squats = 0;
+    let swingCool = 0;
+    for (let i = 0; i < 3600 && RA.state !== 'end'; i++) {
+      const ph = i % 150; let crouch = charge && ph < 60; swingCool--;
+      const R = RA.enemies.filter(e => e.alive && e.type === 'robot' && e.state !== 'emerge');
+      for (const e of R) if (e.stunT > 0 && !wasStun.has(e)) { wasStun.add(e); parries++; }
+      const w = block && R.find(e => e.zone && e.state === 'windup' && e.st > 0.3);
+      if (w) { // bloqueo: la hoja en la marca, agachado si es medio o bajo
+        crouch = w.zone !== 'high'; XRS.headY = crouch ? (w.zone === 'low' ? 1.32 : 1.45) : 1.7; frame(1, 16, xrFrame);
+        const p = RA.blockPoint(w, new THREE.Vector3()); holdSword('right', p, new THREE.Vector3(1, 0, -0.2).normalize(), new THREE.Vector3(0, 1, 0), 0); frame(1, 16, xrFrame); continue;
+      }
+      XRS.headY = crouch ? 1.38 : 1.7;
+      const near = R.find(e => Math.hypot(e.pos.x, e.pos.z) < 1.7);
+      if (near && !crouch && swingCool <= 0 && (block ? near.stunT > 0 : !charge || RA.SWD.perf.length)) { swingCool = 30; const c = RA.arena.localToWorld(new THREE.Vector3(near.pos.x, 1.2, near.pos.z)); swingAt('right', c); restSword('right'); continue; }
+      restSword('right'); frame(1, 16, xrFrame);
+    }
+    const strong = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.45).length, any = XRS.haptics.filter(h => h[0] === 'right').length;
+    log(`sword XR ${name}: visible ${vis} state ${RA.state} reps ${RA.stats.reps} kills ${RA.stats.kills} hits ${RA.stats.hits} taken ${RA.stats.taken} parries ${parries} haptics strong ${strong} any ${any}`);
+    if (!vis) errors.push(`espada XR (${name}): no se ve la espada en la mano derecha`);
+    if (charge && !block && (RA.state !== 'end' || RA.stats.kills < 2)) errors.push(`espada XR (${name}): los tajos cargados no derriban robots`);
+    if (!charge && RA.stats.kills) errors.push(`espada XR (${name}): sin cargar con sentadillas no debería hacer daño`);
+    if (!charge && !any) errors.push(`espada XR (${name}): el mando no vibra al chocar la hoja`);
+    if (charge && !block && !strong) errors.push(`espada XR (${name}): el mando no vibra al golpear`);
+    if (block && (parries < 2 || RA.stats.kills < 1)) errors.push(`espada XR (${name}): no se paran los golpes con la espada o no hay contraataque`);
+    RA.exitAll(); frame(2, 16, xrFrame);
+  }
+  // espada en una mano y bláster en la otra; o dos espadas
+  for (const [sw, pis] of [['one', 1], ['two', 0]]) {
+    for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat', sword: sw, swordHand: 'right', pistol: pis, lives: 0, waves: 1, repsWave: 6 })) RA.setSetting(k, v);
+    XRS.controllers = true; XRS.headY = 1.7; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(250, 16, xrFrame); const a0 = RA.GUN.ammo, c0 = RA.SWD.perf.length; XRS.headY = 1.38; frame(60, 16, xrFrame); XRS.headY = 1.7; frame(60, 16, xrFrame);
+    const L = RA.SWD.s.left.g.visible, Rv = RA.SWD.s.right.g.visible, bl = RA.BLASTERS.left.visible, br = RA.BLASTERS.right.visible;
+    log(`swords ${sw}${pis ? ' + blaster' : ''}: left sword ${L} right sword ${Rv} left blaster ${bl} right blaster ${br} · squat → charge ${c0}→${RA.SWD.perf.length} ammo ${a0}→${RA.GUN.ammo}`);
+    if (sw === 'one' ? (L || !Rv || !bl || br || RA.GUN.ammo <= a0) : (!L || !Rv)) errors.push(`espadas (${sw}${pis ? ' y bláster' : ''}): no se reparten bien las manos`);
+    if (RA.SWD.perf.length <= c0) errors.push('espadas: la sentadilla no carga la hoja');
+    RA.exitAll(); frame(2, 16, xrFrame);
+  }
+  RA.setSetting('pistol', 0);
+  // Toques con espada: bloques que se cortan en la dirección de su flecha, en la postura que piden
+  for (const [name, mode, want] of [['bien', 'ok', 6], ['al revés de la flecha', 'reverse', 0], ['sin agacharse ni inclinarse', 'pose', 0], ['con una estocada recta', 'stab', 0]]) {
+    for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 2.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v);
+    XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(250, 16, xrFrame);
+    const moves = new Set(), deb0 = RA.debris.length; let maxDeb = 0;
+    for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
+      const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
+      XRS.headY = 1.7; XRS.headX = 0;
+      if (t) {
+        moves.add(t.move);
+        if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; }
+        frame(1, 16, xrFrame);
+        const c = RA.arena.localToWorld(t.pos.clone()), dir = t.normal.clone().negate(), sw = t.cutDir.clone().multiplyScalar(mode === 'reverse' ? -1 : 1);
+        holdSword('right', c.clone().addScaledVector(t.normal, 0.9), dir, sw, -0.3); frame(1, 16, xrFrame); // se prepara delante, sin tocar el bloque
+        if (mode === 'stab') for (let k = 0; k <= 6; k++) { holdSword('right', c.clone().addScaledVector(t.normal, 0.6 - 0.9 * k / 6), dir, sw, 0); frame(1, 16, xrFrame); }
+        else for (let k = 0; k <= 6; k++) { holdSword('right', c, dir, sw, -0.3 + 0.6 * k / 6); frame(1, 16, xrFrame); }
+        holdSword('right', c.clone().addScaledVector(t.normal, 0.9), dir, sw, 0.3); frame(1, 16, xrFrame); // retira la hoja hacia ti, sin volver a pasar por el bloque
+        for (let k = 0; k < 20; k++) frame(1, 16, xrFrame); continue; // la hoja se queda retirada hasta el siguiente
+      }
+      frame(1, 16, xrFrame); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
+    }
+    const hits = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.7 && h[2] === 60).length;
+    log(`sword touch ${name}: cuts ${RA.stats.reps} misses ${RA.stats.taken} moves ${[...moves].join(',')} halves ${maxDeb} slice haptics ${hits}`);
+    if (RA.stats.reps !== want) errors.push(`Toques con espada (${name}): ${RA.stats.reps} cortes (deberían ser ${want})`);
+    if (want && (moves.size < 2 || maxDeb < 2 || hits < want)) errors.push(`Toques con espada (${name}): faltan tipos de bloque, mitades o vibración`);
+    RA.exitAll(); frame(2, 16, xrFrame);
+  }
+  XRS.headX = 0;
+  XRS.ctrl = null; XRS.controllers = false; RA.setSetting('sword', 'off');
 
   // ---- Toques en XR: abdominales boca arriba; el entorno mira hacia los pies y la cabeza alcanza los aros ----
   for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'abs', lives: 0, waves: 1, repsWave: 5, tchHands: 0, tchArrive: 2, tchGap: 2.5, tchWindow: 1.5 })) RA.setSetting(k, v);
@@ -625,7 +707,8 @@ function makeXRFrame() {
   const mkHand = side => { const m = new Map(); HJ.forEach(n => m.set(n, { name: n, side })); m.size; return m; };
   const handL = mkHand('left'), handR = mkHand('right');
   const sources = [{ handedness: 'left', hand: handL, targetRaySpace: { ray: 'left' } }, { handedness: 'right', hand: handR, targetRaySpace: { ray: 'right' } }];
-  const pads = { left: { buttons: [{ pressed: false }] }, right: { buttons: [{ pressed: false }] } };
+  // mandos con vibración: cada pulso queda apuntado en XRS.haptics
+  const pads = Object.fromEntries(['left', 'right'].map(h => [h, { buttons: [{ pressed: false }], hapticActuators: [{ pulse(v, ms) { (XRS.haptics = XRS.haptics || []).push([h, v, ms]); return Promise.resolve(true); } }] }]));
   const ctrls = ['left', 'right'].map(h => ({ handedness: h, gripSpace: { grip: h }, targetRaySpace: { ray: h }, gamepad: pads[h] }));
   return () => {
     const s = RA.renderer.xr.getSession(), src = XRS.controllers ? ctrls : sources; if (s) s.inputSources = src;
@@ -634,7 +717,7 @@ function makeXRFrame() {
       session: s || { inputSources: src },
       getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
-      getPose(space) { if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getPose(space) { if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);

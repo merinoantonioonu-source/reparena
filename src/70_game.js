@@ -48,12 +48,14 @@ const ROBOT_KIND = {
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
+// Con espadas se acercan hasta tenerte al alcance de la hoja
+const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
   let best = null, bestC = Infinity;
   for (let row = 0; row < 3 && !best; row++) {
-    const R = r.K.stop + row * ROW_GAP;
+    const R = robotStop(r.K) + row * ROW_GAP;
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
       _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
       if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
@@ -61,7 +63,7 @@ function robotSlot(r) {
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
     }
   }
-  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(r.K.stop + 3 * ROW_GAP) };
+  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(robotStop(r.K) + 3 * ROW_GAP) };
   r.slot.copy(best.p); r.row = best.row; r.slotOk = true;
 }
 const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
@@ -137,6 +139,8 @@ class Robot {
   }
   update(dt, t) {
     const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
+    // aturdido tras un bloqueo: tiembla, echa chispas y no ataca; tu contraataque hace el doble
+    if (this.stunT > 0) { this.stunT -= dt; this.stagger = Math.max(this.stagger, 0.5); this.stunFx = (this.stunFx || 0) - dt; if (this.stunFx <= 0) { this.stunFx = 0.25; fx.electric(this.B.head.getWorldPosition(tmpB), 6); } }
     // espasmos inquietantes
     this.twitchT -= dt;
     if (this.twitchT <= 0) { this.twitchT = rand(2.5, 6); this.twitch = 1; this.twitchYaw = rand(-0.9, 0.9); }
@@ -160,7 +164,7 @@ class Robot {
         const to = _rd.subVectors(this.slot, this.pos); to.y = 0; const d = to.length();
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play') { this.state = 'windup'; this.st = 0; SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
         to.divideScalar(d);
@@ -188,18 +192,24 @@ class Robot {
         break;
       }
       case 'windup': {
-        faceTo = faceP; this.arm = Math.min(1, this.st / 0.6); this.jaw = 1; this.twist = lerp(this.twist, 0.5, Math.min(1, dt * 8));
-        if (this.st > 0.75) { this.state = 'strike'; this.st = 0; this.knockFrom.copy(this.pos); }
+        // con bloqueos, el golpe tarda más en llegar: da tiempo a poner la espada en la marca (y a agacharse)
+        const wind = this.zone ? 1.25 : 0.75;
+        faceTo = faceP; this.arm = Math.min(1, this.st / (wind * 0.8)); this.jaw = 1; this.twist = lerp(this.twist, 0.5, Math.min(1, dt * 8));
+        if (this.zone) blockStep(this, t);
+        if (this.st > wind) { this.state = 'strike'; this.st = 0; this.knockFrom.copy(this.pos); }
         break;
       }
       case 'strike': { // zancada hacia ti con el golpe
         faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, dt * 18)); this.lunge = Math.min(1, this.st / 0.15);
         const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
-        this.pos.copy(this.knockFrom).addScaledVector(back, -0.35 * smooth(this.lunge));
+        this.pos.copy(this.knockFrom).addScaledVector(back, -(swordSet() ? 0.15 : 0.35) * smooth(this.lunge));
+        if (this.zone) blockStep(this, t);
         if (this.st > 0.18) {
-          this.state = 'knock'; this.st = 0; hurtPlayer(this);
+          const parried = this.zone && blockResolve(this); this.zone = null;
+          this.state = 'knock'; this.st = 0; if (parried) { this.stunT = 1.8; this.stagger = 1; } else hurtPlayer(this);
           // retrocede tras el golpe, pero sin meterse en los que esperan detrás
           let kd = 1.4; for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const ox = o.pos.x - this.pos.x, oz = o.pos.z - this.pos.z, al = ox * back.x + oz * back.z, lat = Math.abs(ox * back.z - oz * back.x), min = this.radius + o.radius + 0.05; if (al > 0 && lat < min) kd = Math.min(kd, Math.max(0, al - Math.sqrt(min * min - lat * lat))); }
+          if (parried) kd = Math.min(kd, 0.6); // parado: retrocede poco y queda a tu alcance
           this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, kd);
           fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true);
         }
@@ -247,7 +257,7 @@ class Robot {
     rigDebris(this.inst, c, big ? 5 : 3.6, 0.35, { main: M.steel, paint: M.paint });
     this.dispose();
   }
-  dispose() { arena.remove(this.root); this.inst.skel.dispose(); }
+  dispose() { arena.remove(this.root); this.inst.skel.dispose(); if (this.zoneSpr) { scene.remove(this.zoneSpr); this.zoneSpr.material.dispose(); } }
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
@@ -629,6 +639,8 @@ function onRep(opts, side) {
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
+  if (settings.mode === 'walkers' && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (settings.mode === 'walkers') {
     const origin = side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
@@ -894,6 +906,7 @@ function gunLoad(perfect) {
   const n = twoShots() ? 2 : 1;
   for (let i = 0; i < n; i++) { GUN.perf.push(perfect); if (GUN.perf.length > gunCap()) GUN.perf.shift(); }
   GUN.ammo = GUN.perf.length; SND.charge(); boardDirty = true;
+  for (const s of ['left', 'right']) if (BLASTERS[s].visible) { haptic(s, 0.25, 30); setTimeout(() => haptic(s, 0.25, 30), 110); } // recarga: doble toque
   for (const s of ['left', 'right']) if (BLASTERS[s].visible) fx.glow(gunMuzzle(s), boltRGB(perfect ? 1 : 0), 0.08, 0.15);
 }
 // Boca del cañón: con mando, la del bláster (que se agarra por la empuñadura y apunta como el rayo del mando)
@@ -901,6 +914,7 @@ const GUN_MUZZLE = new V3(0, 0.095, -0.44);
 function gunMuzzle(side, out = new V3()) { const h = hands[side]; return h.isHand ? out.copy(h.rayO).addScaledVector(h.rayD, 0.04) : out.copy(GUN_MUZZLE).applyQuaternion(h.rayQ).add(h.wrist); }
 function gunFire(src) {
   if (!['play', 'rest', 'ready'].includes(state)) return;
+  if (src.key !== 'gaze') haptic(src.key, GUN.ammo ? 0.75 : 0.1, GUN.ammo ? 50 : 15); // retroceso del disparo (o el clic del gatillo vacío)
   if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
   const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
   if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
@@ -935,7 +949,7 @@ function updatePistol(dt) {
   const per = twoShots() ? 2 : 1, lit = Math.min(3, Math.ceil(GUN.ammo / per));
   for (const s of ['left', 'right']) {
     const h = hands[s], b = BLASTERS[s];
-    b.visible = on && h.ok && !h.isHand && h.rayOk;
+    b.visible = on && h.ok && !h.isHand && h.rayOk && !swordIn(s); // la mano de la espada no lleva bláster
     if (b.visible) {
       b.kick = Math.max(0, b.kick - dt * 8);
       b.position.copy(h.wrist).addScaledVector(h.rayD, b.kick * 0.025); b.quaternion.copy(h.rayQ); b.rotateX(b.kick * 0.22); // retroceso: la boca sube
@@ -943,7 +957,7 @@ function updatePistol(dt) {
     }
     // gatillo (o pellizco) al apretar
     const press = h.trig && !h.trigPrev; h.trigPrev = h.trig;
-    if (on && press && h.rayOk) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
+    if (on && press && h.rayOk && !swordIn(s)) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
   }
   if (on && preview) { const t = !!PV.keys.KeyT; if (t && !GUN.prevT) gunFire({ key: 'gaze', o: head.p, d: fwd() }); GUN.prevT = t; } // en el ordenador: T dispara con la mirada
 }
@@ -1015,7 +1029,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
   projs = []; boltsClear();
-  clearFX(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0;
+  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop());
@@ -1044,6 +1058,8 @@ function lobbyMenu() {
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' }
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
+  // espadas (Asalto con sentadillas o zancadas, Toques de pie)
+  if (fieldVisible(FIELD.sword)) { rows.push({ t: 'field', key: 'sword', after: () => lobbyMenu() }); if (swordSet()) rows.push({ t: 'field', key: 'swordKind' }); }
   if (settings.mode === 'touch') {
     if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
     else rows.push({ t: 'field', key: 'tchHands' });
@@ -1100,7 +1116,8 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset();
+  stats = newStats(); gunReset(); swordReset();
+  if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down';
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
@@ -1144,6 +1161,7 @@ function startWave(i) {
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
+  hapticBoth(0.9, 120);
   combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
   if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
