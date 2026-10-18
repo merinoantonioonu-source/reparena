@@ -312,6 +312,6 @@ module.exports = {
   PerspectiveCamera, DirectionalLight, PointLight, HemisphereLight, Fog, FogExp2, BufferAttribute, Float32BufferAttribute, Uint16BufferAttribute, InstancedBufferAttribute,
   BufferGeometry, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, OctahedronGeometry, TorusGeometry, TubeGeometry, PlaneGeometry, CircleGeometry, RingGeometry, InstancedBufferGeometry, CatmullRomCurve3,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, SpriteMaterial, LineBasicMaterial, PointsMaterial, ShadowMaterial, CanvasTexture, Texture, PMREMGenerator, Plane, Raycaster, WebGLRenderer,
-  sRGBEncoding: 3001, ACESFilmicToneMapping: 4, PCFSoftShadowMap: 2, BackSide: 1, DoubleSide: 2, FrontSide: 0, AdditiveBlending: 2, NormalBlending: 1, RepeatWrapping: 1000, ClampToEdgeWrapping: 1001, DynamicDrawUsage: 35048,
+  sRGBEncoding: 3001, ACESFilmicToneMapping: 4, PCFSoftShadowMap: 2, BackSide: 1, DoubleSide: 2, FrontSide: 0, AdditiveBlending: 2, NormalBlending: 1, RepeatWrapping: 1000, ClampToEdgeWrapping: 1001, DynamicDrawUsage: 35048, KeepStencilOp: 7680, ReplaceStencilOp: 7681, NotEqualStencilFunc: 517, AlwaysStencilFunc: 519,
   MathUtils: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) }
 };
