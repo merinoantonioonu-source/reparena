@@ -1,6 +1,6 @@
 
 /* =================== ESPADAS (con los mandos) =================== */
-// Una o dos espadas, metálica o láser. En Asalto cada sentadilla carga la hoja y los robots se derriban a tajos:
+// Una o dos espadas, metálica o láser. En Combate contra robots cada sentadilla carga la hoja y los robots se derriban a tajos:
 // solo cuenta un tajo rápido (la velocidad mínima se ajusta) y sin carga la hoja rebota en el blindaje. Si el robot
 // avisa de un golpe, se para poniendo la espada donde marca (los medios y bajos, agachado) y queda aturdido: el
 // contraataque hace el doble. En Toques se cortan bloques en la dirección de su flecha. Los mandos vibran con cada
@@ -58,7 +58,7 @@ const _wv1 = new V3(), _wv2 = new V3(), _sr = new V3(), _swm4 = new THREE.Matrix
 function bladePoint(S, k, out) { const L = swordLen(), z = settings.swordKind === 'laser' ? -0.14 - L * k : -0.1 - L * k; return S.g.localToWorld(out.set(0, 0, z)); }
 const BLADE_N = 6;
 
-/* ---------- Carga (Asalto): cada sentadilla carga una vez la hoja ---------- */
+/* ---------- Carga (Combate): cada sentadilla carga una vez la hoja ---------- */
 function swordCharge(perfect) {
   SWD.perf.push(perfect); while (SWD.perf.length > swordCap()) SWD.perf.shift();
   for (const s of swordSides()) if (swordIn(s)) { haptic(s, 0.3, 30); fx.glow(bladePoint(SWD.s[s], 0.5, new V3()), [0.4, 1, 0.9], 0.2, 0.15); }
@@ -94,9 +94,9 @@ function updateSwords(dt, t) {
     S.beamMat.opacity = 0.22 + S.glow * 0.5; S.haloMat.opacity = 0.08 + S.glow * 0.14; S.light.intensity = laser ? 0.35 + S.glow * 0.6 : 0;
     for (const [e, c] of S.hitCool) if (t - c > 0.6) S.hitCool.delete(e);
   }
-  if (settings.mode === 'walkers' && swordActive() && SWD.perf.length && ['play', 'rest'].includes(state)) { SWD.beatT -= dt; if (SWD.beatT <= 0) { SWD.beatT = 0.9; for (const s of swordSides()) if (swordIn(s)) haptic(s, 0.08, 20); } }
+  if (isCombat() && swordActive() && SWD.perf.length && ['play', 'rest'].includes(state)) { SWD.beatT -= dt; if (SWD.beatT <= 0) { SWD.beatT = 0.9; for (const s of swordSides()) if (swordIn(s)) haptic(s, 0.08, 20); } }
   if (swordIn('left') && swordIn('right')) swordClash(t);
-  if (settings.mode === 'walkers' && ['play', 'rest'].includes(state)) for (const side of ['left', 'right']) if (swordIn(side)) swordVsRobots(SWD.s[side], t);
+  if (isCombat() && ['play', 'rest'].includes(state)) for (const side of ['left', 'right']) if (swordIn(side)) swordVsRobots(SWD.s[side], t);
 }
 // Distancia entre los segmentos a-b y c-d (y el punto más cercano en el primero)
 const _d1 = new V3(), _d2 = new V3(), _r0 = new V3();
@@ -117,14 +117,14 @@ function swordClash(t) {
   SND.swordClang(p, laser, rel); fx.sparks(p, laser ? 16 : 22, laser ? [0.6, 0.9, 1] : [1, 0.75, 0.35], 2.5, 0.03); hapticBoth(0.8, 50);
 }
 
-/* ---------- Asalto: tajos contra los robots ---------- */
+/* ---------- Combate: tajos contra los robots ---------- */
 // El robot es una cápsula vertical; cada punto de la hoja barre desde el fotograma anterior
 const _ca = new V3(), _cb = new V3(), _hp = new V3();
 function swordVsRobots(S, t) {
   const laser = settings.swordKind === 'laser';
   for (const e of enemies) {
     if (!e.alive || e.type !== 'robot' || e.state === 'emerge') continue;
-    const sc = e.K.scale, rad = 0.33 * sc;
+    const sc = e.sc, rad = 0.33 * sc;
     arena.localToWorld(_ca.set(e.pos.x, 0.25 * sc, e.pos.z)); arena.localToWorld(_cb.set(e.pos.x, 1.95 * sc, e.pos.z));
     let hit = false;
     for (let i = 1; i < BLADE_N && !hit; i++) if (segSeg(S.prev[i], S.cur[i], _ca, _cb, _hp) < rad) hit = true;
@@ -160,11 +160,11 @@ function swordStrike(S, e, p, dmg, counter) {
   e.onHit(dmg, true, p); if (!e.alive) onKilled(e);
 }
 
-/* ---------- Asalto: bloquear el golpe del robot ---------- */
+/* ---------- Combate: bloquear el golpe del robot ---------- */
 // Al preparar el golpe el robot marca a qué altura irá: alto (cabeza), medio (pecho) o bajo (cadera). Se para con la
 // hoja en esa marca; los medios y bajos, además, agachado (sentadilla o zancada)
 const BLOCK_Z = { high: { dy: -0.02, crouch: 0, col: 0xffd166, txt: 'ALTO' }, mid: { dy: -0.42, crouch: 0.5, col: 0xff8a3d, txt: 'MEDIO: ¡agáchate!' }, low: { dy: -0.7, crouch: 0.85, col: 0xff3b5c, txt: 'BAJO: ¡agáchate más!' } };
-const blockOn = () => settings.mode === 'walkers' && swordActive() && !!settings.swordBlock;
+const blockOn = () => isCombat() && swordActive() && !!settings.swordBlock;
 const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.strokeStyle = '#fff'; x.lineWidth = 10; x.beginPath(); x.arc(64, 64, 48, 0, TAU); x.stroke(); x.lineWidth = 6; x.beginPath(); x.moveTo(24, 64); x.lineTo(104, 64); x.stroke(); return c; })());
 function blockStart(r) {
   r.zone = pick(['high', 'mid', 'mid', 'low']); r.blocked = false;

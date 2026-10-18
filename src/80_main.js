@@ -31,7 +31,7 @@ function readXR(frame) {
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
     }
   }
-  anchorsFrame(frame, ref);
+  anchorsFrame(frame, ref); roomFrame(frame, ref);
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
@@ -99,7 +99,7 @@ function previewBarPose(on) {
 function startPreview() {
   audioInit(); ensureRigs();
   Object.assign(EQ.pv.door, { x: 0, z: -1.6, yaw: 0, set: true }); Object.assign(EQ.pv.dip, { x: 0, z: -1.9, yaw: 0, set: true }); PV.bar = PV.crouch = PV.fall = false;
-  preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = settings.mode !== 'flyers';
+  preview = true; arMode = false; $('#stage').hidden = false; $('#cross').hidden = !aimManual();
   const sup = settings.exercise === 'superman';
   PV.baseY = pvBaseY(); PV.y = PV.baseY; lastStandY = 1.6; lastStandYaw = 0;
   camera.position.set(0, PV.baseY, 0); camera.rotation.set(pvPitch(), 0, 0);
@@ -148,7 +148,7 @@ cv.addEventListener('pointerup', e => {
   if (!w) return;
   if (w.kind === 'slider') { w.commit(); return; }
   const h = hitWidget(e);
-  if (h && h.w === w) { SND.click(); w.onPress(); $('#cross').hidden = settings.mode !== 'flyers'; }
+  if (h && h.w === w) { SND.click(); w.onPress(); $('#cross').hidden = !aimManual(); }
 });
 
 /* =================== BUCLE PRINCIPAL =================== */
@@ -168,7 +168,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt);
-  updatePlace(dt); updateEquip(dt, t); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);
@@ -199,7 +199,7 @@ async function startXR(ar) {
   audioInit(); ensureRigs();
   try {
     const useAR = ar || XRSUP.ar;
-    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor'] });
+    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', 'plane-detection', 'mesh-detection'] });
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session);
@@ -226,7 +226,7 @@ async function checkXR() {
   $('#btnAR').disabled = !arOk; $('#btnVR').disabled = !vrOk && !arOk;
   if (!arOk && !vrOk) st.textContent = 'Este dispositivo no admite sesiones inmersivas. Usa la prueba en el ordenador o abre la página en las Quest 3.';
 }
-settingHooks.push(k => { if (k === 'mode' && preview) $('#cross').hidden = settings.mode !== 'flyers'; });
+settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foes', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
 buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage();

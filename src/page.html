@@ -112,12 +112,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section>
     <h2>Modo de juego</h2>
     <div class="cards">
-      <label class="card"><input type="radio" name="mode" id="mode-walkers" value="walkers">
-        <span class="tag">Disparo automático</span><b>Asalto</b>
-        <small>Robots salen de las compuertas y vienen a por ti. En flexiones, arañas que salen del suelo.</small></label>
-      <label class="card"><input type="radio" name="mode" id="mode-flyers" value="flyers">
-        <span class="tag">Tú apuntas</span><b>Enjambre</b>
-        <small>Drones y avispas gigantes en vuelo errático. Apunta con las manos o la mirada y dispara con la repetición.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-combat" value="combat">
+        <span class="tag">Cada repetición dispara</span><b>Combate</b>
+        <small>Eliges los enemigos: robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones gigantes que vuelan, o una mezcla. Y la puntería: automática, para pensar solo en el ejercicio, o apuntando tú con las manos o la mirada.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
         <span class="tag">Solo sentadillas</span><b>Arcos</b>
         <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
@@ -135,30 +132,30 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <div class="cards">
       <label class="card"><input type="radio" name="exercise" id="ex-squat" value="squat">
         <span class="tag">Sensor: altura del visor</span><b>Sentadillas</b>
-        <small>En Enjambre disparas con las dos manos a la vez al subir: cada mano, a donde apunte.</small></label>
+        <small>Apuntando con las manos disparas con las dos a la vez al subir: cada mano, a donde apunte.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-lunge" value="lunge">
         <span class="tag">Sensor: altura del visor</span><b>Zancadas</b>
         <small>Da un paso y baja hasta que la rodilla de atrás casi toque el suelo; alterna las piernas. Como en las sentadillas, valen las manos o las pistolas para apuntar.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-pushup" value="pushup">
         <span class="tag">Sensor: altura del visor</span><b>Flexiones</b>
-        <small>La batalla ocurre en el suelo, bajo tu cara. Apuntas con la mirada y disparas al empujar.</small></label>
+        <small>La batalla ocurre en el suelo, delante de tu cara. Disparas al empujar (si apuntas tú, con la mirada).</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-dips" value="dips">
         <span class="tag">Una silla estable · altura del visor</span><b>Fondos en silla</b>
         <small>Sentado en el borde, manos en el asiento: saca el culo y baja doblando los codos. Disparas al estirarlos.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
         <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
-        <small>Cada brazo dispara al llegar al hombro. En Enjambre, mira al objetivo mientras subes la mancuerna.</small></label>
+        <small>Cada brazo dispara al llegar al hombro. Si apuntas tú, mira al objetivo mientras subes la mancuerna.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-press" value="press">
         <span class="tag">Sensor: muñecas</span><b>Press de hombro</b>
         <small>Con las mancuernas en los hombros, súbelas hasta estirar los brazos. Cada brazo dispara al llegar arriba.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
-        <span class="tag">Asalto · visor y muñecas</span><b>Plancha con un brazo</b>
+        <span class="tag">Combate · visor y muñecas</span><b>Plancha con un brazo</b>
         <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-splank" value="splank">
-        <span class="tag">Asalto o Enjambre · altura del visor</span><b>Plancha lateral</b>
+        <span class="tag">Combate · altura del visor</span><b>Plancha lateral</b>
         <small>De lado sobre el antebrazo, con la cadera arriba: cada pocos segundos aguantados, un disparo. Si cae la cadera, vuelve a empezar. Cambia de lado en cada descanso.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-superman" value="superman">
-        <span class="tag">Enjambre · visor y muñecas</span><b>Superman</b>
+        <span class="tag">Combate · visor y muñecas</span><b>Superman</b>
         <small>Tumbado boca abajo, sube el tronco con los brazos estirados y aguanta los segundos que elijas: disparas al bicho que vuela bajo hacia ti.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-row" value="row">
         <span class="tag">Paralelas · altura del visor</span><b>Remo invertido</b>
@@ -237,12 +234,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Ahí mismo eliges si los arcos salen con ritmo regular o irregular.</li>
       <li><strong>Plancha lateral:</strong> aguanta con la cadera arriba; cada pocos segundos sale un disparo. En cada descanso, cambia de lado.</li>
-      <li><strong>Espadas (Ajustes → Espada, con los mandos):</strong> una o dos, metálica o láser. En Asalto cada sentadilla carga la hoja y derribas a los robots con tajos rápidos; si marcan su golpe, pon la hoja en la marca (agachado si es medio o bajo) para pararlo y contraatacar con el doble de daño. En Toques corta los bloques en la dirección de su flecha. Despeja el espacio y ponte la correa de los mandos.</li>
+      <li><strong>Espadas (Ajustes → Espada, con los mandos):</strong> una o dos, metálica o láser. En Combate contra robots cada sentadilla carga la hoja y derribas a los robots con tajos rápidos; si marcan su golpe, pon la hoja en la marca (agachado si es medio o bajo) para pararlo y contraatacar con el doble de daño. En Toques corta los bloques en la dirección de su flecha. Despeja el espacio y ponte la correa de los mandos.</li>
       <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
-      <li><strong>Pistolas</strong> (sentadillas en Asalto o Enjambre, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
+      <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
+      <li><strong>Realidad mixta en tu habitación:</strong> si has escaneado la habitación en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y das permiso al juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si no está escaneada, el menú principal ofrece «Escanear la habitación». Se desactiva en Ajustes → Sistema.</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño en Asalto, explosión en área en Enjambre y bonificación en Arcos.</li>
+      <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
 

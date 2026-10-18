@@ -47,7 +47,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
-  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, TCH };
+  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -162,7 +162,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Plancha lateral con la cadera cayendo', { ...base, mode: 'walkers', exercise: 'splank', splHold: 3, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.4) > 1.6; }, 30, s => s.reps ? 'con la cadera cayendo antes de tiempo no debería disparar' : !s.partial ? 'debería avisar de que sube la cadera' : '', true);
   RA.PV.crouch = false;
   await runConfig('Enjambre+sentadillas', { ...base, mode: 'flyers', exercise: 'squat' }, squatSim());
-  await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, squatSim());
+  // apuntando con la mirada, el jugador mira al bicho más cercano (si no, desde trampillas a 2 m casi nunca cruzan delante)
+  const lookNearest = sim => t => { sim(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); };
+  await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, lookNearest(squatSim()));
+  RA.camera.rotation.set(0, 0, 0);
+  // Combate: cualquier enemigo con cualquier puntería
+  await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
+  RA.camera.rotation.set(0, 0, 0);
+  await runConfig('Combate voladores automática', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'squat', flySpeed: 8 }, squatSim(), 420, s => s.kills < 6 ? 'la puntería automática no derriba voladores' : '');
+  const MIX = { robots: 0, flyers: 0 };
+  await runConfig('Combate mezcla', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'squat', walkTime: 10, flySpeed: 8 }, t => { squatSim()(t); for (const e of RA.enemies) if (e.alive) MIX[e.type === 'robot' ? 'robots' : 'flyers'] = 1; }, 420, s => !MIX.robots || !MIX.flyers ? 'la mezcla no trae robots y voladores' : s.kills < 4 ? 'en la mezcla no se derriba a nadie' : '');
+  await runConfig('Combate mezcla en flexiones', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'pushup', walkTime: 8 }, squatSim(2.6), 420, s => s.kills < 4 ? 'en flexiones con mezcla no se derriba a nadie' : '');
   await runConfig('Enjambre+curl', { ...base, mode: 'flyers', exercise: 'curl' }, curlSim);
   await runConfig('Arcos', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 40 }, t => { RA.PV.crouch = true; });
   // arcos inclinados: hay que apartarse hacia el lado alto; aparición regular o irregular
@@ -326,7 +336,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('keypad result lives =', RA.settings.lives);
   press('Sistema'); frame(1); press('No'); frame(1); press('Sí'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
   press('Volver'); frame(2);
-  press('Asalto'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('Asalto exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios nuevos'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
+  press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
+  press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
+  press('Sentadillas'); frame(1);
   press('Arcos'); frame(1); log('Arcos offers only squats:', !RA.activeWidgets().some(w => w.label === 'Flexiones'), RA.settings.exercise);
   if (RA.activeWidgets().some(w => w.label === 'Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
   // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
@@ -339,7 +353,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (let i = 0; i < 4; i++) { findW(RA.activeWidgets().find(w => /^Al compás/.test(w.label)).label).onPress(); frame(1); await sleep(400); }
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
-  press('Enjambre'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Mirada'); frame(1); press('Volver'); frame(1);
+  press('Combate'); frame(1); press('Voladores'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
+  log('combat flyers gaze:', RA.settings.foes, RA.settings.aim); if (RA.settings.foes !== 'flyers' || RA.settings.aim !== 'gaze') errors.push('no se eligen voladores con la mirada');
+  press('Robots'); frame(1); press('Automática'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
   press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
   // colocar: el atril se oculta, H = manos arriba; a los 5 s queda colocada y aparece el menú de ajuste
@@ -356,10 +372,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.PLACE.on || !RA.activeWidgets().some(w => w.label === 'EMPEZAR')) errors.push('Esc no cancela la colocación');
   press('Más ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
   press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
-  RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Asalto'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
+  RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Combate'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
   // ---- sesión: tres bloques seguidos, ajustes intactos y resumen ----
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.setSetting('waves', 5); RA.setSetting('repsWave', 12); RA.setSetting('rest', 2); RA.setSetting('lives', 0);
-  RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 6 }, { mode: 'walkers', ex: 'pushup', n: 5 }, { mode: 'bars', ex: 'hang', n: 8 }]; RA.SES.rest = 3;
+  RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 6 }, { mode: 'combat', ex: 'pushup', n: 5, foes: 'robots' }, { mode: 'bars', ex: 'hang', n: 8 }]; RA.SES.rest = 3;
   const hist0 = JSON.parse(storage.get('reparena3-history') || '[]').length;
   RA.lobbyMenu(); frame(2); log('lobby shows session:', RA.activeWidgets().some(w => /EMPEZAR SESIÓN/.test(w.label)));
   RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)).onPress(); frame(2);
@@ -374,8 +390,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const hist1 = JSON.parse(storage.get('reparena3-history') || '[]').length;
   log('session: state', RA.state, 'blocks played', [...blocksSeen].join(' '), 'results', RA.SES.results.map(r => r.reps).join('/'), 'stored mode during block 2', storedDuring && storedDuring.mode, 'restored', RA.settings.mode, RA.settings.exercise, RA.settings.waves, 'history +', hist1 - hist0);
   if (RA.state !== 'end' || RA.SES.results.length !== 3) errors.push('la sesión no juega los tres bloques');
-  if (!storedDuring || storedDuring.mode !== 'walkers' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
-  if (RA.settings.mode !== 'walkers' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
+  if (!storedDuring || storedDuring.mode !== 'combat' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
+  if (RA.settings.mode !== 'combat' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
   // pausa durante partida
@@ -628,6 +644,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
     const moves = new Set(), deb0 = RA.debris.length; let maxDeb = 0;
+    // si al revés se cuela un corte, dice en qué fase del movimiento (preparar, barrido, retirada, espera) para cazarlo
+    const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, t && t.judged, RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + x.pos.toArray().map(v => v.toFixed(2)).join(',')).join(' ')); };
     for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
       const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
       XRS.headY = 1.7; XRS.headX = 0;
@@ -636,13 +654,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
         if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; }
         frame(1, 16, xrFrame);
         const c = RA.arena.localToWorld(t.pos.clone()), dir = t.normal.clone().negate(), sw = t.cutDir.clone().multiplyScalar(mode === 'reverse' ? -1 : 1);
-        holdSword('right', c.clone().addScaledVector(t.normal, 0.9), dir, sw, -0.3); frame(1, 16, xrFrame); // se prepara delante, sin tocar el bloque
-        if (mode === 'stab') for (let k = 0; k <= 6; k++) { holdSword('right', c.clone().addScaledVector(t.normal, 0.6 - 0.9 * k / 6), dir, sw, 0); frame(1, 16, xrFrame); }
-        else for (let k = 0; k <= 6; k++) { holdSword('right', c, dir, sw, -0.3 + 0.6 * k / 6); frame(1, 16, xrFrame); }
-        holdSword('right', c.clone().addScaledVector(t.normal, 0.9), dir, sw, 0.3); frame(1, 16, xrFrame); // retira la hoja hacia ti, sin volver a pasar por el bloque
-        for (let k = 0; k < 20; k++) frame(1, 16, xrFrame); continue; // la hoja se queda retirada hasta el siguiente
+        holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, -0.3); FR('prep', t); // se prepara delante, lejos del bloque (al venir de la retirada, la hoja se mueve en la dirección de la flecha)
+        if (mode === 'stab') for (let k = 0; k <= 6; k++) { holdSword('right', c.clone().addScaledVector(t.normal, 0.6 - 0.9 * k / 6), dir, sw, 0); FR('stab', t); }
+        else for (let k = 0; k <= 6; k++) { holdSword('right', c, dir, sw, -0.3 + 0.6 * k / 6); FR('sweep' + k, t); }
+        holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, 0.3); FR('retreat', t); // retira la hoja hacia ti, sin volver a pasar por el bloque
+        for (let k = 0; k < 20; k++) FR('wait' + k, t); continue; // la hoja se queda retirada hasta el siguiente
       }
-      frame(1, 16, xrFrame); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
+      FR('idle', null); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
     }
     const hits = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.7 && h[2] === 60).length;
     log(`sword touch ${name}: cuts ${RA.stats.reps} misses ${RA.stats.taken} moves ${[...moves].join(',')} halves ${maxDeb} slice haptics ${hits}`);
@@ -710,7 +728,55 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('view switch: VR', vr0, '→ MR', mr, '→ VR', vr1, '· forest in MR while hanging', forestMR, '· gone for pull-ups', noForest);
   if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
   if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
-  RA.exitAll(); frame(2, 16, xrFrame);
+  // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
+  // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la
+  // izquierda (plano) y una mesa delante a la derecha (malla)
+  const roomQ = yaw => { const c = Math.SQRT1_2, cy = Math.cos(yaw / 2), sy = Math.sin(yaw / 2); return { x: cy * c, y: sy * c, z: -sy * c, w: cy * c }; }; // giro yaw · 90° en X: la normal (eje Y del plano) mira hacia dentro
+  const ROOMSIM = { planes: new Set(), meshes: new Set() };
+  const wallP = (x, z, yaw, W) => ROOMSIM.planes.add({ semanticLabel: 'wall', orientation: 'vertical', lastChangedTime: 1, planeSpace: { room: { position: { x, y: 0, z }, orientation: roomQ(yaw) } }, polygon: [[-W / 2, -2.5], [W / 2, -2.5], [W / 2, 0], [-W / 2, 0]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
+  wallP(0, -2.6, 0, 4); wallP(0, 2.4, Math.PI, 4); wallP(-2, -0.1, Math.PI / 2, 5); wallP(2, -0.1, -Math.PI / 2, 5);
+  ROOMSIM.planes.add({ semanticLabel: 'ceiling', orientation: 'horizontal', lastChangedTime: 1, planeSpace: { room: { position: { x: 0, y: 2.5, z: 0 }, orientation: { x: 1, y: 0, z: 0, w: 0 } } }, polygon: [[-2, -2.6], [2, -2.6], [2, 2.4], [-2, 2.4]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
+  const SOFA = { x0: -2.0, x1: -0.6, z0: -2.0, z1: -1.2 }, TABLE = { x0: 0.8, x1: 1.6, z0: -1.3, z1: -0.7 };
+  ROOMSIM.planes.add({ semanticLabel: 'couch', orientation: 'horizontal', lastChangedTime: 1, planeSpace: { room: { position: { x: -1.3, y: 0.45, z: -1.6 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, polygon: [[-0.7, -0.4], [0.7, -0.4], [0.7, 0.4], [-0.7, 0.4]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
+  { const v = [], idx = []; for (const y of [0, 0.75]) for (const [x, z] of [[-0.4, -0.3], [0.4, -0.3], [0.4, 0.3], [-0.4, 0.3]]) v.push(x, y, z); for (const [a, b, c] of [[0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1], [1, 5, 6], [1, 6, 2], [2, 6, 7], [2, 7, 3], [3, 7, 4], [3, 4, 0]]) idx.push(a, b, c);
+    ROOMSIM.meshes.add({ semanticLabel: 'table', lastChangedTime: 1, meshSpace: { room: { position: { x: 1.2, y: 0, z: -1.0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, vertices: new Float32Array(v), indices: new Uint32Array(idx) }); }
+  const inBox = (B, x, z, m) => x > B.x0 - m && x < B.x1 + m && z > B.z0 - m && z < B.z1 + m;
+  const pathHits = (ax, az, bx, bz, m) => { for (let i = 0; i <= 40; i++) { const k = i / 40, x = ax + (bx - ax) * k, z = az + (bz - az) * k; if (inBox(SOFA, x, z, m) || inBox(TABLE, x, z, m)) return true; } return false; };
+  for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', room: 1, lives: 0, waves: 1, repsWave: 30, walkTime: 8, maxAlive: 4, spawnGap: 0.5 })) RA.setSetting(k, v);
+  XRS.room = ROOMSIM; XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0; XRS.headQ = null;
+  await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame);
+  const P = RA.roomPlan(), live = RA.gates.filter(g => g.on), gw = new THREE.Vector3();
+  const gInfo = live.map(g => { RA.arena.updateMatrixWorld(); g.g.getWorldPosition(gw); const r = g.g.rotation.y + RA.arena.rotation.y; return { x: gw.x, z: gw.z, nx: Math.sin(r), nz: Math.cos(r), s: g.scale }; });
+  log('room:', RA.ROOM.walls.length, 'walls', RA.ROOM.furn.length, 'furniture', '· gates', gInfo.map(g => `(${g.x.toFixed(2)}, ${g.z.toFixed(2)}) n(${g.nx.toFixed(2)}, ${g.nz.toFixed(2)}) ×${g.s.toFixed(2)}`).join(' '), '· occluders', RA.ROOM.occl.visible, RA.ROOM.occl.children.length - 1, '+', RA.ROOM.wallOcc.children.length);
+  if (RA.ROOM.walls.length !== 4 || RA.ROOM.furn.length !== 2) errors.push('no se leen las paredes y los muebles escaneados');
+  if (!P || !live.length) errors.push('con la habitación escaneada las compuertas no van a las paredes');
+  const onWall = g => Math.abs(g.z - (-2.6 + 0.45 * g.s)) < 0.05 && g.nz > 0.99 || Math.abs(g.x - (-2 + 0.45 * g.s)) < 0.05 && g.nx > 0.99 || Math.abs(g.x - (2 - 0.45 * g.s)) < 0.05 && g.nx < -0.99;
+  if (gInfo.some(g => !onWall(g))) errors.push('alguna compuerta no está pegada a una pared mirando hacia dentro');
+  if (gInfo.some(g => g.s > 0.56)) errors.push('la compuerta no cabe bajo el techo de 2,5 m');
+  if (gInfo.some(g => pathHits(g.x + g.nx * 0.5, g.z + g.nz * 0.5, 0, 0, 0.15))) errors.push('el camino de alguna compuerta hasta ti pasa por un mueble');
+  if (!gInfo.some(g => g.nz > 0.99 && Math.abs(g.x) < 0.6)) errors.push('no hay compuerta en la pared de delante');
+  { RA.boardRig.children[0].getWorldPosition(gw); const dW = Math.min(Math.abs(gw.z + 2.6), Math.abs(gw.z - 2.4), Math.abs(gw.x + 2), Math.abs(gw.x - 2)); log('board on wall at', gw.x.toFixed(2), gw.z.toFixed(2), 'distance to wall', dW.toFixed(3)); if (dW > 0.1) errors.push('el marcador no se cuelga en una pared'); }
+  if (!RA.ROOM.occl.visible || RA.ROOM.occl.children.length - 1 < 2 || RA.ROOM.wallOcc.children.length < 5) errors.push('las paredes y los muebles no tapan lo virtual (o no hay hueco en las compuertas)');
+  // los robots salen de esas compuertas y sus puestos de ataque no caen en un mueble
+  RA.beginRun(); frame(200, 16, xrFrame); const badSlot = [], seenBots = new Set(), st0 = RA.state;
+  for (let i = 0; i < 1500; i++) { XRS.headY = (i % 140) < 70 ? 1.7 : 1.3; frame(1, 16, xrFrame); if (i % 10) continue; for (const e of RA.enemies) if (e.alive && e.type === 'robot' && e.slotOk) { seenBots.add(e); const sw = RA.arena.localToWorld(e.slot.clone()); if (inBox(SOFA, sw.x, sw.z, 0.1) || inBox(TABLE, sw.x, sw.z, 0.1)) badSlot.push(`${sw.x.toFixed(2)},${sw.z.toFixed(2)}`); } }
+  log('robots in the room: after calib', st0, '→', RA.state, 'robots seen', seenBots.size, 'slots in furniture', badSlot.length);
+  if (seenBots.size < 3) errors.push('en la habitación no salen robots');
+  if (badSlot.length) errors.push('algún robot elige su puesto dentro de un mueble: ' + badSlot.slice(0, 3).join(' '));
+  XRS.headY = 1.7; RA.exitAll(); frame(2, 16, xrFrame);
+  // en flexiones, las trampillas en suelo libre y dentro de la habitación
+  RA.setSetting('exercise', 'pushup'); await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame);
+  const hs = RA.hatches.map(h => RA.arena.localToWorld(new THREE.Vector3(h.x, 0, h.z)));
+  log('room hatches', hs.map(h => `(${h.x.toFixed(2)}, ${h.z.toFixed(2)})`).join(' '));
+  if (hs.some((h, i) => hs.some((o, j) => j !== i && h.distanceTo(o) < 0.55))) errors.push('dos trampillas casi en el mismo sitio');
+  if (hs.some(h => inBox(SOFA, h.x, h.z, 0.2) || inBox(TABLE, h.x, h.z, 0.2) || Math.abs(h.x) > 1.75 || h.z < -2.35 || h.z > 2.15)) errors.push('alguna trampilla cae en un mueble o fuera de la habitación');
+  // en VR, o con el ajuste apagado, todo como siempre
+  RA.setSetting('exercise', 'squat'); frame(40, 16, xrFrame); RA.setSetting('room', 0); frame(40, 16, xrFrame);
+  const offOk = RA.gates.every(g => g.on && g.side.visible) && !RA.ROOM.occl.visible; RA.setSetting('room', 1); frame(40, 16, xrFrame);
+  press('Realidad virtual'); frame(40, 16, xrFrame); const vrOk = RA.gates.every(g => g.on && g.side.visible) && !RA.ROOM.occl.visible;
+  log('room off → default', offOk, '· VR → default', vrOk);
+  if (!offOk || !vrOk) errors.push('sin adaptar a la habitación (o en VR) las compuertas no vuelven a su sitio');
+  RA.exitAll(); frame(2, 16, xrFrame); XRS.room = null;
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
 })().catch(e => { console.log('FATAL', e.stack); console.log('ERRORS so far:\n' + errors.join('\n')); });
@@ -730,9 +796,10 @@ function makeXRFrame() {
     pads.left.buttons[0].pressed = XRS.trig === 'left'; pads.right.buttons[0].pressed = XRS.trig === 'right';
     return {
       session: s || { inputSources: src },
+      detectedPlanes: XRS.room ? XRS.room.planes : undefined, detectedMeshes: XRS.room ? XRS.room.meshes : undefined,
       getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
-      getPose(space) { if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getPose(space) { if (space.room) return { transform: space.room }; if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
