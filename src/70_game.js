@@ -4,7 +4,7 @@ const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
@@ -1147,10 +1147,10 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-// Los ejercicios, de cuatro en cuatro por fila: los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
+// Los ejercicios, de cuatro en cuatro por fila (de tres si son muchos, para que se lean): los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
 function exerciseRows(back) {
   const pick = v => { setSetting('exercise', v); back(); }, rows = [];
-  const add = (label, list) => list.forEach((x, i) => { if (i % 4 === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); });
+  const add = (label, list) => { const per = list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
   if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x]));
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
@@ -1163,6 +1163,7 @@ function lobbyMenu() {
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
+    ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
@@ -1286,12 +1287,18 @@ function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
   store(HIST_KEY, h.slice(-400));
 }
+// Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
+const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
+function progressLine(P = progress()) {
+  return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
+}
 function endRun(win, manual) {
-  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0);
+  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
   saveRun(win);
+  const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop());
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
@@ -1299,12 +1306,13 @@ function endRun(win, manual) {
   const lines = [
     hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
-    `Tiempo ${mm}:${ss} · ${score} puntos`,
+    `Tiempo ${mm}:${ss} · ≈ ${Math.round(runStatsKcal())} kcal · ${score} puntos`,
+    streakUp ? `¡${P.streak} días seguidos entrenando!${P.streak >= P.best ? ' Tu mejor racha' : ''}` : progressLine(P),
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
   if (SES.active) { sessionBlockDone(win, manual); return; } // sesión: pasa al siguiente bloque
-  endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
+  endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean));
 }
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
@@ -1331,7 +1339,7 @@ function gameStep(dt, t) {
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
-  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
+  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt;

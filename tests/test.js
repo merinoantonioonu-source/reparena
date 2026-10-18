@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, boardLooked, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, boardLooked, toastP, progress, kcalOf, progressLine, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -423,6 +423,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.state !== 'end' || RA.SES.results.length !== 3) errors.push('la sesión no juega los tres bloques');
   if (!storedDuring || storedDuring.mode !== 'combat' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
   if (RA.settings.mode !== 'combat' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
+  // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
+  { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
+    const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });
+    RA.setSetting('weight', 70);
+    const P1 = RA.progress([mk(0), mk(1), mk(2), mk(5), mk(6), mk(7), mk(8)], now), P2 = RA.progress([mk(1), mk(2)], now), P3 = RA.progress([mk(3)], now), P0 = RA.progress([], now);
+    const k = RA.kcalOf('squat', 600, 0, 70), kOld = P1.today.kcal;
+    log(`progress: last run kcal ${last && last.kcal} work ${last && last.work}/${last && last.time} s · streaks ${P1.streak}/${P1.best} ${P2.streak} (hoy no) ${P3.streak} ${P0.streak} · week days ${P1.week.days} · 10 min squats ${k.toFixed(1)} kcal, old record ${kOld.toFixed(1)} · line "${RA.progressLine()}"`);
+    if (!last || !(last.kcal > 0) || !(last.work > 0) || last.work > last.time) errors.push('progreso: la ronda no guarda las calorías o el tiempo de oleada');
+    if (P1.streak !== 3 || P1.best !== 4 || P2.streak !== 2 || P2.trainedToday || P3.streak !== 0 || P0.streak !== 0 || P1.week.days !== 5) errors.push('progreso: la racha de días no se cuenta bien');
+    if (Math.abs(k - 67.4) > 0.5 || !(kOld > 30 && kOld < 67.4)) errors.push('progreso: la estimación de calorías no cuadra');
+    if (!/Hoy: .*kcal.*racha 1 día/.test(RA.progressLine())) errors.push('progreso: el menú no muestra lo de hoy y la racha');
+  }
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
   // pausa durante partida

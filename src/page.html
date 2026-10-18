@@ -74,6 +74,11 @@ button{font:inherit;cursor:pointer}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:1.3rem}
+.stat span{color:var(--muted);font-size:.8rem}
+.muted{color:var(--muted)}
 #stage{position:fixed;inset:0;background:#000;z-index:50}
 #stage canvas{display:block;width:100%;height:100%}
 .cross{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none}
@@ -268,14 +273,16 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Progreso:</strong> al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso, en Ajustes → Sistema), y abajo, en tu historial, la racha de días seguidos entrenando, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
 
   <section class="hist">
     <h2>Tu historial en este dispositivo</h2>
+    <div class="stats" id="progBox"></div>
     <div class="tablebox"><table>
-      <thead><tr><th>Ejercicio</th><th>Sesiones</th><th>Reps totales</th><th>Mejor sesión</th><th>Perfectas</th></tr></thead>
+      <thead><tr><th>Ejercicio</th><th>Rondas</th><th>Reps totales</th><th>Mejor ronda</th><th>Perfectas</th><th>Tiempo</th><th>≈ kcal</th></tr></thead>
       <tbody id="histBody"></tbody>
     </table></div>
   </section>

@@ -74,6 +74,11 @@ button{font:inherit;cursor:pointer}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:1.3rem}
+.stat span{color:var(--muted);font-size:.8rem}
+.muted{color:var(--muted)}
 #stage{position:fixed;inset:0;background:#000;z-index:50}
 #stage canvas{display:block;width:100%;height:100%}
 .cross{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none}
@@ -268,14 +273,16 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Progreso:</strong> al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso, en Ajustes → Sistema), y abajo, en tu historial, la racha de días seguidos entrenando, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
 
   <section class="hist">
     <h2>Tu historial en este dispositivo</h2>
+    <div class="stats" id="progBox"></div>
     <div class="tablebox"><table>
-      <thead><tr><th>Ejercicio</th><th>Sesiones</th><th>Reps totales</th><th>Mejor sesión</th><th>Perfectas</th></tr></thead>
+      <thead><tr><th>Ejercicio</th><th>Rondas</th><th>Reps totales</th><th>Mejor ronda</th><th>Perfectas</th><th>Tiempo</th><th>≈ kcal</th></tr></thead>
       <tbody id="histBody"></tbody>
     </table></div>
   </section>
@@ -303,7 +310,7 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
 const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elevación', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'P. muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
@@ -421,6 +428,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'Por modo'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: todos los ejercicios agrupados por lo que trabajan; al elegir uno de otro modo, el modo cambia solo.' },
   { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
@@ -625,12 +633,43 @@ function updateSummary() {
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm${settings.arcJump ? `; el ${settings.arcJump} % son vallas que hay que saltar (${settings.jumpHeight} cm)` : ''}.`;
   $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' || settings.exercise === 'press' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
+/* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
+// Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
+const EX_MET = { squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const REST_MET = 2;
+// kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
+function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
+// las rondas antiguas no guardaban calorías ni el tiempo de oleada: se estiman con su tiempo total
+const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75, (r.time || 0) * 0.25);
+const DAY_MS = 864e5;
+const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
+function progress(h = store(HIST_KEY) || [], now = Date.now()) {
+  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now);
+  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer
+  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); days.has(dayKey(d)); d -= DAY_MS) streak++;
+  let best = 0, run = 0, prev = null;
+  for (const k of [...days].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()); run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; }
+  const sum = list => ({ time: list.reduce((a, r) => a + (r.time || 0), 0), kcal: list.reduce((a, r) => a + runKcal(r), 0), runs: list.length, days: new Set(list.map(r => dayKey(r.date))).size });
+  const weekFrom = noonOf(now) - 6.5 * DAY_MS; // los últimos 7 días, hoy incluido
+  return { streak, best, trainedToday: days.has(today), today: sum(h.filter(r => dayKey(r.date) === today)), week: sum(h.filter(r => r.date >= weekFrom)), total: sum(h) };
+}
+const fmtDur = s => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round(s % 3600 / 60)} min` : `${Math.round(s / 60)} min`;
+const daysTxt = n => `${n} ${n === 1 ? 'día' : 'días'}`;
 function renderHistory() {
-  const h = store(HIST_KEY) || [];
+  const h = store(HIST_KEY) || [], P = progress(h);
+  const box = (big, small) => `<div class="stat"><b>${big}</b><span>${small}</span></div>`;
+  $('#progBox').innerHTML = h.length ? [
+    box(daysTxt(P.streak), P.streak ? (P.trainedToday ? 'seguidos entrenando' : 'seguidos: entrena hoy para no perderla') : 'de racha: empieza hoy'),
+    box(daysTxt(P.best), 'mejor racha'),
+    box(fmtDur(P.week.time), `esta semana · ${daysTxt(P.week.days)} · ≈ ${Math.round(P.week.kcal)} kcal`),
+    box(fmtDur(P.total.time), `en total · ${daysTxt(P.total.days)} · ≈ ${Math.round(P.total.kcal)} kcal`)
+  ].join('') : '<p class="muted">Aún no hay partidas: tu racha de días, el tiempo entrenado y las calorías aparecerán aquí.</p>';
   $('#histBody').innerHTML = Object.keys(EX_NAMES).map(ex => {
     const s = h.filter(r => r.ex === ex);
-    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
-  }).join('');
+    if (!s.length) return '';
+    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td><td>${fmtDur(s.reduce((a, r) => a + (r.time || 0), 0))}</td><td>${Math.round(s.reduce((a, r) => a + runKcal(r), 0))}</td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">Sin partidas todavía</td></tr>';
 }
 
 
@@ -3975,6 +4014,7 @@ function drawBoard() {
   if (state === 'rest') {
     c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
     c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+    c.fillStyle = '#a49fc8'; c.font = `500 30px ${FB}`; c.fillText(`${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, '0')} entrenando · ≈ ${Math.round(runStatsKcal())} kcal`, W - 36, 300);
   } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
@@ -4184,7 +4224,7 @@ function startSession() {
 // Se llama al terminar la partida de un bloque (en lugar del menú de fin)
 function sessionBlockDone(win, manual) {
   const b = SES.blocks[SES.idx];
-  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, score, win, manual });
+  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, kcal: runStatsKcal(), score, win, manual });
   if (SES.stop || SES.idx + 1 >= SES.blocks.length) { finishSession(); return; }
   state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
   betweenMenu();
@@ -4207,10 +4247,11 @@ function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock
 function finishSession() {
   const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
   endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
-  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, score: 0 });
+  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
-  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ${tot.score} puntos`);
+  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ≈ ${Math.round(tot.kcal)} kcal · ${tot.score} puntos`);
+  if (progressLine()) lines.push(progressLine());
   if (all) SND.victory();
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', lines);
 }
@@ -4272,7 +4313,7 @@ const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
@@ -5415,10 +5456,10 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-// Los ejercicios, de cuatro en cuatro por fila: los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
+// Los ejercicios, de cuatro en cuatro por fila (de tres si son muchos, para que se lean): los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
 function exerciseRows(back) {
   const pick = v => { setSetting('exercise', v); back(); }, rows = [];
-  const add = (label, list) => list.forEach((x, i) => { if (i % 4 === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); });
+  const add = (label, list) => { const per = list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
   if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x]));
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
@@ -5431,6 +5472,7 @@ function lobbyMenu() {
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
+    ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
@@ -5554,12 +5596,18 @@ function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
   store(HIST_KEY, h.slice(-400));
 }
+// Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
+const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
+function progressLine(P = progress()) {
+  return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
+}
 function endRun(win, manual) {
-  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0);
+  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
   saveRun(win);
+  const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop());
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
@@ -5567,12 +5615,13 @@ function endRun(win, manual) {
   const lines = [
     hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
-    `Tiempo ${mm}:${ss} · ${score} puntos`,
+    `Tiempo ${mm}:${ss} · ≈ ${Math.round(runStatsKcal())} kcal · ${score} puntos`,
+    streakUp ? `¡${P.streak} días seguidos entrenando!${P.streak >= P.best ? ' Tu mejor racha' : ''}` : progressLine(P),
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
   if (win) SND.victory(); else if (!manual) SND.defeat();
   if (SES.active) { sessionBlockDone(win, manual); return; } // sesión: pasa al siguiente bloque
-  endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines);
+  endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean));
 }
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
@@ -5599,7 +5648,7 @@ function gameStep(dt, t) {
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
-  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; runDetectors(t, dt); }
+  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt;

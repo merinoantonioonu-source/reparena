@@ -489,6 +489,7 @@ function drawBoard() {
   if (state === 'rest') {
     c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
     c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+    c.fillStyle = '#a49fc8'; c.font = `500 30px ${FB}`; c.fillText(`${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, '0')} entrenando · ≈ ${Math.round(runStatsKcal())} kcal`, W - 36, 300);
   } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }

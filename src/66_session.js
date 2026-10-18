@@ -48,7 +48,7 @@ function startSession() {
 // Se llama al terminar la partida de un bloque (en lugar del menú de fin)
 function sessionBlockDone(win, manual) {
   const b = SES.blocks[SES.idx];
-  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, score, win, manual });
+  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, kcal: runStatsKcal(), score, win, manual });
   if (SES.stop || SES.idx + 1 >= SES.blocks.length) { finishSession(); return; }
   state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
   betweenMenu();
@@ -71,10 +71,11 @@ function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock
 function finishSession() {
   const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
   endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
-  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, score: 0 });
+  const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
-  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ${tot.score} puntos`);
+  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ≈ ${Math.round(tot.kcal)} kcal · ${tot.score} puntos`);
+  if (progressLine()) lines.push(progressLine());
   if (all) SND.victory();
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', lines);
 }

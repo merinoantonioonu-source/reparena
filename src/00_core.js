@@ -10,7 +10,7 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
 const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elevación', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'P. muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
@@ -128,6 +128,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'Por modo'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: todos los ejercicios agrupados por lo que trabajan; al elegir uno de otro modo, el modo cambia solo.' },
   { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
@@ -332,10 +333,41 @@ function updateSummary() {
   else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm${settings.arcJump ? `; el ${settings.arcJump} % son vallas que hay que saltar (${settings.jumpHeight} cm)` : ''}.`;
   $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin (cuento las 5 primeras)'} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' || settings.exercise === 'press' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
+/* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
+// Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
+const EX_MET = { squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const REST_MET = 2;
+// kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
+function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
+// las rondas antiguas no guardaban calorías ni el tiempo de oleada: se estiman con su tiempo total
+const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75, (r.time || 0) * 0.25);
+const DAY_MS = 864e5;
+const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
+function progress(h = store(HIST_KEY) || [], now = Date.now()) {
+  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now);
+  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer
+  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); days.has(dayKey(d)); d -= DAY_MS) streak++;
+  let best = 0, run = 0, prev = null;
+  for (const k of [...days].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()); run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; }
+  const sum = list => ({ time: list.reduce((a, r) => a + (r.time || 0), 0), kcal: list.reduce((a, r) => a + runKcal(r), 0), runs: list.length, days: new Set(list.map(r => dayKey(r.date))).size });
+  const weekFrom = noonOf(now) - 6.5 * DAY_MS; // los últimos 7 días, hoy incluido
+  return { streak, best, trainedToday: days.has(today), today: sum(h.filter(r => dayKey(r.date) === today)), week: sum(h.filter(r => r.date >= weekFrom)), total: sum(h) };
+}
+const fmtDur = s => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round(s % 3600 / 60)} min` : `${Math.round(s / 60)} min`;
+const daysTxt = n => `${n} ${n === 1 ? 'día' : 'días'}`;
 function renderHistory() {
-  const h = store(HIST_KEY) || [];
+  const h = store(HIST_KEY) || [], P = progress(h);
+  const box = (big, small) => `<div class="stat"><b>${big}</b><span>${small}</span></div>`;
+  $('#progBox').innerHTML = h.length ? [
+    box(daysTxt(P.streak), P.streak ? (P.trainedToday ? 'seguidos entrenando' : 'seguidos: entrena hoy para no perderla') : 'de racha: empieza hoy'),
+    box(daysTxt(P.best), 'mejor racha'),
+    box(fmtDur(P.week.time), `esta semana · ${daysTxt(P.week.days)} · ≈ ${Math.round(P.week.kcal)} kcal`),
+    box(fmtDur(P.total.time), `en total · ${daysTxt(P.total.days)} · ≈ ${Math.round(P.total.kcal)} kcal`)
+  ].join('') : '<p class="muted">Aún no hay partidas: tu racha de días, el tiempo entrenado y las calorías aparecerán aquí.</p>';
   $('#histBody').innerHTML = Object.keys(EX_NAMES).map(ex => {
     const s = h.filter(r => r.ex === ex);
-    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td></tr>`;
-  }).join('');
+    if (!s.length) return '';
+    return `<tr><td>${EX_NAMES[ex]}${ex === 'hang' ? ' (segundos)' : ''}</td><td>${s.length}</td><td>${s.reduce((a, r) => a + r.reps, 0)}</td><td>${s.reduce((a, r) => Math.max(a, r.reps), 0) || '–'}</td><td>${s.reduce((a, r) => a + r.perfect, 0)}</td><td>${fmtDur(s.reduce((a, r) => a + (r.time || 0), 0))}</td><td>${Math.round(s.reduce((a, r) => a + runKcal(r), 0))}</td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">Sin partidas todavía</td></tr>';
 }
