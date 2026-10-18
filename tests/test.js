@@ -46,7 +46,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, boardLooked, toastP, progress, kcalOf, progressLine, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -96,7 +96,7 @@ const watchPanels = sim => t => {
   const n = RA.collectThreats();
   const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, 0.34, 0.06, true, n);
   if (b) PAN.behind++; if (bt) PAN.toast++;
-  const bad = (b && RA.board.mesh.material.opacity > 0.5) || (bt && RA.toastP.mesh.material.opacity > 0.5);
+  const bad = (b && RA.board.mesh.material.opacity > (RA.boardLooked() ? 0.85 : 0.5)) || (bt && RA.toastP.mesh.material.opacity > 0.5);
   PAN.streak = bad ? PAN.streak + 0.033 : 0; PAN.worst = Math.max(PAN.worst, PAN.streak);
   sim(t);
 };
@@ -170,7 +170,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Combate curl con barra', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2' }, squatSim(2.0), 420, s => s.reps < 9 ? 'el curl con barra no cuenta las repeticiones' : s.partial > 2 ? 'el curl con barra da medias de más' : '');
   await runConfig('Combate press con barra', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'press2' }, squatSim(1.8), 420, s => s.reps < 9 ? 'el press con barra no cuenta las repeticiones' : '');
   await runConfig('Combate sentadilla con press', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster' }, squatSim(3.0), 420, s => s.reps < 9 ? 'la sentadilla con press no dispara' : s.partial > 2 ? 'la sentadilla con press da medias de más' : '');
-  await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.thrUp = 0; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
+  await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.noArms = true; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
+  RA.PV.noArms = false;
+  // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
+  const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
+  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['dlrow', 'peso muerto con remo', 3.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
+    await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
+    await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
+    RA.PV[flag] = false;
+  }
+  const rsides = new Set();
+  await runConfig('Combate remo en plancha', { ...base, mode: 'combat', foes: 'flyers', exercise: 'plankrow', walkTime: 10 }, t => {
+    RA.PV.keys.KeyQ = (t % 3) > 0.2 && (t % 3) < 1.0; RA.PV.keys.KeyE = (t % 3) > 1.5 && (t % 3) < 2.3;
+    RA.enemies.forEach(e => rsides.add(e.pos.x < 0 ? 'izq' : 'der'));
+  }, 420, s => s.kills < 4 ? 'el remo en plancha no mata arañas' : rsides.size < 2 ? 'en el remo en plancha las arañas no llegan por los dos lados' : '');
+  RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
   // Combate: cualquier enemigo con cualquier puntería
   await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
   RA.camera.rotation.set(0, 0, 0);
@@ -410,6 +424,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.state !== 'end' || RA.SES.results.length !== 3) errors.push('la sesión no juega los tres bloques');
   if (!storedDuring || storedDuring.mode !== 'combat' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
   if (RA.settings.mode !== 'combat' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
+  // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
+  { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
+    const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });
+    RA.setSetting('weight', 70);
+    const P1 = RA.progress([mk(0), mk(1), mk(2), mk(5), mk(6), mk(7), mk(8)], now), P2 = RA.progress([mk(1), mk(2)], now), P3 = RA.progress([mk(3)], now), P0 = RA.progress([], now);
+    const k = RA.kcalOf('squat', 600, 0, 70), kOld = P1.today.kcal;
+    log(`progress: last run kcal ${last && last.kcal} work ${last && last.work}/${last && last.time} s · streaks ${P1.streak}/${P1.best} ${P2.streak} (hoy no) ${P3.streak} ${P0.streak} · week days ${P1.week.days} · 10 min squats ${k.toFixed(1)} kcal, old record ${kOld.toFixed(1)} · line "${RA.progressLine()}"`);
+    if (!last || !(last.kcal > 0) || !(last.work > 0) || last.work > last.time) errors.push('progreso: la ronda no guarda las calorías o el tiempo de oleada');
+    if (P1.streak !== 3 || P1.best !== 4 || P2.streak !== 2 || P2.trainedToday || P3.streak !== 0 || P0.streak !== 0 || P1.week.days !== 5) errors.push('progreso: la racha de días no se cuenta bien');
+    if (Math.abs(k - 67.4) > 0.5 || !(kOld > 30 && kOld < 67.4)) errors.push('progreso: la estimación de calorías no cuadra');
+    if (!/Hoy: .*kcal.*racha 1 día/.test(RA.progressLine())) errors.push('progreso: el menú no muestra lo de hoy y la racha');
+  }
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
   // pausa durante partida
@@ -820,6 +846,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.lobbyMenu(); frame(2, 16, xrFrame); press('Realidad mixta'); RA.beginRun(); frame(200, 16, xrFrame); const churnPlay = ms(200, true);
     log(`perf habitación (ms/fotograma, JS): sin habitación ${base.toFixed(2)} · estática ${stat.toFixed(2)} · cambiando en RM ${churnMR.toFixed(2)} · cambiando en VR ${churnVR.toFixed(2)} · cambiando en partida ${churnPlay.toFixed(2)}`);
     if (churnMR > base + 1.5 || churnVR > base + 1.5 || churnPlay > base + 1.5) errors.push('la habitación pesa demasiado por fotograma cuando el escaneo cambia');
+    XRS.room = null; RA.exitAll(); frame(2, 16, xrFrame);
+  }
+  // ---- Escaneo como el de las Quest: «wall face», una malla enorme sin etiqueta y un «mueble» donde estás tú ----
+  {
+    const Q = { planes: new Set(), meshes: new Set() };
+    for (const p of ROOMSIM.planes) Q.planes.add(p.semanticLabel === 'wall' ? { ...p, semanticLabel: 'wall face' } : p);
+    for (const m of ROOMSIM.meshes) Q.meshes.add(m);
+    const big = new Float32Array([-3, 0, -3, 3, 0, -3, 3, 2.4, 3, -3, 2.4, 3]); Q.meshes.add({ semanticLabel: '', lastChangedTime: 1, meshSpace: { room: { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, vertices: big, indices: new Uint32Array([0, 1, 2, 0, 2, 3]) });
+    Q.planes.add({ semanticLabel: 'table', orientation: 'horizontal', lastChangedTime: 1, planeSpace: { room: { position: { x: 0, y: 0.7, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, polygon: [[-0.4, -0.3], [0.4, -0.3], [0.4, 0.3], [-0.4, 0.3]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', roomMode: 'scan', roomShow: 0, roomOcclude: 1, lives: 0, waves: 1, repsWave: 30, walkTime: 8 })) RA.setSetting(k, v);
+    XRS.room = Q; XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0; XRS.headQ = null;
+    await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame);
+    const furnUsed = RA.ROOM.uf.length, gatesOn = RA.gates.filter(g => g.on).length, P = RA.roomPlan();
+    log('quest-like scan: walls', RA.ROOM.walls.length, '· furniture read', RA.ROOM.furn.length, 'used', furnUsed, '· gates', gatesOn, P && P.gates.filter(Boolean).length);
+    if (RA.ROOM.walls.length !== 4) errors.push('no se reconocen las paredes etiquetadas «wall face»');
+    if (RA.ROOM.furn.length !== 3 || furnUsed !== 2) errors.push('una malla enorme sin etiqueta o un «mueble» donde estás tú se toman por muebles');
+    // «Ver lo escaneado» pinta paredes y muebles; sin oclusión, no se tapa nada
+    RA.setSetting('roomShow', 1); frame(2, 16, xrFrame); const shown = RA.ROOM.occl.visible && RA.ROOM.occl.children.some(o => o.material && o.material.colorWrite !== false);
+    RA.setSetting('roomShow', 0); RA.setSetting('roomOcclude', 0); frame(2, 16, xrFrame); const noOcc = !RA.ROOM.occl.visible; RA.setSetting('roomOcclude', 1);
+    log('scan view', shown, '· occlusion off', noOcc);
+    if (!shown || !noOcc) errors.push('no se puede ver lo escaneado o apagar la oclusión');
     XRS.room = null; RA.exitAll(); frame(2, 16, xrFrame);
   }
   // ---- Habitación pequeña: no cumple los requisitos y se coloca a mano (y se recuerda) ----

@@ -330,15 +330,16 @@ function buzzLoop(kind, pos) {
 }
 // Zumbido de la espada láser: grave y continuo; al moverla sube de tono y de volumen
 function saberLoop(pos) {
+  // zumbido sutil: casi todo seno grave, con un poco de sierra muy filtrada; sube algo al mover la hoja deprisa
   if (!sndOK()) return null;
-  const L = new Loop(pos, 0.12, (L, C) => {
-    const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600; lp.connect(L.out);
-    const a = L.osc('sawtooth', 88), b = L.osc('sawtooth', 89.3), g = C.createGain(); g.gain.value = 0.5; a.connect(g); b.connect(g); g.connect(lp);
-    const c = L.osc('sine', 176), cg = C.createGain(); cg.gain.value = 0.3; c.connect(cg).connect(lp);
+  const L = new Loop(pos, 0.025, (L, C) => {
+    const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.connect(L.out);
+    const a = L.osc('sawtooth', 88), b = L.osc('sawtooth', 89.3), g = C.createGain(); g.gain.value = 0.18; a.connect(g); b.connect(g); g.connect(lp);
+    const c = L.osc('sine', 176), cg = C.createGain(); cg.gain.value = 0.5; c.connect(cg).connect(lp);
     L.oscs = [a, b, c]; L.lp = lp;
   });
   const set = L.set.bind(L);
-  L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.6), T, 0.03)); L.lp.frequency.setTargetAtTime(600 + k * 1800, T, 0.03); L.out.gain.setTargetAtTime(0.12 + k * 0.25, T, 0.03); };
+  L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.5), T, 0.03)); L.lp.frequency.setTargetAtTime(380 + k * 900, T, 0.03); L.out.gain.setTargetAtTime(0.025 + k * 0.07, T, 0.03); };
   return L;
 }
 // Succión del remolino: viento grave que gira; k (0-1) es lo abierto que está

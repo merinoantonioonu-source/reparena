@@ -74,6 +74,11 @@ button{font:inherit;cursor:pointer}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:1.3rem}
+.stat span{color:var(--muted);font-size:.8rem}
+.muted{color:var(--muted)}
 #stage{position:fixed;inset:0;background:#000;z-index:50}
 #stage canvas{display:block;width:100%;height:100%}
 .cross{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none}
@@ -158,9 +163,27 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-thruster" value="thruster">
         <span class="tag">Kettlebell, barra o mancuernas · visor y muñecas</span><b>Sentadilla con press</b>
         <small>Con el peso en los hombros, baja en sentadilla para cargar y, al subir, empújalo por encima de la cabeza para lanzar el rayo. Piernas, tronco y hombros en un solo movimiento.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-frontsq" value="frontsq">
+        <span class="tag">Mancuernas o disco · visor y muñecas</span><b>Sentadilla con elevación frontal</b>
+        <small>Baja en sentadilla para cargar y, al subir, lleva los brazos estirados al frente hasta la altura de los hombros: así disparas.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-jsquat" value="jsquat">
+        <span class="tag">Sensor: altura del visor</span><b>Sentadilla con salto</b>
+        <small>La sentadilla carga y el salto al subir dispara (la cabeza tiene que subir deprisa por encima de tu altura de pie). Deja espacio y techo.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-swing" value="swing">
+        <span class="tag">Kettlebell · visor y muñecas</span><b>Swing con kettlebell</b>
+        <small>Lleva la cadera atrás con la espalda recta (la kettlebell entre las piernas) para cargar y, con el impulso de la cadera, lánzala al frente a la altura del pecho para disparar.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-chop" value="chop">
+        <span class="tag">Kettlebell o disco · muñecas</span><b>Leñador</b>
+        <small>Con las dos manos, baja el peso junto a una cadera (carga) y súbelo en diagonal por encima del hombro contrario (dispara). Cambia de lado cuando quieras.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-dlrow" value="dlrow">
+        <span class="tag">Barra o mancuernas · visor y muñecas</span><b>Peso muerto con remo</b>
+        <small>Baja el peso hacia el suelo con la cadera atrás y la espalda recta (carga); al subir, tira de los codos hacia atrás para disparar.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
         <span class="tag">Combate · visor y muñecas</span><b>Plancha con un brazo</b>
         <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-plankrow" value="plankrow">
+        <span class="tag">Mancuernas · visor y muñecas</span><b>Remo en plancha</b>
+        <small>En plancha sobre las mancuernas, tira de una hacia la cadera (el codo hacia atrás) para disparar a las arañas de ese lado.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-splank" value="splank">
         <span class="tag">Combate · altura del visor</span><b>Plancha lateral</b>
         <small>De lado sobre el antebrazo, con la cadera arriba: cada pocos segundos aguantados, un disparo. Si cae la cadera, vuelve a empezar. Cambia de lado en cada descanso.</small></label>
@@ -248,16 +271,18 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No).</li>
+      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Progreso:</strong> al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso, en Ajustes → Sistema), y abajo, en tu historial, la racha de días seguidos entrenando, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
 
   <section class="hist">
     <h2>Tu historial en este dispositivo</h2>
+    <div class="stats" id="progBox"></div>
     <div class="tablebox"><table>
-      <thead><tr><th>Ejercicio</th><th>Sesiones</th><th>Reps totales</th><th>Mejor sesión</th><th>Perfectas</th></tr></thead>
+      <thead><tr><th>Ejercicio</th><th>Rondas</th><th>Reps totales</th><th>Mejor ronda</th><th>Perfectas</th><th>Tiempo</th><th>≈ kcal</th></tr></thead>
       <tbody id="histBody"></tbody>
     </table></div>
   </section>

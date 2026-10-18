@@ -345,7 +345,7 @@ const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THR
 function collectThreats() {
   let n = 0; const put = (o, r) => { o.center(_ocP[n] || (_ocP[n] = new V3())); _ocR[n++] = r; };
   for (const x of touches) if (x.alive && !x.judged) put(x, x.part === 'head' ? x.r * 1.7 : 0.16);
-  for (const e of enemies) if (e.alive) put(e, e.type === 'robot' ? 0.9 * e.sc : Math.max(0.1, e.radius * 1.5));
+  for (const e of enemies) if (e.alive && e.state !== 'emerge' && e.mode !== 'emerge') put(e, e.type === 'robot' ? 0.9 * e.sc : Math.max(0.1, e.radius * 1.5)); // los que aún salen de la pared o del suelo no se ven: no cuentan
   return n;
 }
 // ¿Tapa este panel (w × h en su plano) alguno de esos n? Un panel normal solo tapa lo que queda detrás de él; uno sin
@@ -361,6 +361,9 @@ function panelHides(obj, w, h, always, n) {
   }
   return false;
 }
+// ¿Lo miras de frente? (el centro del marcador a menos de ~14° de donde apunta la vista)
+const _blP = new V3();
+function boardLooked() { board.mesh.getWorldPosition(_blP).sub(head.p); const d = _blP.length(); return d > 0.1 && _blP.dot(fwd()) / d > 0.97; }
 // Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
 const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
@@ -385,9 +388,9 @@ function updateViewPanels(dt) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
     toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
   }
-  // el marcador está fijo: si algo de lo que viene queda detrás de él, se vuelve casi transparente hasta que pasa
+  // el marcador está fijo: si algo de lo que viene queda detrás de él, se aclara hasta que pasa; si lo estás mirando para leerlo, se queda legible
   const hide = n > 0 && board.mesh.parent && panelHides(board.mesh, 1.06, 0.5, false, n);
-  HUD.board += ((hide ? 0.12 : 1) - HUD.board) * Math.min(1, dt * 8);
+  HUD.board += ((hide ? (boardLooked() ? 0.8 : 0.35) : 1) - HUD.board) * Math.min(1, dt * 8);
   board.mesh.material.opacity = HUD.board; boardFrameMat.opacity = HUD.board; boardFrameMat.depthWrite = HUD.board > 0.98;
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
@@ -435,11 +438,11 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise];
+    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (holdsWeights() || settings.exercise === 'plank1' || settings.exercise === 'superman' || (aimManual() && settings.aim === 'hands' && handsFree()) || pistolOn()) {
+    if (holdsWeights() || oneArm() || settings.exercise === 'superman' || (aimManual() && settings.aim === 'hands' && handsFree()) || pistolOn()) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {
@@ -486,6 +489,7 @@ function drawBoard() {
   if (state === 'rest') {
     c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
     c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
+    c.fillStyle = '#a49fc8'; c.font = `500 30px ${FB}`; c.fillText(`${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, '0')} entrenando · ≈ ${Math.round(runStatsKcal())} kcal`, W - 36, 300);
   } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
   else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
   else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
