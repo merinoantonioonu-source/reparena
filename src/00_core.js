@@ -12,7 +12,7 @@ const smooth = t => t * t * (3 - 2 * t);
 const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', press: 'Press de hombro', plank1: 'Plancha con un brazo', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', press: 'Press hombro', plank1: 'Plancha 1 brazo', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { walkers: 'Asalto', flyers: 'Enjambre', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Sistema' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   walkers: ['squat', 'lunge', 'pushup', 'dips', 'curl', 'press', 'plank1', 'splank'], flyers: ['squat', 'lunge', 'pushup', 'dips', 'curl', 'press', 'superman', 'splank'], arcs: ['squat'],
@@ -73,6 +73,14 @@ const SCHEMA = [
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['walkers', 'flyers'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
   { key: 'aim', g: 'enemigos', cond: () => !settings.pistol, label: 'Apuntar con (sentadillas y zancadas)', short: 'Apuntar con', type: 'choice', opts: [['hands', 'Manos'], ['gaze', 'Mirada']], def: 'hands', modes: ['flyers'], hint: 'En flexiones y curl se apunta con la mirada.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['flyers'] },
+
+  // Espadas (con los mandos): en Asalto, cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques,
+  // los diamantes pasan a ser bloques que se cortan en la dirección de su flecha
+  { key: 'sword', g: 'espada', label: 'Espadas (con los mandos)', short: 'Espadas', type: 'choice', opts: [['off', 'No'], ['one', 'Una'], ['two', 'Dos']], def: 'off', modes: ['walkers', 'touch'], ex: ['squat', 'lunge', 'jump', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', relayout: true, hint: 'Con los mandos en la mano. En Asalto cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques se cortan bloques en la dirección de su flecha. Despeja bien el espacio a tu alrededor y ponte la correa de los mandos.' },
+  { key: 'swordKind', g: 'espada', label: 'Tipo de espada', short: 'Tipo', type: 'choice', opts: [['metal', 'Metálica'], ['laser', 'Láser']], def: 'metal', modes: ['walkers', 'touch'], cond: () => swordSet(), hint: 'Metálica: acero que refleja las luces del entorno. Láser: hoja de energía con su zumbido.' },
+  { key: 'swordHand', g: 'espada', label: 'Mano de la espada', short: 'Mano', type: 'choice', opts: [['right', 'Derecha'], ['left', 'Izquierda']], def: 'right', modes: ['walkers', 'touch'], cond: () => swordSet() && settings.sword === 'one', hint: 'Con una sola espada y las pistolas activadas, en la otra mano llevas el bláster.' },
+  { key: 'swordSpeed', g: 'espada', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['walkers', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
+  { key: 'swordBlock', g: 'espada', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['walkers'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
   { key: 'arcMax', g: 'arcos', label: 'Bajada máxima bajo un arco', short: 'Bajada máxima', type: 'num', min: 5, max: 90, step: 1, def: 38, unit: 'cm', modes: ['arcs'], hint: 'Cada arco sale a una altura al azar entre la mínima y la máxima.' },
@@ -160,6 +168,8 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 const pistolOn = () => !!settings.pistol && handsFree() && (settings.mode === 'walkers' || settings.mode === 'flyers');
+// Espadas: en Asalto (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
+const swordSet = () => settings.sword !== 'off' && (settings.mode === 'walkers' ? handsFree() : settings.mode === 'touch' && (['squat', 'lunge', 'jump'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase === 'stand')));
 // En Enjambre con las manos o las pistolas cada repetición da dos disparos (uno por mano)
 const twoShots = () => settings.mode === 'flyers' && handsFree() && (settings.aim === 'hands' || pistolOn());
 const isFloor = () => ['pushup', 'plank1', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
