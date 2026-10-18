@@ -6,10 +6,12 @@
 //  · el marcador se cuelga en una pared, y las trampillas de las arañas salen en suelo libre;
 //  · los robots no eligen su puesto de ataque dentro de un mueble;
 //  · las paredes y los muebles tapan lo que pasa por detrás (con un hueco en cada compuerta, por el que se ve el túnel).
-// Sin escaneo, en VR o con el ajuste apagado, todo sigue como siempre.
+// Si la habitación no cumple los requisitos (o lo prefieres), «Colocada a mano»: pones tú el sitio de juego, las
+// compuertas, las trampillas y el marcador, y se recuerda entre sesiones. En VR o con el ajuste en No, todo como siempre.
 const ROOM = { walls: [], furn: [], feats: [], ceilY: 0, sig: '', refs: new WeakSet(), plan: null, applied: false, at: null, wait: 0, occl: new THREE.Group(), wallOcc: new THREE.Group() };
 ROOM.occl.add(ROOM.wallOcc); ROOM.occl.visible = false; scene.add(ROOM.occl);
-const roomOn = () => arMode && !!settings.room && ROOM.walls.length > 0 && !forestOn();
+const roomMode = () => arMode && !forestOn() ? settings.roomMode : 'off';
+const roomOn = () => { const m = roomMode(); return m === 'scan' ? ROOM.walls.length > 0 : m === 'manual' ? manualReady() : false; };
 const roomPlan = () => roomOn() && ROOM.applied ? ROOM.plan : null;
 // solo escribe profundidad: lo virtual que queda detrás de una pared o un mueble real no se ve
 const occMat = new THREE.MeshBasicMaterial({ colorWrite: false });
@@ -111,32 +113,35 @@ function roomFree(R, x, z, margin) {
   return true;
 }
 // Puestos a lo largo de las paredes: los que miran hacia ti, a la distancia y el ángulo pedidos, con el camino libre
-function wallSpots(R, half, depth, minD, maxD, maxAng, path) {
-  const out = [];
+function wallSpots(R, half, depth, minD, maxD, maxAng, path, why = {}) {
+  const out = []; why.stage = why.stage || 0; const reach = k => { if (k > why.stage) why.stage = k; };
   R.walls.forEach((W, wi) => {
-    if (W.len < 2 * half + 0.1) return;
+    if (W.len < 2 * half + 0.1) return; reach(1);
     const ux = (W.b.x - W.a.x) / W.len, uz = (W.b.z - W.a.z) / W.len, n = W.n;
     for (let t = half + 0.05; t <= W.len - half - 0.05 + 1e-6; t += 0.2) {
       const px = W.a.x + ux * t, pz = W.a.z + uz * t, x = px + n.x * depth, z = pz + n.z * depth, d = Math.hypot(x, z);
-      if (d < minD || d > maxD) continue;
-      const face = -(n.x * x + n.z * z) / d, ang = Math.atan2(x, -z); if (face < 0.4 || Math.abs(ang) > maxAng) continue;
+      if (d < minD || d > maxD) continue; reach(2);
+      const face = -(n.x * x + n.z * z) / d, ang = Math.atan2(x, -z); if (face < 0.4 || Math.abs(ang) > maxAng) continue; reach(3);
       if (R.feats.some(F => ptSeg(px, pz, F.a.x, F.a.z, F.b.x, F.b.z) < half && Math.abs(F.n.x * n.x + F.n.z * n.z) > 0.8)) continue; // ni puertas ni ventanas
       // las esquinas de lo que se cuelga, despejadas de muebles
       let ok = true; for (const s of [-1, 1]) for (const f of [0.05, depth * 2 + 0.3]) { const cx = px + ux * s * half + n.x * f, cz = pz + uz * s * half + n.z * f; if (R.furn.some(P => P.length >= 3 && segPoly(cx, cz, cx, cz, P) < 0.05)) ok = false; }
-      if (!ok || (path && !roomClear(R, x + n.x * path, z + n.z * path, x * 0.7 / d, z * 0.7 / d, 0.35, wi))) continue;
+      if (!ok) continue; reach(4);
+      if (path && !roomClear(R, x + n.x * path, z + n.z * path, x * 0.7 / d, z * 0.7 / d, 0.35, wi)) continue; reach(5);
       out.push({ x, z, px, pz, rot: Math.atan2(n.x, n.z), ang, d, wi, t, score: Math.cos(ang) * 2 + face - Math.abs(d - 3.2) * 0.25 });
     }
   });
   return out;
 }
 // Dónde van las compuertas (hasta tres: centro, izquierda y derecha), el marcador y lo lejos que está la pared de delante
-function makeRoomPlan() {
+function scanPlan() {
   const R = roomLocal(); if (!R.walls.length) return null;
   const H = Math.min(ROOM.ceilY > 1.6 ? ROOM.ceilY : 9, Math.max(...ROOM.walls.map(w => w.y1)));
   const gs = clamp((H - 0.1) / 4.4, 0.4, 0.72), half = 1.85 * gs; // la compuerta, con su baliza, cabe bajo el techo
-  const C = wallSpots(R, half, 0.45 * gs, 1.7, 7.5, 1.3, 0.9 * gs);
+  const why = {}, C = wallSpots(R, half, 0.45 * gs, 1.7, 7.5, 1.3, 0.9 * gs, why);
   let front = Infinity; for (const w of R.walls) { const den = w.b.x - w.a.x; if (Math.abs(den) < 1e-9) continue; const t = -w.a.x / den; if (t < 0 || t > 1) continue; const z = w.a.z + (w.b.z - w.a.z) * t; if (z < 0) front = Math.min(front, -z); }
   const plan = { gs, half, gates: [null, null, null], board: null, front, R };
+  // si no cabe ninguna compuerta, por qué (lo más lejos que llegó la búsqueda)
+  if (!C.length) plan.why = ['las paredes escaneadas son demasiado estrechas para una compuerta', 'no hay ninguna pared a 1,7–7,5 m de donde estás', 'no hay ninguna pared delante de ti (mira hacia una pared libre)', 'delante de las paredes hay muebles, puertas o ventanas', 'los muebles tapan el camino entre las paredes y tú'][why.stage] || 'no cabe ninguna compuerta';
   if (C.length) {
     const sep = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) >= 2 * half + 0.25;
     const best = list => list.reduce((m, c) => (!m || c.score > m.score ? c : m), null);
@@ -185,10 +190,16 @@ function buildFurnOccluders() {
 function buildWallOccluders(plan) {
   for (const c of [...ROOM.wallOcc.children]) { ROOM.wallOcc.remove(c); c.geometry.dispose(); }
   if (!plan) return;
-  ROOM.walls.forEach((w, wi) => {
+  // cada compuerta abre hueco en la pared que tiene detrás (también las colocadas a mano, si están pegadas a una)
+  arena.updateMatrixWorld();
+  const gw = plan.gates.filter(Boolean).map(g => { const y = g.rot + arena.rotation.y; return { p: arena.localToWorld(new V3(g.x, 0, g.z)), f: new V3(Math.sin(y), 0, Math.cos(y)) }; });
+  ROOM.walls.forEach(w => {
     const len = w.a.distanceTo(w.b); if (len < 0.05) return;
     const u = _ro.subVectors(w.b, w.a).divideScalar(len).clone(), top = Math.max(w.y1, ROOM.ceilY || 0, 2.2), off = w.n.clone().multiplyScalar(-0.02);
-    const holes = plan.gates.filter(g => g && g.wi === wi).map(g => [g.t - 1.25 * plan.gs, g.t + 1.25 * plan.gs, 3.1 * plan.gs]).sort((a, b) => a[0] - b[0]);
+    const holes = gw.filter(g => g.f.dot(w.n) > 0.7).map(g => {
+      const t = (g.p.x - w.a.x) * u.x + (g.p.z - w.a.z) * u.z, dn = (g.p.x - w.a.x) * w.n.x + (g.p.z - w.a.z) * w.n.z;
+      return dn > -0.1 && dn < 0.9 && t > -0.5 && t < len + 0.5 ? [t - 1.25 * plan.gs, t + 1.25 * plan.gs, 3.1 * plan.gs] : null;
+    }).filter(Boolean).sort((a, b) => a[0] - b[0]);
     const quad = (s0, s1, y0, y1) => {
       if (s1 - s0 < 0.01 || y1 - y0 < 0.01) return;
       const p = (s, y) => { const v = w.a.clone().addScaledVector(u, s).add(off); v.y = y; return v; }, A = p(s0, y0), B = p(s1, y0), Cq = p(s1, y1), D = p(s0, y1);
@@ -200,25 +211,173 @@ function buildWallOccluders(plan) {
   });
 }
 
-/* ---------- Cada fotograma: recolocar fuera de la partida si se movió la arena o llegó el escaneo ---------- */
+/* ---------- Colocada a mano: lo que pones tú, guardado respecto al sitio de juego ---------- */
+// El sitio de juego (dónde te pones y hacia dónde miras) es un aparato más (EQ 'spot': ancla persistente, suelo del
+// guardián y local-floor); compuertas, trampillas y marcador se guardan respecto a él, así siguen en su sitio de la
+// habitación entre sesiones aunque cambie el origen.
+const RSET_KEY = 'reparena3-roomset';
+const RSET = { gs: 0.6, gates: [], hatches: [], board: null };
+(function loadRoomSet() {
+  const s = store(RSET_KEY) || {}, ok = o => o && [o.x, o.z].every(isFinite);
+  if (isFinite(s.gs)) RSET.gs = clamp(s.gs, 0.4, 1);
+  if (Array.isArray(s.gates)) RSET.gates = s.gates.filter(ok).slice(0, 3).map(o => ({ x: o.x, z: o.z, yaw: +o.yaw || 0 }));
+  if (Array.isArray(s.hatches)) RSET.hatches = s.hatches.filter(ok).slice(0, 4).map(o => ({ x: o.x, z: o.z }));
+  if (ok(s.board)) RSET.board = { x: s.board.x, z: s.board.z, yaw: +s.board.yaw || 0, wall: !!s.board.wall };
+})();
+const saveRoomSet = () => store(RSET_KEY, RSET);
+const manualReady = () => eqPose('spot').set && (RSET.gates.length + RSET.hatches.length > 0 || !!RSET.board);
+function manualPlan() {
+  const S = eqPose('spot'); arena.updateMatrixWorld();
+  const toArena = o => { const l = arena.worldToLocal(eqWorld(S, o.x, 0, o.z, new V3())); return { x: l.x, z: l.z, rot: (o.yaw || 0) + S.yaw - arena.rotation.y, ang: Math.atan2(l.x, -l.z) }; };
+  const G = RSET.gates.map(toArena), gates = [null, null, null];
+  if (G.length) { // la más de frente, en el centro (la del jefe); las demás, a su lado
+    const mid = G.reduce((m, g) => (!m || Math.abs(g.ang) < Math.abs(m.ang) ? g : m), null); gates[1] = mid;
+    for (const g of G) if (g !== mid) { const k = g.ang < mid.ang ? 0 : 2; gates[gates[k] ? 2 - k : k] = g; }
+  }
+  const R = ROOM.walls.length ? roomLocal() : { walls: [], feats: [], furn: [] };
+  const front = gates[1] ? Math.max(2.5, Math.hypot(gates[1].x, gates[1].z)) : Infinity;
+  return { manual: true, gs: RSET.gs, half: 1.85 * RSET.gs, gates, R, front, hatches: RSET.hatches.map(toArena), board: RSET.board ? Object.assign(toArena(RSET.board), { wall: RSET.board.wall }) : null };
+}
+function makeRoomPlan() { return roomMode() === 'manual' ? manualPlan() : scanPlan(); }
+
+/* ---------- Colocar a mano, en las gafas ---------- */
+// Pasos: sitio de juego → compuertas → trampillas → marcador. Lo que colocas sale donde miras al suelo (o donde apunta
+// tu mano); «Colocar aquí» o pellizcar lo deja. Con la habitación escaneada, compuertas y marcador se pegan a la pared.
+const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null };
+const rplGood = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
+const rplBad = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
+const rplDim = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false });
+function ghostOf(kind, mat) {
+  const g = new THREE.Group(), box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); };
+  if (kind === 'gate') { for (const s of [-1, 1]) box(0.12, 3.4, 0.12, s * 1.5, 1.7, 0); box(3.2, 0.12, 0.12, 0, 3.4, 0); box(0.08, 0.02, 1.2, 0, 0.02, 0.6); box(0.5, 0.02, 0.08, 0, 0.02, 1.1); }
+  else if (kind === 'hatch') { const r = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 6, 24), mat); r.rotation.x = Math.PI / 2; r.position.y = 0.02; g.add(r); }
+  else if (kind === 'board') { for (const s of [-1, 1]) { box(1.1, 0.03, 0.03, 0, 1.75 + s * 0.245, 0); box(0.03, 0.52, 0.03, s * 0.55, 1.75, 0); } }
+  else { const r = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.03, 6, 32), mat); r.rotation.x = Math.PI / 2; r.position.y = 0.02; g.add(r); box(0.06, 0.02, 0.5, 0, 0.02, -0.55); box(0.3, 0.02, 0.06, 0, 0.02, -0.78); } // sitio de juego, con su flecha hacia delante
+  return g;
+}
+const rplGroup = new THREE.Group(); rplGroup.visible = false; scene.add(rplGroup);
+const rplGhost = {}; for (const k of ['gate', 'hatch', 'board', 'spot']) { rplGhost[k] = ghostOf(k, rplGood); rplGhost[k].visible = false; rplGroup.add(rplGhost[k]); }
+const rplPlaced = new THREE.Group(); rplGroup.add(rplPlaced);
+// En el menú principal (colocada a mano): el sitio de juego marcado en el suelo
+const spotMark = ghostOf('spot', rplDim); spotMark.visible = false; scene.add(spotMark);
+const setMat = (g, m) => g.traverse(o => { if (o.material) o.material = m; });
+// Pegar a la pared escaneada más cercana que mire hacia el sitio de juego
+function snapWall(p, depth) {
+  let best = null, bd = 0.7;
+  for (const w of ROOM.walls) {
+    const ux = w.b.x - w.a.x, uz = w.b.z - w.a.z, L = Math.hypot(ux, uz); if (L < 0.1) continue;
+    const t = clamp(((p.x - w.a.x) * ux + (p.z - w.a.z) * uz) / (L * L), 0, 1), cx = w.a.x + ux * t, cz = w.a.z + uz * t, d = Math.hypot(p.x - cx, p.z - cz);
+    if (d < bd && w.n.x * (RPL.spot.x - cx) + w.n.z * (RPL.spot.z - cz) > 0) { bd = d; best = { x: cx + w.n.x * depth, z: cz + w.n.z * depth, yaw: Math.atan2(w.n.x, w.n.z) }; }
+  }
+  return best;
+}
+function rplPose(kind) {
+  const p = RPL.aim, S = RPL.spot, toS = Math.atan2(S.x - p.x, S.z - p.z);
+  const snap = kind === 'gate' ? snapWall(p, 0.45 * RPL.gs) : kind === 'board' ? snapWall(p, 0.03) : null;
+  const pose = snap ? { x: snap.x, z: snap.z, yaw: snap.yaw, wall: true } : { x: p.x, z: p.z, yaw: toS, wall: false };
+  const dp = Math.hypot(pose.x - S.x, pose.z - S.z); // ya pegado a la pared, si toca
+  pose.ok = RPL.aimOk && (kind === 'gate' ? dp >= 0.8 && dp <= 8 : kind === 'hatch' ? dp >= 0.9 && dp <= 3.5 : dp >= 0.8 && dp <= 7);
+  return pose;
+}
+function rplShowPlaced() {
+  while (rplPlaced.children.length) rplPlaced.remove(rplPlaced.children[0]);
+  const add = (k, o, sc = 1) => { const g = ghostOf(k, rplDim); g.position.set(o.x, 0, o.z); g.rotation.y = o.yaw || 0; g.scale.setScalar(sc); rplPlaced.add(g); };
+  if (RPL.spot) add('spot', RPL.spot);
+  RPL.gates.forEach(o => add('gate', o, RPL.gs)); RPL.hatches.forEach(o => add('hatch', o)); if (RPL.board) add('board', RPL.board);
+}
+function startRoomPlace(back) {
+  Object.assign(RPL, { on: true, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: ROOM.ceilY > 1.6 ? clamp((ROOM.ceilY - 0.1) / 4.4, 0.4, 0.72) : RSET.gs, back, aimOk: false });
+  rplGroup.visible = true; rplShowPlaced(); SND.click(); roomPlaceMenu();
+}
+function endRoomPlace(save) {
+  if (save && RPL.spot) {
+    const S = eqPose('spot'); Object.assign(S, { x: RPL.spot.x, z: RPL.spot.z, yaw: RPL.spot.yaw }); S.anchor = null; equipChanged('spot'); equipCommit('spot');
+    const L = o => { const l = eqLocal(S, new V3(o.x, 0, o.z), new V3()); return { x: l.x, z: l.z, yaw: (o.yaw || 0) - S.yaw }; };
+    Object.assign(RSET, { gs: RPL.gs, gates: RPL.gates.map(L), hatches: RPL.hatches.map(o => { const l = L(o); return { x: l.x, z: l.z }; }), board: RPL.board ? Object.assign(L(RPL.board), { wall: RPL.board.wall }) : null });
+    saveRoomSet(); settings.roomMode = 'manual'; saveSettings(); onSettingChanged('roomMode');
+    say('Habitación colocada', '#3cf0c6', 1.4); SND.perfect();
+  }
+  RPL.on = false; rplGroup.visible = false; for (const k in rplGhost) rplGhost[k].visible = false;
+  const back = RPL.back; RPL.back = null; if (back) back();
+}
+function rplPlace() {
+  const S = RPL.step;
+  if (S === 'spot') { RPL.spot = { x: head.p.x, z: head.p.z, yaw: bodyYaw() }; RPL.step = 'gates'; }
+  else {
+    const kind = S === 'gates' ? 'gate' : S === 'hatches' ? 'hatch' : 'board', pose = rplPose(kind); if (!pose.ok) { SND.partial(); return; }
+    if (kind === 'gate') { RPL.gates.push(pose); if (RPL.gates.length >= 3) RPL.step = 'hatches'; }
+    else if (kind === 'hatch') { RPL.hatches.push(pose); if (RPL.hatches.length >= 4) RPL.step = 'board'; }
+    else { RPL.board = pose; endRoomPlace(true); return; }
+  }
+  SND.click(); rplShowPlaced(); roomPlaceMenu();
+}
+function roomPlaceMenu() {
+  const S = RPL.step, n = { gates: RPL.gates.length, hatches: RPL.hatches.length }, aimTxt = 'Mira al suelo donde lo quieres (o apunta con la mano) y pulsa «Colocar aquí» o pellizca.';
+  const rows = [{ t: 'title', text: 'COLOCAR LA HABITACIÓN' }];
+  if (S === 'spot') rows.push({ t: 'text', text: 'Ponte donde vas a hacer el ejercicio, mirando hacia donde quieres que lleguen los enemigos, y pulsa «Aquí juego».' }, { t: 'btns', items: [{ label: 'Aquí juego', style: 'primary', onPress: rplPlace }], h: 0.08 });
+  else if (S === 'gates') rows.push({ t: 'text', text: `Compuertas (${n.gates} de 3): por donde salen los enemigos. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se pega a ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.gates.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Más pequeña', onPress: () => { RPL.gs = clamp(RPL.gs - 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Más grande', onPress: () => { RPL.gs = clamp(RPL.gs + 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Siguiente: trampillas', onPress: () => { RPL.step = 'hatches'; roomPlaceMenu(); } }] });
+  else if (S === 'hatches') rows.push({ t: 'text', text: `Trampillas de las arañas (${n.hatches} de 4), para flexiones y planchas: a 1–3,5 m del sitio de juego, en suelo libre. ${aimTxt}` },
+    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.hatches.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Siguiente: marcador', onPress: () => { RPL.step = 'board'; roomPlaceMenu(); } }] });
+  else rows.push({ t: 'text', text: `Marcador: donde quieras verlo. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se cuelga en ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
+  rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
+  openMenu(rows);
+}
+const _rpd = new V3();
+function updateRoomPlace(dt) {
+  // fuera de la colocación: el sitio de juego marcado en el suelo, para ponerse en él antes de empezar
+  const S = eqPose('spot');
+  spotMark.visible = !RPL.on && roomMode() === 'manual' && S.set && ['lobby', 'calib', 'ready'].includes(state);
+  if (spotMark.visible) { spotMark.position.set(S.x, 0, S.z); spotMark.rotation.y = S.yaw; }
+  if (!RPL.on) return;
+  // dónde se apunta: la mano que apunta al suelo o, si no, la mirada; mirando al menú o tocándolo, se queda quieto
+  let o = null, d = null;
+  const atMenu = menu && menu.group && fwd().angleTo(_rpd.copy(menu.group.getWorldPosition(new V3())).sub(head.p)) < 0.35;
+  for (const s of ['right', 'left']) { const h = hands[s]; if (h.rayOk && h.rayD.y < -0.15 && !(h.tipOk && menu && menu.group && h.tip.distanceTo(menu.group.getWorldPosition(_rpd)) < 0.3)) { o = h.rayO; d = h.rayD; break; } }
+  if (!o && !atMenu) { const f = fwd(); if (f.y < -0.08) { o = head.p; d = f; } }
+  if (o) { const t = -o.y / d.y; if (t > 0 && t < 12) { RPL.aim.set(o.x + d.x * t, 0, o.z + d.z * t); RPL.aimOk = true; } }
+  // pellizcar coloca
+  for (const s of ['left', 'right']) { const p = hands[s].pinch; if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) rplPlace(); RPL.pinch[s] = p; }
+  if (!RPL.on) return;
+  const kind = { gates: 'gate', hatches: 'hatch', board: 'board' }[RPL.step];
+  for (const k in rplGhost) rplGhost[k].visible = false;
+  if (RPL.step === 'spot') { const g = rplGhost.spot; g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = bodyYaw(); return; }
+  const g = rplGhost[kind], pose = rplPose(kind); g.visible = RPL.aimOk; g.position.set(pose.x, 0, pose.z); g.rotation.y = pose.yaw; g.scale.setScalar(kind === 'gate' ? RPL.gs : 1); setMat(g, pose.ok ? rplGood : rplBad);
+}
+
+/* ---------- Cada fotograma: recolocar fuera de la partida si se movió la arena o cambió la habitación ---------- */
 function roomStep(dt) {
   const on = roomOn(); ROOM.occl.visible = on;
-  if (!on) { if (ROOM.applied) { ROOM.applied = false; ROOM.plan = null; layoutArena(); } return; }
+  if (!on) { if (ROOM.applied) { ROOM.applied = false; ROOM.plan = null; buildWallOccluders(null); layoutArena(); } return; }
   if (ROOM.applied && ['play', 'rest', 'paused'].includes(state)) return; // a mitad de partida no se mueven (pero sí se ponen al pasar a realidad mixta)
   ROOM.wait -= dt; if (ROOM.wait > 0) return;
   const a = arena.position, at = ROOM.at, moved = !at || Math.hypot(a.x - at.x, a.z - at.z) > 0.05 || Math.abs(wrapAng(arena.rotation.y - at.yaw)) > 0.03;
   if (!moved && ROOM.applied) return;
   ROOM.wait = 0.5; ROOM.at = { x: a.x, z: a.z, yaw: arena.rotation.y };
-  ROOM.plan = makeRoomPlan(); ROOM.applied = true; layoutArena(); buildWallOccluders(ROOM.plan && ROOM.plan.gates.some(Boolean) ? ROOM.plan : null);
+  // las paredes tapan siempre lo que queda detrás (si no cabe ninguna compuerta, las de siempre quedan detrás de la pared)
+  ROOM.plan = makeRoomPlan(); ROOM.applied = true; layoutArena(); buildWallOccluders(ROOM.plan);
 }
-settingHooks.push(k => { if (k === 'room' || k === '*') { ROOM.applied = false; ROOM.plan = null; ROOM.at = null; ROOM.wait = 0; buildWallOccluders(null); layoutArena(); } });
+settingHooks.push(k => { if (k === 'roomMode' || k === '*') { ROOM.applied = false; ROOM.plan = null; ROOM.at = null; ROOM.wait = 0; buildWallOccluders(null); layoutArena(); } });
 
-/* ---------- En el menú: cómo va el escaneo y botón para escanear (si las gafas lo permiten) ---------- */
+/* ---------- En el menú principal: escala de habitación, si cumple los requisitos, colocar a mano y escanear ---------- */
 function roomRows(back) {
   if (!xrActive || preview || !arMode) return [];
-  const s = renderer.xr.getSession(), P = roomPlan(), n = P ? P.gates.filter(Boolean).length : 0;
-  const txt = !settings.room ? 'Habitación: sin adaptar (Ajustes → Sistema)' : !ROOM.walls.length ? 'Habitación: sin escanear. Escanéala para que las compuertas salgan de tus paredes' : `Habitación: ${ROOM.walls.length} ${ROOM.walls.length === 1 ? 'pared' : 'paredes'}, ${ROOM.furn.length} ${ROOM.furn.length === 1 ? 'mueble' : 'muebles'} · ${n ? `${n} ${n === 1 ? 'compuerta' : 'compuertas'} en tus paredes` : 'no caben compuertas en tus paredes: deja más espacio delante'}`;
-  const rows = [{ t: 'text', text: txt, color: settings.room && ROOM.walls.length && n ? '#3cf0c6' : '#ffd166' }];
-  if (settings.room && s && s.initiateRoomCapture) rows.push({ t: 'btns', items: [{ label: ROOM.walls.length ? 'Volver a escanear la habitación' : 'Escanear la habitación', onPress: () => { s.initiateRoomCapture().catch(() => {}).then(() => { ROOM.sig = ''; back(); }); } }] });
+  const s = renderer.xr.getSession(), m = settings.roomMode, P = roomPlan(), n = P ? P.gates.filter(Boolean).length : 0;
+  const rows = [{ t: 'field', key: 'roomMode', after: back }];
+  const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) });
+  let txt, ok = false; const btns = [];
+  if (m === 'off') txt = 'Disposición fija: las compuertas no se adaptan a tu habitación';
+  else if (m === 'manual') {
+    if (manualReady()) { ok = true; txt = `Colocada a mano: ${RSET.gates.length} ${RSET.gates.length === 1 ? 'compuerta' : 'compuertas'}, ${RSET.hatches.length} ${RSET.hatches.length === 1 ? 'trampilla' : 'trampillas'}${RSET.board ? ' y el marcador' : ''}. Ponte en el círculo del suelo para jugar`; btns.push(place('Recolocar')); }
+    else { txt = 'Aún no has colocado nada: pon el sitio de juego, las compuertas, las trampillas y el marcador'; btns.push(place('Colocar a mano', 'primary')); }
+  } else if (!ROOM.walls.length) { txt = 'Habitación sin escanear: escanéala para que las compuertas salgan de tus paredes, o colócala a mano'; btns.push(place('Colocar a mano')); }
+  else if (!n) { txt = `La habitación no cumple los requisitos: ${P && P.why ? P.why : 'no cabe ninguna compuerta'}. Hace falta una pared libre de al menos ${fmtNum(2 * 1.85 * (P ? P.gs : 0.55) + 0.1)} m de ancho a 1,7–7,5 m delante de ti, con el camino despejado. Puedes colocarla a mano`; btns.push(place('Colocar a mano', 'primary')); }
+  else { ok = true; txt = `Habitación: ${ROOM.walls.length} ${ROOM.walls.length === 1 ? 'pared' : 'paredes'}, ${ROOM.furn.length} ${ROOM.furn.length === 1 ? 'mueble' : 'muebles'} · ${n} ${n === 1 ? 'compuerta' : 'compuertas'} en tus paredes`; }
+  rows.push({ t: 'text', text: txt, color: ok ? '#3cf0c6' : m === 'off' ? '#a49fc8' : '#ffd166' });
+  if (m === 'scan' && s && s.initiateRoomCapture) btns.push({ label: ROOM.walls.length ? 'Volver a escanear' : 'Escanear la habitación', onPress: () => { s.initiateRoomCapture().catch(() => {}).then(() => { ROOM.sig = ''; back(); }); } });
+  if (btns.length) rows.push({ t: 'btns', items: btns });
   return rows;
 }

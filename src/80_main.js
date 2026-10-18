@@ -35,7 +35,7 @@ function readXR(frame) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15 };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, curl: 0, thrUp: 0, wasCrouch: false };
 // Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
 const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2 : isSeated() ? 1.0 : isFloor() ? 0.45 : 1.6;
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
@@ -44,7 +44,7 @@ const _pvw = new V3();
 function previewInput(dt) {
   const ex = settings.exercise;
   const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : settings.squatDepth / 100 + 0.12;
-  let target = PV.crouch && ex !== 'curl' && ex !== 'press' ? PV.baseY - dropAmt : PV.baseY;
+  let target = PV.crouch && !['curl', 'curl2', 'press', 'press2'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
@@ -53,6 +53,9 @@ function previewInput(dt) {
     let nx = null; for (const a of arcs) if (!a.judged && !a.second && (!nx || a.z > nx.z)) nx = a;
     const lx = PV.crouch && !PV.noLean && nx && nx.tilt ? Math.sign(nx.tilt) * settings.arcShift / 100 : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
+    // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
+    if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
+    else PV.jumping = false;
   }
   // Toques: Espacio lleva la cabeza a la ameba que toca y la devuelve después
   if (settings.mode === 'touch' && GAME_STATES.includes(state) && PV.home) {
@@ -60,8 +63,11 @@ function previewInput(dt) {
     if (d > 1e-4) camera.position.addScaledVector(_pvw, Math.min(1, 1.4 * dt / d));
     target = PV.y = camera.position.y;
   }
-  PV.y += clamp(target - PV.y, -0.75 * dt, 0.75 * dt);
+  const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
   PV.press += clamp((PV.crouch ? 0.24 : -0.15) - PV.press, -1.2 * dt, 1.2 * dt);
+  PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt);
+  // sentadilla con press: al volver de la sentadilla, las manos suben por encima de la cabeza un momento
+  if (PV.wasCrouch && !PV.crouch) PV.thrUp = 0.9; PV.wasCrouch = PV.crouch; PV.thrUp = Math.max(0, PV.thrUp - dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
   if (PV.keys.KeyD) camera.position.addScaledVector(r, sp); if (PV.keys.KeyA) camera.position.addScaledVector(r, -sp);
@@ -72,7 +78,11 @@ function previewInput(dt) {
   // superman: los brazos estirados por delante de la cabeza
   if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }
   // press de hombro: las mancuernas a la altura de los hombros; Espacio las sube por encima de la cabeza
-  if (settings.exercise === 'press' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.22); h.wrist.y += PV.press; }
+  // curl con barra: las dos manos a la altura de la cadera; Espacio las sube juntas hasta los hombros
+  if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }
+  // sentadilla con press: las pesas en los hombros; al subir de la sentadilla, por encima de la cabeza
+  if (settings.exercise === 'thruster' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.15).addScaledVector(f, 0.12); h.wrist.y += PV.thrUp > 0 ? 0.32 : -0.25; }
+  if ((settings.exercise === 'press' || settings.exercise === 'press2') && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.22); h.wrist.y += PV.press; }
   // plancha con un brazo: las dos manos apoyadas junto a la cabeza; Q y E levantan la izquierda y la derecha
   if (settings.exercise === 'plank1' && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
@@ -119,7 +129,7 @@ addEventListener('keydown', e => {
     e.preventDefault(); return;
   }
   PV.keys[e.code] = true;
-  if (e.code === 'Escape') { if (PLACE.on || PLACE.wait) onWatch(); else if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
+  if (e.code === 'Escape') { if (PLACE.on || PLACE.wait || RPL.on) onWatch(); else if (GAME_STATES.includes(state)) openPause(); else if (state === 'paused') resumeGame(); }
   if (e.code === 'KeyH') PV.handsUp = true;
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
   if (e.code === 'KeyF') PV.fall = true;
@@ -168,7 +178,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt);
-  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
   updateViewPanels(dt);
   updateEnv(dt, t);

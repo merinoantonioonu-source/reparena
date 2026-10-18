@@ -26,6 +26,7 @@ h1 span{color:var(--pink)}
 .lede{margin:0;max-width:62ch;color:var(--muted);font-size:1.1rem}
 h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.04em;margin:0 0 12px}
 .cards{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cards .zone{grid-column:1/-1;margin:10px 0 -2px;font-size:.95rem;letter-spacing:.04em;color:var(--gold)}
 .cards.four{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:680px){.cards,.cards.four{grid-template-columns:1fr}}
 .card{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border:2px solid var(--line);border-radius:14px;background:var(--panel);cursor:pointer;min-width:0}
@@ -116,8 +117,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <span class="tag">Cada repetición dispara</span><b>Combate</b>
         <small>Eliges los enemigos: robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones gigantes que vuelan, o una mezcla. Y la puntería: automática, para pensar solo en el ejercicio, o apuntando tú con las manos o la mirada.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
-        <span class="tag">Solo sentadillas</span><b>Arcos</b>
-        <small>Arcos de energía avanzan hacia ti a distintas alturas. Agáchate a tiempo para pasar por debajo.</small></label>
+        <span class="tag">Sentadillas y saltos</span><b>Arcos</b>
+        <small>Arcos de energía avanzan hacia ti a distintas alturas: agáchate a tiempo para pasar por debajo. Y vallas a ras de suelo que hay que saltar.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
         <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
@@ -148,6 +149,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-press" value="press">
         <span class="tag">Sensor: muñecas</span><b>Press de hombro</b>
         <small>Con las mancuernas en los hombros, súbelas hasta estirar los brazos. Cada brazo dispara al llegar arriba.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-curl2" value="curl2">
+        <span class="tag">Barra o kettlebell · muñecas</span><b>Curl con barra</b>
+        <small>Con una barra, una kettlebell o dos mancuernas a la vez: sube las dos manos juntas hasta los hombros. Cada subida es un disparo.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-press2" value="press2">
+        <span class="tag">Barra o kettlebell · muñecas</span><b>Press con barra</b>
+        <small>Desde los hombros, sube la barra (o la kettlebell con las dos manos) hasta estirar los brazos. Las dos manos a la vez, un disparo.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-thruster" value="thruster">
+        <span class="tag">Kettlebell, barra o mancuernas · visor y muñecas</span><b>Sentadilla con press</b>
+        <small>Con el peso en los hombros, baja en sentadilla para cargar y, al subir, empújalo por encima de la cabeza para lanzar el rayo. Piernas, tronco y hombros en un solo movimiento.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
         <span class="tag">Combate · visor y muñecas</span><b>Plancha con un brazo</b>
         <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
@@ -238,7 +248,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Realidad mixta en tu habitación:</strong> si has escaneado la habitación en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y das permiso al juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si no está escaneada, el menú principal ofrece «Escanear la habitación». Se desactiva en Ajustes → Sistema.</li>
+      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No).</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
