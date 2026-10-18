@@ -822,6 +822,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (churnMR > base + 1.5 || churnVR > base + 1.5 || churnPlay > base + 1.5) errors.push('la habitación pesa demasiado por fotograma cuando el escaneo cambia');
     XRS.room = null; RA.exitAll(); frame(2, 16, xrFrame);
   }
+  // ---- Escaneo como el de las Quest: «wall face», una malla enorme sin etiqueta y un «mueble» donde estás tú ----
+  {
+    const Q = { planes: new Set(), meshes: new Set() };
+    for (const p of ROOMSIM.planes) Q.planes.add(p.semanticLabel === 'wall' ? { ...p, semanticLabel: 'wall face' } : p);
+    for (const m of ROOMSIM.meshes) Q.meshes.add(m);
+    const big = new Float32Array([-3, 0, -3, 3, 0, -3, 3, 2.4, 3, -3, 2.4, 3]); Q.meshes.add({ semanticLabel: '', lastChangedTime: 1, meshSpace: { room: { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, vertices: big, indices: new Uint32Array([0, 1, 2, 0, 2, 3]) });
+    Q.planes.add({ semanticLabel: 'table', orientation: 'horizontal', lastChangedTime: 1, planeSpace: { room: { position: { x: 0, y: 0.7, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }, polygon: [[-0.4, -0.3], [0.4, -0.3], [0.4, 0.3], [-0.4, 0.3]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', roomMode: 'scan', roomShow: 0, roomOcclude: 1, lives: 0, waves: 1, repsWave: 30, walkTime: 8 })) RA.setSetting(k, v);
+    XRS.room = Q; XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0; XRS.headQ = null;
+    await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame);
+    const furnUsed = RA.ROOM.uf.length, gatesOn = RA.gates.filter(g => g.on).length, P = RA.roomPlan();
+    log('quest-like scan: walls', RA.ROOM.walls.length, '· furniture read', RA.ROOM.furn.length, 'used', furnUsed, '· gates', gatesOn, P && P.gates.filter(Boolean).length);
+    if (RA.ROOM.walls.length !== 4) errors.push('no se reconocen las paredes etiquetadas «wall face»');
+    if (RA.ROOM.furn.length !== 3 || furnUsed !== 2) errors.push('una malla enorme sin etiqueta o un «mueble» donde estás tú se toman por muebles');
+    // «Ver lo escaneado» pinta paredes y muebles; sin oclusión, no se tapa nada
+    RA.setSetting('roomShow', 1); frame(2, 16, xrFrame); const shown = RA.ROOM.occl.visible && RA.ROOM.occl.children.some(o => o.material && o.material.colorWrite !== false);
+    RA.setSetting('roomShow', 0); RA.setSetting('roomOcclude', 0); frame(2, 16, xrFrame); const noOcc = !RA.ROOM.occl.visible; RA.setSetting('roomOcclude', 1);
+    log('scan view', shown, '· occlusion off', noOcc);
+    if (!shown || !noOcc) errors.push('no se puede ver lo escaneado o apagar la oclusión');
+    XRS.room = null; RA.exitAll(); frame(2, 16, xrFrame);
+  }
   // ---- Habitación pequeña: no cumple los requisitos y se coloca a mano (y se recuerda) ----
   const TINY = { planes: new Set(), meshes: new Set() };
   for (const [x, z, yaw] of [[0, -1.2, 0], [0, 1.2, Math.PI], [-1.2, 0, Math.PI / 2], [1.2, 0, -Math.PI / 2]]) TINY.planes.add({ semanticLabel: 'wall', orientation: 'vertical', lastChangedTime: 2, planeSpace: { room: { position: { x, y: 0, z }, orientation: roomQ(yaw) } }, polygon: [[-1.2, -2.5], [1.2, -2.5], [1.2, 0], [-1.2, 0]].map(([a, b]) => ({ x: a, y: 0, z: b, w: 1 })) });

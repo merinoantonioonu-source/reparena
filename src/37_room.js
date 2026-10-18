@@ -8,17 +8,31 @@
 //  · las paredes y los muebles tapan lo que pasa por detrás (con un hueco en cada compuerta, por el que se ve el túnel).
 // Si la habitación no cumple los requisitos (o lo prefieres), «Colocada a mano»: pones tú el sitio de juego, las
 // compuertas, las trampillas y el marcador, y se recuerda entre sesiones. En VR o con el ajuste en No, todo como siempre.
-const ROOM = { walls: [], furn: [], feats: [], ceilY: 0, sig: '', fp: '', read: false, pollT: -1e9, refs: new WeakSet(), plan: null, applied: false, at: null, wait: 0, occl: new THREE.Group(), wallOcc: new THREE.Group() };
+const ROOM = { walls: [], furn: [], feats: [], uw: [], uf: [], ceilY: 0, sig: '', fp: '', read: false, pollT: -1e9, refs: new WeakSet(), plan: null, applied: false, at: null, wait: 0, occl: new THREE.Group(), wallOcc: new THREE.Group() };
 ROOM.occl.add(ROOM.wallOcc); ROOM.occl.visible = false; scene.add(ROOM.occl);
 const roomMode = () => arMode && !forestOn() ? settings.roomMode : 'off';
 const roomOn = () => { const m = roomMode(); return m === 'scan' ? ROOM.walls.length > 0 : m === 'manual' ? manualReady() : false; };
 const roomPlan = () => roomOn() && ROOM.applied ? ROOM.plan : null;
 // solo escribe profundidad: lo virtual que queda detrás de una pared o un mueble real no se ve
-const occMat = new THREE.MeshBasicMaterial({ colorWrite: false });
+const occMat = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
+// «Ver lo escaneado»: paredes en verde y muebles en naranja, tal como los ha leído el juego (para comprobar que coinciden)
+const scanWallMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+const scanFurnMat = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+const occlMatFor = kind => settings.roomShow ? (kind === 'wall' ? scanWallMat : scanFurnMat) : occMat;
 const _ro = new V3(), _rn2 = new V3(), _rq4 = new Q4(), _roM = new THREE.Matrix4(), _r1 = new V3(1, 1, 1);
 const roomLabel = o => String(o.semanticLabel || '').toLowerCase().replace(/[\s-]+/g, '_');
+// las Quest llaman a las paredes «wall» o «wall face»; las invisibles (para cerrar un hueco) no son reales
+const WALL_LABELS = ['wall', 'wall_face'];
 const WALL_FEATS = ['door_frame', 'door', 'window_frame', 'window', 'wall_art', 'screen'];
-const NOT_FURN = ['global_mesh', 'floor', 'ceiling', 'wall', 'invisible_wall_face', 'inner_wall_face', ...WALL_FEATS];
+const NOT_FURN = ['global_mesh', 'floor', 'ceiling', ...WALL_LABELS, 'invisible_wall_face', 'inner_wall_face', ...WALL_FEATS];
+// Un mueble de verdad no ocupa media habitación: lo que es más grande (la malla de la habitación mal etiquetada, por
+// ejemplo) no se toma por mueble
+function furnOk(poly) {
+  if (poly.length < 3) return false;
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, area = 0;
+  poly.forEach(([x, z], i) => { const [nx, nz] = poly[(i + 1) % poly.length]; area += x * nz - nx * z; x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); });
+  return Math.abs(area) / 2 <= 4.5 && Math.max(x1 - x0, z1 - z0) <= 3.2;
+}
 function poseMatrix(frame, space, ref) {
   const p = space && frame.getPose(space, ref); if (!p) return null;
   const t = p.transform; return _roM.compose(_ro.set(t.position.x, t.position.y, t.position.z), _rq4.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w), _r1);
@@ -63,14 +77,14 @@ function roomFrame(frame, ref, t) {
       const u = new V3(-nh.z, 0, nh.x), o = new V3().setFromMatrixPosition(M); let s0 = Infinity, s1 = -Infinity;
       for (const q of pts) { const s = (q.x - o.x) * u.x + (q.z - o.z) * u.z; s0 = Math.min(s0, s); s1 = Math.max(s1, s); }
       const w = { a: new V3(o.x + u.x * s0, 0, o.z + u.z * s0), b: new V3(o.x + u.x * s1, 0, o.z + u.z * s1), n: nh, y0: Math.max(0, y0), y1, label: L };
-      if (L === 'wall' || (!L && s1 - s0 > 1.2 && y1 - y0 > 1.8)) walls.push(w); else if (WALL_FEATS.includes(L)) feats.push(w);
+      if (WALL_LABELS.includes(L) || (!L && s1 - s0 > 1.2 && y1 - y0 > 1.8)) walls.push(w); else if (WALL_FEATS.includes(L)) feats.push(w);
       return;
     }
     // horizontal y ni suelo ni techo: la tapa de un mueble apoyado en el suelo (mesa, sofá, cama...)
-    if (y0 > 0.05 && y0 < 2.2 && !NOT_FURN.includes(L)) furn.push({ poly: hull2(pts), y0: 0, y1, label: L });
+    if (y0 > 0.05 && y0 < 2.2 && !NOT_FURN.includes(L)) { const poly = hull2(pts); if (furnOk(poly)) furn.push({ poly, y0: 0, y1, label: L }); }
   });
   if (meshes) meshes.forEach(me => {
-    const L = roomLabel(me); if (NOT_FURN.includes(L) || !me.vertices || me.vertices.length < 9) return;
+    const L = roomLabel(me); if (!L || NOT_FURN.includes(L) || !me.vertices || me.vertices.length < 9) return; // sin etiqueta puede ser cualquier cosa
     const M = poseMatrix(frame, me.meshSpace, ref); if (!M) return;
     // la caja del mueble en su propio espacio, en una pasada y sin crear nada; luego sus 8 esquinas en el mundo
     const v = me.vertices, lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -78,14 +92,13 @@ function roomFrame(frame, ref, t) {
     const pts = []; let y0 = Infinity, y1 = -Infinity;
     for (let c = 0; c < 8; c++) { const q = new V3(c & 1 ? hi[0] : lo[0], c & 2 ? hi[1] : lo[1], c & 4 ? hi[2] : lo[2]).applyMatrix4(M); pts.push(q); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
     if (y1 < 0.05 || y0 > 2.2) return; // lo que cuelga del techo no estorba
-    furn.push({ poly: hull2(pts), y0: Math.max(0, y0), y1, label: L });
+    const poly = hull2(pts); if (furnOk(poly)) furn.push({ poly, y0: Math.max(0, y0), y1, label: L });
   });
   ROOM.read = true;
   // ¿cambió algo de verdad? (al centímetro)
   const r = x => Math.round(x * 100), fp = [walls.map(w => [w.a.x, w.a.z, w.b.x, w.b.z, w.y1].map(r).join(',')).join(';'), feats.map(w => [w.a.x, w.a.z, w.b.x, w.b.z].map(r).join(',')).join(';'), furn.map(f => f.poly.map(([x, z]) => r(x) + ',' + r(z)).join(' ') + '^' + r(f.y1)).join(';'), r(ceil)].join('|');
   if (fp === ROOM.fp) return; ROOM.fp = fp;
-  Object.assign(ROOM, { walls, furn, feats, ceilY: ceil, applied: false, plan: null });
-  buildFurnOccluders();
+  Object.assign(ROOM, { walls, furn, feats, ceilY: ceil, applied: false, plan: null }); // roomStep lo recoloca y rehace los oclusores
 }
 
 /* ---------- Geometría en el suelo, en coordenadas de la arena (tú en el origen, mirando a -Z) ---------- */
@@ -112,7 +125,7 @@ function segPoly(ax, az, bx, bz, P) {
 function roomLocal() {
   arena.updateMatrixWorld();
   const wall = w => { const a = toL(w.a), b = toL(w.b), n = dirL(w.n); return { a, b, n, len: Math.hypot(b.x - a.x, b.z - a.z), w }; };
-  return { walls: ROOM.walls.map(wall), feats: ROOM.feats.map(wall), furn: ROOM.furn.map(f => f.poly.map(([x, z]) => { const p = toL(_ro.set(x, 0, z)); return [p.x, p.z]; })) };
+  return { walls: ROOM.uw.map(wall), feats: ROOM.feats.map(wall), furn: ROOM.uf.map(f => f.poly.map(([x, z]) => { const p = toL(_ro.set(x, 0, z)); return [p.x, p.z]; })) };
 }
 // ¿Se puede ir en línea recta de A a B sin pasar por un mueble (con margen) ni atravesar una pared?
 function roomClear(R, ax, az, bx, bz, margin, skipWall = -1) {
@@ -192,13 +205,20 @@ function prismGeo(poly, y0, y1) { // muro de la huella del mueble, de y0 a y1, c
   for (let i = 1; i + 1 < n; i++) idx.push(1, i * 2 + 1, (i + 1) * 2 + 1);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g;
 }
-function occMesh(g) { const m = new THREE.Mesh(g, occMat); m.renderOrder = -2; m.frustumCulled = false; return m; }
+function occMesh(g, kind) { const m = new THREE.Mesh(g, occlMatFor(kind)); m.userData.kind = kind; m.renderOrder = -2; m.frustumCulled = false; return m; }
+// Lo que se usa de verdad: ni paredes ni muebles donde estás tú (un escaneo mal leído no puede taparte todo ni dejar a
+// los robots sin sitio). Se calcula al recolocar, con la arena (tú) donde esté
+function roomFilter() {
+  const ux = arena.position.x, uz = arena.position.z;
+  ROOM.uw = ROOM.walls.filter(w => ptSeg(ux, uz, w.a.x, w.a.z, w.b.x, w.b.z) > 0.35);
+  ROOM.uf = ROOM.furn.filter(f => segPoly(ux, uz, ux, uz, f.poly) > 0.35);
+}
 function buildFurnOccluders() {
   clearOccl(ROOM.occl);
-  for (const f of ROOM.furn) {
+  for (const f of ROOM.uf) {
     let g;
     if (f.poly.length >= 3) g = prismGeo(f.poly, f.y0, f.y1);
-    if (g) ROOM.occl.add(occMesh(g));
+    if (g) ROOM.occl.add(occMesh(g, 'furn'));
   }
 }
 // Cada pared, un poco por detrás de su superficie, partida en trozos alrededor de los huecos de las compuertas
@@ -208,7 +228,7 @@ function buildWallOccluders(plan) {
   // cada compuerta abre hueco en la pared que tiene detrás (también las colocadas a mano, si están pegadas a una)
   arena.updateMatrixWorld();
   const gw = plan.gates.filter(Boolean).map(g => { const y = g.rot + arena.rotation.y; return { p: arena.localToWorld(new V3(g.x, 0, g.z)), f: new V3(Math.sin(y), 0, Math.cos(y)) }; });
-  ROOM.walls.forEach(w => {
+  ROOM.uw.forEach(w => {
     const len = w.a.distanceTo(w.b); if (len < 0.05) return;
     const u = _ro.subVectors(w.b, w.a).divideScalar(len).clone(), top = Math.max(w.y1, ROOM.ceilY || 0, 2.2), off = w.n.clone().multiplyScalar(-0.02);
     const holes = gw.filter(g => g.f.dot(w.n) > 0.7).map(g => {
@@ -219,7 +239,7 @@ function buildWallOccluders(plan) {
       if (s1 - s0 < 0.01 || y1 - y0 < 0.01) return;
       const p = (s, y) => { const v = w.a.clone().addScaledVector(u, s).add(off); v.y = y; return v; }, A = p(s0, y0), B = p(s1, y0), Cq = p(s1, y1), D = p(s0, y1);
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([A.x, A.y, A.z, B.x, B.y, B.z, Cq.x, Cq.y, Cq.z, D.x, D.y, D.z], 3)); g.setIndex([0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]);
-      ROOM.wallOcc.add(occMesh(g));
+      ROOM.wallOcc.add(occMesh(g, 'wall'));
     };
     let s = 0; for (const [h0, h1, hh] of holes) { quad(s, h0, 0, top); quad(h0, h1, hh, top); s = h1; }
     quad(s, len, 0, top);
@@ -365,7 +385,7 @@ function updateRoomPlace(dt) {
 
 /* ---------- Cada fotograma: recolocar fuera de la partida si se movió la arena o cambió la habitación ---------- */
 function roomStep(dt) {
-  const on = roomOn(); ROOM.occl.visible = on;
+  const on = roomOn(); ROOM.occl.visible = on && (!!settings.roomOcclude || !!settings.roomShow);
   if (!on) { if (ROOM.applied) { ROOM.applied = false; ROOM.plan = null; buildWallOccluders(null); layoutArena(); } return; }
   if (ROOM.applied && ['play', 'rest', 'paused'].includes(state)) return; // a mitad de partida no se mueven (pero sí se ponen al pasar a realidad mixta)
   ROOM.wait -= dt; if (ROOM.wait > 0) return;
@@ -373,15 +393,16 @@ function roomStep(dt) {
   if (!moved && ROOM.applied) return;
   ROOM.wait = 0.5; ROOM.at = { x: a.x, z: a.z, yaw: arena.rotation.y };
   // las paredes tapan siempre lo que queda detrás (si no cabe ninguna compuerta, las de siempre quedan detrás de la pared)
-  ROOM.plan = makeRoomPlan(); ROOM.applied = true; layoutArena(); buildWallOccluders(ROOM.plan);
+  roomFilter(); ROOM.plan = makeRoomPlan(); ROOM.applied = true; layoutArena(); buildFurnOccluders(); buildWallOccluders(ROOM.plan);
 }
+settingHooks.push(k => { if (k === 'roomShow' || k === '*') ROOM.occl.traverse(o => { if (o.isMesh) o.material = occlMatFor(o.userData.kind); }); });
 settingHooks.push(k => { if (k === 'roomMode' || k === '*') { ROOM.applied = false; ROOM.plan = null; ROOM.at = null; ROOM.wait = 0; buildWallOccluders(null); layoutArena(); } });
 
 /* ---------- En el menú principal: escala de habitación, si cumple los requisitos, colocar a mano y escanear ---------- */
 function roomRows(back) {
   if (!xrActive || preview || !arMode) return [];
   const s = renderer.xr.getSession(), m = settings.roomMode, P = roomPlan(), n = P ? P.gates.filter(Boolean).length : 0;
-  const rows = [{ t: 'field', key: 'roomMode', after: back }];
+  const rows = [{ t: 'field', key: 'roomMode', after: back }, ...(m !== 'off' ? [{ t: 'field', key: 'roomShow' }, { t: 'field', key: 'roomOcclude' }] : [])];
   const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) });
   let txt, ok = false; const btns = [];
   if (m === 'off') txt = 'Disposición fija: las compuertas no se adaptan a tu habitación';

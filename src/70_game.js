@@ -54,12 +54,13 @@ function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
   let best = null, bestC = Infinity;
-  for (let row = 0; row < 3 && !best; row++) {
+  // en tu habitación, ni en un mueble ni detrás de una pared; si así no queda ningún puesto (escaneo raro), sin mirarla
+  for (const room of [true, false]) for (let row = 0; row < 3 && !best; row++) {
     const R = robotStop(r.K) + row * ROW_GAP;
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
       _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
       if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
-      if (roomBlocked(_rs.x, _rs.z, r.radius)) continue; // en tu habitación, ni dentro de un mueble ni detrás de una pared
+      if (room && roomBlocked(_rs.x, _rs.z, r.radius)) continue;
       const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
     }
@@ -1047,7 +1048,7 @@ function buildWave(i) {
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
-    else { kind = (i >= 1 && k % 4 === 3) ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; }
+    else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
   }
   if (boss) list.push(boss);
