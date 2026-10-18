@@ -1,10 +1,12 @@
 
-/* =================== MÚSICA: SPOTIFY COMO MANDO A DISTANCIA =================== */
-// La música suena en la app de Spotify (en las Quest o en el móvil) y el juego la controla con la Web API.
+/* =================== MÚSICA: SPOTIFY =================== */
+// El juego es también un reproductor de Spotify (Web Playback SDK): la página aparece como el dispositivo «RepArena
+// (Quest)» y, al pulsar Play, la música se pasa ahí y suena en las gafas. El resto (siguiente, volumen…) va por la Web API.
+// Si el reproductor no puede arrancar (sin el permiso «streaming», sin Premium…), Play despierta otro reproductor tuyo.
 // Inicio de sesión con Authorization Code + PKCE, sin servidor. Hace falta Spotify Premium y una app propia
 // creada en developer.spotify.com con esta página como Redirect URI.
 const SP_KEY = 'reparena3-spotify', SP_PKCE = 'reparena3-spotify-pkce';
-const SP_SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing';
 const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0 };
 const spRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
 const spConnected = () => !!SP.cfg.refresh;
@@ -26,7 +28,7 @@ async function spTokenReq(body) {
   const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { if (body.grant_type === 'refresh_token' && j.error === 'invalid_grant') { delete SP.cfg.refresh; spSave(); } throw new Error(j.error_description || j.error || 'HTTP ' + r.status); }
-  SP.cfg.access = j.access_token; SP.cfg.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.cfg.refresh = j.refresh_token; spSave();
+  SP.cfg.access = j.access_token; SP.cfg.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.cfg.refresh = j.refresh_token; if (j.scope) SP.cfg.scopes = j.scope; spSave();
 }
 // Vuelta desde Spotify con ?code=… (o ?error=…)
 async function spHandleRedirect() {
@@ -36,7 +38,7 @@ async function spHandleRedirect() {
   if (!pk.verifier || q.get('state') !== pk.state) { spStatus('La respuesta de Spotify no coincide. Vuelve a pulsar Conectar.', true); return; }
   try {
     await spTokenReq({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: spRedirect(), client_id: SP.cfg.clientId, code_verifier: pk.verifier });
-    spStatus('Conectado. Pon algo a sonar en Spotify y pulsa Probar.'); spPage(); spRefresh();
+    spStatus('Conectado. La música sonará en estas gafas (o el navegador) al pulsar Play.'); spPage(); spRefresh(); spPlayerInit();
   } catch (e) { spStatus('No se pudo conectar: ' + e.message, true); }
 }
 async function spToken() {
@@ -74,12 +76,47 @@ async function spDo(fn) {
   try { await fn(); SP.err = ''; } catch (e) { SP.err = spErrText(e); } finally { SP.busy = false; }
   spMenuSync(); setTimeout(spRefresh, 500); // Spotify tarda un momento en reflejar el cambio
 }
-async function spWake() { // sin reproductor activo: despierta el primero disponible
+/* ---------- Reproductor en la propia página: la música suena en las gafas ---------- */
+const SPP = { player: null, id: '', state: '', err: '' }; // state: '' (sin arrancar), 'loading', 'ready', 'error'
+const spHereOk = () => SPP.state === 'ready' && !!SPP.id;
+const spHereNow = () => spHereOk() && !!(SP.st && SP.st.device && SP.st.device.id === SPP.id);
+function spPlayerInit() {
+  const host = typeof document !== 'undefined' && (document.head || document.body);
+  if (SPP.state || !spConnected() || typeof window === 'undefined' || !host || !host.appendChild || !document.createElement) return;
+  SPP.state = 'loading';
+  const fail = msg => { SPP.state = 'error'; SPP.err = msg; spMenuSync(); spPage(); };
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
+    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; spMenuSync(); spPage(); });
+    p.addListener('not_ready', () => { SPP.state = 'loading'; });
+    p.addListener('authentication_error', () => fail('Para que suene en las gafas, vuelve a conectar Spotify en la página (hace falta un permiso nuevo)'));
+    p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
+    p.addListener('initialization_error', () => fail('Este navegador no puede reproducir Spotify: sonará en otro reproductor tuyo'));
+    p.addListener('playback_error', () => {});
+    SPP.player = p; p.connect();
+  };
+  const sc = document.createElement('script'); sc.src = 'https://sdk.scdn.co/spotify-player.js'; sc.async = true;
+  sc.onerror = () => fail('No se pudo cargar el reproductor de Spotify');
+  host.appendChild(sc);
+}
+// Los navegadores solo dejan sonar audio tras un gesto del usuario: se «despierta» al entrar en las gafas
+function spPlayerUnlock() { try { if (SPP.player && SPP.player.activateElement) SPP.player.activateElement(); } catch (e) {} }
+// Pasa la música al reproductor de las gafas (y que suene)
+async function spToHere() { await spApi('PUT', '/me/player', { device_ids: [SPP.id], play: true }); if (SP.st) { SP.st.is_playing = true; SP.st.device = Object.assign({}, SP.st.device, { id: SPP.id, name: 'RepArena (Quest)' }); } }
+async function spWake() { // sin reproductor activo: las gafas si están listas; si no, el primero disponible
+  if (spHereOk()) { await spToHere(); return; }
   const d = await spApi('GET', '/me/player/devices'), list = (d && d.devices) || [];
   if (!list.length) throw new Error('NO_DEVICE');
   await spApi('PUT', '/me/player', { device_ids: [(list.find(x => x.is_active) || list[0]).id], play: true });
 }
-function spToggle() { spDo(async () => { if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; } else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; } else await spWake(); }); }
+function spToggle() {
+  spDo(async () => {
+    if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
+    else if (spHereOk() && !spHereNow()) await spToHere(); // en pausa en otro dispositivo: Play la trae a las gafas
+    else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; }
+    else await spWake();
+  });
+}
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
 function spVol(d) {
@@ -112,7 +149,10 @@ function spNowText() {
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
-  return [{ t: 'text', text: spNowText(), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true },
+  const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
+  const where = SP.st && SP.st.device && SP.st.device.name ? ` (en ${SP.st.device.name})` : '';
+  return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here,
+    ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
@@ -135,4 +175,5 @@ function spInitPage() {
   $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
   spPage();
   spHandleRedirect();
+  spPlayerInit();
 }

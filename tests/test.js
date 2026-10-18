@@ -33,7 +33,8 @@ global.fetch = async (url, opts = {}) => {
   if (!url.startsWith('https://api.spotify.com/v1/')) throw new Error('unexpected fetch ' + url);
   if (!/^Bearer tok\d+$/.test(opts.headers.Authorization)) return res(401, { error: { status: 401, message: 'The access token expired' } });
   const path = url.slice('https://api.spotify.com/v1'.length);
-  if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: 'quest', name: 'Quest 3', volume_percent: SPOT.vol, supports_volume: true }, item: { name: SPOT.track, artists: [{ name: 'Survivor' }] } });
+  if (method === 'PUT' && path === '/me/player') { const b = JSON.parse(opts.body); SPOT.device = b.device_ids[0]; SPOT.playing = !!b.play; return res(204); }
+  if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: SPOT.device || 'phone', name: SPOT.device === 'quest-sdk' ? 'RepArena (Quest)' : 'Móvil', volume_percent: SPOT.vol, supports_volume: true }, item: { name: SPOT.track, artists: [{ name: 'Survivor' }] } });
   if (method === 'GET' && path === '/me/player/devices') return res(200, { devices: SPOT.noDevice ? [] : [{ id: 'quest', is_active: true }] });
   if (method === 'PUT' && path === '/me/player/pause') { SPOT.playing = false; return res(204); }
   if (method === 'PUT' && path === '/me/player/play') { SPOT.playing = true; return res(204); }
@@ -46,7 +47,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, boardLooked, toastP, progress, kcalOf, progressLine, HTH, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -64,9 +65,17 @@ function frame(n = 1, dtMs = 33, xrFrame) {
   }
 }
 function key(type, code, keyName) { (winListeners[type] || []).forEach(f => f({ code, key: keyName || code, repeat: false, preventDefault() {} })); }
-function findW(label) { const w = RA.activeWidgets().find(w => w.label === label); if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
+// los submenús del principal llevan «  ▸» y el ejercicio se elige en su propio menú: findW los encuentra igual
+const wLabel = w => (w.label || '').replace(/\s+▸$/, '');
+function exLabels() { const b = RA.activeWidgets().find(w => /^Ejercicio:/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
+function findW(label) {
+  let w = RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
+  for (const re of [/^Ejercicio:/, /^Sala y vista/, /^Música/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); } }
+  if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
+// centro del borde de arriba del menú (de ahí cuelga: los menús que se suceden lo comparten)
+function menuTop() { const g = RA.menu.group, h = RA.menu.H / 2; return new THREE.Vector3(g.position.x - h * Math.sin(0.38) * Math.sin(g.rotation.y), g.position.y + h * Math.cos(0.38), g.position.z - h * Math.sin(0.38) * Math.cos(g.rotation.y)); }
 
 // ONLY=expresión: solo las partidas cuyo nombre encaja (para depurar deprisa)
 async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
@@ -91,16 +100,17 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = 
   RA.exitAll(); frame(1);
 }
 // Ningún panel puede quedarse tapando (opaco) algo que viene hacia ti más de un instante (lo que tarda en desvanecerse)
-const PAN = { behind: 0, streak: 0, worst: 0, toast: 0 };
+const PAN = { behind: 0, streak: 0, worst: 0, toast: 0, boardFade: false };
 const watchPanels = sim => t => {
   const n = RA.collectThreats();
   const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, 0.34, 0.06, true, n);
   if (b) PAN.behind++; if (bt) PAN.toast++;
-  const bad = (b && RA.board.mesh.material.opacity > (RA.boardLooked() ? 0.85 : 0.5)) || (bt && RA.toastP.mesh.material.opacity > 0.5);
+  const bad = bt && RA.toastP.mesh.material.opacity > 0.5; // el marcador se ve siempre (opaco): solo cuentan los avisos
+  if (b && RA.board.mesh.material.opacity < 1) PAN.boardFade = true;
   PAN.streak = bad ? PAN.streak + 0.033 : 0; PAN.worst = Math.max(PAN.worst, PAN.streak);
   sim(t);
 };
-const panelCheck = (name, more) => s => { const why = more ? more(s) : ''; const r = PAN.worst > 0.35 ? `${name}: un panel tapa lo que viene durante ${PAN.worst.toFixed(2)} s` : ''; log(`   paneles: ${PAN.behind} fotogramas con algo tras el marcador, ${PAN.toast} tras un aviso, peor racha opaca ${PAN.worst.toFixed(2)} s`); Object.assign(PAN, { behind: 0, streak: 0, worst: 0, toast: 0 }); return why || r; };
+const panelCheck = (name, more) => s => { const why = more ? more(s) : ''; const r = PAN.worst > 0.35 ? `${name}: un aviso tapa lo que viene durante ${PAN.worst.toFixed(2)} s` : PAN.boardFade ? `${name}: el marcador se aclara (tiene que verse siempre)` : ''; log(`   paneles: ${PAN.behind} fotogramas con algo tras el marcador, ${PAN.toast} tras un aviso, peor racha opaca ${PAN.worst.toFixed(2)} s`); Object.assign(PAN, { behind: 0, streak: 0, worst: 0, toast: 0, boardFade: false }); return why || r; };
 const squatSim = (period = 2.6) => t => { RA.PV.crouch = (t % period) < period * 0.55; };
 // barras: solo se mueve cuando la oleada está en marcha (al colgarse hay que estar quieto)
 const pullSim = (period = 2.6) => t => { RA.PV.crouch = RA.state === 'play' && (t % period) < period * 0.5; };
@@ -127,9 +137,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
   // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
   const bringMenu = () => {
-    RA.camera.position.set(0.8, 1.6, 1.6); frame(2); const before = RA.menu.group.position.clone();
-    RA.onWatch(); frame(2); const brought = RA.menu.group.position.clone();
-    press('Menú principal'); frame(2); const lobby = RA.menu.group.position.clone();
+    RA.camera.position.set(0.8, 1.6, 1.6); frame(2); const before = menuTop();
+    RA.onWatch(); frame(2); const brought = menuTop();
+    press('Menú principal'); frame(2); const lobby = menuTop();
     log('bring menu: moved', before.distanceTo(brought).toFixed(2), 'main menu offset from brought', lobby.distanceTo(brought).toFixed(3));
     RA.camera.position.set(0, 1.6, 0);
     return before.distanceTo(brought) < 0.3 || lobby.distanceTo(brought) > 0.01 ? '«Traer menú» y luego «Menú principal»: el menú principal no sale donde estaba el traído' : '';
@@ -360,23 +370,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('keypad result lives =', RA.settings.lives);
   press('Sistema'); frame(1); press('No'); frame(1); press('Sí'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
   press('Volver'); frame(2);
-  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
   press('Sentadillas'); frame(1);
   // menú por zonas del cuerpo: todos los ejercicios, y el modo cambia solo al elegir uno de otro
   RA.setSetting('exSort', 'body'); RA.lobbyMenu(); frame(1);
-  { const lw = RA.activeWidgets().map(w => w.label), want = ['Remo invertido', 'Saltos', 'Curl barra', 'Sent. + press', 'Abdominales'];
+  { const lw = exLabels(), want = ['Remo invertido', 'Saltos', 'Curl barra', 'Sent. + press', 'Abdominales'];
     press('Remo invertido'); frame(1); const m1 = RA.settings.mode; press('Saltos'); frame(1); const m2 = RA.settings.mode; press('Curl barra'); frame(1); const m3 = RA.settings.mode;
     log('menú por zonas:', want.every(l => lw.includes(l)), '· remo →', m1, '· saltos →', m2, '· curl con barra →', m3);
     if (!want.every(l => lw.includes(l))) errors.push('el menú por zonas no muestra todas las zonas y ejercicios');
     if (m1 !== 'bars' || m2 !== 'touch' || m3 !== 'combat') errors.push('al elegir un ejercicio de otro modo en el menú por zonas no cambia el modo'); }
   RA.setSetting('exSort', 'mode'); press('Sentadillas'); frame(1);
-  press('Arcos'); frame(1); log('Arcos offers only squats:', !RA.activeWidgets().some(w => w.label === 'Flexiones'), RA.settings.exercise);
-  if (RA.activeWidgets().some(w => w.label === 'Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
+  press('Arcos'); frame(1); const aw = exLabels(); log('Arcos offers only squats:', !aw.includes('Flexiones'), RA.settings.exercise);
+  if (aw.includes('Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
   // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
-  press('Toques'); frame(1); const tw = RA.activeWidgets().map(w => w.label);
+  press('Toques'); frame(1); const tw = exLabels();
   log('Toques exercises:', ['Sentadillas', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'));
   if (!['Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl')) errors.push('el menú de Toques no ofrece sus ejercicios');
   RA.setSetting('comboFloor', 'push'); press('Combinado'); frame(1); press('Plancha'); frame(1); RA.activeWidgets().filter(w => w.label === 'Plancha')[1].onPress(); frame(1); press('Toque'); frame(1);
@@ -453,6 +463,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
+  // ---- los menús que se suceden salen en el mismo sitio (cuelgan del mismo borde de arriba), al alcance de la mano ----
+  { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2); RA.beginRun(); frame(10); RA.endRun(true, true); frame(2);
+    const top = menuTop;
+    const t1 = top(), h1 = RA.menu.H, dist = Math.hypot(t1.x - RA.head.p.x, t1.z - RA.head.p.z); press('Menú principal'); frame(2); const t2 = top(), h2 = RA.menu.H;
+    log(`menus in place: summary H ${h1.toFixed(2)} → main menu H ${h2.toFixed(2)} · top edge moved ${(t1.distanceTo(t2) * 100).toFixed(1)} cm · top edge ${(dist * 100).toFixed(0)} cm away`);
+    if (t1.distanceTo(t2) > 0.005) errors.push('el menú que sigue al resumen no sale en el mismo sitio');
+    if (dist > 0.75) errors.push('el menú sale demasiado lejos');
+    frame(1); }
   // pausa durante partida
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.lobbyMenu(); frame(1); press('EMPEZAR'); frame(120);
   RA.openPause(); frame(2); press('Ajustes'); frame(1); press('Volver'); frame(1); press('Continuar'); frame(10);
@@ -598,12 +616,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
-  RA.startPreview(); frame(2); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
+  RA.startPreview(); frame(2); press('Música'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(20); await RA.spRefresh(); frame(2);
   log('after next/vol:', RA.spNowText());
   for (const c of ['PUT /v1/me/player/pause', 'POST /v1/me/player/next', 'PUT /v1/me/player/volume?volume_percent=60']) if (!SPOT.calls.includes(c)) errors.push('Spotify: falta la llamada ' + c);
   RA.SP.cfg.access = 'caducado'; const tc = SPOT.tokenCalls; await RA.spRefresh(); log('expired token refreshed', SPOT.tokenCalls === tc + 1, RA.spNowText());
   if (SPOT.tokenCalls !== tc + 1 || RA.SP.err) errors.push('Spotify: no renueva el token caducado');
+  // el juego como reproductor (Web Playback SDK): al pulsar Play, la música pasa a las gafas en vez de sonar en el móvil
+  { let src = ''; global.document.head = { appendChild(sc) { src = sc.src; } };
+    global.Spotify = { Player: class { constructor(o) { this.o = o; this.l = {}; } addListener(e, f) { this.l[e] = f; } connect() { setTimeout(() => this.l.ready({ device_id: 'quest-sdk' }), 0); return Promise.resolve(true); } activateElement() {} } };
+    RA.SPP.state = ''; RA.spPlayerInit(); global.onSpotifyWebPlaybackSDKReady(); await sleep(10);
+    SPOT.playing = false; SPOT.device = 'phone'; await RA.spRefresh(); RA.spToggle(); await sleep(30); await RA.spRefresh();
+    log(`spotify player in the game: sdk ${/sdk\.scdn\.co/.test(src)} · ready ${RA.SPP.state} ${RA.SPP.id} · after Play the music is on ${SPOT.device} (playing ${SPOT.playing}) · ${RA.spNowText()}`);
+    if (!/sdk\.scdn\.co/.test(src) || RA.SPP.state !== 'ready' || SPOT.device !== 'quest-sdk' || !SPOT.playing) errors.push('Spotify: al pulsar Play la música no pasa al reproductor de las gafas');
+    delete global.document.head; delete global.Spotify; SPOT.device = null; RA.SPP.state = ''; RA.SPP.id = ''; }
   SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(20); log('no device:', RA.spNowText());
   if (!/pon algo a sonar/.test(RA.spNowText())) errors.push('Spotify: sin reproductor no avisa');
   SPOT.noDevice = false; RA.exitAll(); frame(1);
@@ -618,7 +644,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!m.wrist || !g.visible || Math.abs(g.scale.x - 0.46 * 55 / 45) > 0.01 || Math.abs(hd - 0.55) > 0.03 || RA.stand.visible) errors.push('el menú de muñeca no queda a la distancia elegida');
     RA.setSetting('wristDist', 75); frame(60, 16, xrFrame); const hd2 = Math.hypot(RA.menu.group.position.x, RA.menu.group.position.z);
     log('wrist menu at 75 cm:', hd2.toFixed(2)); if (Math.abs(hd2 - 0.75) > 0.03) errors.push('cambiar la distancia del menú de muñeca no lo aleja'); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
-    const w = RA.activeWidgets().find(w => w.label === 'Más ajustes'), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
+    const w = RA.activeWidgets().find(w => /^Más ajustes/.test(w.label)), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
     w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new THREE.Vector3(0, 0, 1))).sub(wp).normalize();
     const before = g.position.clone();
     for (const d of [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]) { XRS.tip = wp.clone().addScaledVector(wn, d); frame(2, 16, xrFrame); }
@@ -633,6 +659,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   RA.setSetting('menuWhere', 'stand'); RA.exitAll(); frame(2, 16, xrFrame);
   RA.setSetting('menuWhere', 'wrist');
+  // ---- La pulsación que abre un menú no toca el menú nuevo: hay que retirar el dedo antes de pulsar otra vez ----
+  { RA.setSetting('menuWhere', 'stand'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(30, 16, xrFrame); RA.lobbyMenu(); frame(40, 16, xrFrame);
+    const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
+    const poke = (w, ds) => { for (const d of ds) { XRS.tip = at(w, d); frame(2, 16, xrFrame); if (process.env.DBG) log('  poke', w.label, d, 'need', RA.POKE.need.right, 'menuH', RA.menuH && RA.menuH.toFixed(2)); } };
+    poke(findW('Más ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver');
+    const tab = RA.activeWidgets().find(w => w.style === 'tab'), before = JSON.stringify(RA.settings);
+    await sleep(500); poke(tab, [-0.01, 0.015, -0.01, 0.015, -0.01]); const sameTab = !RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected'), same = JSON.stringify(RA.settings) === before;
+    poke(tab, [0.06]); await sleep(500); poke(tab, [0.06, 0.03, 0.015, 0.0, -0.01]); const nowTab = RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected');
+    XRS.tip = null; frame(2, 16, xrFrame);
+    log(`poke re-arm: settings opened ${opened} · without pulling back, tab ${tab.label} untouched ${sameTab}, settings unchanged ${same} · after pulling back, tab pressed ${nowTab}`);
+    if (!opened || !sameTab || !same) errors.push('la pulsación que abre un menú (sin retirar el dedo) no debería tocar el menú nuevo');
+    if (!nowTab) errors.push('después de retirar el dedo, la siguiente pulsación debería contar');
+    RA.exitAll(); frame(2, 16, xrFrame); RA.setSetting('menuWhere', 'wrist'); }
 
   // ---- Pistolas en XR con mandos: bláster en cada mano y el gatillo dispara ----
   for (const [k, v] of Object.entries({ mode: 'flyers', exercise: 'squat', pistol: 1, lives: 0, waves: 1, repsWave: 6, rest: 0, flySpeed: 8, squatDepth: 25 })) RA.setSetting(k, v);
@@ -759,10 +798,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (let i = 0; i < 3; i++) { for (let k = 0; k <= 14; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } XRS.noHands = true; frame(30, 16, xrFrame); XRS.noHands = false; XRS.hands = sh(1.55); frame(30, 16, xrFrame); }
   log('press XR lost overhead: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: con las manos perdidas arriba deberían ser 6 (${RA.stats.reps - prR})`);
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
-  // ---- Combate apuntando con las manos: la repetición carga las manos y el rayo se lanza con el gesto (atrás y adelante deprisa) ----
-  for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: 'hands', exercise: 'squat', lives: 0, waves: 1, repsWave: 5, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: 0, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
-  { const rest = () => ({ left: new THREE.Vector3(-0.25, 1.0, -0.1), right: new THREE.Vector3(0.25, 1.0, -0.1) });
-    XRS.headY = 1.7; XRS.hands = rest(); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
+  // ---- Combate con las manos desnudas: la repetición carga UN rayo y se lanza con el gesto (atrás y adelante deprisa) con
+  // cualquier mano; igual con las pistolas activadas (sin mandos no se dispara pellizcando) ----
+  for (const [variant, pis] of [['puntería con las manos', 0], ['pistolas sin mandos', 1]]) {
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: pis ? 'auto' : 'hands', exercise: 'squat', lives: 0, waves: 1, repsWave: 5, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: pis, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
+    const rest = () => ({ left: new THREE.Vector3(-0.25, 1.0, -0.1), right: new THREE.Vector3(0.25, 1.0, -0.1) });
+    XRS.controllers = false; XRS.headY = 1.7; XRS.hands = rest(); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
     const throwAt = (side, slow) => {
       const e = RA.enemies.find(x => x.alive), back = new THREE.Vector3(side === 'left' ? -0.2 : 0.2, XRS.headY - 0.25, 0);
       XRS.hands[side] = back.clone(); frame(4, 16, xrFrame);
@@ -771,14 +812,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       frame(6, 16, xrFrame); XRS.hands = rest(); frame(2, 16, xrFrame);
     };
     const squat = () => { XRS.headY = 1.38; frame(70, 16, xrFrame); XRS.headY = 1.7; frame(30, 16, xrFrame); };
-    squat(); const charged = [RA.HTH.left.q.length, RA.HTH.right.q.length], shots0 = RA.stats.shots;
-    throwAt('right', true); const slowShots = RA.stats.shots - shots0; throwAt('right'); throwAt('left');
-    for (let i = 0; i < 30 && RA.state !== 'end'; i++) { squat(); throwAt('right'); throwAt('left'); }
-    log(`throw XR: charged after a rep ${charged} · slow push shots ${slowShots} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits} kills ${RA.stats.kills}`);
-    if (charged[0] !== 1 || charged[1] !== 1 || shots0) errors.push('lanzar con la mano: la repetición no carga las dos manos (o dispara sola)');
-    if (slowShots) errors.push('lanzar con la mano: empujar despacio no debería lanzar el rayo');
-    if (RA.state !== 'end' || RA.stats.shots < 6 || RA.stats.hits < RA.stats.shots * 0.5) errors.push('lanzar con la mano: el gesto no lanza el rayo o no acierta');
-    XRS.hands = null; RA.setSetting('aim', 'auto'); RA.exitAll(); frame(2, 16, xrFrame);
+    squat(); const charged = RA.HTH.q.length, shots0 = RA.stats.shots;
+    XRS.pinch = 'right'; frame(10, 16, xrFrame); XRS.pinch = null; frame(4, 16, xrFrame); const pinchShots = RA.stats.shots - shots0;
+    throwAt('right', true); const slowShots = RA.stats.shots - shots0;
+    throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const second = RA.stats.shots - shots0 - one;
+    let k = 0; for (let i = 0; i < 30 && RA.state !== 'end'; i++) { squat(); throwAt(k++ % 2 ? 'left' : 'right'); }
+    log(`throw XR (${variant}): charged after a rep ${charged} · pinch shots ${pinchShots} · slow push shots ${slowShots} · first throw ${one}, second without a rep ${second} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits} kills ${RA.stats.kills}`);
+    if (charged !== 1 || shots0) errors.push(`lanzar con la mano (${variant}): una repetición debería cargar un solo rayo (y no dispararlo sola)`);
+    if (pinchShots || slowShots) errors.push(`lanzar con la mano (${variant}): pellizcar o empujar despacio no debería lanzar el rayo`);
+    if (one !== 1 || second !== 0) errors.push(`lanzar con la mano (${variant}): con una repetición se lanza un rayo, con cualquier mano, y no dos`);
+    if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
+    XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }
 
   // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----
@@ -911,7 +955,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', roomMode: 'scan', lives: 0, waves: 1, repsWave: 30, walkTime: 8 })) RA.setSetting(k, v);
   XRS.room = TINY; XRS.noHands = true; XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0; XRS.headQ = null;
   await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame); RA.lobbyMenu(); frame(2, 16, xrFrame);
-  { const P = RA.roomPlan(), lw = RA.activeWidgets().map(w => w.label); log('tiny room: why', P && P.why, '· offers manual', lw.includes('Colocar a mano'));
+  { const P = RA.roomPlan(), main = RA.activeWidgets().map(w => w.label); findW('Sala y vista').onPress(); const lw = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); log('tiny room: main menu points to the room', main.includes('Sala y vista  ▸'), '· why', P && P.why, '· offers manual', lw.includes('Colocar a mano'));
     if (!P || !P.why || !/1,7/.test(P.why) || !lw.includes('Colocar a mano')) errors.push('en una habitación que no cumple los requisitos no se explica el motivo ni se ofrece colocarla a mano'); }
   const lookAt = (x, z) => { const dx = x - (XRS.headX || 0), dz = z - (XRS.headZ || 0), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.atan2(-XRS.headY, Math.hypot(dx, dz)), Math.atan2(-dx, -dz), 0, 'YXZ')); XRS.headQ = { x: q.x, y: q.y, z: q.z, w: q.w }; frame(3, 16, xrFrame); };
   press('Colocar a mano'); frame(2, 16, xrFrame); press('Aquí juego'); frame(2, 16, xrFrame);
@@ -966,6 +1010,7 @@ function makeXRFrame() {
         if (j.side === 'right' && i === 9 && XRS.tip) pos = { x: XRS.tip.x, y: XRS.tip.y, z: XRS.tip.z };
         if (XRS.lift === j.side || XRS.lift === 'both') pos.y += 0.4;
         if (XRS.hands) { const g = XRS.hands[j.side]; pos = { x: g.x + (i % 5) * 0.01, y: g.y, z: g.z - Math.floor(i / 5) * 0.02 }; }
+        if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }

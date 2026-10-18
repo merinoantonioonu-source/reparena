@@ -242,7 +242,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="music">
     <h2>Música con Spotify</h2>
-    <p>El juego hace de mando a distancia: la música suena en la app de Spotify (en las Quest o en tu móvil) y la controlas desde el menú principal y el de pausa (anterior, pausa, siguiente y volumen). Hace falta <b>Spotify Premium</b>.</p>
+    <p>El juego es también un reproductor de Spotify: aparece en tu cuenta como el dispositivo <b>RepArena (Quest)</b> y, al pulsar Play en el menú del juego (Música ▸), la música pasa a las gafas y suena en ellas, aunque antes sonara en el móvil. Desde el menú principal y el de pausa controlas anterior, pausa, siguiente y volumen. Hace falta <b>Spotify Premium</b>. Si ya lo habías conectado antes, <b>vuelve a pulsar Conectar con Spotify</b>: hace falta un permiso nuevo para reproducir en el navegador.</p>
     <ol class="steps">
       <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
       <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
@@ -256,7 +256,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     </div>
     <p class="status sp" id="spStatus"></p>
     <p class="spnow" id="spNow"></p>
-    <p>Antes de entrar en el juego, abre Spotify en las Quest (o en el móvil) y pon algo a sonar. Si la app de Spotify de las Quest se para al entrar en el juego, usa el móvil como reproductor: el mando funciona igual.</p>
+    <p>No hace falta abrir la app de Spotify: basta con pulsar Play en el juego. Si el navegador no puede reproducir Spotify, el menú lo dice y la música sonará en otro dispositivo tuyo (el mando funciona igual). Si la música ya suena en otro dispositivo, el menú ofrece «Que suene en las gafas».</p>
   </section>
 
   <section class="how">
@@ -511,7 +511,10 @@ const aimManual = () => isCombat() && !pistolOn() && !autoAim();
 // Espadas: en Combate contra robots (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
 const swordSet = () => settings.sword !== 'off' && (isCombat() ? handsFree() && foes() === 'robots' : settings.mode === 'touch' && (['squat', 'lunge', 'jump'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase === 'stand')));
 // Apuntando con las manos (o con las pistolas, contra voladores) cada repetición da dos disparos (uno por mano)
-const twoShots = () => isCombat() && handsFree() && (pistolOn() ? foes() !== 'robots' : aimManual() && settings.aim === 'hands');
+// (lanzando el rayo con la mano, cada repetición es un solo rayo: lo lanza la mano que quieras)
+const twoShots = () => isCombat() && handsFree() && pistolOn() && !bareHands() && foes() !== 'robots';
+// Con las manos desnudas (seguimiento de manos, sin mandos)
+const bareHands = () => typeof hands !== 'undefined' && ((hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand));
 const isFloor = () => ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
 // Sentado en el borde de una silla (fondos): la cabeza, a media altura
 const isSeated = () => settings.exercise === 'dips';
@@ -1720,9 +1723,9 @@ const rails = [-1.12, 1.12].map(x => { const m = new THREE.Mesh(new THREE.BoxGeo
 const trackFloor = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), std({ color: 0x0c0a0c, roughness: 0.4, metalness: 0.6, transparent: true, opacity: 0.7 })); trackFloor.rotation.x = -Math.PI / 2; trackFloor.position.y = 0.003; trackFloor.receiveShadow = true; arcTrack.add(trackFloor);
 
 /* ---------- Marcador fijo ---------- */
-const board = makePanel(1, 0.445, 1024);
+const board = makePanel(1, 0.445, 1024); board.mesh.material.transparent = false; board.mesh.material.depthWrite = true; // siempre visible y opaco
 const boardRig = new THREE.Group(); arena.add(boardRig);
-const boardFrameMat = M.steel.clone(); boardFrameMat.transparent = true; // el marco se desvanece con el marcador si tapa algo
+const boardFrameMat = M.steel.clone();
 let boardDirty = true;
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
@@ -3634,11 +3637,13 @@ const _wl = new V3();
 // Para que no se pulsen botones sin querer: tras una pulsación, ese dedo no pulsa nada más hasta que se aleja un poco
 // (POKE_MOVE) del sitio donde pulsó, y entre dos pulsaciones pasa un momento. En cada fotograma cuenta como mucho una
 // pulsación, la del botón en cuyo centro está más metido el dedo (con el dedo entre dos botones no se pulsan los dos).
-const POKE = { lock: { left: null, right: null }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45;
-function pokeWidgets(list, dt, ready = true) {
+// Tras pulsar (o al abrirse un menú), ese dedo no vuelve a pulsar ni a arrastrar hasta que se retira un poco del menú
+// (POKE_BACK por delante de los botones o fuera de ellos): así la misma pulsación no toca el menú que se abre
+const POKE = { lock: { left: null, right: null }, need: { left: false, right: false }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45, POKE_BACK = 0.02;
+function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000;
   for (const f of fingers) { const L = POKE.lock[f.side]; if (L && f.p.distanceTo(L) > POKE_MOVE) POKE.lock[f.side] = null; }
-  let best = null, bestD = Infinity;
+  let best = null, bestD = Infinity; const near = { left: false, right: false };
   for (const w of list) {
     if (!w.mesh.visible) continue;
     w.cool = Math.max(0, (w.cool || 0) - dt);
@@ -3646,15 +3651,16 @@ function pokeWidgets(list, dt, ready = true) {
     for (const f of fingers) {
       if (w.only && w.only !== f.side) continue;
       const l = w.mesh.worldToLocal(_wl.copy(f.p));
-      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side];
+      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side], held = isMenu && POKE.need[f.side];
+      if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.03 && l.z < POKE_BACK && l.z > -0.15) near[f.side] = true;
       if (inX && inY && l.z < 0.07 && l.z > -0.05) hover = true;
       if (w.kind === 'slider') {
-        if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
+        if (!held && Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
       } else if (inX && inY && l.z < 0.012 && l.z > -0.07) {
         touching = true;
         // pulsa al cruzar la superficie desde delante, con el dedo ya dentro del botón (no en su borde)
         const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2));
-        if (prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
+        if (!held && prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
       }
       w.prevZ[f.side] = l.z;
     }
@@ -3662,8 +3668,13 @@ function pokeWidgets(list, dt, ready = true) {
     w.mesh.position.z = w.baseZ - (touching ? 0.004 : 0);
     if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); }
   }
+  if (isMenu) for (const f of fingers) {
+    // retirado (más de POKE_BACK por delante del menú, o lejos de él): ya puede volver a pulsar
+    if (!near[f.side] && menu && menu.group) { const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near[f.side] = true; }
+    if (!near[f.side]) POKE.need[f.side] = false;
+  }
   if (!best || !ready || best.w.cool > 0 || now < POKE.until) return false;
-  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35;
+  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35; if (isMenu) POKE.need[best.f.side] = true;
   SND.click(); haptic(best.f.side, 0.15, 15); best.w.onPress(); return true;
 }
 
@@ -3684,22 +3695,28 @@ const stand = (() => {
   const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1, 0.012), M.glow); tint(strip.geometry, C.teal); g.add(strip); g.strip = strip;
   g.visible = false; scene.add(g); return g;
 })();
+// Dónde sale un menú nuevo: el punto es el centro de su borde de arriba (el menú cuelga de ahí, inclinado hacia ti), a
+// la altura del pecho y a tu alcance; así, por alto que sea el menú, lo de arriba no se aleja ni se sube
 function placeAnchor(dist) {
-  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.3, head.p.y - 0.3) : standHeadY() - 0.42;
+  const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
 function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+// Al cerrar un menú se recuerda su sitio un momento: si enseguida se abre otro (de un menú a otro), sale en el mismo sitio
+let lastAnchor = null, lastAnchorT = -9;
 function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
-  if (!keepAnchor) { menuAnchor = null; stand.visible = false; }
+  if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 function openMenu(rows, opts = {}) {
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
-  const reuse = menu && menuAnchor;
+  const reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
   hideMenu(true);
-  if (!reuse) menuAnchor = opts.anchor || placeAnchor((opts.dist || settings.menuDist) / 100);
+  if (recent) menuAnchor = lastAnchor;
+  else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
+  POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
   const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
@@ -3755,12 +3772,13 @@ function openMenu(rows, opts = {}) {
     widgets.forEach(w => { w.only = 'right'; });
     stand.visible = false; wristPose(group, H);
   } else {
-    group.position.copy(menuAnchor.pos); group.rotation.set(-0.38, menuAnchor.yaw, 0);
+    group.rotation.set(-0.38, menuAnchor.yaw, 0); const hz = H / 2 * Math.sin(0.38); // cuelga de su borde de arriba: el centro, más abajo y algo más cerca de ti
+    group.position.set(menuAnchor.pos.x + hz * Math.sin(menuAnchor.yaw), menuAnchor.pos.y - H / 2 * Math.cos(0.38), menuAnchor.pos.z + hz * Math.cos(menuAnchor.yaw));
     stand.visible = settings.menuWhere === 'stand';
     if (stand.visible) { // atril
       const n = new V3(0, 0, -1).applyAxisAngle(_up, menuAnchor.yaw);
-      stand.position.set(menuAnchor.pos.x + n.x * 0.06, 0, menuAnchor.pos.z + n.z * 0.06);
-      const postH = Math.max(0.1, menuAnchor.pos.y - H / 2 * Math.cos(0.38) - 0.02);
+      stand.position.set(group.position.x + n.x * 0.06, 0, group.position.z + n.z * 0.06);
+      const postH = Math.max(0.1, group.position.y - H / 2 * Math.cos(0.38) - 0.02);
       stand.post.scale.y = postH; stand.post.position.y = postH / 2; stand.strip.scale.y = postH * 0.85; stand.strip.position.set(0, postH / 2, 0.034);
       stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
     }
@@ -3936,9 +3954,6 @@ function panelHides(obj, w, h, always, n) {
   }
   return false;
 }
-// ¿Lo miras de frente? (el centro del marcador a menos de ~14° de donde apunta la vista)
-const _blP = new V3();
-function boardLooked() { board.mesh.getWorldPosition(_blP).sub(head.p); const d = _blP.length(); return d > 0.1 && _blP.dot(fwd()) / d > 0.97; }
 // Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
 const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
@@ -3963,10 +3978,7 @@ function updateViewPanels(dt) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
     toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
   }
-  // el marcador está fijo: si algo de lo que viene queda detrás de él, se aclara hasta que pasa; si lo estás mirando para leerlo, se queda legible
-  const hide = n > 0 && board.mesh.parent && panelHides(board.mesh, 1.06, 0.5, false, n);
-  HUD.board += ((hide ? (boardLooked() ? 0.8 : 0.35) : 1) - HUD.board) * Math.min(1, dt * 8);
-  board.mesh.material.opacity = HUD.board; boardFrameMat.opacity = HUD.board; boardFrameMat.depthWrite = HUD.board > 0.98;
+  // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;
 }
@@ -4073,6 +4085,7 @@ function drawBoard() {
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
   if (isCombat() && swordActive() && ['play', 'rest', 'ready'].includes(state)) { const n = SWD.perf.length; c.fillStyle = n ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', W - 36, 262); }
+  else if (throwAim() && ['play', 'rest', 'ready'].includes(state)) { const n = HTH.q.length; c.fillStyle = n ? '#3cf0c6' : '#a49fc8'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', W - 36, 262); }
   else if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
   else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
   c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
@@ -4086,12 +4099,14 @@ function drawBoard() {
 }
 
 
-/* =================== MÚSICA: SPOTIFY COMO MANDO A DISTANCIA =================== */
-// La música suena en la app de Spotify (en las Quest o en el móvil) y el juego la controla con la Web API.
+/* =================== MÚSICA: SPOTIFY =================== */
+// El juego es también un reproductor de Spotify (Web Playback SDK): la página aparece como el dispositivo «RepArena
+// (Quest)» y, al pulsar Play, la música se pasa ahí y suena en las gafas. El resto (siguiente, volumen…) va por la Web API.
+// Si el reproductor no puede arrancar (sin el permiso «streaming», sin Premium…), Play despierta otro reproductor tuyo.
 // Inicio de sesión con Authorization Code + PKCE, sin servidor. Hace falta Spotify Premium y una app propia
 // creada en developer.spotify.com con esta página como Redirect URI.
 const SP_KEY = 'reparena3-spotify', SP_PKCE = 'reparena3-spotify-pkce';
-const SP_SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing';
 const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0 };
 const spRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
 const spConnected = () => !!SP.cfg.refresh;
@@ -4113,7 +4128,7 @@ async function spTokenReq(body) {
   const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { if (body.grant_type === 'refresh_token' && j.error === 'invalid_grant') { delete SP.cfg.refresh; spSave(); } throw new Error(j.error_description || j.error || 'HTTP ' + r.status); }
-  SP.cfg.access = j.access_token; SP.cfg.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.cfg.refresh = j.refresh_token; spSave();
+  SP.cfg.access = j.access_token; SP.cfg.exp = Date.now() + (j.expires_in || 3600) * 1000; if (j.refresh_token) SP.cfg.refresh = j.refresh_token; if (j.scope) SP.cfg.scopes = j.scope; spSave();
 }
 // Vuelta desde Spotify con ?code=… (o ?error=…)
 async function spHandleRedirect() {
@@ -4123,7 +4138,7 @@ async function spHandleRedirect() {
   if (!pk.verifier || q.get('state') !== pk.state) { spStatus('La respuesta de Spotify no coincide. Vuelve a pulsar Conectar.', true); return; }
   try {
     await spTokenReq({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: spRedirect(), client_id: SP.cfg.clientId, code_verifier: pk.verifier });
-    spStatus('Conectado. Pon algo a sonar en Spotify y pulsa Probar.'); spPage(); spRefresh();
+    spStatus('Conectado. La música sonará en estas gafas (o el navegador) al pulsar Play.'); spPage(); spRefresh(); spPlayerInit();
   } catch (e) { spStatus('No se pudo conectar: ' + e.message, true); }
 }
 async function spToken() {
@@ -4161,12 +4176,47 @@ async function spDo(fn) {
   try { await fn(); SP.err = ''; } catch (e) { SP.err = spErrText(e); } finally { SP.busy = false; }
   spMenuSync(); setTimeout(spRefresh, 500); // Spotify tarda un momento en reflejar el cambio
 }
-async function spWake() { // sin reproductor activo: despierta el primero disponible
+/* ---------- Reproductor en la propia página: la música suena en las gafas ---------- */
+const SPP = { player: null, id: '', state: '', err: '' }; // state: '' (sin arrancar), 'loading', 'ready', 'error'
+const spHereOk = () => SPP.state === 'ready' && !!SPP.id;
+const spHereNow = () => spHereOk() && !!(SP.st && SP.st.device && SP.st.device.id === SPP.id);
+function spPlayerInit() {
+  const host = typeof document !== 'undefined' && (document.head || document.body);
+  if (SPP.state || !spConnected() || typeof window === 'undefined' || !host || !host.appendChild || !document.createElement) return;
+  SPP.state = 'loading';
+  const fail = msg => { SPP.state = 'error'; SPP.err = msg; spMenuSync(); spPage(); };
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
+    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; spMenuSync(); spPage(); });
+    p.addListener('not_ready', () => { SPP.state = 'loading'; });
+    p.addListener('authentication_error', () => fail('Para que suene en las gafas, vuelve a conectar Spotify en la página (hace falta un permiso nuevo)'));
+    p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
+    p.addListener('initialization_error', () => fail('Este navegador no puede reproducir Spotify: sonará en otro reproductor tuyo'));
+    p.addListener('playback_error', () => {});
+    SPP.player = p; p.connect();
+  };
+  const sc = document.createElement('script'); sc.src = 'https://sdk.scdn.co/spotify-player.js'; sc.async = true;
+  sc.onerror = () => fail('No se pudo cargar el reproductor de Spotify');
+  host.appendChild(sc);
+}
+// Los navegadores solo dejan sonar audio tras un gesto del usuario: se «despierta» al entrar en las gafas
+function spPlayerUnlock() { try { if (SPP.player && SPP.player.activateElement) SPP.player.activateElement(); } catch (e) {} }
+// Pasa la música al reproductor de las gafas (y que suene)
+async function spToHere() { await spApi('PUT', '/me/player', { device_ids: [SPP.id], play: true }); if (SP.st) { SP.st.is_playing = true; SP.st.device = Object.assign({}, SP.st.device, { id: SPP.id, name: 'RepArena (Quest)' }); } }
+async function spWake() { // sin reproductor activo: las gafas si están listas; si no, el primero disponible
+  if (spHereOk()) { await spToHere(); return; }
   const d = await spApi('GET', '/me/player/devices'), list = (d && d.devices) || [];
   if (!list.length) throw new Error('NO_DEVICE');
   await spApi('PUT', '/me/player', { device_ids: [(list.find(x => x.is_active) || list[0]).id], play: true });
 }
-function spToggle() { spDo(async () => { if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; } else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; } else await spWake(); }); }
+function spToggle() {
+  spDo(async () => {
+    if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
+    else if (spHereOk() && !spHereNow()) await spToHere(); // en pausa en otro dispositivo: Play la trae a las gafas
+    else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; }
+    else await spWake();
+  });
+}
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
 function spVol(d) {
@@ -4199,7 +4249,10 @@ function spNowText() {
 function musicRows() {
   if (!spConnected()) return [];
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
-  return [{ t: 'text', text: spNowText(), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true },
+  const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
+  const where = SP.st && SP.st.device && SP.st.device.name ? ` (en ${SP.st.device.name})` : '';
+  return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here,
+    ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
@@ -4222,6 +4275,7 @@ function spInitPage() {
   $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
   spPage();
   spHandleRedirect();
+  spPlayerInit();
 }
 
 
@@ -4400,7 +4454,7 @@ function rigDebris(inst, center, power, smokeChance, mats) {
 
 /* =================== ROBOTS (de pie) =================== */
 const ROBOT_KIND = {
-  scout: { rig: 'scout', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.25, stride: 0.8, head: 1.85 },
+  scout: { rig: 'scout', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.25, stride: 1.8, head: 1.85 },
   heavy: { rig: 'heavy', scale: 1.0, speedF: 0.85, heavy: true, stop: 1.4, stride: 0.85, head: 1.75 },
   titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true }
 };
@@ -4460,7 +4514,9 @@ class Robot {
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
       let a1, a2, a3;
-      if (isR) { a1 = -0.55 + 0.42 * la * Math.sin(q) * amp; a2 = 1.2 + 0.45 * la * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
+      // el muslo va hacia delante (ángulo negativo) mientras cos(q) > 0, que es cuando la rodilla se dobla: la pierna avanza
+      // en el aire y luego, estirada, empuja hacia atrás apoyada (antes el signo estaba al revés y parecían andar hacia atrás)
+      if (isR) { a1 = -0.55 - 0.42 * la * Math.sin(q) * amp; a2 = 1.2 + 0.45 * la * Math.max(0, c) * amp; a3 = -(a1 + a2) + 0.1 * Math.sin(q + 0.4) * amp; }
       else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
@@ -4479,7 +4535,7 @@ class Robot {
     // brazos: braceo contrario a las piernas; al correr, bombean doblados; en la amenaza, abiertos y en alto
     const arm = this.arm, raise = Math.max(0, arm), strike = Math.max(0, -arm), sw = (0.32 + run * 0.45) * amp, tn = this.taunt;
     if (isR) {
-      for (const [sd, off, sx] of [['L', Math.PI, 1], ['R', 0, -1]]) {
+      for (const [sd, off, sx] of [['L', 0, 1], ['R', Math.PI, -1]]) { // cada brazo, adelante con la pierna contraria
         const swing = -0.3 - run * 0.25 + sw * Math.sin(p + off) + Math.sin(t * 1.7 + off) * 0.05 * (1 - amp);
         B['sh' + sd].rotation.x = lerp(lerp(swing, -1.0, tn), -2.7, raise) * (1 - strike) + strike * -0.5;
         B['sh' + sd].rotation.z = sx * (0.18 + raise * 0.25 + tn * 1.0);
@@ -4487,7 +4543,7 @@ class Robot {
         B['ha' + sd].rotation.x = -0.25 + Math.sin(t * 3 + off) * 0.08 + tn * Math.sin(t * 14 + off) * 0.25; // garras que se abren y cierran
       }
     } else {
-      B.shL.rotation.x = lerp(lerp(-0.35 - run * 0.2 + sw * Math.sin(p + Math.PI), -1.2, tn), -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2 + tn * 0.9;
+      B.shL.rotation.x = lerp(lerp(-0.35 - run * 0.2 + sw * Math.sin(p), -1.2, tn), -2.5, raise) * (1 - strike) + strike * -0.6; B.shL.rotation.z = 0.2 + tn * 0.9;
       B.elL.rotation.x = lerp(-0.5 - run * 0.4, -0.3, Math.max(raise, tn)); B.clawL.rotation.x = -0.2 + raise * 0.4 - strike * 0.3 + tn * Math.sin(t * 12) * 0.3;
       B.shR.rotation.x = -1.15 + Math.sin(p) * 0.08 * amp - tn * 0.4; B.shR.rotation.z = -0.15 - tn * 0.5; B.elR.rotation.x = -0.35;
       this.gunSpin += dt * (this.state === 'windup' || this.state === 'strike' || tn > 0.5 ? 30 : 4 + run * 10); B.gunR.rotation.y = this.gunSpin;
@@ -5030,7 +5086,7 @@ function onRep(opts, side) {
   if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
-  if (pistolOn()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
+  if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
     const sup = settings.exercise === 'superman', origin = sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
@@ -5344,43 +5400,42 @@ function aimSources() {
   return out;
 }
 /* =================== LANZAR EL RAYO CON LA MANO =================== */
-// Apuntando con las manos, cada repetición carga las dos manos (un orbe en cada muñeca) y cada mano lanza su rayo con
-// un gesto: atrás, junto al cuerpo, y deprisa hacia delante, hacia el enemigo. La dirección del lanzamiento elige el
-// blanco con mucha ayuda (un cono amplio), así que no hace falta afinar. La carga se guarda hasta que lances (hasta
-// THROW_MAX por mano). Sin manos a la vista (en el ordenador), la repetición dispara como antes, con la mirada.
-// El gesto se mide respecto a la cabeza: bajar y subir en la sentadilla no cuenta como lanzar
-const throwAim = () => aimManual() && settings.aim === 'hands' && handsFree();
+// Apuntando con las manos (o con las pistolas sin mandos, con las manos desnudas), cada repetición carga UN rayo (se ve
+// un orbe en las dos muñecas) y cualquiera de las dos manos lo lanza con un gesto: atrás, junto al cuerpo, y deprisa hacia
+// delante, hacia el enemigo. La dirección del lanzamiento elige el blanco con mucha ayuda (un cono amplio), así que no
+// hace falta afinar. La carga se guarda hasta que lances (hasta THROW_MAX). Sin manos a la vista (en el ordenador), la
+// repetición dispara como antes, con la mirada. El gesto se mide respecto a la cabeza: la sentadilla no cuenta
+const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
 const THROW_MAX = 3, THROW_V = 1.5, THROW_D = 0.18, THROW_NEAR = 0.15, THROW_WIDE = 70;
-const mkThrow = () => ({ q: [], armed: false, have: false, prev: new V3(), v: new V3(), from: new V3() });
-const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
+const mkThrow = () => ({ armed: false, have: false, prev: new V3(), v: new V3(), from: new V3() });
+const HTH = { left: mkThrow(), right: mkThrow(), q: [], idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3();
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { q: [], armed: false, have: false }); HTH.idle = 0; HTH.taught = false; }
-// La repetición carga las dos manos (si alguna se ve); si no, devuelve false y se dispara como siempre
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { armed: false, have: false }); HTH.q = []; HTH.idle = 0; HTH.taught = false; }
+// La repetición carga un rayo (si se ve alguna mano); si no, devuelve false y se dispara como siempre
 function throwCharge(dmg, perfect) {
   if (!throwAim() || !(hands.left.ok || hands.right.ok)) return false;
-  for (const s of ['left', 'right']) { const q = HTH[s].q; if (q.length < THROW_MAX) q.push({ dmg, perfect }); else q[q.length - 1] = { dmg, perfect: perfect || q[q.length - 1].perfect }; }
+  const q = HTH.q; if (q.length < THROW_MAX) q.push({ dmg, perfect }); else q[q.length - 1] = { dmg, perfect: perfect || q[q.length - 1].perfect };
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
-  HTH.idle = 0; return true;
+  HTH.idle = 0; boardDirty = true; return true;
 }
-// El blanco: el más cercano a la dirección del lanzamiento dentro de un cono amplio; si no, el que menos se desvía
+// El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados
 function throwTarget(o, d) {
-  let best = null, bs = 1e9;
+  let best = null, bs = THROW_WIDE * Math.PI / 180;
   for (const e of enemies) {
     if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
     const a = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
-    if (a < THROW_WIDE * Math.PI / 180 && a < bs) { bs = a; best = e; }
+    if (a < bs) { bs = a; best = e; }
   }
   return best;
 }
 function throwStep(dt, t) {
-  const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
+  const on = throwAim() && ['play', 'rest', 'ready'].includes(state), n = HTH.q.length;
   _thf.set(0, 0, -1).applyAxisAngle(_up, arena.rotation.y); // hacia dónde mira el cuerpo
-  let any = false;
   for (const s of ['left', 'right']) {
     const T = HTH[s], h = hands[s], orb = HTH.orbs[s];
-    orb.visible = on && h.ok && T.q.length > 0;
-    if (orb.visible) { any = true; const n = T.q.length, sc = (0.05 + 0.025 * n) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.q[0].perfect ? 1 : 0]); }
+    const m = HTH.q.length; orb.visible = on && h.ok && m > 0;
+    if (orb.visible) { const sc = (0.05 + 0.025 * m) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[HTH.q[0].perfect ? 1 : 0]); }
     if (!on || !h.ok) { T.have = false; T.armed = false; continue; }
     _thr.subVectors(h.wrist, head.p);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
@@ -5388,14 +5443,14 @@ function throwStep(dt, t) {
     const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length();
     if (reach < THROW_NEAR) { T.armed = true; T.from.copy(_thr); } // mano atrás, junto al cuerpo: lista para lanzar
     else if (T.armed && sp > THROW_V && T.v.dot(_thf) > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) {
-      T.armed = false; if (!T.q.length) continue;
-      const c = T.q.shift(), o = h.wrist.clone(), d = T.v.clone().normalize();
+      T.armed = false; if (!HTH.q.length) continue;
+      const c = HTH.q.shift(), o = h.wrist.clone(), d = T.v.clone().normalize();
       fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
-      gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0;
+      gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
     }
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
-  if (any && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
+  if (on && n && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
 }
 function updateAim(t) {
   const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)); // lanzando con la mano no hay láser: el gesto apunta
@@ -5475,7 +5530,7 @@ function updatePistol(dt) {
     }
     // gatillo (o pellizco) al apretar
     const press = h.trig && !h.trigPrev; h.trigPrev = h.trig;
-    if (on && press && h.rayOk && !swordIn(s)) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD });
+    if (on && press && h.rayOk && !h.isHand && !swordIn(s)) gunFire({ key: s, o: gunMuzzle(s), d: h.rayD }); // con las manos desnudas no se pellizca: se lanza
   }
   if (on && preview) { const t = !!PV.keys.KeyT; if (t && !GUN.prevT) gunFire({ key: 'gaze', o: head.p, d: fwd() }); GUN.prevT = t; } // en el ordenador: T dispara con la mirada
 }
@@ -5580,7 +5635,7 @@ function lobbyMenu() {
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    ...exerciseRows(() => lobbyMenu()),
+    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, onPress: () => exerciseMenu(lobbyMenu) }] },
     ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : [])] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
@@ -5596,12 +5651,30 @@ function lobbyMenu() {
     rows.push(...tempoRows(() => lobbyMenu()));
   }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
-  rows.push(...musicRows(), ...viewRows(() => lobbyMenu()), ...roomRows(() => lobbyMenu()));
-  rows.push({ t: 'btns', items: [{ label: 'Más ajustes', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] });
-  const hint = !bars ? 'En partida: mira tu muñeca izquierda para abrir el menú' : !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`;
-  rows.push({ t: 'text', text: hint, color: bars && !placed ? '#ffd166' : '#a49fc8' });
+  // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
+  const sub = [];
+  if (spConnected()) sub.push({ label: 'Música  ▸', onPress: () => musicMenu(lobbyMenu) });
+  const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
+  if (viewRows(lobbyMenu).length || rr.length) sub.push({ label: 'Sala y vista  ▸', style: roomBad ? 'primary' : undefined, onPress: () => roomMenu(lobbyMenu) });
+  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Sala y vista»', color: '#ffd166' });
+  sub.push({ label: 'Más ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
+  rows.push({ t: 'btns', items: sub });
+  if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows);
   m.rebuild = () => lobbyMenu();
+}
+// Submenús del principal: elegir ejercicio, música, y sala y vista (realidad mixta); «Volver» deja el principal en el mismo sitio
+function exerciseMenu(back) {
+  const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = () => exerciseMenu(back);
+}
+function musicMenu(back) {
+  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = () => musicMenu(back);
+}
+function roomMenu(back) {
+  const again = () => roomMenu(back), rows = [{ t: 'title', text: 'SALA Y VISTA' }, ...viewRows(again), ...roomRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = again;
 }
 let settingsTab = 'partida';
 function settingsMenu(back, tab = settingsTab) {
@@ -5644,7 +5717,7 @@ function pauseMenu() {
   m.rebuild = () => pauseMenu();
 }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
@@ -6675,15 +6748,48 @@ const hapticBoth = (v, ms) => { haptic('left', v, ms); haptic('right', v, ms); }
 
 /* ---------- Modelos ---------- */
 // El origen es el agarre del mando y la hoja sale por −Z (como un objeto que se sostiene en el puño)
-const M_BLADE = std({ color: 0xdfe4ea, metalness: 1, roughness: 0.14, envMapIntensity: 1.8 });
-const M_GUARD = std({ color: 0xb08a3c, metalness: 1, roughness: 0.3, envMapIntensity: 1.4 });
+// Reflejos del acero: un entorno propio, más luminoso que el de la arena (cielo claro, suelo oscuro y paneles de luz
+// blanca y de colores), para que la hoja brille y cada faceta refleje distinto según cómo la gires
+const ENV_STEEL = (() => {
+  const s = new THREE.Scene(), g = new THREE.SphereGeometry(10, 32, 16), cols = [], c = new THREE.Color(), top = new THREE.Color(0x56607a), mid = new THREE.Color(0x23262f), bot = new THREE.Color(0x0a080c);
+  for (let i = 0; i < g.attributes.position.count; i++) { const y = g.attributes.position.getY(i) / 10; if (y > 0) c.copy(mid).lerp(top, Math.min(1, y * 1.6)); else c.copy(mid).lerp(bot, Math.min(1, -y * 3)); cols.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  s.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  // tiras de luz estrechas: dan los destellos alargados del acero pulido sobre un fondo más oscuro
+  for (const [col, x, y, z, w, h] of [[0xffffff, 0, 8, 1, 10, 0.8], [0xffffff, -7, 4, 4, 0.6, 7], [0xfff0d8, 7, 3, -3, 0.8, 6], [0xffffff, 2, 6, -6, 6, 0.5], [0xff6a40, -6, 1, -7, 4, 0.6], [0x8fb8ff, 5, 2, 7, 4, 0.8]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); s.add(m);
+  }
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(s, 0.02).texture; pm.dispose(); return t;
+})();
+const M_BLADE = std({ color: 0xdfe5ec, metalness: 1, roughness: 0.12, envMap: ENV_STEEL, envMapIntensity: 1.5 });
+const M_GUARD = std({ color: 0xc89a48, metalness: 1, roughness: 0.28, envMap: ENV_STEEL, envMapIntensity: 1.3 });
 const M_GRIP = std({ color: 0x2a1a12, metalness: 0, roughness: 0.85 });
-const M_HILT = std({ color: 0x9aa0aa, metalness: 1, roughness: 0.25, envMapIntensity: 1.4 });
+const M_HILT = std({ color: 0x9aa0aa, metalness: 1, roughness: 0.25, envMap: ENV_STEEL, envMapIntensity: 1.4 });
+// Hoja de acero de verdad: sección de rombo (dos filos y un nervio central) que se estrecha poco a poco y acaba en una
+// punta centrada; caras planas, así cada faceta refleja la luz por su lado. z0 es la guarda; la hoja sale por −Z
+function bladeGeo(L, z0) {
+  const st = [], N = 14, P = [], Nn = [];
+  for (let i = 0; i <= N; i++) { // estaciones a lo largo: anchura y grosor (la punta, en ojiva corta)
+    const k = i / N, tip = Math.max(0, (k - 0.86) / 0.14), w = 0.023 * (1 - 0.18 * k) * Math.sqrt(Math.max(0, 1 - tip * tip)), t = 0.0042 * (1 - 0.3 * k) * (1 - tip);
+    st.push({ z: z0 - L * k, w, t });
+  }
+  const tri = (a, b, c) => { const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(c, a)).normalize(); for (const v of [a, b, c]) { P.push(v.x, v.y, v.z); Nn.push(n.x, n.y, n.z); } };
+  // sección: cara central plana (la mitad de la anchura) y biseles marcados hasta cada filo
+  const ring = s => { const c = s.w * 0.5; return [new THREE.Vector3(s.w, 0, s.z), new THREE.Vector3(c, s.t, s.z), new THREE.Vector3(-c, s.t, s.z), new THREE.Vector3(-s.w, 0, s.z), new THREE.Vector3(-c, -s.t, s.z), new THREE.Vector3(c, -s.t, s.z)]; };
+  for (let i = 0; i < N; i++) {
+    const a = ring(st[i]), b = ring(st[i + 1]);
+    for (let j = 0; j < 6; j++) { const j2 = (j + 1) % 6; tri(a[j], b[j], b[j2]); tri(a[j], b[j2], a[j2]); }
+  }
+  const base = ring(st[0]); for (let j = 1; j < 5; j++) tri(base[0], base[j + 1], base[j]); // tapa junto a la guarda
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
+  const uv = new Float32Array(P.length / 3 * 2); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
 function makeSword(side) {
   const col = SWORD_COL[side], g = new THREE.Group(), S = { side, g, prev: [], cur: [], had: false, speed: 0, vel: new V3(), tipPrev: new V3(), swishT: 0, hitCool: new Map(), hum: null, glow: 0 };
   // metálica: hoja de acero con nervio central, guarda dorada, empuñadura de cuero y pomo; filo que brilla cargada
   const L = 0.85, met = new THREE.Group(); g.add(met); S.metal = met;
-  const blade = new THREE.Mesh(mergeGeos([xform(G.box(0.044, 0.005, L - 0.09), 0, 0, -0.1 - (L - 0.09) / 2), xform(G.box(0.01, 0.009, L - 0.12), 0, 0, -0.1 - (L - 0.12) / 2), xform(new THREE.ConeGeometry(0.022, 0.09, 4), 0, 0, -0.1 - L + 0.045, -Math.PI / 2, Math.PI / 4, 0, 1, 1, 0.16)]), M_BLADE);
+  const blade = new THREE.Mesh(bladeGeo(L, -0.1), M_BLADE); // la punta, centrada con el resto de la hoja
   blade.castShadow = true; met.add(blade);
   const guard = new THREE.Mesh(mergeGeos([xform(G.box(0.2, 0.022, 0.03), 0, 0, -0.088), xform(G.sph(0.016, 10, 8), 0.1, 0, -0.088), xform(G.sph(0.016, 10, 8), -0.1, 0, -0.088), xform(G.sph(0.022, 12, 10), 0, 0, 0.1)]), M_GUARD); guard.castShadow = true; met.add(guard);
   const grip = new THREE.Mesh(xform(G.cyl(0.019, 0.021, 0.17, 12), 0, 0, 0.003, Math.PI / 2, 0, 0), M_GRIP); grip.castShadow = true; met.add(grip);
@@ -7067,7 +7173,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateAim(t); throwStep(dt, t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt);
   updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
-  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady()); }
+  if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt);
   updateEnv(dt, t);
   if (!arMode && !forestOn() && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
@@ -7094,7 +7200,7 @@ function viewRows(back) {
   return [{ t: 'choice', label: 'Vista', value: arMode ? 'mr' : 'vr', opts: [['mr', 'Realidad mixta'], ['vr', 'Realidad virtual']], onPick: v => { setView(v); back(); } }];
 }
 async function startXR(ar) {
-  audioInit(); ensureRigs();
+  audioInit(); ensureRigs(); spPlayerUnlock(); // con el gesto de entrar, el reproductor de Spotify ya puede sonar
   try {
     const useAR = ar || XRSUP.ar;
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar

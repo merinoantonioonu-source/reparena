@@ -211,7 +211,10 @@ const aimManual = () => isCombat() && !pistolOn() && !autoAim();
 // Espadas: en Combate contra robots (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
 const swordSet = () => settings.sword !== 'off' && (isCombat() ? handsFree() && foes() === 'robots' : settings.mode === 'touch' && (['squat', 'lunge', 'jump'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase === 'stand')));
 // Apuntando con las manos (o con las pistolas, contra voladores) cada repetición da dos disparos (uno por mano)
-const twoShots = () => isCombat() && handsFree() && (pistolOn() ? foes() !== 'robots' : aimManual() && settings.aim === 'hands');
+// (lanzando el rayo con la mano, cada repetición es un solo rayo: lo lanza la mano que quieras)
+const twoShots = () => isCombat() && handsFree() && pistolOn() && !bareHands() && foes() !== 'robots';
+// Con las manos desnudas (seguimiento de manos, sin mandos)
+const bareHands = () => typeof hands !== 'undefined' && ((hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand));
 const isFloor = () => ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
 // Sentado en el borde de una silla (fondos): la cabeza, a media altura
 const isSeated = () => settings.exercise === 'dips';
