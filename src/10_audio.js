@@ -39,17 +39,22 @@ function audioInit() {
   return C;
 }
 /* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
-// Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado.
-const SAMPLE_NAMES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
+// Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado. Casi todos los efectos
+// (SND_FILES, más abajo) y los sonidos continuos (LOOP_FILES) se pueden sustituir; sounds/LEEME.md tiene la lista
+const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque'];
 AUD.samples = {};
 async function loadSamples() {
   if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
-  for (const n of SAMPLE_NAMES) for (const ext of ['mp3', 'ogg', 'wav']) {
-    try {
-      const r = await fetch(`sounds/${n}.${ext}`); if (!r.ok) continue;
-      AUD.samples[n] = await AUD.C.decodeAudioData(await r.arrayBuffer()); break;
-    } catch (e) { break; } // sin red o sin servidor (p. ej. abriendo el archivo a pelo): solo sintetizados
-  }
+  await Promise.all(sampleNames().map(async n => {
+    for (const ext of ['mp3', 'ogg', 'wav']) {
+      try {
+        const r = await fetch(`sounds/${n}.${ext}`); if (!r.ok) continue;
+        AUD.samples[n] = await AUD.C.decodeAudioData(await r.arrayBuffer());
+        if (n.startsWith('ambiente-') && AMB.nodes) { ambientStop(); ambientStart(); } // el ambiente ya sonaba sintetizado
+        return;
+      } catch (e) { return; } // sin red o sin servidor (p. ej. abriendo el archivo a pelo): solo sintetizados
+    }
+  }));
 }
 function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}) {
   const b = AUD.samples && AUD.samples[name]; if (!b || !sndOK()) return false;
@@ -294,6 +299,32 @@ const SND = {
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
 
+// Efectos que se pueden sustituir por un archivo: nombre del archivo, posición del argumento con el sitio del sonido y,
+// en las espadas, el del «es láser» (entonces se busca antes <nombre>-laser). rayo, impacto, tentáculos, caída al foso y
+// pompa tienen su propio manejo (con variantes de tono) dentro de cada efecto
+const SND_FILES = {
+  click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
+  combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
+  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
+  swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
+  owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
+};
+const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
+function sampleNames() {
+  const out = [...OWN_FILES, ...LOOP_FILES];
+  for (const [f, , li] of Object.values(SND_FILES)) { out.push(f); if (li != null) out.push(f + '-laser'); }
+  return out;
+}
+for (const [k, [file, pi, li]] of Object.entries(SND_FILES)) {
+  const synth = SND[k];
+  SND[k] = function (...a) {
+    const pos = pi != null ? a[pi] || null : null, name = li != null && a[li] && AUD.samples[file + '-laser'] ? file + '-laser' : file;
+    if (AUD.samples[name] && playSample(name, pos, { rev: pos ? 0.3 : 0.1 })) return;
+    return synth.apply(this, a);
+  };
+}
 /* ---------- Sonidos continuos (zumbidos, arcos) ---------- */
 class Loop {
   constructor(pos, gain, build) {
@@ -305,6 +336,8 @@ class Loop {
     build(this, C); this.nodes.forEach(n => n.start && n.start());
     AUD.loops.add(this);
   }
+  // Bucle desde un archivo (sounds/<nombre>): si existe, suena en lugar del sintetizado, a su volumen
+  file(name, rate = 1, gain = 0.6) { const b = AUD.samples[name]; if (!b) return false; const s = AUD.C.createBufferSource(); s.buffer = b; s.loop = true; s.playbackRate.value = rate; s.connect(this.out); this.nodes.push(s); this.fileSrc = s; this.out.gain.setTargetAtTime(gain, AUD.C.currentTime, 0.15); return true; }
   osc(type, f) { const o = AUD.C.createOscillator(); o.type = type; o.frequency.value = f; this.nodes.push(o); return o; }
   src(brown) { const s = AUD.C.createBufferSource(); s.buffer = brown ? AUD.brown : AUD.noise; s.loop = true; this.nodes.push(s); return s; }
   set(pos) { if (!this.dead) setPos(this.p, pos); }
@@ -319,6 +352,7 @@ function buzzLoop(kind, pos) {
   const f0 = { drone: rand(120, 150), hornet: rand(190, 240), wasp: rand(160, 200), queen: rand(95, 115), bomber: rand(85, 100), carrier: rand(60, 70) }[kind] || 130;
   const insect = kind === 'hornet' || kind === 'wasp' || kind === 'queen';
   return new Loop(pos, kind === 'carrier' || kind === 'queen' ? 0.35 : kind === 'wasp' ? 0.24 : 0.18, (L, C) => {
+    if (L.file(insect ? 'zumbido-avispa' : 'zumbido-dron', f0 / (insect ? 215 : 135), kind === 'carrier' || kind === 'queen' ? 0.8 : 0.55)) return; // cada uno con su tono
     const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f0 * 3; bp.Q.value = 0.9; bp.connect(L.out);
     const trem = C.createGain(); trem.gain.value = 0.7; trem.connect(bp);
     const a = L.osc('sawtooth', f0), b = L.osc('sawtooth', f0 * 1.013); a.connect(trem); b.connect(trem);
@@ -333,30 +367,33 @@ function saberLoop(pos) {
   // zumbido sutil: casi todo seno grave, con un poco de sierra muy filtrada; sube algo al mover la hoja deprisa
   if (!sndOK()) return null;
   const L = new Loop(pos, 0.025, (L, C) => {
+    if (L.file('espada-laser-zumbido', 1, 0.3)) return;
     const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.connect(L.out);
     const a = L.osc('sawtooth', 88), b = L.osc('sawtooth', 89.3), g = C.createGain(); g.gain.value = 0.18; a.connect(g); b.connect(g); g.connect(lp);
     const c = L.osc('sine', 176), cg = C.createGain(); cg.gain.value = 0.5; c.connect(cg).connect(lp);
     L.oscs = [a, b, c]; L.lp = lp;
   });
   const set = L.set.bind(L);
-  L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.5), T, 0.03)); L.lp.frequency.setTargetAtTime(380 + k * 900, T, 0.03); L.out.gain.setTargetAtTime(0.025 + k * 0.07, T, 0.03); };
+  L.set = (p, v = 0) => { set(p); if (L.dead) return; const k = clamp(v / 4, 0, 1), T = AUD.C.currentTime; if (L.fileSrc) { L.fileSrc.playbackRate.setTargetAtTime(1 + k * 0.3, T, 0.03); L.out.gain.setTargetAtTime(0.3 + k * 0.4, T, 0.03); return; } L.oscs.forEach((o, i) => o.frequency.setTargetAtTime((i === 2 ? 176 : 88 + i * 1.3) * (1 + k * 0.5), T, 0.03)); L.lp.frequency.setTargetAtTime(380 + k * 900, T, 0.03); L.out.gain.setTargetAtTime(0.025 + k * 0.07, T, 0.03); };
   return L;
 }
 // Succión del remolino: viento grave que gira; k (0-1) es lo abierto que está
 function suctionLoop(pos) {
   if (!sndOK()) return null;
   const L = new Loop(pos, 0.3, (L, C) => {
+    if (L.file('remolino')) return;
     const n = L.src(true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 260; bp.Q.value = 0.7; n.connect(bp); bp.connect(L.out);
     const lfo = L.osc('sine', 0.6), lg = C.createGain(); lg.gain.value = 120; lfo.connect(lg).connect(bp.frequency);
     const d = L.osc('sine', 42), dg = C.createGain(); dg.gain.value = 0.5; d.connect(dg).connect(L.out); L.lfo = lfo;
   });
   const set = L.set.bind(L);
-  L.set = (p, k = 1) => { set(p); if (L.dead) return; const T = AUD.C.currentTime; L.out.gain.setTargetAtTime(0.05 + 0.35 * k, T, 0.1); L.lfo.frequency.setTargetAtTime(0.6 + (1 - k) * 2, T, 0.2); };
+  L.set = (p, k = 1) => { set(p); if (L.dead) return; const T = AUD.C.currentTime; L.out.gain.setTargetAtTime((L.fileSrc ? 0.15 + 0.6 * k : 0.05 + 0.35 * k), T, 0.1); if (L.lfo) L.lfo.frequency.setTargetAtTime(0.6 + (1 - k) * 2, T, 0.2); };
   return L;
 }
 function humLoop(pos) {
   if (!sndOK()) return null;
   return new Loop(pos, 0.3, (L, C) => {
+    if (L.file('arco-zumbido')) return;
     const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(L.out);
     L.osc('sawtooth', 55).connect(lp); const sq = L.osc('square', 110), sg = C.createGain(); sg.gain.value = 0.25; sq.connect(sg).connect(lp);
     const n = L.src(false), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 0.8;
@@ -371,6 +408,8 @@ function ambientStart() {
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
   AMB.kind = forestOn() ? 'forest' : 'arena';
+  const own = AUD.samples[AMB.kind === 'forest' ? 'ambiente-bosque' : 'ambiente-arena'];
+  if (own) { const s = C.createBufferSource(); s.buffer = own; s.loop = true; s.connect(out); s.start(); AMB.nodes = { nodes: [s], out }; return; } // ambiente desde archivo
   if (AMB.kind === 'forest') { // viento entre las hojas, grillos y un zumbido grave e inquietante
     const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 0.5;
     const wg = C.createGain(); wg.gain.value = 0.2; w.connect(wf).connect(wg).connect(out); nodes.push(w);

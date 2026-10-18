@@ -607,7 +607,7 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
-  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.06 + dist * 0.025, kind: 'orb', col });
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: 0.09 + dist * 0.032, kind: 'orb', col });
   SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 // Apuntando tú: el rayo sale hacia donde apuntas y se engancha al enemigo fijado
@@ -616,7 +616,7 @@ function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
-  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.06, origin.distanceTo(to) / 40), kind: 'bolt', col });
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.09, origin.distanceTo(to) / 30), kind: 'bolt', col });
   SND.bolt(origin, L); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
@@ -626,7 +626,7 @@ function updateProjectiles(dt) {
     const k = Math.min(1, p.t / p.dur);
     // el líder del rayo avanza hacia el blanco (que puede moverse)
     p.lt.to.copy(p.to); p.lt.k = Math.max(p.lt.k, k);
-    if (k < 1) { const h = p.lt.pointAt(k, tmpA); fx.glow(h, p.col, 0.1 * p.lt.scale, 0.06); }
+    if (k < 1) { const h = p.lt.pointAt(k, tmpA); fx.glow(h, p.col.map(c => 0.6 + c * 0.4), (0.13 + 0.03 * p.lt.L) * p.lt.scale, 0.05); fx.glow(h, p.col, 0.3 * p.lt.scale, 0.04); } // cabeza casi blanca con halo del color
     if (k >= 1) {
       boltArrive(p.lt); projs.splice(i, 1);
       if (p.e && p.e.alive) {
@@ -676,7 +676,7 @@ function onRep(opts, side) {
     const sup = settings.exercise === 'superman', origin = sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
-  } else {
+  } else if (!throwCharge(dmg, opts.perfect)) { // apuntando con las manos: carga las manos y se lanza con el gesto
     for (const s of aimSources()) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
@@ -984,8 +984,62 @@ function aimSources() {
   if (!out.length) out.push({ key: 'gaze', o: head.p, d: fwd() });
   return out;
 }
+/* =================== LANZAR EL RAYO CON LA MANO =================== */
+// Apuntando con las manos, cada repetición carga las dos manos (un orbe en cada muñeca) y cada mano lanza su rayo con
+// un gesto: atrás, junto al cuerpo, y deprisa hacia delante, hacia el enemigo. La dirección del lanzamiento elige el
+// blanco con mucha ayuda (un cono amplio), así que no hace falta afinar. La carga se guarda hasta que lances (hasta
+// THROW_MAX por mano). Sin manos a la vista (en el ordenador), la repetición dispara como antes, con la mirada.
+// El gesto se mide respecto a la cabeza: bajar y subir en la sentadilla no cuenta como lanzar
+const throwAim = () => aimManual() && settings.aim === 'hands' && handsFree();
+const THROW_MAX = 3, THROW_V = 1.5, THROW_D = 0.18, THROW_NEAR = 0.15, THROW_WIDE = 70;
+const mkThrow = () => ({ q: [], armed: false, have: false, prev: new V3(), v: new V3(), from: new V3() });
+const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
+for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
+const _thr = new V3(), _thv = new V3(), _thf = new V3();
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { q: [], armed: false, have: false }); HTH.idle = 0; HTH.taught = false; }
+// La repetición carga las dos manos (si alguna se ve); si no, devuelve false y se dispara como siempre
+function throwCharge(dmg, perfect) {
+  if (!throwAim() || !(hands.left.ok || hands.right.ok)) return false;
+  for (const s of ['left', 'right']) { const q = HTH[s].q; if (q.length < THROW_MAX) q.push({ dmg, perfect }); else q[q.length - 1] = { dmg, perfect: perfect || q[q.length - 1].perfect }; }
+  if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
+  HTH.idle = 0; return true;
+}
+// El blanco: el más cercano a la dirección del lanzamiento dentro de un cono amplio; si no, el que menos se desvía
+function throwTarget(o, d) {
+  let best = null, bs = 1e9;
+  for (const e of enemies) {
+    if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
+    const a = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
+    if (a < THROW_WIDE * Math.PI / 180 && a < bs) { bs = a; best = e; }
+  }
+  return best;
+}
+function throwStep(dt, t) {
+  const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
+  _thf.set(0, 0, -1).applyAxisAngle(_up, arena.rotation.y); // hacia dónde mira el cuerpo
+  let any = false;
+  for (const s of ['left', 'right']) {
+    const T = HTH[s], h = hands[s], orb = HTH.orbs[s];
+    orb.visible = on && h.ok && T.q.length > 0;
+    if (orb.visible) { any = true; const n = T.q.length, sc = (0.05 + 0.025 * n) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.q[0].perfect ? 1 : 0]); }
+    if (!on || !h.ok) { T.have = false; T.armed = false; continue; }
+    _thr.subVectors(h.wrist, head.p);
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
+    const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length();
+    if (reach < THROW_NEAR) { T.armed = true; T.from.copy(_thr); } // mano atrás, junto al cuerpo: lista para lanzar
+    else if (T.armed && sp > THROW_V && T.v.dot(_thf) > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) {
+      T.armed = false; if (!T.q.length) continue;
+      const c = T.q.shift(), o = h.wrist.clone(), d = T.v.clone().normalize();
+      fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
+      gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0;
+    }
+  }
+  // cargado y sin lanzar: cada pocos segundos, recuérdalo
+  if (any && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
+}
 function updateAim(t) {
-  const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state);
+  const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)); // lanzando con la mano no hay láser: el gesto apunta
   const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
@@ -1233,7 +1287,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); applyEnvMode(); runSaved = false;
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset();
+  stats = newStats(); gunReset(); swordReset(); throwReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle';
   stateT = 0; boardDirty = true;
