@@ -43,8 +43,8 @@ function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camer
 const _pvw = new V3();
 function previewInput(dt) {
   const ex = settings.exercise;
-  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : settings.squatDepth / 100 + 0.12;
-  let target = PV.crouch && !['curl', 'curl2', 'press', 'press2'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
+  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
+  let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
@@ -63,6 +63,8 @@ function previewInput(dt) {
     if (d > 1e-4) camera.position.addScaledVector(_pvw, Math.min(1, 1.4 * dt / d));
     target = PV.y = camera.position.y;
   }
+  // sentadilla con salto: al soltar Espacio, sube de golpe por encima de tu altura de pie (PV.noJump: no salta)
+  if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
   PV.press += clamp((PV.crouch ? 0.24 : -0.15) - PV.press, -1.2 * dt, 1.2 * dt);
   PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt);
@@ -82,9 +84,20 @@ function previewInput(dt) {
   if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }
   // sentadilla con press: las pesas en los hombros; al subir de la sentadilla, por encima de la cabeza
   if (settings.exercise === 'thruster' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.15).addScaledVector(f, 0.12); h.wrist.y += PV.thrUp > 0 ? 0.32 : -0.25; }
+  // swing, sentadilla con elevación y peso muerto con remo: abajo, las pesas cuelgan; al subir, al frente o tirando de los codos (PV.noArms: no)
+  if (['swing', 'frontsq', 'dlrow'].includes(ex) && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) {
+    const h = hands[s], up = PV.thrUp > 0 && !PV.noArms; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
+    h.wrist.copy(camera.position).addScaledVector(r, sg * (ex === 'swing' ? 0.05 : 0.2)).addScaledVector(f, up && ex !== 'dlrow' ? (ex === 'swing' ? 0.4 : 0.55) : 0.08);
+    h.wrist.y += !up ? -0.75 : ex === 'swing' ? -0.36 : ex === 'frontsq' ? -0.18 : -0.45;
+  }
+  // leñador: Espacio baja las manos junto a la cadera derecha; al soltarlo suben por encima del hombro izquierdo (PV.chopSame: del mismo lado)
+  if (ex === 'chop' && GAME_STATES.includes(state)) for (const s of ['left', 'right']) {
+    const h = hands[s], up = PV.thrUp > 0; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
+    h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, PV.crouch ? 0.28 : up ? (PV.chopSame ? 0.28 : -0.28) : 0); h.wrist.y = PV.crouch ? calibRef * 0.5 : up ? camera.position.y + 0.05 : camera.position.y - 0.4;
+  }
   if ((settings.exercise === 'press' || settings.exercise === 'press2') && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.22); h.wrist.y += PV.press; }
   // plancha con un brazo: las dos manos apoyadas junto a la cabeza; Q y E levantan la izquierda y la derecha
-  if (settings.exercise === 'plank1' && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
+  if (oneArm() && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
