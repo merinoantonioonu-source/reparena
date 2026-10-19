@@ -21,6 +21,8 @@ function handsLow() {
   for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok) { ok++; if (h.wrist.y < y) low++; } }
   return { low, ok };
 }
+// ¿Alguna mano a la vista agarrada a la barra (a su altura)?
+const handsOnBar = () => ['left', 'right'].some(s => hands[s].ok && Math.abs(hands[s].wrist.y - eqTopY()) < 0.2);
 const handsOff = () => { const h = handsLow(); return h.low >= 2 || (h.low === 1 && h.ok === 1); };
 
 /* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
@@ -77,6 +79,7 @@ function barFall() {
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
   say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
+  if (BAR.lastFall) warnFloor(`${door ? '¡AL CHARCO!' : '¡TE SOLTASTE!'} (${BAR.lastFall})`, '#ff8a3d');
   barToMount(0, true);
 }
 function barDetect(t, dt) {
@@ -86,7 +89,16 @@ function barDetect(t, dt) {
   if (BAR.det === 'down' && head.speed < 0.05) BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
   // soltarse: las manos a la vista por debajo de la barra (al caer de pie la cabeza no siempre baja)
   const off = handsLow(); BAR.letGo = off.low >= 2 || (off.low === 1 && off.ok === 1) ? BAR.letGo + dt : 0;
-  if (y < BAR.hangRef - margin || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { BAR.letGo = 0; barFall(); return; }
+  // En el remo, tumbado boca arriba, la altura de la cabeza cambia con solo relajar el cuello o estirar del todo
+  // los brazos: si las manos siguen a la vista en las paralelas, bajar no es soltarse (se toma esa altura como
+  // nueva posición de abajo). Sí lo es tener la cabeza en el suelo.
+  let low = y < BAR.hangRef - margin;
+  if (low && settings.exercise === 'row' && handsOnBar() && y > 0.22) { low = false; BAR.hangRef = BAR.ref = Math.min(BAR.ref, y); }
+  if (settings.exercise === 'row' && y < 0.18) low = true;
+  if (low || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) {
+    BAR.lastFall = low ? (settings.exercise === 'row' ? 'la cabeza llegó al suelo' : `la cabeza bajó más de ${settings.fallMargin} cm`) : BAR.letGo ? 'tus manos se vieron por debajo de la barra' : 'te alejaste del aparato';
+    BAR.letGo = 0; barFall(); return;
+  }
   if (settings.exercise === 'hang') {
     const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
     if (Math.floor(BAR.hold) > Math.floor(before)) {

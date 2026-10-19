@@ -4052,7 +4052,43 @@ function hudSlot(P, slots, n, dt) {
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
   return headLocal(P.off, new V3());
 }
+/* ---------- Avisos grandes impresos en el suelo ---------- */
+// Lo que estás haciendo mal (a medias, suelta la cadera, te soltaste…) se escribe en grande en el suelo, delante,
+// durante 4 s; si miras hacia arriba (remo, abdominales), por encima de la cara. Los últimos quedan en la pausa.
+const WARN_SECS = 4;
+const WARN = { t: 0, log: [], text: '', p: makePanel(1.6, 0.42, 1024, { depthTest: false }), at: new V3(), q: new Q4(), init: false };
+WARN.p.mesh.visible = false; WARN.p.mesh.renderOrder = 32; scene.add(WARN.p.mesh);
+function warnFloor(text, color = '#ff8a3d') {
+  if (WARN.log[WARN.log.length - 1] !== text) { WARN.log.push(text); if (WARN.log.length > 8) WARN.log.shift(); }
+  if (text === WARN.text && WARN.t > 1) { WARN.t = WARN_SECS; return; }
+  const c = WARN.p.ctx, W = WARN.p.W, H = WARN.p.H; c.clearRect(0, 0, W, H);
+  rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,8,10,0.82)'; c.fill(); c.lineWidth = 10; c.strokeStyle = color; c.stroke();
+  // en una o dos líneas, lo más grande que quepa
+  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const words = text.split(' '); let lines = [text];
+  c.font = `110px ${FD}`;
+  if (c.measureText(text).width > W - 90 && words.length > 1) { let best = 1; for (let i = 1; i < words.length; i++) if (Math.abs(words.slice(0, i).join(' ').length - text.length / 2) < Math.abs(words.slice(0, best).join(' ').length - text.length / 2)) best = i; lines = [words.slice(0, best).join(' '), words.slice(best).join(' ')]; }
+  const fs = Math.min(lines.length > 1 ? 92 : 120, ...lines.map(l => { c.font = `100px ${FD}`; return Math.floor(100 * (W - 90) / Math.max(1, c.measureText(l).width)); }));
+  c.font = `${fs}px ${FD}`; lines.forEach((l, i) => c.fillText(l, W / 2, H / 2 + (i - (lines.length - 1) / 2) * fs * 1.05 + 6));
+  WARN.p.tex.needsUpdate = true; WARN.text = text; WARN.t = WARN_SECS; WARN.init = false; WARN.p.mesh.visible = true;
+}
+const _wf = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
+function updateWarn(dt) {
+  const m = WARN.p.mesh; if (!m.visible) return;
+  WARN.t -= dt; if (WARN.t <= 0 || !GAME_STATES.includes(state) && state !== 'paused') { m.visible = false; WARN.text = ''; return; }
+  const f = fwd(); let s;
+  if (f.y > 0.35) { // mirando arriba: por encima de la cara, de cara a ti
+    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(head.q);
+  } else { // en el suelo, delante: más lejos cuanto más alta la cabeza, tumbado y legible desde donde estás
+    const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
+    s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
+  }
+  const k = WARN.init ? 1 - Math.exp(-dt * 3) : 1; WARN.init = true;
+  WARN.at.lerp(_wf, k); m.position.copy(WARN.at); m.quaternion.slerp(WARN.q, k); m.scale.setScalar(s);
+  m.material.opacity = Math.min(1, WARN.t / 0.5, (WARN_SECS - WARN.t) / 0.15 + 0.2);
+}
 function updateViewPanels(dt) {
+  updateWarn(dt);
   const k = 1 - Math.exp(-dt * 4), n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.2]] : C.slots; // con el atril abierto, por encima para no taparlo
@@ -4272,8 +4308,8 @@ function spPlayerInit() {
   SPP.state = 'loading';
   const fail = msg => { SPP.state = 'error'; SPP.err = msg; spMenuSync(); spPage(); };
   window.onSpotifyWebPlaybackSDKReady = () => {
-    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
-    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; spMenuSync(); spPage(); });
+    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: SP.cfg.vol != null ? SP.cfg.vol / 100 : 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
+    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; if (SP.cfg.vol != null && p.setVolume) Promise.resolve(p.setVolume(SP.cfg.vol / 100)).catch(() => {}); spMenuSync(); spPage(); });
     p.addListener('not_ready', () => { SPP.state = 'loading'; });
     p.addListener('authentication_error', () => fail('Para que suene en las gafas, vuelve a conectar Spotify en la página (hace falta un permiso nuevo)'));
     p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
@@ -4328,13 +4364,25 @@ function spToggle() {
 }
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
+// Volumen. El juego lleva la cuenta: Spotify tarda en reflejar los cambios (y al volver a leerlo devolvía el
+// valor viejo, así que el botón «no hacía nada»), y el reproductor de las gafas a menudo informa de un 0 que
+// hacía que bajar lo silenciara. En las gafas se cambia directamente en su reproductor; fuera, por la Web API
+// (agrupando las pulsaciones seguidas). Las pulsaciones nunca se pierden aunque haya otra orden en curso.
+function spVolNow() {
+  if (SP.volT && Date.now() - SP.volT < 8000) return SP.vol;
+  const rep = SP.st && SP.st.device && SP.st.device.volume_percent;
+  if (spHereNow() || !(rep > 0)) return SP.cfg.vol != null ? SP.cfg.vol : rep > 0 ? rep : 60;
+  return rep;
+}
 function spVol(d) {
-  spDo(async () => {
-    const dev = SP.st && SP.st.device; if (!dev) throw new Error('NO_DEVICE');
-    if (dev.supports_volume === false) throw new Error('ese reproductor no deja cambiar el volumen desde fuera');
-    const v = clamp(Math.round(((dev.volume_percent == null ? 50 : dev.volume_percent) + d) / 5) * 5, 0, 100);
-    await spApi('PUT', '/me/player/volume?volume_percent=' + v); dev.volume_percent = v;
-  });
+  if (!spConnected()) return;
+  const dev = SP.st && SP.st.device;
+  if (dev && dev.supports_volume === false && !spHereNow()) { SP.err = 'Spotify: ese reproductor no deja cambiar el volumen desde fuera'; spMenuSync(); return; }
+  const v = clamp(Math.round((spVolNow() + d) / 5) * 5, 0, 100);
+  SP.vol = v; SP.volT = Date.now(); SP.cfg.vol = v; spSave(); if (dev) dev.volume_percent = v; SP.err = ''; spMenuSync();
+  if (spHereNow() && SPP.player && SPP.player.setVolume) { Promise.resolve(SPP.player.setVolume(v / 100)).catch(() => {}); return; }
+  clearTimeout(SP.volTimer);
+  SP.volTimer = setTimeout(() => { spApi('PUT', '/me/player/volume?volume_percent=' + SP.vol).catch(e => { SP.err = spErrText(e); spMenuSync(); }); }, 250);
 }
 // Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
 // 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
@@ -4351,7 +4399,7 @@ function spNowText() {
   const it = SP.st && SP.st.item;
   if (!it) return SP.st ? 'Spotify: no suena nada' : 'Spotify: buscando reproductor…';
   const who = it.artists ? it.artists.map(a => a.name).join(', ') : it.show ? it.show.name : '';
-  const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
+  const vol = SP.st.device ? ` · vol. ${spVolNow()}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
 // Filas para los menús del juego (principal y pausa)
@@ -4553,7 +4601,12 @@ const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DM
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
 const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
-function say(text, color = '#ffffff', dur = 1.4, toast = true) { msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur); }
+// Avisos de corrección (naranja o rojo): además, grandes en el suelo durante 4 s y apuntados para la pausa
+const WARN_COLS = ['#ff8a3d', '#ff3b5c', '#ff4a6a'];
+function say(text, color = '#ffffff', dur = 1.4, toast = true) {
+  msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur);
+  if (WARN_COLS.includes(color) && GAME_STATES.includes(state)) warnFloor(text, color);
+}
 
 /* ---------- Barra de vida flotante ---------- */
 const barBgMat = new THREE.MeshBasicMaterial({ color: 0x120d1c, transparent: true, opacity: 0.85, depthWrite: false });
@@ -5869,6 +5922,7 @@ function pauseMenu() {
     { t: 'title', text: 'PAUSA' },
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
+    ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
     ...musicRows(), ...viewRows(() => pauseMenu()),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
@@ -6045,6 +6099,8 @@ function handsLow() {
   for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok) { ok++; if (h.wrist.y < y) low++; } }
   return { low, ok };
 }
+// ¿Alguna mano a la vista agarrada a la barra (a su altura)?
+const handsOnBar = () => ['left', 'right'].some(s => hands[s].ok && Math.abs(hands[s].wrist.y - eqTopY()) < 0.2);
 const handsOff = () => { const h = handsLow(); return h.low >= 2 || (h.low === 1 && h.ok === 1); };
 
 /* ---------- Colgarse: colocarse, cuenta atrás y quedarse quieto ---------- */
@@ -6101,6 +6157,7 @@ function barFall() {
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
   say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
+  if (BAR.lastFall) warnFloor(`${door ? '¡AL CHARCO!' : '¡TE SOLTASTE!'} (${BAR.lastFall})`, '#ff8a3d');
   barToMount(0, true);
 }
 function barDetect(t, dt) {
@@ -6110,7 +6167,16 @@ function barDetect(t, dt) {
   if (BAR.det === 'down' && head.speed < 0.05) BAR.hangRef += (BAR.ref - BAR.hangRef) * Math.min(1, dt * 0.3);
   // soltarse: las manos a la vista por debajo de la barra (al caer de pie la cabeza no siempre baja)
   const off = handsLow(); BAR.letGo = off.low >= 2 || (off.low === 1 && off.ok === 1) ? BAR.letGo + dt : 0;
-  if (y < BAR.hangRef - margin || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) { BAR.letGo = 0; barFall(); return; }
+  // En el remo, tumbado boca arriba, la altura de la cabeza cambia con solo relajar el cuello o estirar del todo
+  // los brazos: si las manos siguen a la vista en las paralelas, bajar no es soltarse (se toma esa altura como
+  // nueva posición de abajo). Sí lo es tener la cabeza en el suelo.
+  let low = y < BAR.hangRef - margin;
+  if (low && settings.exercise === 'row' && handsOnBar() && y > 0.22) { low = false; BAR.hangRef = BAR.ref = Math.min(BAR.ref, y); }
+  if (settings.exercise === 'row' && y < 0.18) low = true;
+  if (low || BAR.letGo > (off.low >= 2 ? 0.25 : 0.6) || Math.hypot(head.p.x - BAR.mountXZ.x, head.p.z - BAR.mountXZ.z) > 0.75) {
+    BAR.lastFall = low ? (settings.exercise === 'row' ? 'la cabeza llegó al suelo' : `la cabeza bajó más de ${settings.fallMargin} cm`) : BAR.letGo ? 'tus manos se vieron por debajo de la barra' : 'te alejaste del aparato';
+    BAR.letGo = 0; barFall(); return;
+  }
   if (settings.exercise === 'hang') {
     const before = BAR.hold; BAR.hold += dt; stats.hold += dt;
     if (Math.floor(BAR.hold) > Math.floor(before)) {

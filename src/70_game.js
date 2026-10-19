@@ -13,7 +13,12 @@ const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DM
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
 const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
-function say(text, color = '#ffffff', dur = 1.4, toast = true) { msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur); }
+// Avisos de corrección (naranja o rojo): además, grandes en el suelo durante 4 s y apuntados para la pausa
+const WARN_COLS = ['#ff8a3d', '#ff3b5c', '#ff4a6a'];
+function say(text, color = '#ffffff', dur = 1.4, toast = true) {
+  msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur);
+  if (WARN_COLS.includes(color) && GAME_STATES.includes(state)) warnFloor(text, color);
+}
 
 /* ---------- Barra de vida flotante ---------- */
 const barBgMat = new THREE.MeshBasicMaterial({ color: 0x120d1c, transparent: true, opacity: 0.85, depthWrite: false });
@@ -1329,6 +1334,7 @@ function pauseMenu() {
     { t: 'title', text: 'PAUSA' },
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
+    ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
     ...musicRows(), ...viewRows(() => pauseMenu()),
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
