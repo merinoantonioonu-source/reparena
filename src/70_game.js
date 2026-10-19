@@ -403,14 +403,40 @@ const NEON_PAL = [
 ];
 const NEON_BOSS = { body: 0x16110a, panel: 0xc9a85a, glow: 0xff5a1f, glow2: 0xffd21e };
 const neonMats = () => ({ main: std({ vertexColors: true, skinning: true, flatShading: true, roughness: 0.42, metalness: 0.18 }), paint: std({ vertexColors: true, skinning: true, flatShading: true, roughness: 0.25, metalness: 0.45 }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true, toneMapped: false }) });
-const _nc = new THREE.Color(), _nc2 = new THREE.Color(), _nw = new THREE.Color(1, 1, 1);
+const _nc = new THREE.Color(), _nc2 = new THREE.Color(), _nw = new THREE.Color(1, 1, 1), _nq = new Q4();
 class Neon extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.bar.g.position.y = 2.05; this.pal = this.K.boss ? NEON_BOSS : pick(NEON_PAL); this.flash = 0; this.hue = rand(0, TAU);
     this.mat = { body: this.inst.meshes.main.material, paint: this.inst.meshes.paint.material, glow: this.inst.meshes.glow.material }; this.mat.body.color.setHex(this.pal.body); this.mat.paint.color.setHex(this.pal.panel);
     if (!this.mat.body.emissive || typeof this.mat.body.emissive.copy !== 'function') this.mat.body.emissive = new THREE.Color(0);
+    // con las animaciones de la biblioteca cargadas, se mueven con ellas; si no, con la animación hecha a mano
+    if (BEAST.neonClips) { this.clips = BEAST.neonClips; this.mx = new THREE.AnimationMixer(this.inst.root); this.acts = {}; this.cur = null; this.react = 0; this.prevSt = ''; }
   }
   roar(pos) { SND.neonWarn(pos); }
+  // Con animaciones: andar, trotar o correr según la velocidad; amenazar apuntándote; el tajo con la porra (la animación de
+  // espada, llevada a mano para que el golpe caiga justo al golpear); encogerse al recibir; esperando con música, bailar
+  animMx(dt, t, spd, st) {
+    const K = this.K;
+    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = 'Sword_Attack'; this.restart = true; this.react = 0; }
+    this.prevSt = st;
+    let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2, atkT = -1;
+    if (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.5)) {
+      const [t0, t1] = BEAST_PUNCH.Sword_Attack, wind = this.zone ? 1.25 : 0.75;
+      atkT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, 0.8, clamp(this.st / 0.5, 0, 1));
+      want = 'Sword_Attack'; once = true; fade = 0.1; ts = 0;
+    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    else if (st === 'taunt') want = 'Spell_Simple_Shoot';
+    else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
+    else { const v = spd / this.sc;
+      if (v > 0.12) { want = v < 2.1 ? 'Walk_Loop' : v < 3.8 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = clamp(v / (want === 'Walk_Loop' ? 1.3 : want === 'Jog_Fwd_Loop' ? 3.0 : 4.8), 0.5, 1.8); }
+      else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } }
+    mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
+    if (atkT >= 0) this.acts.Sword_Attack.time = atkT;
+    this.mx.update(dt);
+    // la cabeza, además, se vuelve hacia ti; y el tambaleo al recibir
+    const toP = tmpA.subVectors(HL, this.pos), ly = clamp(wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), -0.9, 0.9);
+    this.B.head.quaternion.multiply(_nq.setFromAxisAngle(_up, ly * 0.6)); this.B.hips.rotation.x -= (this.hitT || 0) * 0.6 + (this.stagger || 0) * 0.2;
+  }
   animate(dt, t, spd) {
     const B = this.B, tn = this.taunt || 0, run = this.run || 0, st = this.state; this.lastU = this.lastU || [0, 0];
     if (spd === true) spd = this.vWalk;
@@ -422,6 +448,7 @@ class Neon extends Robot {
     const mat = st === 'emerge' ? smooth(clamp(this.st / 0.8, 0, 1)) : 1;
     this.root.scale.set(this.sc, this.sc * (0.03 + 0.97 * mat), this.sc);
     const windup = st === 'windup' ? smooth(clamp(this.st / 0.5, 0, 1)) : 0, strike = st === 'strike' ? (this.lunge || 0) : 0, knock = st === 'knock' ? 1 - smooth(clamp(this.st / 0.7, 0, 1)) : 0;
+    if (this.mx) this.animMx(dt, t, spd, st); else {
     // cuerpo: erguido, con un rebote al compás y balanceo de cadera
     const groove = (1 - amp) * pulse * 0.025, hy = NEO.hipY - 0.05 - run * 0.05 + amp * 0.025 * Math.cos(p * 2) - groove - strike * 0.08;
     const Ph = 0.06 + run * 0.18 + strike * 0.35 - windup * 0.12 - (this.hitT || 0) * 0.9 - (this.stagger || 0) * 0.35 - knock * 0.2;
@@ -449,6 +476,7 @@ class Neon extends Robot {
     const pitch = Math.atan2(HL.y - this.K.head * this.sc, Math.max(0.3, dist));
     B.neck.rotation.set(-Ph * 0.5, clamp(ly, -1, 1) * 0.35, 0);
     B.head.rotation.set(-pitch - Ph * 0.4 + pulse * 0.12 * (1 - amp * 0.5) + (this.twitch || 0) * 0.25, clamp(ly, -1, 1) * 0.6 + (this.twitchYaw || 0) * 0.6, tn * 0.35 + Math.sin(t * 0.8 + this.hue) * 0.05);
+    }
     // luces: laten con el compás, cambian un poco de tono, parpadean deprisa al avisar del golpe y destellan en blanco al recibir
     if (!this.pal) return;
     this.flash = Math.max(0, (this.flash || 0) - dt * 6);
@@ -460,6 +488,7 @@ class Neon extends Robot {
     this.mat.body.emissive.setRGB(_nc.r * ek, _nc.g * ek, _nc.b * ek).lerp(_nw, this.flash * 0.8);
   }
   onHit(dmg, perfect, point) {
+    if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true; }
     this.hp -= dmg; this.hitT = 0.3; this.flash = 1; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     shardBurst(point, 8, [this.pal.glow, this.pal.panel, 0xffffff], 2.2); fx.glow(point, [1, 1, 1], 0.4, 0.08); SND.zap(point);
     if (this.hp <= 0) this.kill();
@@ -472,29 +501,31 @@ class Neon extends Robot {
     SND.shatter(c); if (big) SND.explosion(c, true);
     this.dispose();
   }
-  dispose() { super.dispose(); for (const k in this.mat) this.mat[k].dispose(); }
+  dispose() { super.dispose(); for (const k in this.mat) this.mat[k].dispose(); if (this.mx) this.mx.stopAllAction(); }
 }
 
 /* =================== MONSTRUOS DE ARCHIVO (Imp y Puglin) =================== */
 // Se comportan como los robots (puestos, compuertas, bloqueos); el cuerpo lo mueven sus animaciones: andar, trotar o
 // correr según la velocidad (y al ritmo de lo que avanzan), provocarte (el Imp lanza un hechizo, el Puglin baila), un
 // puñetazo que llega justo al golpear, encogerse al recibir y caer al morir; esperando su turno con música, bailan al compás
-const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22] };
+const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22], Sword_Attack: [0.33, 0.5] };
+// Animaciones de archivo (monstruos y humanoides de neón): la acción de cada animación, y ponerla apagando todas las demás
+// (si quedara alguna sonando, se mezclarían las posturas; también las paradas, como el golpe que se lleva a mano)
+function mxAct(o, n) { let a = o.acts[n]; if (!a) { const c = o.clips[n]; if (!c) return null; a = o.acts[n] = o.mx.clipAction(c); } return a; }
+function mxPlay(o, n, fade = 0.2, once = false, ts = 1, restart = false) {
+  const a = mxAct(o, n); if (!a) return; a.timeScale = ts; if (o.cur === n && !restart) return;
+  o.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
+  for (const k in o.acts) { const b = o.acts[k]; if (b !== a && b.isScheduled()) { b.timeScale = 1; b.fadeOut(fade); } }
+}
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
-    this.mx = new THREE.AnimationMixer(this.inst.model); this.acts = {}; this.cur = null; this.react = 0; this.tint = 0; this.prevSt = '';
+    this.mx = new THREE.AnimationMixer(this.inst.model); this.clips = BEAST.kinds[this.K.beast3d].clips; this.acts = {}; this.cur = null; this.react = 0; this.tint = 0; this.prevSt = '';
     this.animate(0, 0, 0);
   }
   roar(pos) { SND.roar(pos, this.K.beast3d === 'puglin' ? 1.9 : 1.4); }
   center(out) { return this.B.chest.getWorldPosition(out); }
-  act(n) { let a = this.acts[n]; if (!a) { const c = BEAST.kinds[this.K.beast3d].clips[n]; if (!c) return null; a = this.acts[n] = this.mx.clipAction(c); } return a; }
-  // pone la animación n (o la reinicia, con restart) y apaga todas las demás: si quedara alguna sonando, se mezclarían las posturas
-  play(n, fade = 0.2, once = false, ts = 1, restart = false) {
-    const a = this.act(n); if (!a) return; a.timeScale = ts; if (this.cur === n && !restart) return;
-    this.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
-    for (const k in this.acts) { const o = this.acts[k]; if (o !== a && o.isScheduled()) { o.timeScale = 1; o.fadeOut(fade); } } // también las paradas (el puñetazo va a mano, con velocidad 0)
-  }
+  play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
     if (!this.mx) return;
     const K = this.K, D = this.D, st = this.state; if (spd === true) spd = this.vWalk;
@@ -504,7 +535,7 @@ class Beast extends Robot {
     // instante mientras retrocede y lo recoge (BEAST_PUNCH: cuándo empieza a salir y cuándo está del todo estirado)
     let punchT = -1;
     if (this.atk && (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.8))) {
-      const [t0, t1] = BEAST_PUNCH[this.atk], dur = BEAST.kinds[K.beast3d].clips[this.atk].duration, wind = this.zone ? 1.25 : 0.75;
+      const [t0, t1] = BEAST_PUNCH[this.atk], dur = this.clips[this.atk].duration, wind = this.zone ? 1.25 : 0.75;
       punchT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : this.st < 0.3 ? t1 : lerp(t1, dur, clamp((this.st - 0.3) / 0.5, 0, 1));
     }
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
