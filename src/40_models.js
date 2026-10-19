@@ -359,7 +359,47 @@ function arcFrame(H) {
   const g = k.build({ steel: M.steel, paint: M.paint, glow: M.glow }, { cast: true, receive: true });
   ARC_FRAMES[key] = g; return g.clone();
 }
+// Valla para saltar: no es un arco (nada por encima de la cabeza) sino una cuchilla de sierra a ras de suelo entre dos
+// postes bajos, con sierras circulares que giran: corta los pies si no saltas
+const SAW_MAT = std({ color: 0xd8dde4, metalness: 1, roughness: 0.22, envMapIntensity: 1.4 });
+function sawDisc(r) {
+  const k = new Kit(), n = 18;
+  k.add('steel', G.cyl(r * 0.86, r * 0.86, 0.012, 32, 0.3), C.white, 0, 0, 0, Math.PI / 2, 0, 0);
+  for (let i = 0; i < n; i++) { const a = i / n * TAU; k.add('steel', new THREE.ConeGeometry(r * 0.12, r * 0.24, 3), C.white, Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92, 0, 0, 0, a - Math.PI / 2 - 0.35, 1, 1, 0.12); }
+  k.add('steel', G.cyl(r * 0.22, r * 0.22, 0.03, 16, 0.3), C.gun, 0, 0, 0, Math.PI / 2, 0, 0);
+  return k.build({ steel: SAW_MAT }, { cast: true });
+}
+const SAW_PARTS = {}; // geometría compartida: cada valla clona las piezas (no se crea ni se tira geometría por valla)
+function sawParts(barY) {
+  const key = barY.toFixed(2); if (SAW_PARTS[key]) return SAW_PARTS[key];
+  const k = new Kit(), ph = barY + 0.16;
+  for (const s of [-1, 1]) { // postes bajos con franjas de peligro
+    k.add('steel', G.box(0.18, ph, 0.26), C.dark, s * 1.08, ph / 2, 0); k.add('steel', G.box(0.36, 0.06, 0.44), C.gun, s * 1.08, 0.03, 0);
+    for (let i = 0; i < 3; i++) k.add('paint', G.box(0.19, 0.06, 0.27), i % 2 ? C.black : C.hazard, s * 1.08, 0.1 + i * 0.07, 0);
+  }
+  const posts = k.build({ steel: M.steel, paint: M.paint }, { cast: true });
+  if (!SAW_PARTS.blade) {
+    const bk = new Kit(); bk.add('steel', G.box(2.0, 0.07, 0.01), C.white, 0, 0, 0);
+    for (let i = 0; i < 40; i++) for (const s of [-1, 1]) bk.add('steel', new THREE.ConeGeometry(0.014, 0.03, 3), C.white, -0.98 + i * 0.05, s * 0.045, 0, 0, 0, s > 0 ? -0.4 : Math.PI + 0.4, 1, 1, 0.3); // dientes
+    SAW_PARTS.blade = bk.build({ steel: SAW_MAT }, { cast: true }); SAW_PARTS.disc = sawDisc(0.17);
+  }
+  return (SAW_PARTS[key] = { posts, blade: SAW_PARTS.blade, disc: SAW_PARTS.disc });
+}
+function makeSawObj(barY) {
+  const P = sawParts(barY), grp = new THREE.Group(); grp.add(P.posts.clone());
+  const bar = new THREE.Group(); bar.position.y = barY; grp.add(bar); bar.add(P.blade.clone());
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb0a0, toneMapped: false }); // filo al rojo
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(G.box(2.0, 0.006, 0.014), coreMat); e.position.y = s * 0.036; bar.add(e); }
+  const saws = [-0.62, 0, 0.62].map(x => { const d = P.disc.clone(); d.position.set(x, 0, 0.012); bar.add(d); return d; });
+  const glowMat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0xff2a14, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+  for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 0.2), glowMat); p.rotation.x = i * Math.PI / 2; bar.add(p); }
+  const lines = [0, 1].map(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 3), 3)); const l = new THREE.Line(g, arcLineMat); l.frustumCulled = false; bar.add(l); return l; });
+  const curtainMat = new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2010, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+  const ch = Math.max(0.05, barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = ch / 2 + 0.01; grp.add(curtain);
+  return { grp, bar, coreMat, glowMat, curtainMat, curtain, lines, saws };
+}
 function makeArcObj(barY, H, tilt = 0, low = false) {
+  if (low) return makeSawObj(barY);
   const grp = new THREE.Group(); grp.add(arcFrame(H));
   const bar = new THREE.Group(); bar.position.y = barY; bar.rotation.z = tilt; grp.add(bar);
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb0a0, toneMapped: false });
@@ -415,6 +455,19 @@ function makeGlove(side) {
   const core = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.005, 6), tipMat); core.position.set(0, 0.0215, -0.042); palm.add(core);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.003, 4, 20), tipMat); ring.position.z = 0.012; palm.add(ring);
   palm.visible = false; scene.add(palm); g.palm = palm;
+  // con los mandos se ve el mando (como el de las Quest 3: empuñadura, cabeza con joystick y botones, y gatillo), no una
+  // mano sin dedos. El origen es el del agarre: la empuñadura baja por +Y/+Z y la cabeza queda delante, por −Z
+  const pk = new Kit(), sx = side === 'left' ? -1 : 1;
+  pk.add('plastic', G.cyl(0.017, 0.019, 0.1, 16, 0.2), C.black, 0, -0.006, 0.018, Math.PI / 2, 0, 0); // empuñadura, a lo largo de Z
+  pk.add('plastic', G.sph(1, 20, 14), C.black, sx * 0.004, 0.006, -0.05, 0, 0, 0, 0.034, 0.02, 0.038); // cabeza
+  pk.add('face', G.cyl(0.028, 0.03, 0.006, 22, 0.2), C.dark, sx * 0.004, 0.022, -0.05); // cara de arriba
+  pk.add('face', G.cyl(0.006, 0.0075, 0.012, 12, 0.2), C.black, sx * -0.008, 0.03, -0.056); pk.add('face', G.cyl(0.009, 0.009, 0.004, 14, 0.2), C.black, sx * -0.008, 0.036, -0.056); // joystick
+  pk.add('btn', G.cyl(0.0055, 0.0055, 0.004, 10, 0.2), C.steel, sx * 0.012, 0.026, -0.04); pk.add('btn', G.cyl(0.0055, 0.0055, 0.004, 10, 0.2), C.steel, sx * 0.014, 0.026, -0.058); // A/B o X/Y
+  pk.add('plastic', G.box(0.014, 0.024, 0.02, 0.2), C.black, 0, -0.016, -0.05, -0.35, 0, 0); // gatillo
+  pk.add('plastic', G.box(0.008, 0.022, 0.03, 0.2), C.black, -sx * 0.017, -0.012, 0.012); // botón de agarre
+  const padMat = std({ vertexColors: true, roughness: 0.5, metalness: 0.05 }), faceMat = std({ vertexColors: true, roughness: 0.2, metalness: 0.1 });
+  const pad = pk.build({ plastic: padMat, face: faceMat, btn: std({ vertexColors: true, roughness: 0.4, metalness: 0.6 }) }, { cast: true });
+  pad.visible = false; scene.add(pad); g.pad = pad;
   return g;
 }
 const gloves = { left: makeGlove('left'), right: makeGlove('right') };
@@ -430,8 +483,9 @@ function updateGloves(dt) {
     const show = h.isHand && h.ok, J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
-      g.palm.visible = !h.isHand && h.ok && !(pistolOn() && GAME_STATES.includes(state)) && !swordIn(side); // con pistolas se ve el bláster; con espada, la espada
-      if (g.palm.visible) { g.palm.position.copy(h.wrist); g.palm.quaternion.copy(h.wristQ); g.palm.scale.setScalar(1); }
+      g.palm.visible = false;
+      g.pad.visible = !h.isHand && h.ok && !(pistolOn() && GAME_STATES.includes(state)) && !swordIn(side); // el mando; con pistolas se ve el bláster y con espada, la espada
+      if (g.pad.visible) { g.pad.position.copy(h.wrist); g.pad.quaternion.copy(h.wristQ); }
       continue;
     }
     G_SEGS.forEach(([a, b], i) => {
@@ -444,7 +498,7 @@ function updateGloves(dt) {
     G_TIPS.forEach((j, i) => { const A = J[j]; if (!A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(A.p, A.q, _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
     G_KNUCK.forEach((j, i) => { const A = J[j]; if (!A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(A.q); _gp.copy(A.p).add(_goff); _gm.compose(_gp, A.q, _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
     for (const m of [g.seg, g.joint, g.tip, g.guard]) { m.count = m.instanceMatrix.count; m.instanceMatrix.needsUpdate = true; }
-    g.palm.visible = true; g.palm.position.copy(J[0].p); g.palm.quaternion.copy(J[0].q);
+    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(J[0].p); g.palm.quaternion.copy(J[0].q);
     const size = J[11].ok ? J[0].p.distanceTo(J[11].p) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
   }
 }

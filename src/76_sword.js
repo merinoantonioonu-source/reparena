@@ -8,7 +8,7 @@
 const SWD = { perf: [], beatT: 0, clashT: 0, hintT: 0, s: {} };
 const SWORD_COL = { left: 0x4aa8ff, right: 0xff7a2a };
 const swordSides = () => !swordSet() ? [] : settings.sword === 'two' ? ['left', 'right'] : [settings.swordHand];
-const swordCap = () => settings.sword === 'two' ? 4 : 3;
+const swordCap = () => settings.sword === 'two' ? 2 : 1; // una carga por espada: no se acumulan más
 // La espada de esa mano está en uso: ajuste activo, en partida y con el mando (con las manos no hay espada)
 const swordIn = side => swordSides().includes(side) && hands[side].ok && !hands[side].isHand && GAME_STATES.includes(state);
 const swordActive = () => ['left', 'right'].some(swordIn);
@@ -93,7 +93,7 @@ const BLADE_N = 6;
 
 /* ---------- Carga (Combate): cada sentadilla carga una vez la hoja ---------- */
 function swordCharge(perfect) {
-  SWD.perf.push(perfect); while (SWD.perf.length > swordCap()) SWD.perf.shift();
+  for (let i = 0; i < swordCap(); i++) SWD.perf.push(perfect); while (SWD.perf.length > swordCap()) SWD.perf.shift(); // cada repetición carga cada espada
   for (const s of swordSides()) if (swordIn(s)) { haptic(s, 0.3, 30); fx.glow(bladePoint(SWD.s[s], 0.5, new V3()), [0.4, 1, 0.9], 0.2, 0.15); }
   SND.charge(); boardDirty = true;
 }

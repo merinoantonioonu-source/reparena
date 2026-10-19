@@ -6,8 +6,8 @@
 // Inicio de sesión con Authorization Code + PKCE, sin servidor. Hace falta Spotify Premium y una app propia
 // creada en developer.spotify.com con esta página como Redirect URI.
 const SP_KEY = 'reparena3-spotify', SP_PKCE = 'reparena3-spotify-pkce';
-const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing';
-const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0 };
+const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative';
+const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0, mine: null, started: false };
 const spRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
 const spConnected = () => !!SP.cfg.refresh;
 const spPlaying = () => !!(SP.st && SP.st.is_playing);
@@ -109,9 +109,32 @@ async function spWake() { // sin reproductor activo: las gafas si están listas;
   if (!list.length) throw new Error('NO_DEVICE');
   await spApi('PUT', '/me/player', { device_ids: [(list.find(x => x.is_active) || list[0]).id], play: true });
 }
+/* ---------- Tus listas: las elegidas suenan al pulsar Play (varias, mezcladas) ---------- */
+const spLists = () => (SP.cfg.lists || []).filter(l => l && l.uri);
+async function spMyLists() { // todas tus listas (las tuyas y las que sigues), de 50 en 50
+  const out = []; let url = '/me/playlists?limit=50';
+  for (let i = 0; i < 6 && url; i++) { const j = await spApi('GET', url); (j && j.items || []).forEach(p => p && out.push({ id: p.id, name: p.name, uri: p.uri, n: p.tracks && p.tracks.total })); url = j && j.next ? j.next.replace('https://api.spotify.com/v1', '') : null; }
+  return out;
+}
+// Reproduce esas listas en las gafas (o en el reproductor activo): una, tal cual y al azar; varias, sus canciones mezcladas
+async function spPlayLists(lists = spLists()) {
+  if (!lists.length) return;
+  const dev = spHereOk() ? SPP.id : SP.st && SP.st.device && SP.st.device.id, q = dev ? '?device_id=' + encodeURIComponent(dev) : '';
+  if (lists.length === 1) await spApi('PUT', '/me/player/play' + q, { context_uri: lists[0].uri });
+  else {
+    let uris = [];
+    for (const l of lists) { const j = await spApi('GET', `/playlists/${l.id}/tracks?limit=100&fields=items(track(uri))`); uris.push(...(j && j.items || []).map(x => x.track && x.track.uri).filter(u => u && u.startsWith('spotify:track:'))); }
+    for (let i = uris.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [uris[i], uris[k]] = [uris[k], uris[i]]; }
+    uris = uris.slice(0, 150); if (!uris.length) throw new Error('esas listas no tienen canciones que se puedan poner');
+    await spApi('PUT', '/me/player/play' + q, { uris });
+  }
+  try { await spApi('PUT', '/me/player/shuffle?state=true' + (dev ? '&device_id=' + encodeURIComponent(dev) : '')); } catch (e) { /* da igual */ }
+  SP.started = true; if (SP.st) SP.st.is_playing = true;
+}
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
+    else if (spLists().length && !SP.started) await spPlayLists(); // la primera vez, tus listas; luego Play reanuda
     else if (spHereOk() && !spHereNow()) await spToHere(); // en pausa en otro dispositivo: Play la trae a las gafas
     else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; }
     else await spWake();
@@ -151,7 +174,8 @@ function musicRows() {
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
   const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
   const where = SP.st && SP.st.device && SP.st.device.name ? ` (en ${SP.st.device.name})` : '';
-  return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here,
+  const L = spLists(), lists = L.length ? [{ t: 'btns', items: [...L.slice(0, 3).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Todas mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : [])] }] : [];
+  return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here, ...lists,
     ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
@@ -172,8 +196,25 @@ function spInitPage() {
   $('#spRedirect').textContent = spRedirect();
   $('#btnSpConnect').addEventListener('click', () => { spConnect().catch(e => spStatus('No se pudo abrir Spotify: ' + e.message, true)); });
   $('#btnSpTest').addEventListener('click', async () => { if (!spConnected()) { spStatus('Primero pulsa Conectar con Spotify.', true); return; } spStatus('Comprobando…'); await spRefresh(); spStatus(SP.err || spNowText(), !!SP.err); });
+  $('#btnSpLists').addEventListener('click', async () => {
+    if (!spConnected()) { spStatus('Primero pulsa Conectar con Spotify.', true); return; }
+    spStatus('Cargando tus listas…');
+    try { SP.mine = await spMyLists(); spStatus(SP.mine.length ? `${SP.mine.length} listas: marca las que quieras para entrenar.` : 'No tienes listas en Spotify.'); spListsPage(); }
+    catch (e) { spStatus(/insufficient|scope|403/i.test(e.message) ? 'Vuelve a pulsar Conectar con Spotify: hace falta el permiso para leer tus listas.' : spErrText(e), true); }
+  });
   $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
-  spPage();
+  spPage(); spListsPage();
   spHandleRedirect();
   spPlayerInit();
+}
+// Casillas con tus listas (las cargadas y, si no, las ya elegidas)
+function spListsPage() {
+  const host = $('#spLists'); if (!host) return;
+  const chosen = new Set(spLists().map(l => l.id)), all = SP.mine || spLists();
+  host.innerHTML = all.map(l => `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${String(l.name).replace(/[<&"]/g, c => ({ '<': '&lt;', '&': '&amp;', '"': '&quot;' }[c]))}</span></label>`).join('');
+  if (!host.querySelectorAll) return;
+  host.querySelectorAll('input').forEach(i => i.addEventListener('change', () => {
+    const on = new Set([...host.querySelectorAll('input:checked')].map(x => x.dataset.id));
+    SP.cfg.lists = all.filter(l => on.has(l.id)).map(l => ({ id: l.id, name: l.name, uri: l.uri })); SP.started = false; spSave(); spMenuSync();
+  }));
 }

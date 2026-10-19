@@ -37,7 +37,10 @@ global.fetch = async (url, opts = {}) => {
   if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: SPOT.device || 'phone', name: SPOT.device === 'quest-sdk' ? 'RepArena (Quest)' : 'Móvil', volume_percent: SPOT.vol, supports_volume: true }, item: { name: SPOT.track, artists: [{ name: 'Survivor' }] } });
   if (method === 'GET' && path === '/me/player/devices') return res(200, { devices: SPOT.noDevice ? [] : [{ id: 'quest', is_active: true }] });
   if (method === 'PUT' && path === '/me/player/pause') { SPOT.playing = false; return res(204); }
-  if (method === 'PUT' && path === '/me/player/play') { SPOT.playing = true; return res(204); }
+  if (method === 'PUT' && path.startsWith('/me/player/play')) { SPOT.playing = true; SPOT.playBody = opts.body ? JSON.parse(opts.body) : null; SPOT.playPath = path; return res(204); }
+  if (method === 'PUT' && path.startsWith('/me/player/shuffle')) return res(204);
+  if (method === 'GET' && path.startsWith('/me/playlists')) return res(200, { items: [{ id: 'pl1', name: 'Correr', uri: 'spotify:playlist:pl1', tracks: { total: 3 } }, { id: 'pl2', name: 'Pesas', uri: 'spotify:playlist:pl2', tracks: { total: 2 } }], next: null });
+  if (method === 'GET' && path.startsWith('/playlists/')) { const id = path.split('/')[2]; return res(200, { items: [1, 2, 3].map(i => ({ track: { uri: `spotify:track:${id}-${i}` } })) }); }
   if (method === 'POST' && path === '/me/player/next') { SPOT.track = 'Siguiente canción'; return res(204); }
   if (method === 'POST' && path === '/me/player/previous') return res(204);
   if (method === 'PUT' && path.startsWith('/me/player/volume?volume_percent=')) { SPOT.vol = +path.split('=')[1]; return res(204); }
@@ -47,7 +50,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -185,8 +188,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
   for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['dlrow', 'peso muerto con remo', 3.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
-    await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
-    await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
+    await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex, rowLift: 16 }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
+    await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1, rowLift: 16 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
   }
   const rsides = new Set();
@@ -228,7 +231,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Asalto+pistolas (apunta y dispara)', { ...base, mode: 'walkers', exercise: 'squat', pistol: 1, walkTime: 14 }, aimShoot(0.7), 420, s => s.kills < 4 ? 'las pistolas no matan robots' : s.shots < s.kills ? 'no cuenta los disparos' : '');
   await runConfig('Enjambre+pistolas (apunta y dispara)', { ...base, mode: 'flyers', exercise: 'squat', pistol: 1, flySpeed: 8 }, aimShoot(0.4), 420, s => s.kills < 6 ? 'las pistolas no derriban voladores' : '');
   let maxAmmo = 0;
-  await runConfig('Asalto+pistolas sin disparar', { ...base, mode: 'walkers', exercise: 'squat', pistol: 1, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.4; RA.PV.keys.KeyT = false; maxAmmo = Math.max(maxAmmo, RA.GUN.ammo); }, 25, s => s.kills ? 'sin apretar el gatillo no debería disparar' : maxAmmo !== 3 ? `la munición debería llegar a 3 y no pasar (${maxAmmo})` : '', true);
+  await runConfig('Asalto+pistolas sin disparar', { ...base, mode: 'walkers', exercise: 'squat', pistol: 1, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.4; RA.PV.keys.KeyT = false; maxAmmo = Math.max(maxAmmo, RA.GUN.ammo); }, 25, s => s.kills ? 'sin apretar el gatillo no debería disparar' : maxAmmo !== 2 ? `la munición debería llegar a una por pistola (2) y no pasar (${maxAmmo})` : '', true);
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
@@ -449,6 +452,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     dr.stop(); sb.stop(); for (const k of ['rugido-robot', 'espada-golpe', 'espada-golpe-laser', 'oleada', 'zumbido-dron', 'espada-laser-zumbido']) delete RA.AUD.samples[k];
     C.createBufferSource = mk;
   }
+  { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
   // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
   { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
     const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });
@@ -630,6 +634,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`spotify player in the game: sdk ${/sdk\.scdn\.co/.test(src)} · ready ${RA.SPP.state} ${RA.SPP.id} · after Play the music is on ${SPOT.device} (playing ${SPOT.playing}) · ${RA.spNowText()}`);
     if (!/sdk\.scdn\.co/.test(src) || RA.SPP.state !== 'ready' || SPOT.device !== 'quest-sdk' || !SPOT.playing) errors.push('Spotify: al pulsar Play la música no pasa al reproductor de las gafas');
     delete global.document.head; delete global.Spotify; SPOT.device = null; RA.SPP.state = ''; RA.SPP.id = ''; }
+  // tus listas: Play (la primera vez) pone las elegidas; varias, sus canciones mezcladas
+  { const mine = await RA.spMyLists(); RA.SP.cfg.lists = [mine[0]]; RA.SP.started = false; SPOT.playing = false; await RA.spRefresh(); RA.spToggle(); await sleep(30);
+    const one = SPOT.playBody && SPOT.playBody.context_uri; RA.SP.cfg.lists = mine; await RA.spPlayLists(); const many = SPOT.playBody && SPOT.playBody.uris || [];
+    log(`spotify lists: ${mine.map(l => l.name).join(', ')} · Play with one → ${one} · with two → ${many.length} tracks from ${new Set(many.map(u => u.split(':')[2].split('-')[0])).size} lists`);
+    if (one !== 'spotify:playlist:pl1' || many.length !== 6 || new Set(many.map(u => u.split(':')[2].split('-')[0])).size !== 2) errors.push('Spotify: no pone las listas elegidas');
+    RA.SP.cfg.lists = []; }
   SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(20); log('no device:', RA.spNowText());
   if (!/pon algo a sonar/.test(RA.spNowText())) errors.push('Spotify: sin reproductor no avisa');
   SPOT.noDevice = false; RA.exitAll(); frame(1);
@@ -694,11 +704,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const swingAt = (side, c, n = 8) => { const to = c.clone().sub(new THREE.Vector3(0, c.y, 0)); to.y = 0; to.normalize(); const sw = new THREE.Vector3(to.z, 0, -to.x); for (let k = 0; k <= n; k++) { holdSword(side, c, to, sw, -0.45 + 0.9 * k / n); frame(1, 16, xrFrame); } };
   for (const [name, kind, charge, block] of [['metálica con carga', 'metal', true, 0], ['láser sin cargar', 'laser', false, 0], ['metálica bloqueando', 'metal', true, 1]]) {
     const reps_ = block ? 12 : 6;
-    for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: kind, swordBlock: block, swordSpeed: 1.6, pistol: 0, lives: 0, waves: 1, repsWave: reps_, rest: 0, walkTime: 6, maxAlive: 2, spawnGap: 1, squatDepth: 25 })) RA.setSetting(k, v);
+    for (const [k, v] of Object.entries({ mode: 'walkers', aim: 'hands', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: kind, swordBlock: block, swordSpeed: 1.6, pistol: 0, lives: 0, waves: 1, repsWave: reps_, rest: 0, walkTime: 6, maxAlive: 2, spawnGap: 1, squatDepth: 25 })) RA.setSetting(k, v);
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
     const vis = RA.SWD.s.right.g.visible && !RA.SWD.s.left.g.visible && !RA.gloves.right.palm.visible;
-    let parries = 0, wasStun = new Set(), squats = 0;
+    let parries = 0, wasStun = new Set(), squats = 0, aimSeen = false;
     let swingCool = 0;
     for (let i = 0; i < 3600 && RA.state !== 'end'; i++) {
       const ph = i % 150; let crouch = charge && ph < 60; swingCool--;
@@ -712,8 +722,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       XRS.headY = crouch ? 1.38 : 1.7;
       const near = R.find(e => Math.hypot(e.pos.x, e.pos.z) < 1.7);
       if (near && !crouch && swingCool <= 0 && (block ? near.stunT > 0 : !charge || RA.SWD.perf.length)) { swingCool = 30; const c = RA.arena.localToWorld(new THREE.Vector3(near.pos.x, 1.2, near.pos.z)); swingAt('right', c); restSword('right'); continue; }
-      restSword('right'); frame(1, 16, xrFrame);
+      restSword('right'); frame(1, 16, xrFrame); if (Object.values(RA.locks).some(l => l.visible) || RA.lasers.left.visible || RA.lasers.right.visible) aimSeen = true;
     }
+    if (aimSeen) errors.push(`espada XR (${name}): con espada no debería verse la diana ni el láser`);
     const strong = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.45).length, any = XRS.haptics.filter(h => h[0] === 'right').length;
     log(`sword XR ${name}: visible ${vis} state ${RA.state} reps ${RA.stats.reps} kills ${RA.stats.kills} hits ${RA.stats.hits} taken ${RA.stats.taken} parries ${parries} haptics strong ${strong} any ${any}`);
     if (!vis) errors.push(`espada XR (${name}): no se ve la espada en la mano derecha`);
@@ -812,15 +823,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       frame(6, 16, xrFrame); XRS.hands = rest(); frame(2, 16, xrFrame);
     };
     const squat = () => { XRS.headY = 1.38; frame(70, 16, xrFrame); XRS.headY = 1.7; frame(30, 16, xrFrame); };
-    squat(); const charged = RA.HTH.q.length, shots0 = RA.stats.shots;
+    const charges = () => (RA.HTH.left.c ? 1 : 0) + (RA.HTH.right.c ? 1 : 0);
+    squat(); squat(); const charged = charges(), shots0 = RA.stats.shots; // dos repeticiones sin lanzar: sigue siendo una por mano
     XRS.pinch = 'right'; frame(10, 16, xrFrame); XRS.pinch = null; frame(4, 16, xrFrame); const pinchShots = RA.stats.shots - shots0;
     throwAt('right', true); const slowShots = RA.stats.shots - shots0;
-    throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const second = RA.stats.shots - shots0 - one;
+    throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const two = RA.stats.shots - shots0; throwAt('left'); const extra = RA.stats.shots - shots0 - two;
+    // las gafas pierden la mano en pleno lanzamiento: sale igual
+    squat(); { const back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
+      XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
+      const s0 = RA.stats.shots; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0; }
     let k = 0; for (let i = 0; i < 30 && RA.state !== 'end'; i++) { squat(); throwAt(k++ % 2 ? 'left' : 'right'); }
-    log(`throw XR (${variant}): charged after a rep ${charged} · pinch shots ${pinchShots} · slow push shots ${slowShots} · first throw ${one}, second without a rep ${second} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits} kills ${RA.stats.kills}`);
-    if (charged !== 1 || shots0) errors.push(`lanzar con la mano (${variant}): una repetición debería cargar un solo rayo (y no dispararlo sola)`);
+    log(`throw XR (${variant}): charges after two reps ${charged} · pinch shots ${pinchShots} · slow push shots ${slowShots} · left ${one}, right ${two}, a third without a rep ${extra} · hand lost mid-throw ${lostShot} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits}`);
+    if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);
     if (pinchShots || slowShots) errors.push(`lanzar con la mano (${variant}): pellizcar o empujar despacio no debería lanzar el rayo`);
-    if (one !== 1 || second !== 0) errors.push(`lanzar con la mano (${variant}): con una repetición se lanza un rayo, con cualquier mano, y no dos`);
+    if (one !== 1 || two !== 2 || extra) errors.push(`lanzar con la mano (${variant}): cada mano lanza su rayo, y sin otra repetición no hay más`);
+    if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual`);
     if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }

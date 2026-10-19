@@ -48,6 +48,8 @@ const ROBOT_KIND = {
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
+// Con espada hay que esperarlos a tu alcance: vienen directos (como mucho SWORD_WALK s), sin pararse a amenazar
+const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(settings.walkTime, SWORD_WALK) : settings.walkTime;
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
 function robotSlot(r) {
@@ -80,7 +82,7 @@ class Robot {
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
     // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
-    const D = this.pos.distanceTo(this.slot), T = Math.max(2, settings.walkTime / K.speedF - (settings.walkTime >= 10 ? 1.2 : 0));
+    const W = walkT(), D = this.pos.distanceTo(this.slot), T = Math.max(2, W / K.speedF - (W >= 10 ? 1.2 : 0));
     this.chargeD = Math.min(3.2, D * 0.4); this.vRun = clamp(2.2 * D / T, 1.0, 3.2) * (K.heavy ? 0.85 : 1);
     this.vWalk = Math.max(0.05, (D - this.chargeD) / Math.max(T * 0.4, T - this.chargeD / this.vRun));
     if (this.vWalk > this.vRun) this.vRun = this.vWalk * 1.3;
@@ -174,7 +176,7 @@ class Robot {
         }
         to.divideScalar(d);
         // amenaza a media distancia (una vez por avance, si hay tiempo)
-        if (!this.taunts && settings.walkTime >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
+        if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
         if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
         wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
@@ -547,6 +549,7 @@ class Arc {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
     const appear = Math.min(1, this.t / 0.4); this.o.grp.scale.set(appear, 1, 1);
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); }
+    if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
     const flick = 0.75 + Math.random() * 0.25;
@@ -713,6 +716,7 @@ const DET = {
   pair: { side: null, t: 0, perfect: false, fast: false },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
+  dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
@@ -802,13 +806,11 @@ function pairStep(kind, t, dt) {
 //  · thruster: las dos manos por encima de la cabeza (thrUp cm sobre los ojos)
 //  · frontsq: brazos estirados al frente, a la altura de los hombros
 //  · swing: la kettlebell al frente, a la altura del pecho (con una mano a la vista basta: la agarran las dos)
-//  · dlrow: tirar de los codos atrás: la muñeca sube rowRange cm respecto a la cabeza desde donde colgaba
 //  · jsquat: la cabeza sube jsqJump cm sobre tu altura de pie, deprisa (un salto, no ponerse de puntillas)
 const CHAIN = {
   thruster: { depth: () => settings.squatDepth, both: true, ok: r => r >= settings.thrUp / 100, lostOk: r => r > -0.02, miss: '¡Sube las pesas por encima de la cabeza!' },
   frontsq: { depth: () => settings.squatDepth, both: true, ok: (r, f) => r >= -0.28 && f >= 0.32, lostOk: r => r > -0.4, miss: '¡Brazos estirados al frente, a la altura de los hombros!' },
   swing: { depth: () => settings.swingDrop, ok: (r, f) => r >= -0.48 && f >= 0.25, lostOk: r => r > -0.58, low: '¡Lleva más la cadera atrás!', miss: '¡Lanza la kettlebell al frente, a la altura del pecho!' },
-  dlrow: { depth: () => settings.dlDepth, row: true, low: '¡Baja más el peso!', miss: '¡Tira de los codos hacia atrás!' },
   jsquat: { depth: () => settings.squatDepth, jump: true, miss: '¡Salta al subir!' }
 };
 const CH_WIN = 2.5, _chw = new V3();
@@ -823,7 +825,7 @@ function chainStep(kind, t, dt) {
   if (!T.pending && !T.armed) return;
   if (K.jump) { if (head.p.y - T.ref >= settings.jsqJump / 100 && JUMP.fastT < 0.3) T.seen.left = T.seen.right = true; }
   else for (const s of ['left', 'right']) {
-    const h = hands[s], rr = settings.rowRange / 100;
+    const h = hands[s], rr = settings.rowLift / 100;
     if (h.ok) {
       const r = h.wrist.y - head.p.y;
       if (K.row) { T.low[s] = Math.min(T.low[s], r); if (r - T.low[s] >= rr) T.seen[s] = true; }
@@ -835,6 +837,27 @@ function chainStep(kind, t, dt) {
   const L = T.seen.left, R = T.seen.right, one = !K.both || T.lostT.left > 0.3 || T.lostT.right > 0.3;
   if ((L && R) || ((L || R) && one)) { onRep(T.pending); T.pending = null; if (K.jump) { T.quiet = t + 0.6; S.ref = T.ref; S.state = 'up'; } }
   else if (t - T.t0 > CH_WIN) { onPartial(K.miss); T.pending = null; }
+}
+// Peso muerto con remo: bajar el peso (la cabeza baja dlDepth) carga; el remo dispara en el momento en que se hace,
+// de pie o aún inclinado: tirar de los codos atrás sube la muñeca rowLift respecto a la cabeza desde donde colgaba.
+// «Donde colgaba» es lo más bajo de los últimos instantes (sube despacio), así vale en cualquier postura. Sin remo en
+// DL_WIN s se avisa; un remo sin peso muerto antes, también
+const DL_WIN = 6;
+function dlrowStep(t, dt) {
+  const D = DET.dl, S = DET.sq, req = settings.dlDepth / 100, rr = settings.rowLift / 100;
+  vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: '¡Baja más el peso!', defer: o => { D.o = o; } });
+  const ch = S.state === 'down' && S.charged; if (ch && !D.was) { if (D.armed) onPartial('¡Tira de los codos hacia atrás!'); D.armed = true; D.t0 = t; D.o = null; } D.was = ch; // otro peso muerto sin remo: aviso
+  for (const s of ['left', 'right']) {
+    const h = hands[s];
+    if (h.ok) { const r = h.wrist.y - head.p.y; D.low[s] = Math.min(r, D.low[s] + dt * 0.12); D.up[s] = r - D.low[s]; D.lost[s] = 0; }
+    else D.lost[s] += dt;
+  }
+  if (D.armed && t - D.t0 > DL_WIN) { D.armed = false; onPartial('¡Tira de los codos hacia atrás!'); }
+  const rowed = ['left', 'right'].some(s => D.lost[s] === 0 ? D.up[s] >= rr : D.lost[s] < 0.5 && D.up[s] >= rr * 0.6); // si se pierde la mano subiendo, cuenta
+  if (!rowed) { D.rowing = false; return; }
+  if (D.rowing) return; D.rowing = true; // cada remo, una vez
+  if (D.armed) { onRep(D.o || { perfect: S.ref - S.min >= req + 0.03, fast: false }); D.armed = false; D.o = null; }
+  else if (state === 'play' && t - D.warnT > 3) { D.warnT = t; onPartial('Primero baja el peso (peso muerto)'); }
 }
 // Leñador: las manos juntas (con la kettlebell o el disco) bajan junto a una cadera y suben en diagonal por encima del
 // hombro contrario. Abajo a un lado carga; arriba al otro lado dispara (en CHOP_WIN s). Alturas respecto a tu altura de pie
@@ -882,6 +905,8 @@ function runDetectors(t, dt) {
     chainStep(settings.exercise, t, dt);
   } else if (settings.exercise === 'chop') {
     chopStep(t, dt);
+  } else if (settings.exercise === 'dlrow') {
+    dlrowStep(t, dt);
   } else if (settings.exercise === 'splank') {
     // plancha lateral: aguantar con la cadera arriba; cada splHold segundos seguidos, un disparo.
     // Si la cabeza baja splDrop desde tu postura, la cadera ha caído y el tiempo vuelve a empezar
@@ -941,7 +966,7 @@ function runDetectors(t, dt) {
   } else if (oneArm()) {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado.
     // En el remo en plancha, la mancuerna tiene que subir el recorrido del remo
-    const P = DET.pl, y = head.p.y, LIFT = settings.exercise === 'plankrow' ? settings.rowRange / 100 : 0.18;
+    const P = DET.pl, y = head.p.y, LIFT = settings.exercise === 'plankrow' ? settings.rowLift / 100 : 0.18;
     if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
     // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
@@ -987,22 +1012,23 @@ function aimSources() {
   return out;
 }
 /* =================== LANZAR EL RAYO CON LA MANO =================== */
-// Apuntando con las manos (o con las pistolas sin mandos, con las manos desnudas), cada repetición carga UN rayo (se ve
-// un orbe en las dos muñecas) y cualquiera de las dos manos lo lanza con un gesto: atrás, junto al cuerpo, y deprisa hacia
-// delante, hacia el enemigo. La dirección del lanzamiento elige el blanco con mucha ayuda (un cono amplio), así que no
-// hace falta afinar. La carga se guarda hasta que lances (hasta THROW_MAX). Sin manos a la vista (en el ordenador), la
-// repetición dispara como antes, con la mirada. El gesto se mide respecto a la cabeza: la sentadilla no cuenta
+// Apuntando con las manos (o con las pistolas sin mandos, con las manos desnudas), cada repetición carga un rayo en cada
+// mano (como mucho uno por mano: no se acumulan; se ve un orbe en la muñeca cargada) y cada mano lanza el suyo con un
+// gesto: atrás, hacia el cuerpo, y deprisa hacia delante, hacia el enemigo. La dirección elige el blanco con mucha ayuda
+// (un cono amplio). Sin manos a la vista (en el ordenador), la repetición dispara con la mirada. El gesto se mide respecto
+// a la cabeza (la sentadilla no cuenta); si las gafas pierden la mano en pleno lanzamiento, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_MAX = 3, THROW_V = 1.5, THROW_D = 0.18, THROW_NEAR = 0.15, THROW_WIDE = 70;
-const mkThrow = () => ({ armed: false, have: false, prev: new V3(), v: new V3(), from: new V3() });
-const HTH = { left: mkThrow(), right: mkThrow(), q: [], idle: 0, taught: false, orbs: {} };
+const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 70;
+const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3() });
+const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3();
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { armed: false, have: false }); HTH.q = []; HTH.idle = 0; HTH.taught = false; }
-// La repetición carga un rayo (si se ve alguna mano); si no, devuelve false y se dispara como siempre
+const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0 }); HTH.idle = 0; HTH.taught = false; }
+// La repetición carga las dos manos (si se ve alguna); si no, devuelve false y se dispara como siempre
 function throwCharge(dmg, perfect) {
   if (!throwAim() || !(hands.left.ok || hands.right.ok)) return false;
-  const q = HTH.q; if (q.length < THROW_MAX) q.push({ dmg, perfect }); else q[q.length - 1] = { dmg, perfect: perfect || q[q.length - 1].perfect };
+  for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg, perfect: perfect || !!(T.c && T.c.perfect) }; }
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
 }
@@ -1016,32 +1042,39 @@ function throwTarget(o, d) {
   }
   return best;
 }
+function throwFire(s, o, d) {
+  const T = HTH[s], c = T.c; T.armed = false; if (!c) return;
+  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
+  gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
+}
 function throwStep(dt, t) {
-  const on = throwAim() && ['play', 'rest', 'ready'].includes(state), n = HTH.q.length;
+  const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
   _thf.set(0, 0, -1).applyAxisAngle(_up, arena.rotation.y); // hacia dónde mira el cuerpo
   for (const s of ['left', 'right']) {
     const T = HTH[s], h = hands[s], orb = HTH.orbs[s];
-    const m = HTH.q.length; orb.visible = on && h.ok && m > 0;
-    if (orb.visible) { const sc = (0.05 + 0.025 * m) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[HTH.q[0].perfect ? 1 : 0]); }
-    if (!on || !h.ok) { T.have = false; T.armed = false; continue; }
-    _thr.subVectors(h.wrist, head.p);
+    orb.visible = on && h.ok && !!T.c;
+    if (orb.visible) { const sc = 0.075 * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.c.perfect ? 1 : 0]); }
+    if (!on) { T.have = false; T.armed = false; continue; }
+    if (!h.ok) { // perdida: si iba lanzada hacia delante, sale el rayo en esa dirección
+      T.lost += dt;
+      if (T.have && T.armed && T.fwd > THROW_V * 0.7 && T.lost < 0.2) throwFire(s, T.last.clone(), T.v.clone().normalize());
+      if (T.lost > 0.3) { T.have = false; T.armed = false; }
+      continue;
+    }
+    T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
-    const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length();
-    if (reach < THROW_NEAR) { T.armed = true; T.from.copy(_thr); } // mano atrás, junto al cuerpo: lista para lanzar
-    else if (T.armed && sp > THROW_V && T.v.dot(_thf) > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) {
-      T.armed = false; if (!HTH.q.length) continue;
-      const c = HTH.q.shift(), o = h.wrist.clone(), d = T.v.clone().normalize();
-      fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
-      gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
-    }
+    const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
+    if (reach < THROW_NEAR || T.fwd < THROW_BACK) { T.armed = true; T.from.copy(_thr); } // mano junto al cuerpo o echándose atrás: lista
+    else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) throwFire(s, h.wrist.clone(), T.v.clone().normalize());
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
-  if (on && n && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
+  if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
 }
 function updateAim(t) {
-  const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)); // lanzando con la mano no hay láser: el gesto apunta
-  const srcs = show ? aimSources() : [], used = new Set(srcs.map(s => s.key));
+  // lanzando con la mano no hay láser (el gesto apunta); con espada tampoco ni diana: se corta de cerca
+  const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)) && !(swordActive() && !pistolOn());
+  const srcs = show ? aimSources().filter(s => !swordIn(s.key)) : [], used = new Set(srcs.map(s => s.key));
   lasers.left.visible = lasers.right.visible = false;
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
@@ -1060,7 +1093,7 @@ function updateAim(t) {
 // Cada sentadilla mete munición (una por mano contra voladores); el gatillo dispara un rayo donde apuntas.
 // Con mandos se ve un bláster en cada mano con sus celdas de energía; con las manos, se dispara pellizcando.
 const GUN = { ammo: 0, perf: [], emptyT: 0 };
-const gunCap = () => (twoShots() ? 2 : 1) * 3;
+const gunCap = () => twoShots() ? 2 : 1; // una por pistola: cada repetición las recarga, no se acumulan
 function gunReset() { GUN.ammo = 0; GUN.perf.length = 0; }
 function gunLoad(perfect) {
   const n = twoShots() ? 2 : 1;
@@ -1308,7 +1341,7 @@ function beginRun() {
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle';
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
@@ -1346,7 +1379,7 @@ function startWave(i) {
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
-    spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : auto;
+    spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto; // con espada, uno detrás de otro
   }
   spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
