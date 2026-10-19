@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, SHARDS, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -211,6 +211,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       return '';
     });
   }
+  // humanoides de neón: salen por las compuertas, se les derriba (estallan en esquirlas) y, si llegan, avisan y golpean
+  const neo = { n: 0, boss: false, robot: false, shards: 0, states: new Set(), cols: new Set() };
+  await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100 }, t => {
+    squatSim(2.6)(t); neo.shards = Math.max(neo.shards, RA.SHARDS.live.length);
+    RA.enemies.forEach(e => { if (e.kind === 'neon') { neo.n++; neo.cols.add(e.pal.glow); } else if (e.kind === 'neonboss') neo.boss = true; else if (e.type === 'robot') neo.robot = true; });
+  }, 420, s => !neo.n ? 'no sale ningún humanoide de neón' : s.kills < 4 ? `a los de neón no se les derriba (${s.kills})` : neo.robot ? 'con 100 % de neón sale algún robot' : !neo.boss ? 'con 100 % de neón el jefe no es de neón' : neo.shards < 20 ? 'los de neón no estallan en esquirlas' : '');
+  await runConfig('neón que llega y golpea', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, walkTime: 4 }, t => {
+    RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'neon') neo.states.add(e.state); });
+  }, 30, s => s.taken < 1 ? 'los de neón no atacan' : !['windup', 'strike', 'knock'].every(k => neo.states.has(k)) ? `al de neón le falta parte del ataque (${[...neo.states]})` : '', true);
+  log(`neon: spawned frames ${neo.n} · colors ${neo.cols.size} · max shards ${neo.shards} · boss ${neo.boss}`);
   // hombres-cocodrilo: salen por las compuertas, se les derriba como a los robots y, si los dejas llegar, muerden
   const croc = { n: 0, boss: false, robot: false };
   await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100 }, t => {
