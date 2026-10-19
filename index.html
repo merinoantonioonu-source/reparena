@@ -377,6 +377,7 @@ const SCHEMA = [
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
   { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
+  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 10, step: 1, def: 3, unit: '% por oleada', zero: 'No', hint: 'Cada oleada superada lo pone un poco más difícil: los enemigos (o los arcos, los objetivos…) llegan antes y son más, y el ejercicio pide algo más de recorrido. Sube este porcentaje en cada oleada, hasta un +50 % (el recorrido, como mucho un +20 %). 0 = siempre igual.' },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
@@ -666,6 +667,16 @@ function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? setting
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
+// Dificultad creciente: el valor efectivo de un ajuste en la oleada en curso. Más rápido (o menos tiempo) un ramp % por
+// oleada superada, hasta +50 %; más enemigos a la vez en la misma proporción; y más recorrido, a un 40 % de ese ritmo (hasta +20 %)
+const RAMP_CAP = 0.5, RAMP_SLOWER = ['walkTime', 'tchArrive', 'barArrive', 'tchGap'], RAMP_DEEPER = ['squatDepth', 'pushDepth', 'lungeDepth', 'dipDepth'];
+const rampK = () => settings.ramp > 0 && GAME_STATES.concat('paused').includes(state) ? Math.min(RAMP_CAP, settings.ramp / 100 * Math.max(0, waveIdx)) : 0;
+function dv(key) {
+  const v = settings[key], k = rampK(); if (!k) return v;
+  if (RAMP_DEEPER.includes(key)) { const f = SCHEMA.find(x => x.key === key); return Math.min(f ? f.max : v * 2, v * (1 + k * 0.4)); }
+  if (key === 'maxAlive') return Math.round(v * (1 + k));
+  return RAMP_SLOWER.includes(key) ? v / (1 + k) : v * (1 + k);
+}
 function waveReps(i) { return sesWave(i) || Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }
 function hangSecs(i) { return sesWave(i) || settings.hangTime + settings.hangInc * i; }
 function updateSummary() {
@@ -4103,41 +4114,67 @@ function updateWatch(dt) {
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
-// Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
-// derecho para pulsar y se recoge al bajar el brazo.
+// Panel de la muñeca: sale al mirarla (crece desde la muñeca) y, mientras está abierto, sigue a la mano izquierda (con
+// los temblores suavizados: si adelantas la mano, el panel la acompaña). Se cierra en cuanto pones la palma hacia abajo
+// o cierras el puño (y vuelve al abrir la mano mirándola), o al bajar el brazo.
 const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
 // escala a la distancia elegida: más lejos, más grande, para que se lea igual
 const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
-const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4(), from: new V3() };
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, shutT: 0, shut: false, near: false, init: false, hd0: 0, pos: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
 const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
-function wristPose(group, H, k = 1) {
+// dt = 0: colocarlo de golpe
+function wristPose(group, H, dt = 0) {
   const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
-  if (h.ok && !WM.near) {
-    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos, con el borde de abajo
-    // a la altura de la muñeca y de cara a ti (demasiado cerca obliga a bizquear)
-    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.copy(fwdH()); _wh.normalize();
-    _wmt.copy(head.p).addScaledVector(_wh, Math.max(settings.wristDist / 100, Math.hypot(h.wrist.x - head.p.x, h.wrist.z - head.p.z)));
+  if (h.ok) {
+    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos (contando desde donde estaba la mano al
+    // abrirlo), con el borde de abajo a la altura de la muñeca y de cara a ti; luego acompaña a la mano adonde vaya
+    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; const hd = _wh.length(); if (hd < 1e-2) _wh.copy(fwdH()); _wh.normalize();
+    if (!WM.init) WM.hd0 = hd;
+    _wmt.copy(head.p).addScaledVector(_wh, hd + Math.max(0, settings.wristDist / 100 - WM.hd0));
     _wmt.y = h.wrist.y + 0.03 + H * S / 2;
     _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
-    if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+    if (!WM.init || !dt) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; }
+    else { // suavizado: los temblores de milímetros casi no lo mueven; un movimiento de verdad lo arrastra enseguida
+      const gap = WM.pos.distanceTo(_wmt), rate = lerp(3, 24, clamp((gap - 0.004) / 0.05, 0, 1)) * (WM.near ? 0.6 : 1), k = gap < 0.0015 ? 0 : 1 - Math.exp(-dt * rate);
+      WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, Math.max(k, 1 - Math.exp(-dt * 4)));
+    }
     WM.from.copy(h.wrist);
   }
   // al salir, viaja desde la muñeca hasta su sitio mientras crece
   group.position.lerpVectors(WM.from, WM.pos, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
 }
+// Mano izquierda: normal hacia el lado de la palma, sacada de los nudillos (null si las articulaciones no cuadran)
+const _pa = new V3(), _pb = new V3(), _pc = new V3(), _pd = new V3();
+function leftPalm(out) {
+  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok || !J[6].ok || !J[11].ok || !J[21].ok) return null;
+  _pa.subVectors(J[6].p, J[0].p); _pb.subVectors(J[21].p, J[0].p); _pc.subVectors(J[11].p, J[0].p).normalize(); _pd.subVectors(J[6].p, J[21].p);
+  if (_pd.length() < 0.03 || Math.abs(_pd.normalize().dot(_pc)) > 0.5) return null; // los nudillos, de través respecto a la mano
+  return out.crossVectors(_pb, _pa).normalize(); // en la izquierda, (meñique × índice) sale por la palma
+}
+// Puño cerrado: al menos tres dedos con la punta más cerca de la muñeca que su nudillo
+function leftFist() {
+  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok) return false; let n = 0;
+  for (const b of [5, 10, 15, 20]) { const k = J[b + 1], t = J[b + 4]; if (k.ok && t.ok && t.p.distanceTo(J[0].p) < k.p.distanceTo(J[0].p) * 1.05) n++; }
+  return n >= 3;
+}
+const _wpn = new V3();
 function updateWristMenu(dt) {
-  const look = wristLook(hands.left, 0.6);
-  // ¿está el índice derecho delante del panel? Entonces no se mueve ni se esconde
+  // palma hacia abajo o puño cerrado: se cierra en el acto (y no vuelve a salir hasta que abras la mano)
+  const pn = leftPalm(_wpn), shut = (!!pn && pn.y < -0.7) || leftFist();
+  WM.shutT = shut ? WM.shutT + dt : 0; WM.shut = WM.shutT > 0.05;
+  const look = wristLook(hands.left, 0.6) && !WM.shut;
+  // ¿está el índice derecho delante del panel? Entonces no se esconde (pero sigue a la mano)
   WM.near = false;
-  if (menu && menu.wrist && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
+  if (menu && menu.wrist && !WM.shut && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
   WM.gestT = look ? WM.gestT + dt : 0; WM.lostT = look || WM.near ? 0 : WM.lostT + dt;
   if (!WM.on && WM.gestT > 0.12) { WM.on = true; if (menu && menu.wrist) SND.tick(); }
-  if (WM.on && WM.lostT > 0.5) WM.on = false;
+  if (WM.on && (WM.lostT > 0.5 || WM.shut)) WM.on = false;
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
-  WM.e = clamp(WM.e + (WM.on ? dt : -dt) / 0.22, 0, 1);
-  wristPose(menu.group, menu.H, 1 - Math.exp(-dt * 14));
+  WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / (WM.shut ? 0.07 : 0.22)), 0, 1);
+  if (WM.e === 0) WM.init = false; // la próxima vez sale otra vez desde la muñeca
+  wristPose(menu.group, menu.H, dt);
   // aviso: un punto que late en la muñeca mientras hay un menú recogido
   const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
   if (wristHint.visible) { wristHint.position.copy(h.wrist).add(_wo.set(0, 0.04, 0)); const p = 0.04 + 0.015 * Math.sin(performance.now() / 160); wristHint.scale.set(p, p, 1); }
@@ -5118,7 +5155,7 @@ function beatStep(dt) {
   BEAT.t += dt; if (BEAT.off === null) BEAT.off = perfNow() - BEAT.t;
   const P = beatP(); if (!P) { BEAT.hit = false; return; } const k = Math.floor(beatNow()); BEAT.hit = k !== BEAT.last && BEAT.last >= 0; BEAT.last = k;
 }
-const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(settings.walkTime, SWORD_WALK) : settings.walkTime;
+const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
 function robotSlot(r) {
@@ -5447,7 +5484,7 @@ class Spider {
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
     this.target = oneArm() ? new V3(Math.sign(hatch.x) * rand(0.3, 0.4), 0, rand(-0.3, 0)) : new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s)); // en la plancha atacan por el costado
-    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / settings.walkTime);
+    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / dv('walkTime'));
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
     Object.assign(this, { threatT: rand(1.2, 2.5), close: 0, rage: 0, hopFrom: new V3(), hopTo: new V3(), hopped: false, startD: Math.max(0.1, this.pos.distanceTo(this.target)) });
@@ -5601,7 +5638,7 @@ class Flyer {
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
     if (push) { const h = pick(liveHatches()); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
-    const sp = settings.flySpeed / 3.6 * (push ? 0.27 : 1);
+    const sp = dv('flySpeed') / 3.6 * (push ? 0.27 : 1);
     if (!push) { const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
     this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
@@ -5699,7 +5736,7 @@ class Arc {
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
     this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
     this.o = makeArcObj(this.barY, H, tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
-    Object.assign(this, { speed: settings.arcSpeed / 3.6, judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    Object.assign(this, { speed: dv('arcSpeed') / 3.6, judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
     if (!second) gates[1].openT = 1.6;
     zapLines(this.o.lines);
@@ -5889,7 +5926,10 @@ function vertDetector(d, y, t, dt, cfg) {
     // la referencia de arriba sube enseguida y baja despacio: se ajusta a tu postura real
     // (calibrar a cuatro patas, o mirar al suelo en la flexión, deja la cabeza más baja que al calibrar)
     d.ref += (y - d.ref) * Math.min(1, dt * (y > d.ref ? 1.5 : 0.25));
-    if (y < d.ref - cfg.start) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; d.holdT = 0; d.pow = 1; }
+    // tras una repetición, la siguiente bajada se mide desde lo más alto que llegaste después (si la repetición se confirmó
+    // con la cabeza aún subiendo, no se toma ese final de la subida por otra bajada)
+    d.peak = Math.max(d.peak == null ? y : d.peak, y);
+    if (y < d.ref - cfg.start && y < d.peak - cfg.start * 0.6) { d.state = 'down'; d.min = y; d.t0 = t; d.charged = false; d.stillT = 0; d.holdT = 0; d.pow = 1; }
   } else {
     if (y < d.min) d.min = y;
     const drop = d.ref - d.min;
@@ -5906,7 +5946,7 @@ function vertDetector(d, y, t, dt, cfg) {
       if (d.charged) { const o = { perfect: dur >= cfg.perfectDur && dur < 12 && drop >= cfg.req + 0.03, fast: cfg.perfectDur > 0 && dur < cfg.perfectDur * 0.5, pow: cfg.power ? d.pow : 1 }; if (cfg.defer) cfg.defer(o); else onRep(o); }
       else if (drop > cfg.partial) onPartial(cfg.partialMsg);
       if (stuck) d.ref = y;
-      d.state = 'up';
+      d.state = 'up'; d.peak = y;
     } else if (!d.charged && d.stillT > 3) { d.ref = y + cfg.back * 0.5; d.state = 'up'; d.stillT = 0; }
   }
 }
@@ -5971,10 +6011,10 @@ function pairStep(kind, t, dt) {
 //  · swing: la kettlebell al frente, a la altura del pecho (con una mano a la vista basta: la agarran las dos)
 //  · jsquat: la cabeza sube jsqJump cm sobre tu altura de pie, deprisa (un salto, no ponerse de puntillas)
 const CHAIN = {
-  thruster: { depth: () => settings.squatDepth, both: true, ok: r => r >= settings.thrUp / 100, lostOk: r => r > -0.02, miss: '¡Sube las pesas por encima de la cabeza!' },
-  frontsq: { depth: () => settings.squatDepth, both: true, ok: (r, f) => r >= -0.28 && f >= 0.32, lostOk: r => r > -0.4, miss: '¡Brazos estirados al frente, a la altura de los hombros!' },
+  thruster: { depth: () => dv('squatDepth'), both: true, ok: r => r >= settings.thrUp / 100, lostOk: r => r > -0.02, miss: '¡Sube las pesas por encima de la cabeza!' },
+  frontsq: { depth: () => dv('squatDepth'), both: true, ok: (r, f) => r >= -0.28 && f >= 0.32, lostOk: r => r > -0.4, miss: '¡Brazos estirados al frente, a la altura de los hombros!' },
   swing: { depth: () => settings.swingDrop, ok: (r, f) => r >= -0.48 && f >= 0.25, lostOk: r => r > -0.58, low: '¡Lleva más la cadera atrás!', miss: '¡Lanza la kettlebell al frente, a la altura del pecho!' },
-  jsquat: { depth: () => settings.squatDepth, jump: true, miss: '¡Salta al subir!' }
+  jsquat: { depth: () => dv('squatDepth'), jump: true, miss: '¡Salta al subir!' }
 };
 const CH_WIN = 2.5, _chw = new V3();
 function chainStep(kind, t, dt) {
@@ -6124,7 +6164,7 @@ function iwStep(t, dt) {
     if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
   }
   if (W.phase === 'plank') {
-    const req = settings.pushDepth / 100, before = stats.reps;
+    const req = dv('pushDepth') / 100, before = stats.reps;
     vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
     if (stats.reps > before) W.phase = 'back'; // disparó: ahora, de vuelta y de pie
     else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
@@ -6145,16 +6185,16 @@ function runDetectors(t, dt) {
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
-    const req = settings.squatDepth / 100;
+    const req = dv('squatDepth') / 100;
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
   } else if (settings.exercise === 'lunge') {
     // zancada: como la sentadilla, con su propia bajada; después de cada una toca la otra pierna
-    const d = DET.lu, req = settings.lungeDepth / 100, before = stats.reps;
+    const d = DET.lu, req = dv('lungeDepth') / 100, before = stats.reps;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más la rodilla de atrás!' });
     if (stats.reps > before) { d.leg ^= 1; showToast(`Ahora con la pierna ${d.leg ? 'izquierda' : 'derecha'} delante`, '#a49fc8', 1.4); }
   } else if (settings.exercise === 'dips') {
     // fondos en silla: la cabeza baja al doblar los codos y sube al estirarlos
-    const d = DET.di, req = settings.dipDepth / 100;
+    const d = DET.di, req = dv('dipDepth') / 100;
     if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
@@ -6255,7 +6295,7 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'inchworm') {
     iwStep(t, dt);
   } else if (settings.exercise === 'pushup') {
-    const d = DET.pu, req = settings.pushDepth / 100;
+    const d = DET.pu, req = dv('pushDepth') / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
@@ -6282,20 +6322,22 @@ function aimSources() {
 /* =================== LANZAR EL RAYO CON LA MANO =================== */
 // Apuntando con las manos (o con las pistolas sin mandos, con las manos desnudas), cada repetición carga un rayo en cada
 // mano (como mucho uno por mano: no se acumulan; se ve un orbe en la muñeca cargada) y cada mano lanza el suyo con un
-// gesto: atrás, hacia el cuerpo, y deprisa hacia delante, hacia el enemigo. La dirección elige el blanco con mucha ayuda
-// (un cono amplio). Sin manos a la vista (en el ordenador), la repetición dispara con la mirada. El gesto se mide respecto
-// a la cabeza (la sentadilla no cuenta); si las gafas pierden la mano en pleno lanzamiento, el rayo sale igual
+// gesto: una sacudida de la mano hacia un enemigo (puede salir de donde sea, también de la cadera, y en plena sentadilla):
+// acelera deprisa y frena de golpe. Si la sacudida no apunta a ningún enemigo, o no hay sacudida, la carga se queda en la
+// mano. En las gafas, sin manos a la vista la repetición carga igual (el rayo espera a que vuelvan a verse); solo en el
+// ordenador dispara sola. El gesto se mide respecto a la cabeza; si las gafas pierden la mano en plena sacudida hacia un
+// enemigo, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 70;
-const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3() });
+const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 40, THROW_STOP = 0.55; // frena de golpe: por debajo del 55 % del pico
+const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3(), pdir: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3();
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0 }); HTH.idle = 0; HTH.taught = false; }
-// La repetición carga las dos manos (si se ve alguna); si no, devuelve false y se dispara como siempre
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0 }); HTH.idle = 0; HTH.taught = false; }
+// La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect) {
-  if (!throwAim() || !(hands.left.ok || hands.right.ok)) return false;
+  if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
   for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg, perfect: perfect || !!(T.c && T.c.perfect) }; }
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
@@ -6310,9 +6352,9 @@ function throwTarget(o, d) {
   }
   return best;
 }
-function throwFire(s, o, d) {
-  const T = HTH[s], c = T.c; T.armed = false; if (!c) return;
-  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
+function throwFire(s, o, d, tg) {
+  const T = HTH[s], c = T.c; T.armed = false; T.peak = 0; if (!c) return;
+  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
 function throwStep(dt, t) {
@@ -6323,18 +6365,22 @@ function throwStep(dt, t) {
     orb.visible = on && h.ok && !!T.c;
     if (orb.visible) { const sc = 0.075 * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.c.perfect ? 1 : 0]); }
     if (!on) { T.have = false; T.armed = false; continue; }
-    if (!h.ok) { // perdida: si iba lanzada hacia delante, sale el rayo en esa dirección
+    if (!h.ok) { // perdida en plena sacudida hacia un enemigo: sale el rayo en esa dirección
       T.lost += dt;
-      if (T.have && T.armed && T.fwd > THROW_V * 0.7 && T.lost < 0.2) throwFire(s, T.last.clone(), T.v.clone().normalize());
-      if (T.lost > 0.3) { T.have = false; T.armed = false; }
+      if (T.have && T.armed && T.peak > THROW_V && T.lost < 0.2) { const tg = throwTarget(T.last, T.pdir); if (tg) throwFire(s, T.last.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } }
+      if (T.lost > 0.3) { T.have = false; T.armed = false; T.peak = 0; }
       continue;
     }
     T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
     const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
-    if (reach < THROW_NEAR || T.fwd < THROW_BACK) { T.armed = true; T.from.copy(_thr); } // mano junto al cuerpo o echándose atrás: lista
-    else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) throwFire(s, h.wrist.clone(), T.v.clone().normalize());
+    if (T.armed && T.peak > THROW_V && sp < T.peak * THROW_STOP) { // frenó de golpe: si la sacudida iba hacia un enemigo, sale el rayo
+      const tg = _thr.distanceTo(T.from) > THROW_D && throwTarget(h.wrist, T.pdir);
+      if (tg) throwFire(s, h.wrist.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } // hacia ningún enemigo: la carga sigue en la mano
+    } else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp) { if (sp > T.peak) { T.peak = sp; T.pdir.copy(T.v).normalize(); } } // acelerando: el pico marca la dirección
+    // mano junto al cuerpo (también colgando junto a la cadera) o echándose atrás, sin estar en plena sacudida: lista
+    if (!T.peak && (reach < THROW_NEAR || T.fwd < THROW_BACK) && (sp < THROW_V || T.fwd < 0)) { T.armed = true; T.from.copy(_thr); }
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
@@ -6654,14 +6700,14 @@ function calibrate() {
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
   if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
-  else if (settings.mode === 'arcs') spawnInterval = 60 / settings.arcRate;
+  else if (settings.mode === 'arcs') spawnInterval = 60 / dv('arcRate');
   else if (settings.mode === 'touch') touchStartWave();
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto; // con espada, uno detrás de otro
   }
-  spawnTimer = 0.6; state = 'play'; stateT = 0; say(`OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   hapticBoth(0.9, 120);
@@ -6732,7 +6778,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
@@ -6987,12 +7033,12 @@ class HeadTarget {
       w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
       this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
-      const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
+      const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + dv('barArrive'));
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
       this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
       if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9);
     }
-    this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / settings.barArrive);
+    this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
   }
   center(out) { this.root.getWorldPosition(out); return out; }
@@ -7322,10 +7368,10 @@ const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { valu
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
 function moveSpec(move) {
   const r = settings.tchRing / 100, S = TCH.ref, D = arMode ? 4 : 6.5, side = Math.random() < 0.5 ? -1 : 1;
-  const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
+  const sd = dv('squatDepth') / 100, pd = dv('pushDepth') / 100, jh = settings.jumpHeight / 100;
   const o = { move, part: CUT_MOVES.includes(move) ? 'cut' : HAND_MOVES.includes(move) ? 'hand' : 'head', hand: side < 0 ? 'left' : 'right', n: new V3(0, 0, 1), r, hold: 0 };
   const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro de la ameba
-  if (move === 'lunge') { const ld = settings.lungeDepth / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
+  if (move === 'lunge') { const ld = dv('lungeDepth') / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
   else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
@@ -7434,7 +7480,7 @@ class TouchTarget {
   touching() {
     if (this.part === 'cut') { // la espada lo atraviesa deprisa y en la dirección de la flecha, en la postura que pide
       const side = swordCutTest(this); if (!side) return false;
-      const S = TCH.ref, sd = settings.squatDepth / 100, jh = settings.jumpHeight / 100;
+      const S = TCH.ref, sd = dv('squatDepth') / 100, jh = settings.jumpHeight / 100;
       const ok = { cutLow: HL.y < S - sd * 0.6, cutFwd: HL.z < -0.12, cutSide: HL.x * Math.sign(this.pos.x) > 0.1, cutHigh: HL.y > S + jh * 0.5 }[this.move];
       if (!ok) { touchHint(CUT_POSE[this.move]); haptic(side, 0.2, 20); return false; }
       this.by = side; return true;
@@ -7578,14 +7624,14 @@ function snapBeat(c) {
   return TCH.beat0 + k * P - off;
 }
 function tchGapFor(move) {
-  const P = tchPeriod(), base = settings.tchGap + (move === 'plank' ? settings.plankHold : 0);
+  const P = tchPeriod(), base = dv('tchGap') + (move === 'plank' ? settings.plankHold : 0);
   return P ? Math.max(1, Math.round(base / P)) * P : base;
 }
-function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + settings.tchArrive + 0.6); touchRearm(); }
+function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + dv('tchArrive') + 0.6); touchRearm(); }
 function touchRearm() { TCH.headArm.armed = true; TCH.hadHL = false; for (const s of ['left', 'right']) Object.assign(TCH.arm[s], { armed: true, had: false, n: 0 }); }
 function touchStep(dt, t) {
   if (state !== 'paused') TCH.clock += dt;
-  if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - settings.tchArrive) {
+  if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - dv('tchArrive')) {
     const spec = spawnQueue.shift(); touches.push(new TouchTarget(spec.move, Math.max(TCH.nextArrive, TCH.clock + 0.3)));
     TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
   }
@@ -7942,21 +7988,21 @@ const IWS = [[0, 1.6, -1], [0.9, 0.95, 0], [1.7, 0.7, 1], [2.6, 0.45, 2], [3.3, 
 function iwSim(dt) {
   if (PV.crouch || PV.iwAuto) PV.iwT = ((PV.iwT || 0) + dt) % 7.6;
   const u = PV.iwT || 0, i = IWS.findIndex((k, j) => j + 1 < IWS.length && u < IWS[j + 1][0]), a = IWS[i], b = IWS[i + 1], k = smooth(clamp((u - a[0]) / (b[0] - a[0]) * 1.6, 0, 1));
-  const low = 0.45 - settings.pushDepth / 100 - 0.06, hy = v => v < 0 ? low : v, y = lerp(hy(a[1]), hy(b[1]), k);
+  const low = 0.45 - dv('pushDepth') / 100 - 0.06, hy = v => v < 0 ? low : v, y = lerp(hy(a[1]), hy(b[1]), k);
   const S = IW_OFF(), zf = v => v < 0 ? S : v === 0 ? S - 0.3 : v === 1 ? S * 0.45 : 0, z = lerp(zf(a[2]), zf(b[2]), k);
   camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;
   if (PV.crouch || PV.iwAuto) camera.rotation.x = lerp(-0.12, -0.75, clamp((1.6 - y) / 1.1, 0, 1)); // mirando al suelo al bajar
   const out = {};
   for (const s of ['left', 'right']) {
     const at = v => { if (v < 0) return new V3(s === 'left' ? -0.22 : 0.22, Math.max(0.75, y - 0.75), S); const pr = IW.prints.find(p => p.side === s && p.pair === (PV.iwSkip && v === 1 ? 0 : v)); return new V3(pr.x, 0.05, pr.z + 0.06); };
-    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.sin(Math.PI * k); // la mano se levanta entre huella y huella
+    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.min(1, 2.5 * Math.sin(Math.PI * k)); // la mano va levantada entre huella y huella y solo baja al llegar
     out[s] = arena.localToWorld(w);
   }
   return out;
 }
 function previewInput(dt) {
   const ex = settings.exercise;
-  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
+  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
   let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco

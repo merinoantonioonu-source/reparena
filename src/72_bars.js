@@ -221,12 +221,12 @@ class HeadTarget {
       w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
       this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
-      const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + settings.barArrive);
+      const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + dv('barArrive'));
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
       this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
       if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9);
     }
-    this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / settings.barArrive);
+    this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
   }
   center(out) { this.root.getWorldPosition(out); return out; }
