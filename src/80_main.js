@@ -54,7 +54,7 @@ function iwSim(dt) {
   const out = {};
   for (const s of ['left', 'right']) {
     const at = v => { if (v < 0) return new V3(s === 'left' ? -0.22 : 0.22, Math.max(0.75, y - 0.75), S); const pr = IW.prints.find(p => p.side === s && p.pair === (PV.iwSkip && v === 1 ? 0 : v)); return new V3(pr.x, 0.05, pr.z + 0.06); };
-    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.sin(Math.PI * k); // la mano se levanta entre huella y huella
+    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.min(1, 2.5 * Math.sin(Math.PI * k)); // la mano va levantada entre huella y huella y solo baja al llegar
     out[s] = arena.localToWorld(w);
   }
   return out;

@@ -1239,20 +1239,22 @@ function aimSources() {
 /* =================== LANZAR EL RAYO CON LA MANO =================== */
 // Apuntando con las manos (o con las pistolas sin mandos, con las manos desnudas), cada repetición carga un rayo en cada
 // mano (como mucho uno por mano: no se acumulan; se ve un orbe en la muñeca cargada) y cada mano lanza el suyo con un
-// gesto: atrás, hacia el cuerpo, y deprisa hacia delante, hacia el enemigo. La dirección elige el blanco con mucha ayuda
-// (un cono amplio). Sin manos a la vista (en el ordenador), la repetición dispara con la mirada. El gesto se mide respecto
-// a la cabeza (la sentadilla no cuenta); si las gafas pierden la mano en pleno lanzamiento, el rayo sale igual
+// gesto: una sacudida de la mano hacia un enemigo (puede salir de donde sea, también de la cadera, y en plena sentadilla):
+// acelera deprisa y frena de golpe. Si la sacudida no apunta a ningún enemigo, o no hay sacudida, la carga se queda en la
+// mano. En las gafas, sin manos a la vista la repetición carga igual (el rayo espera a que vuelvan a verse); solo en el
+// ordenador dispara sola. El gesto se mide respecto a la cabeza; si las gafas pierden la mano en plena sacudida hacia un
+// enemigo, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 70;
-const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3() });
+const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 40, THROW_STOP = 0.55; // frena de golpe: por debajo del 55 % del pico
+const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3(), pdir: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3();
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0 }); HTH.idle = 0; HTH.taught = false; }
-// La repetición carga las dos manos (si se ve alguna); si no, devuelve false y se dispara como siempre
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0 }); HTH.idle = 0; HTH.taught = false; }
+// La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect) {
-  if (!throwAim() || !(hands.left.ok || hands.right.ok)) return false;
+  if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
   for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg, perfect: perfect || !!(T.c && T.c.perfect) }; }
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
@@ -1267,9 +1269,9 @@ function throwTarget(o, d) {
   }
   return best;
 }
-function throwFire(s, o, d) {
-  const T = HTH[s], c = T.c; T.armed = false; if (!c) return;
-  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, throwTarget(o, d) || undefined);
+function throwFire(s, o, d, tg) {
+  const T = HTH[s], c = T.c; T.armed = false; T.peak = 0; if (!c) return;
+  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
 function throwStep(dt, t) {
@@ -1280,18 +1282,22 @@ function throwStep(dt, t) {
     orb.visible = on && h.ok && !!T.c;
     if (orb.visible) { const sc = 0.075 * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.c.perfect ? 1 : 0]); }
     if (!on) { T.have = false; T.armed = false; continue; }
-    if (!h.ok) { // perdida: si iba lanzada hacia delante, sale el rayo en esa dirección
+    if (!h.ok) { // perdida en plena sacudida hacia un enemigo: sale el rayo en esa dirección
       T.lost += dt;
-      if (T.have && T.armed && T.fwd > THROW_V * 0.7 && T.lost < 0.2) throwFire(s, T.last.clone(), T.v.clone().normalize());
-      if (T.lost > 0.3) { T.have = false; T.armed = false; }
+      if (T.have && T.armed && T.peak > THROW_V && T.lost < 0.2) { const tg = throwTarget(T.last, T.pdir); if (tg) throwFire(s, T.last.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } }
+      if (T.lost > 0.3) { T.have = false; T.armed = false; T.peak = 0; }
       continue;
     }
     T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
     const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
-    if (reach < THROW_NEAR || T.fwd < THROW_BACK) { T.armed = true; T.from.copy(_thr); } // mano junto al cuerpo o echándose atrás: lista
-    else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp && _thr.distanceTo(T.from) > THROW_D) throwFire(s, h.wrist.clone(), T.v.clone().normalize());
+    if (T.armed && T.peak > THROW_V && sp < T.peak * THROW_STOP) { // frenó de golpe: si la sacudida iba hacia un enemigo, sale el rayo
+      const tg = _thr.distanceTo(T.from) > THROW_D && throwTarget(h.wrist, T.pdir);
+      if (tg) throwFire(s, h.wrist.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } // hacia ningún enemigo: la carga sigue en la mano
+    } else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp) { if (sp > T.peak) { T.peak = sp; T.pdir.copy(T.v).normalize(); } } // acelerando: el pico marca la dirección
+    // mano junto al cuerpo (también colgando junto a la cadera) o echándose atrás, sin estar en plena sacudida: lista
+    if (!T.peak && (reach < THROW_NEAR || T.fwd < THROW_BACK) && (sp < THROW_V || T.fwd < 0)) { T.armed = true; T.from.copy(_thr); }
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;

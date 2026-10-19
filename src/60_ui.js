@@ -290,41 +290,67 @@ function updateWatch(dt) {
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
-// Panel de la muñeca: sale al mirarla (crece desde la muñeca), se queda quieto mientras acercas el dedo
-// derecho para pulsar y se recoge al bajar el brazo.
+// Panel de la muñeca: sale al mirarla (crece desde la muñeca) y, mientras está abierto, sigue a la mano izquierda (con
+// los temblores suavizados: si adelantas la mano, el panel la acompaña). Se cierra en cuanto pones la palma hacia abajo
+// o cierras el puño (y vuelve al abrir la mano mirándola), o al bajar el brazo.
 const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
 // escala a la distancia elegida: más lejos, más grande, para que se lea igual
 const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
-const WM = { e: 0, on: false, gestT: 0, lostT: 0, near: false, init: false, pos: new V3(), q: new Q4(), from: new V3() };
+const WM = { e: 0, on: false, gestT: 0, lostT: 0, shutT: 0, shut: false, near: false, init: false, hd0: 0, pos: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
 const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
-function wristPose(group, H, k = 1) {
+// dt = 0: colocarlo de golpe
+function wristPose(group, H, dt = 0) {
   const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
-  if (h.ok && !WM.near) {
-    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos, con el borde de abajo
-    // a la altura de la muñeca y de cara a ti (demasiado cerca obliga a bizquear)
-    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; if (_wh.lengthSq() < 1e-4) _wh.copy(fwdH()); _wh.normalize();
-    _wmt.copy(head.p).addScaledVector(_wh, Math.max(settings.wristDist / 100, Math.hypot(h.wrist.x - head.p.x, h.wrist.z - head.p.z)));
+  if (h.ok) {
+    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos (contando desde donde estaba la mano al
+    // abrirlo), con el borde de abajo a la altura de la muñeca y de cara a ti; luego acompaña a la mano adonde vaya
+    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; const hd = _wh.length(); if (hd < 1e-2) _wh.copy(fwdH()); _wh.normalize();
+    if (!WM.init) WM.hd0 = hd;
+    _wmt.copy(head.p).addScaledVector(_wh, hd + Math.max(0, settings.wristDist / 100 - WM.hd0));
     _wmt.y = h.wrist.y + 0.03 + H * S / 2;
     _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
-    if (!WM.init) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; } else { WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, k); }
+    if (!WM.init || !dt) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; }
+    else { // suavizado: los temblores de milímetros casi no lo mueven; un movimiento de verdad lo arrastra enseguida
+      const gap = WM.pos.distanceTo(_wmt), rate = lerp(3, 24, clamp((gap - 0.004) / 0.05, 0, 1)) * (WM.near ? 0.6 : 1), k = gap < 0.0015 ? 0 : 1 - Math.exp(-dt * rate);
+      WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, Math.max(k, 1 - Math.exp(-dt * 4)));
+    }
     WM.from.copy(h.wrist);
   }
   // al salir, viaja desde la muñeca hasta su sitio mientras crece
   group.position.lerpVectors(WM.from, WM.pos, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
 }
+// Mano izquierda: normal hacia el lado de la palma, sacada de los nudillos (null si las articulaciones no cuadran)
+const _pa = new V3(), _pb = new V3(), _pc = new V3(), _pd = new V3();
+function leftPalm(out) {
+  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok || !J[6].ok || !J[11].ok || !J[21].ok) return null;
+  _pa.subVectors(J[6].p, J[0].p); _pb.subVectors(J[21].p, J[0].p); _pc.subVectors(J[11].p, J[0].p).normalize(); _pd.subVectors(J[6].p, J[21].p);
+  if (_pd.length() < 0.03 || Math.abs(_pd.normalize().dot(_pc)) > 0.5) return null; // los nudillos, de través respecto a la mano
+  return out.crossVectors(_pb, _pa).normalize(); // en la izquierda, (meñique × índice) sale por la palma
+}
+// Puño cerrado: al menos tres dedos con la punta más cerca de la muñeca que su nudillo
+function leftFist() {
+  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok) return false; let n = 0;
+  for (const b of [5, 10, 15, 20]) { const k = J[b + 1], t = J[b + 4]; if (k.ok && t.ok && t.p.distanceTo(J[0].p) < k.p.distanceTo(J[0].p) * 1.05) n++; }
+  return n >= 3;
+}
+const _wpn = new V3();
 function updateWristMenu(dt) {
-  const look = wristLook(hands.left, 0.6);
-  // ¿está el índice derecho delante del panel? Entonces no se mueve ni se esconde
+  // palma hacia abajo o puño cerrado: se cierra en el acto (y no vuelve a salir hasta que abras la mano)
+  const pn = leftPalm(_wpn), shut = (!!pn && pn.y < -0.7) || leftFist();
+  WM.shutT = shut ? WM.shutT + dt : 0; WM.shut = WM.shutT > 0.05;
+  const look = wristLook(hands.left, 0.6) && !WM.shut;
+  // ¿está el índice derecho delante del panel? Entonces no se esconde (pero sigue a la mano)
   WM.near = false;
-  if (menu && menu.wrist && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
+  if (menu && menu.wrist && !WM.shut && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
   WM.gestT = look ? WM.gestT + dt : 0; WM.lostT = look || WM.near ? 0 : WM.lostT + dt;
   if (!WM.on && WM.gestT > 0.12) { WM.on = true; if (menu && menu.wrist) SND.tick(); }
-  if (WM.on && WM.lostT > 0.5) WM.on = false;
+  if (WM.on && (WM.lostT > 0.5 || WM.shut)) WM.on = false;
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
-  WM.e = clamp(WM.e + (WM.on ? dt : -dt) / 0.22, 0, 1);
-  wristPose(menu.group, menu.H, 1 - Math.exp(-dt * 14));
+  WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / (WM.shut ? 0.07 : 0.22)), 0, 1);
+  if (WM.e === 0) WM.init = false; // la próxima vez sale otra vez desde la muñeca
+  wristPose(menu.group, menu.H, dt);
   // aviso: un punto que late en la muñeca mientras hay un menú recogido
   const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
   if (wristHint.visible) { wristHint.position.copy(h.wrist).add(_wo.set(0, 0.04, 0)); const p = 0.04 + 0.015 * Math.sin(performance.now() / 160); wristHint.scale.set(p, p, 1); }

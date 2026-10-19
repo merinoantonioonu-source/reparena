@@ -747,6 +747,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const pressed = RA.activeWidgets().some(x => x.label === 'Volver' || x.label === '‹ Volver' || /Volver/.test(x.label));
     log('wrist menu poke with right index → settings opened', pressed, 'panel kept still', before.distanceTo(g.position) < 0.01);
     if (!pressed) errors.push('el panel de la muñeca no se puede pulsar con el índice derecho');
+    // con una mano izquierda de verdad: la palma hacia la cara lo abre; palma abajo o puño lo cierran en el acto; sigue a la mano
+    { const V = THREE.Vector3, p0 = new V(-0.15, 1.3, -0.32), toFace = new V(0, 1.7, 0).sub(p0).normalize();
+      const pose = (p, n, fist) => { XRS.left = { p, n, f: new V(0.3, 0.6, -0.75), fist }; };
+      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const open1 = RA.menu.group.visible && RA.WM.e > 0.9;
+      pose(p0.clone(), new V(0.05, -1, 0.1), false); frame(12, 16, xrFrame); const palmDown = !RA.menu.group.visible;
+      frame(40, 16, xrFrame); const stays = !RA.menu.group.visible;
+      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const back = RA.menu.group.visible;
+      pose(p0.clone(), toFace, true); frame(12, 16, xrFrame); const fist = !RA.menu.group.visible;
+      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const back2 = RA.menu.group.visible;
+      // temblor de 3 mm: casi no se mueve; adelantar la mano 15 cm: el panel la acompaña
+      const g0 = RA.menu.group.position.clone(); let worst = 0;
+      for (let i = 0; i < 40; i++) { pose(p0.clone().add(new V(Math.sin(i * 2.1), Math.cos(i * 1.7), Math.sin(i * 1.3)).multiplyScalar(0.003)), toFace, false); frame(1, 16, xrFrame); worst = Math.max(worst, RA.menu.group.position.distanceTo(g0)); }
+      const ahead = p0.clone().add(new V(0, 0, -0.15)); pose(ahead, new V(0, 1.7, 0).sub(ahead).normalize(), false); frame(30, 16, xrFrame);
+      const moved = RA.menu.group.position.clone().sub(g0), follow = -moved.z;
+      log(`wrist menu with a real hand: opens ${open1} · palm down closes ${palmDown}, stays closed ${stays}, palm to face reopens ${back} · fist closes ${fist}, reopens ${back2} · 3 mm jitter moves it ${(worst * 1000).toFixed(1)} mm · hand 15 cm forward → panel ${(follow * 100).toFixed(1)} cm`);
+      if (!open1) errors.push('menú de muñeca: no sale con la palma hacia la cara');
+      if (!palmDown || !stays || !back) errors.push('menú de muñeca: la palma hacia abajo debería cerrarlo en el acto (y volver al girarla hacia la cara)');
+      if (!fist || !back2) errors.push('menú de muñeca: el puño cerrado debería cerrarlo en el acto (y volver al abrir la mano)');
+      if (worst > 0.0025) errors.push(`menú de muñeca: tiembla con la mano (${(worst * 1000).toFixed(1)} mm con 3 mm de temblor)`);
+      if (follow < 0.12) errors.push(`menú de muñeca: no acompaña a la mano al adelantarla (${(follow * 100).toFixed(1)} cm de 15)`);
+      XRS.left = null; frame(40, 16, xrFrame); }
     XRS.noLeft = true; frame(60, 16, xrFrame); log('left hand away: panel hidden', !RA.menu.group.visible);
     if (RA.menu.group.visible) errors.push('el panel de la muñeca no se recoge al bajar la mano');
     XRS.noLeft = false; frame(40, 16, xrFrame);
@@ -913,6 +934,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.pinch = 'right'; frame(10, 16, xrFrame); XRS.pinch = null; frame(4, 16, xrFrame); const pinchShots = RA.stats.shots - shots0;
     throwAt('right', true); const slowShots = RA.stats.shots - shots0;
     throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const two = RA.stats.shots - shots0; throwAt('left'); const extra = RA.stats.shots - shots0 - two;
+    // sin manos a la vista: la repetición carga las dos manos y no dispara sola; una sacudida que no va hacia ningún enemigo
+    // no lanza (la carga sigue); una sacudida desde la cadera hacia el enemigo, en plena bajada, sí
+    const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });
+    { const s0 = RA.stats.shots; XRS.noHands = true; XRS.headY = 1.38; for (let i = 0; i < 70; i++) { frame(1, 16, xrFrame); scan(); } XRS.headY = 1.7; for (let i = 0; i < 30; i++) { frame(1, 16, xrFrame); scan(); }
+      XRS.noHands = false; XRS.hands = rest(); for (let i = 0; i < 10; i++) { frame(1, 16, xrFrame); scan(); } var noHandShots = RA.stats.shots - s0 + autoOrbs, noHandCharges = charges(); }
+    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), d = new THREE.Vector3(0, -0.8, -0.6).normalize();
+      XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 5; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
+      frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); var floorShots = RA.stats.shots - s0, floorCharges = charges(); }
+    { const s0 = RA.stats.shots; XRS.hands.right = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.05); frame(6, 16, xrFrame);
+      for (let k = 1; k <= 8; k++) { XRS.headY = 1.7 - 0.03 * k; frame(1, 16, xrFrame); } // bajando
+      const hip = XRS.hands.right.clone(), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(hip).normalize();
+      for (let k = 1; k <= 5; k++) { XRS.headY -= 0.03; XRS.hands.right = hip.clone().addScaledVector(d, 0.11 * k); frame(1, 16, xrFrame); }
+      frame(8, 16, xrFrame); XRS.headY = 1.7; XRS.hands = rest(); frame(30, 16, xrFrame); var hipShots = RA.stats.shots - s0; }
+    log(`throw XR (${variant}): no hands → shots ${noHandShots}, charges kept ${noHandCharges} · flick at the floor → shots ${floorShots}, charges ${floorCharges} · flick from the hip while squatting → shots ${hipShots}`);
+    if (noHandShots || noHandCharges !== 2) errors.push(`lanzar con la mano (${variant}): sin manos a la vista no debería dispararse solo, sino quedarse cargado`);
+    if (floorShots || floorCharges !== 2) errors.push(`lanzar con la mano (${variant}): una sacudida que no va hacia ningún enemigo no debería lanzar ni gastar la carga`);
+    if (hipShots !== 1) errors.push(`lanzar con la mano (${variant}): la sacudida desde la cadera hacia el enemigo, bajando en la sentadilla, debería lanzar`);
     // las gafas pierden la mano en pleno lanzamiento: sale igual
     squat(); { const back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
@@ -1106,6 +1144,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 })().catch(e => { console.log('FATAL', e.stack); console.log('ERRORS so far:\n' + errors.join('\n')); });
 
 // ---------- simulador de frames XR ----------
+// Mano izquierda realista: muñeca p, normal de la palma n (hacia el lado de la palma), dedos hacia f; fist: puño cerrado.
+// En la izquierda, el pulgar queda hacia n × f
+function leftJoint(i, L) {
+  const V = THREE.Vector3, n = L.n.clone().normalize(), f = L.f.clone().normalize(), th = new V().crossVectors(n, f).normalize(), P = (...t) => { const v = L.p.clone(); for (const [d, k] of t) v.addScaledVector(d, k); return { x: v.x, y: v.y, z: v.z }; };
+  if (i === 0) return P();
+  if (i < 5) return P([th, 0.025 + i * 0.012], [f, 0.02 + i * 0.015], [n, 0.01]); // pulgar
+  const k = Math.floor((i - 5) / 5), m = (i - 5) % 5, side = 0.03 - k * 0.02; // índice … meñique, de través
+  if (m === 0) return P([th, side * 0.6], [f, 0.035]);
+  if (m === 1 || !L.fist) return P([th, side], [f, 0.09 + [0, 0, 0.04, 0.065, 0.085][m]]);
+  return P([th, side], [f, [0, 0, 0.1, 0.075, 0.05][m]], [n, [0, 0, 0.03, 0.045, 0.035][m]]); // doblado hacia la palma
+}
 const XRS = { headY: 1.7, tip: null, wristUp: false };
 function makeXRFrame() {
   const HJ = RA.HJ;
@@ -1140,6 +1189,7 @@ function makeXRFrame() {
         if (XRS.handsAway) pos = { x: pos.x, y: XRS.headY - 0.9, z: 0.4 }; // manos bajadas, junto al cuerpo
         if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
+        if (XRS.left && j.side === 'left') pos = leftJoint(i, XRS.left); // mano izquierda con forma de mano: palma, dedos y puño
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }
     };
