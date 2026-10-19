@@ -86,8 +86,8 @@ function spPlayerInit() {
   SPP.state = 'loading';
   const fail = msg => { SPP.state = 'error'; SPP.err = msg; spMenuSync(); spPage(); };
   window.onSpotifyWebPlaybackSDKReady = () => {
-    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
-    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; spMenuSync(); spPage(); });
+    const p = new window.Spotify.Player({ name: 'RepArena (Quest)', volume: SP.cfg.vol != null ? SP.cfg.vol / 100 : 0.8, getOAuthToken: cb => { spToken().then(cb).catch(() => {}); } });
+    p.addListener('ready', ({ device_id }) => { SPP.id = device_id; SPP.state = 'ready'; SPP.err = ''; if (SP.cfg.vol != null && p.setVolume) Promise.resolve(p.setVolume(SP.cfg.vol / 100)).catch(() => {}); spMenuSync(); spPage(); });
     p.addListener('not_ready', () => { SPP.state = 'loading'; });
     p.addListener('authentication_error', () => fail('Para que suene en las gafas, vuelve a conectar Spotify en la página (hace falta un permiso nuevo)'));
     p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
@@ -142,13 +142,25 @@ function spToggle() {
 }
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
+// Volumen. El juego lleva la cuenta: Spotify tarda en reflejar los cambios (y al volver a leerlo devolvía el
+// valor viejo, así que el botón «no hacía nada»), y el reproductor de las gafas a menudo informa de un 0 que
+// hacía que bajar lo silenciara. En las gafas se cambia directamente en su reproductor; fuera, por la Web API
+// (agrupando las pulsaciones seguidas). Las pulsaciones nunca se pierden aunque haya otra orden en curso.
+function spVolNow() {
+  if (SP.volT && Date.now() - SP.volT < 8000) return SP.vol;
+  const rep = SP.st && SP.st.device && SP.st.device.volume_percent;
+  if (spHereNow() || !(rep > 0)) return SP.cfg.vol != null ? SP.cfg.vol : rep > 0 ? rep : 60;
+  return rep;
+}
 function spVol(d) {
-  spDo(async () => {
-    const dev = SP.st && SP.st.device; if (!dev) throw new Error('NO_DEVICE');
-    if (dev.supports_volume === false) throw new Error('ese reproductor no deja cambiar el volumen desde fuera');
-    const v = clamp(Math.round(((dev.volume_percent == null ? 50 : dev.volume_percent) + d) / 5) * 5, 0, 100);
-    await spApi('PUT', '/me/player/volume?volume_percent=' + v); dev.volume_percent = v;
-  });
+  if (!spConnected()) return;
+  const dev = SP.st && SP.st.device;
+  if (dev && dev.supports_volume === false && !spHereNow()) { SP.err = 'Spotify: ese reproductor no deja cambiar el volumen desde fuera'; spMenuSync(); return; }
+  const v = clamp(Math.round((spVolNow() + d) / 5) * 5, 0, 100);
+  SP.vol = v; SP.volT = Date.now(); SP.cfg.vol = v; spSave(); if (dev) dev.volume_percent = v; SP.err = ''; spMenuSync();
+  if (spHereNow() && SPP.player && SPP.player.setVolume) { Promise.resolve(SPP.player.setVolume(v / 100)).catch(() => {}); return; }
+  clearTimeout(SP.volTimer);
+  SP.volTimer = setTimeout(() => { spApi('PUT', '/me/player/volume?volume_percent=' + SP.vol).catch(e => { SP.err = spErrText(e); spMenuSync(); }); }, 250);
 }
 // Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
 // 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
@@ -165,7 +177,7 @@ function spNowText() {
   const it = SP.st && SP.st.item;
   if (!it) return SP.st ? 'Spotify: no suena nada' : 'Spotify: buscando reproductor…';
   const who = it.artists ? it.artists.map(a => a.name).join(', ') : it.show ? it.show.name : '';
-  const vol = SP.st.device && SP.st.device.volume_percent != null ? ` · vol. ${SP.st.device.volume_percent}%` : '';
+  const vol = SP.st.device ? ` · vol. ${spVolNow()}%` : '';
   return `${spPlaying() ? 'Suena' : 'En pausa'}: ${it.name}${who ? ' — ' + who : ''}${vol}`;
 }
 // Filas para los menús del juego (principal y pausa)

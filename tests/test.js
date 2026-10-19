@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -594,6 +594,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (!dip1.set || Math.abs(Math.abs(dip1.yaw) - Math.PI / 2) > 0.05 || RA.settings.dipGap !== 58) errors.push('colocar una sola paralela con las manos no funciona');
   XRS.headY = 1.7; frame(100, 16, xrFrame); press('Listo'); frame(2, 16, xrFrame); RA.setSetting('dipBars', '2'); RA.exitAll(); frame(2, 16, xrFrame);
 
+  // ---- Remo en XR: colgarse con los brazos algo doblados y luego estirarlos (la cabeza baja 15 cm) no es soltarse ----
+  for (const [k, v] of Object.entries({ mode: 'bars', exercise: 'row', dipBars: '1', lives: 0, waves: 1, repsWave: 4, rest: 0, rowRange: 30, fallMargin: 12, barArrive: 1.5, barWait: 0 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+  { const topY = RA.settings.dipH / 100, grip = { left: new THREE.Vector3(-0.25, topY, -0.2), right: new THREE.Vector3(0.25, topY, -0.2) };
+    XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.2, 0, 0, 'YXZ')); XRS.grip = grip; XRS.headY = 0.53;
+    RA.beginRun(); frame(330, 16, xrFrame); log('row XR mounted with bent arms: state', RA.state);
+    for (let k = 0; k < 30; k++) { XRS.headY = 0.53 - 0.15 * k / 30; frame(2, 16, xrFrame); } frame(60, 16, xrFrame);
+    log('row XR after straightening the arms: state', RA.state, 'falls', RA.stats.falls);
+    if (RA.stats.falls) errors.push('remo XR: estirar los brazos tras colgarse con ellos doblados cuenta como soltarse');
+    for (let i = 0; i < 1600 && RA.state !== 'end'; i++) { XRS.headY = (i % 120) < 60 ? 0.38 + 0.36 : 0.38; frame(1, 16, xrFrame); }
+    log('row XR reps', RA.stats.reps, 'state', RA.state, 'falls', RA.stats.falls);
+    if (RA.stats.reps < 4 || RA.stats.falls) errors.push(`remo XR: ${RA.stats.reps} repeticiones, ${RA.stats.falls} caídas`);
+    XRS.headQ = null; XRS.grip = null; RA.setSetting('dipBars', '2'); RA.exitAll(); frame(2, 16, xrFrame); }
+
   // ---- Al calibrar, el entorno se coloca según tu posición y hacia dónde mira tu cuerpo (en plancha, mirando al suelo) ----
   for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 4 })) RA.setSetting(k, v);
   XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
@@ -615,15 +629,40 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.exitAll(); frame(2, 16, xrFrame);
   }
 
+  // ---- Caricatura del ejercicio: todos los ejercicios en todos sus modos se dibujan; junto al menú y en la espera ----
+  { const bad = [];
+    for (const mode of Object.keys(RA.MODE_EX)) for (const ex of RA.MODE_EX[mode]) { if (!RA.DEMO[ex]) { bad.push(ex + ' sin caricatura'); continue; } for (const t of [0.1, 0.9, 1.7, 2.6]) { try { RA.demoDraw(RA.DEMOP.ctx, RA.DEMOP.W, RA.DEMOP.H, ex, mode, t); } catch (e) { bad.push(`${ex}/${mode}: ${e.message}`); break; } } }
+    log('demo drawings:', bad.length ? bad.join(' · ') : 'all ok'); if (bad.length) errors.push('caricaturas: ' + bad.join(' · '));
+    RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(3);
+    const inMenu = () => { let n = 0; RA.menu && RA.menu.group.traverse(o => { if (o.material === RA.DEMOP.mesh.material) n++; }); return n; };
+    const m1 = inMenu(); press('EMPEZAR'); frame(10); const waitVis = RA.DEMOV.head.visible, st = RA.state;
+    for (let i = 0; i < 300 && RA.state !== 'play'; i++) frame(1);
+    log('demo next to the lobby menu', m1, '· during', st, 'visible', waitVis, '· in play hidden', !RA.DEMOV.head.visible, '· texture alive', !RA.DEMOP.tex.disposed);
+    if (m1 !== 1 || !waitVis || RA.DEMOV.head.visible) errors.push('la caricatura no aparece junto al menú o en la espera');
+    RA.exitAll(); frame(1); }
+
+  // ---- Avisos de corrección: grandes en el suelo durante 4 s ----
+  RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(3); press('EMPEZAR');
+  for (let i = 0; i < 300 && RA.state !== 'play'; i++) frame(1);
+  RA.onPartial('¡Baja más!'); frame(100); const wv = RA.WARN.p.mesh.visible, wy = RA.WARN.p.mesh.position.y; frame(40);
+  log('floor warning: visible at 3.3 s', wv, 'on the floor (y)', wy.toFixed(2), 'hidden at 4.6 s', !RA.WARN.p.mesh.visible, 'log', RA.WARN.log.slice(-1)[0]);
+  if (!wv || wy > 0.1 || RA.WARN.p.mesh.visible) errors.push('el aviso no se queda 4 s escrito en el suelo');
+  RA.exitAll(); frame(1);
+
   // ---- Spotify ----
   await sleep(50);
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2); press('Música'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
-  press('Siguiente'); await sleep(20); press('Vol +'); await sleep(20); await RA.spRefresh(); frame(2);
+  press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);
   log('after next/vol:', RA.spNowText());
   for (const c of ['PUT /v1/me/player/pause', 'POST /v1/me/player/next', 'PUT /v1/me/player/volume?volume_percent=60']) if (!SPOT.calls.includes(c)) errors.push('Spotify: falta la llamada ' + c);
+  // volumen: pulsaciones seguidas no se pierden aunque Spotify tarde en reflejarlas, y un 0 falso del reproductor no silencia
+  { press('Vol +'); press('Vol +'); press('Vol +'); frame(1); await sleep(320); log('three quick Vol +: spotify volume', SPOT.vol);
+    if (SPOT.vol !== 90) errors.push(`Spotify: tres «Vol +» seguidos deberían dejar 90 (${SPOT.vol})`);
+    RA.SP.volT = 0; SPOT.vol = 0; await RA.spRefresh(); press('Vol −'); await sleep(320); log('device reports 0, Vol − →', SPOT.vol);
+    if (SPOT.vol !== 80) errors.push(`Spotify: con un 0 falso del reproductor, «Vol −» debería dejar 80 (${SPOT.vol})`); }
   RA.SP.cfg.access = 'caducado'; const tc = SPOT.tokenCalls; await RA.spRefresh(); log('expired token refreshed', SPOT.tokenCalls === tc + 1, RA.spNowText());
   if (SPOT.tokenCalls !== tc + 1 || RA.SP.err) errors.push('Spotify: no renueva el token caducado');
   // el juego como reproductor (Web Playback SDK): al pulsar Play, la música pasa a las gafas en vez de sonar en el móvil
@@ -633,6 +672,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     SPOT.playing = false; SPOT.device = 'phone'; await RA.spRefresh(); RA.spToggle(); await sleep(30); await RA.spRefresh();
     log(`spotify player in the game: sdk ${/sdk\.scdn\.co/.test(src)} · ready ${RA.SPP.state} ${RA.SPP.id} · after Play the music is on ${SPOT.device} (playing ${SPOT.playing}) · ${RA.spNowText()}`);
     if (!/sdk\.scdn\.co/.test(src) || RA.SPP.state !== 'ready' || SPOT.device !== 'quest-sdk' || !SPOT.playing) errors.push('Spotify: al pulsar Play la música no pasa al reproductor de las gafas');
+    // en las gafas, el volumen se cambia en su propio reproductor (sin pasar por la Web API)
+    let sdkVol = null; RA.SPP.player.setVolume = v => { sdkVol = v; return Promise.resolve(); }; const n0 = SPOT.calls.length; RA.SP.volT = 0;
+    RA.spVol(-10); await sleep(320); log('volume in the glasses: sdk setVolume', sdkVol, 'web api calls', SPOT.calls.slice(n0).filter(c => /volume/.test(c)).length);
+    if (sdkVol !== 0.7 || SPOT.calls.slice(n0).some(c => /volume/.test(c))) errors.push(`Spotify: en las gafas el volumen debería ir al reproductor (${sdkVol})`);
     delete global.document.head; delete global.Spotify; SPOT.device = null; RA.SPP.state = ''; RA.SPP.id = ''; }
   // tus listas: Play (la primera vez) pone las elegidas; varias, sus canciones mezcladas
   { const mine = await RA.spMyLists(); RA.SP.cfg.lists = [mine[0]]; RA.SP.started = false; SPOT.playing = false; await RA.spRefresh(); RA.spToggle(); await sleep(30);

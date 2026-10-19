@@ -123,7 +123,7 @@ function placeAnchor(dist) {
   const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
-function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
 // Al cerrar un menú se recuerda su sitio un momento: si enseguida se abre otro (de un menú a otro), sale en el mismo sitio
 let lastAnchor = null, lastAnchorT = -9;
 function hideMenu(keepAnchor) {
@@ -388,7 +388,43 @@ function hudSlot(P, slots, n, dt) {
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
   return headLocal(P.off, new V3());
 }
+/* ---------- Avisos grandes impresos en el suelo ---------- */
+// Lo que estás haciendo mal (a medias, suelta la cadera, te soltaste…) se escribe en grande en el suelo, delante,
+// durante 4 s; si miras hacia arriba (remo, abdominales), por encima de la cara. Los últimos quedan en la pausa.
+const WARN_SECS = 4;
+const WARN = { t: 0, log: [], text: '', p: makePanel(1.6, 0.42, 1024, { depthTest: false }), at: new V3(), q: new Q4(), init: false };
+WARN.p.mesh.visible = false; WARN.p.mesh.renderOrder = 32; scene.add(WARN.p.mesh);
+function warnFloor(text, color = '#ff8a3d') {
+  if (WARN.log[WARN.log.length - 1] !== text) { WARN.log.push(text); if (WARN.log.length > 8) WARN.log.shift(); }
+  if (text === WARN.text && WARN.t > 1) { WARN.t = WARN_SECS; return; }
+  const c = WARN.p.ctx, W = WARN.p.W, H = WARN.p.H; c.clearRect(0, 0, W, H);
+  rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,8,10,0.82)'; c.fill(); c.lineWidth = 10; c.strokeStyle = color; c.stroke();
+  // en una o dos líneas, lo más grande que quepa
+  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const words = text.split(' '); let lines = [text];
+  c.font = `110px ${FD}`;
+  if (c.measureText(text).width > W - 90 && words.length > 1) { let best = 1; for (let i = 1; i < words.length; i++) if (Math.abs(words.slice(0, i).join(' ').length - text.length / 2) < Math.abs(words.slice(0, best).join(' ').length - text.length / 2)) best = i; lines = [words.slice(0, best).join(' '), words.slice(best).join(' ')]; }
+  const fs = Math.min(lines.length > 1 ? 92 : 120, ...lines.map(l => { c.font = `100px ${FD}`; return Math.floor(100 * (W - 90) / Math.max(1, c.measureText(l).width)); }));
+  c.font = `${fs}px ${FD}`; lines.forEach((l, i) => c.fillText(l, W / 2, H / 2 + (i - (lines.length - 1) / 2) * fs * 1.05 + 6));
+  WARN.p.tex.needsUpdate = true; WARN.text = text; WARN.t = WARN_SECS; WARN.init = false; WARN.p.mesh.visible = true;
+}
+const _wf = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
+function updateWarn(dt) {
+  const m = WARN.p.mesh; if (!m.visible) return;
+  WARN.t -= dt; if (WARN.t <= 0 || !GAME_STATES.includes(state) && state !== 'paused') { m.visible = false; WARN.text = ''; return; }
+  const f = fwd(); let s;
+  if (f.y > 0.35) { // mirando arriba: por encima de la cara, de cara a ti
+    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(head.q);
+  } else { // en el suelo, delante: más lejos cuanto más alta la cabeza, tumbado y legible desde donde estás
+    const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
+    s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
+  }
+  const k = WARN.init ? 1 - Math.exp(-dt * 3) : 1; WARN.init = true;
+  WARN.at.lerp(_wf, k); m.position.copy(WARN.at); m.quaternion.slerp(WARN.q, k); m.scale.setScalar(s);
+  m.material.opacity = Math.min(1, WARN.t / 0.5, (WARN_SECS - WARN.t) / 0.15 + 0.2);
+}
 function updateViewPanels(dt) {
+  updateWarn(dt);
   const k = 1 - Math.exp(-dt * 4), n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.2]] : C.slots; // con el atril abierto, por encima para no taparlo
