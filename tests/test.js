@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -197,6 +197,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1, rowLift: 16 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
   }
+  // hombres-cocodrilo: salen por las compuertas, se les derriba como a los robots y, si los dejas llegar, muerden
+  const croc = { n: 0, boss: false, robot: false };
+  await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100 }, t => {
+    squatSim(2.6)(t); RA.enemies.forEach(e => { if (e.kind === 'lizard') croc.n++; else if (e.kind === 'crocboss') croc.boss = true; else if (e.type === 'robot') croc.robot = true; });
+  }, 420, s => !croc.n ? 'no sale ningún hombre-cocodrilo' : s.kills < 4 ? `a los cocodrilos no se les derriba (${s.kills})` : croc.robot ? 'con 100 % de cocodrilos sale algún robot' : !croc.boss ? 'con 100 % de cocodrilos el jefe no es un cocodrilo' : '');
+  const bites = { taken: 0, states: new Set() };
+  await runConfig('cocodrilos que llegan y muerden', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, walkTime: 4 }, t => {
+    RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'lizard') bites.states.add(e.state); });
+  }, 30, s => s.taken < 1 ? 'los cocodrilos no atacan' : !['windup', 'strike', 'knock'].every(k => bites.states.has(k)) ? `al cocodrilo le falta parte del ataque (${[...bites.states]})` : '', true);
+  // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
+  const iwMid = new Set();
+  await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
+    RA.PV.iwAuto = true; const m = RA.IW.prints.find(p => p.pair === 1 && p.side === 'left'); iwMid.add(m.x.toFixed(2) + m.z.toFixed(2));
+  }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : iwMid.size < 3 ? 'inchworm: las huellas del medio no cambian de sitio' : RA.IW.prints.length !== 6 ? 'inchworm: no hay seis huellas' : '');
+  await runConfig('inchworm sin las huellas del medio', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
+    s => s.reps ? 'inchworm: sin pasar por todas las huellas no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que faltan huellas' : '', true);
+  RA.PV.iwAuto = RA.PV.iwSkip = false; RA.PV.iwT = 0;
   const rsides = new Set();
   await runConfig('Combate remo en plancha', { ...base, mode: 'combat', foes: 'flyers', exercise: 'plankrow', walkTime: 10 }, t => {
     RA.PV.keys.KeyQ = (t % 3) > 0.2 && (t % 3) < 1.0; RA.PV.keys.KeyE = (t % 3) > 1.5 && (t % 3) < 2.3;

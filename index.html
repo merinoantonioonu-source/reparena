@@ -163,6 +163,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-pushup" value="pushup">
         <span class="tag">Sensor: altura del visor</span><b>Flexiones</b>
         <small>La batalla ocurre en el suelo, delante de tu cara. Disparas al empujar (si apuntas tú, con la mirada).</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-inchworm" value="inchworm">
+        <span class="tag">Manos libres · visor y manos · 2 m de sitio</span><b>Flexiones inchworm</b>
+        <small>Seis huellas en el suelo, tres por mano: dóblate, camina con las manos por ellas en orden (las del medio cambian en cada repetición) y en las dos últimas haz la flexión: disparas al subir. Vuelve andando y ponte de pie.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-dips" value="dips">
         <span class="tag">Una silla estable · altura del visor</span><b>Fondos en silla</b>
         <small>Sentado en el borde, manos en el asiento: saca el culo y baja doblando los codos. Disparas al estirarlos.</small></label>
@@ -339,22 +342,22 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['squat', 'lunge', 'jump', 'abs', 'pushup', 'combo']
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump']],
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
-  ['Pecho', ['pushup']],
+  ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['plankrow', 'row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
@@ -362,7 +365,7 @@ const BODY_ZONES = [
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
 const BAR_EX = MODE_EX.bars; // ejercicios del modo Barras: el resto no se usa en él
 // Al cambiar de modo, el ejercicio que se queda: el mismo si vale; si estabas en el suelo, flexiones
-function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
+function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
@@ -377,7 +380,8 @@ const SCHEMA = [
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
-  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
   { key: 'dipDepth', g: 'ejercicio', label: 'Bajada en el fondo', short: 'Bajada fondo', type: 'num', min: 6, max: 40, step: 1, def: 15, unit: 'cm', ex: ['dips'], hint: 'Cuánto debe bajar la cabeza al doblar los codos, con las manos en el borde de la silla.' },
   { key: 'pressRange', g: 'ejercicio', label: 'Recorrido del press', short: 'Recorrido press', type: 'num', min: 15, max: 60, step: 1, def: 32, unit: 'cm', ex: ['press', 'press2'], hint: 'Cuánto deben subir las manos desde los hombros. Con mancuernas cada brazo dispara al llegar arriba; con barra, los dos a la vez.' },
@@ -398,6 +402,7 @@ const SCHEMA = [
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
+  { key: 'crocs', g: 'enemigos', label: 'Hombres-cocodrilo entre los robots', short: 'Cocodrilos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son hombres-cocodrilo: van encorvados a cuatro patas, rugen con las fauces abiertas y, al atacar, se yerguen con los brazos abiertos y se lanzan a morderte. 100 % = solo cocodrilos, y el jefe es un cocodrilo gigante.' },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['combat'], cond: () => foesHas('flyers'), hint: 'En flexiones los bichos van a escala, unas 4 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('flyers') },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['combat'], hint: 'Bájalo si el juego va a tirones.' },
@@ -418,7 +423,7 @@ const SCHEMA = [
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
+  { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots (y hombres-cocodrilo) que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
   { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
 
@@ -539,7 +544,7 @@ const foes = () => oneArm() ? 'robots' : settings.exercise === 'superman' ? 'fly
 const foesHas = k => isCombat() && (foes() === k || foes() === 'mix');
 // Puntería: automática (cada repetición dispara sola al más cercano) o la tuya, con las manos o la mirada. En la plancha
 // con un brazo (cada brazo dispara a su lado) y en el superman (tumbado no se apunta) siempre es automática
-const aimForced = () => oneArm() || settings.exercise === 'superman' || settings.exercise === 'twist'; // con la barra flexible las dos manos están ocupadas
+const aimForced = () => oneArm() || settings.exercise === 'superman' || settings.exercise === 'inchworm' || settings.exercise === 'twist'; // con la barra flexible las dos manos están ocupadas
 const autoAim = () => isCombat() && !pistolOn() && (settings.aim === 'auto' || aimForced());
 const aimManual = () => isCombat() && !pistolOn() && !autoAim();
 // Espadas: en Combate contra robots (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
@@ -557,7 +562,7 @@ const isSeated = () => settings.exercise === 'dips';
 // Tumbado boca arriba (abdominales)
 const isSupine = () => settings.exercise === 'abs' || (settings.exercise === 'combo' && settings.comboBase === 'abs');
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
-const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || oneArm());
+const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'inchworm' || oneArm());
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -657,7 +662,7 @@ function sortExCards(byBody) {
   }
   EXCARDS.order.forEach(c => { if (!used.has(c)) host.appendChild(c); });
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -679,7 +684,7 @@ function updateSummary() {
 }
 /* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
 // Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
-const EX_MET = { squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const EX_MET = { squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
 const REST_MET = 2;
 // kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
 function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
@@ -820,6 +825,15 @@ function noise(dest, { t = 0, a = 0.002, d = 0.3, gain = 0.3, type = 'lowpass', 
 }
 function shaper(dest, hard) { const w = AUD.C.createWaveShaper(); w.curve = hard ? AUD.curveHard : AUD.curve; w.oversample = '2x'; w.connect(dest); return w; }
 
+function roarSynth(pos, s) {
+  if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
+  const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
+  bp.frequency.setValueAtTime(320, T); bp.frequency.linearRampToValueAtTime(1000, T + 0.5); bp.frequency.linearRampToValueAtTime(260, T + 1.7); bp.connect(sh);
+  const am = C.createGain(); am.gain.value = 0.6; am.connect(bp);
+  const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = 31; lg.gain.value = 0.45; lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + 1.9);
+  [55, 58.4, 110.7, 83].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s * 1.5, T); os.frequency.linearRampToValueAtTime(f * s, T + 0.4); os.frequency.linearRampToValueAtTime(f * s * 0.62, T + 1.8); os.connect(envGain(T, 0.15, 0.22, 1.55, am)); os.start(T); os.stop(T + 1.9); });
+  noise(o, { type: 'bandpass', f: 1900, q: 1.3, a: 0.12, d: 1.4, gain: 0.22 });
+}
 const SND = {
   click() { if (!sndOK()) return; const o = sout(null, { rev: 0.05, gain: 0.5 }); tone(o, { type: 'square', f: 1800, d: 0.025, gain: 0.08 }); noise(o, { type: 'highpass', f: 4000, d: 0.02, gain: 0.08 }); },
   tick() { if (!sndOK()) return; const o = sout(null, { rev: 0, gain: 0.3 }); tone(o, { type: 'triangle', f: 2400, d: 0.015, gain: 0.05 }); },
@@ -890,15 +904,9 @@ const SND = {
     os.frequency.setValueAtTime(f0, T); os.frequency.linearRampToValueAtTime(f0 * 1.6, T + 0.15); os.frequency.linearRampToValueAtTime(f0 * 1.1, T + 0.35);
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
-  roar(pos, s = 1) {
-    if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
-    const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
-    bp.frequency.setValueAtTime(320, T); bp.frequency.linearRampToValueAtTime(1000, T + 0.5); bp.frequency.linearRampToValueAtTime(260, T + 1.7); bp.connect(sh);
-    const am = C.createGain(); am.gain.value = 0.6; am.connect(bp);
-    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = 31; lg.gain.value = 0.45; lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + 1.9);
-    [55, 58.4, 110.7, 83].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s * 1.5, T); os.frequency.linearRampToValueAtTime(f * s, T + 0.4); os.frequency.linearRampToValueAtTime(f * s * 0.62, T + 1.8); os.connect(envGain(T, 0.15, 0.22, 1.55, am)); os.start(T); os.stop(T + 1.9); });
-    noise(o, { type: 'bandpass', f: 1900, q: 1.3, a: 0.12, d: 1.4, gain: 0.22 });
-  },
+  roar(pos, s = 1) { roarSynth(pos, s); },
+  // el cocodrilo: más grave, con un bufido áspero encima
+  crocRoar(pos, s = 1) { if (!sndOK()) return; roarSynth(pos, s * 0.62); const o = sout(pos, { rev: 0.4, gain: 0.9, ref: 2 }); noise(shaper(o, true), { type: 'bandpass', f: 900, to: 500, q: 0.8, a: 0.08, d: 1.2, gain: 0.35 }); },
   hiss(pos, s = 1) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: 0.8, ref: 0.6 });
     noise(o, { type: 'highpass', f: 3200 / s, a: 0.12, d: 0.7, gain: 0.35 }); noise(o, { type: 'bandpass', f: 6500 / Math.sqrt(s), q: 2, a: 0.1, d: 0.6, gain: 0.25 });
@@ -908,6 +916,12 @@ const SND = {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.1, gain: 0.7, ref: 0.5 });
     const n = 5 + Math.floor(Math.random() * 7); let t = 0;
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
+  },
+  // mordisco del cocodrilo: las fauces se cierran de golpe (chasquido de dientes y golpe sordo)
+  chomp(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 1.0, ref: 1.5 });
+    noise(shaper(o, true), { type: 'bandpass', f: 2600, q: 1.5, a: 0.001, d: 0.05, gain: 0.8 }); noise(o, { type: 'highpass', f: 4500, t: 0.012, d: 0.03, gain: 0.4 });
+    tone(o, { f: 140, to: 50, d: 0.18, gain: 0.6 }); noise(o, { brown: true, f: 500, to: 120, d: 0.2, gain: 0.5 });
   },
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
@@ -1023,8 +1037,8 @@ const SND = {
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
-  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
-  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0], crocRoar: ['rugido-cocodrilo', 0],
+  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], chomp: ['mordisco-cocodrilo', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
@@ -1375,6 +1389,20 @@ SURF.chitin = surface(256, 256, 61, S => {
   const { h, rnd } = S;
   for (let i = 0; i < 600; i++) { const x = rnd() * 256, y = rnd() * 256; h.strokeStyle = 'rgba(255,255,255,0.35)'; h.lineWidth = 0.8; h.beginPath(); h.moveTo(x, y); h.lineTo(x + (rnd() - 0.5) * 3, y + 4 + rnd() * 4); h.stroke(); }
 }, 3.0);
+// Escamas del hombre-cocodrilo: placas redondeadas en filas al tresbolillo, con surcos oscuros y relieve en el centro
+// (casi gris: el verde del lomo y el amarillento de la tripa los pone el color de cada pieza)
+SURF.scales = surface(256, 256, 83, S => {
+  fillAll(S, '#5d5f52', 60, 0.62, 0.0);
+  const { a, h, r, rnd } = S;
+  for (let row = 0, y = 0; y < 256 + 12; row++, y += 12) for (let x = (row % 2) * 8 - 8; x < 256 + 16; x += 16) {
+    const k = 0.8 + rnd() * 0.32, cx = x + 8, cy = y + 6, g = h.createRadialGradient(cx, cy - 1, 1, cx, cy, 9);
+    g.addColorStop(0, 'rgb(190,190,190)'); g.addColorStop(0.75, 'rgb(150,150,150)'); g.addColorStop(1, 'rgb(90,90,90)');
+    h.fillStyle = g; rr(h, x + 1, y + 1, 14, 10, 4); h.fill();
+    a.fillStyle = `rgb(${200 * k | 0},${204 * k | 0},${186 * k | 0})`; rr(a, x + 1, y + 1, 14, 10, 4); a.fill();
+    r.fillStyle = `rgb(0,${(0.45 + rnd() * 0.15) * 255 | 0},0)`; rr(r, x + 2, y + 2, 12, 8, 3); r.fill();
+  }
+  speckle(S, 3000, 0.12, 0.05, 0.08);
+}, 1.3);
 SURF.carbon = surface(256, 256, 71, S => {
   fillAll(S, '#5a5d63', 128, 0.32, 0.25);
   const { a, h, r } = S;
@@ -1467,8 +1495,14 @@ const M = {
   addGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, map: TX.beam, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide }),
   shadowCatcher: new THREE.ShadowMaterial({ opacity: 0.45 })
 };
+// Hombre-cocodrilo: escamas (con y sin esqueleto, para los pedazos) y la boca, húmeda
+M.scaleSkin = std({ map: SURF.scales.map, normalMap: SURF.scales.normal, roughnessMap: SURF.scales.orm, metalness: 0, roughness: 1, vertexColors: true, skinning: true });
+M.scaleStatic = std({ map: SURF.scales.map, normalMap: SURF.scales.normal, roughnessMap: SURF.scales.orm, metalness: 0, roughness: 1, vertexColors: true });
+M.fleshSkin = std({ vertexColors: true, roughness: 0.28, metalness: 0, skinning: true });
+M.fleshStatic = std({ vertexColors: true, roughness: 0.28, metalness: 0 });
+Object.assign(C, { croc: col(0.25, 0.3, 0.17), crocDark: col(0.13, 0.16, 0.09), belly: col(0.62, 0.62, 0.42), mouth: col(0.62, 0.24, 0.3), tongue: col(0.75, 0.36, 0.42), throat: col(0.18, 0.04, 0.06), tooth: col(0.95, 0.92, 0.8), eyeY: col(1, 0.85, 0.12), clawK: col(0.12, 0.11, 0.09) });
 // Las texturas de detalle se repiten según el tamaño real (G.* reescala las UV)
-[SURF.steel, SURF.paint, SURF.chitin, SURF.carbon, SURF.concrete].forEach(s => { [s.map, s.normal, s.orm].forEach(t => t.repeat.set(1, 1)); });
+[SURF.steel, SURF.paint, SURF.chitin, SURF.carbon, SURF.concrete, SURF.scales].forEach(s => { [s.map, s.normal, s.orm].forEach(t => t.repeat.set(1, 1)); });
 SURF.floor.map.repeat.set(40, 40); SURF.floor.normal.repeat.set(40, 40); SURF.floor.orm.repeat.set(40, 40);
 [SURF.door.map, SURF.door.normal, SURF.door.orm].forEach(t => { t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; });
 
@@ -1772,7 +1806,7 @@ function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settin
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
-  const D = arenaDepth(), push = isTiny(), low = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const D = arenaDepth(), push = isTiny(), low = isFloor() || settings.exercise === 'inchworm', gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
   const plan = roomPlan(), roomGates = plan && plan.gates.some(Boolean); // realidad mixta: en tus paredes
   gates.forEach((g, i) => {
@@ -2860,6 +2894,7 @@ function roomRows(back) {
 /* =================== MODELOS =================== */
 const RIGS = {};
 const MAT_ROBOT = { main: M.robot, paint: M.robotPaint, glow: M.glowSkin, halo: M.haloSkin };
+const MAT_LIZARD = { main: M.scaleSkin, flesh: M.fleshSkin, glow: M.glowSkin };
 const MAT_ROBOT_STATIC = { main: M.steel, paint: M.paint, glow: M.glow, halo: M.halo };
 
 /* ---------- Segador: esqueleto de pesadilla con patas invertidas ---------- */
@@ -3361,9 +3396,80 @@ function updateGloves(dt) {
   }
 }
 
+/* ---------- Hombre-cocodrilo: bípedo encorvado, hocico largo lleno de dientes, cresta en el lomo y cola ---------- */
+// En reposo, de pie y recto (brazos colgando, cola hacia atrás); la postura encorvada y el andar a cuatro patas los pone la animación
+const LIZ = { th: 0.4, kn: 0.4, sh: 0.45, el: 0.42, tail: 0.3, hipY: 0.66 };
+function buildLizard() {
+  const R = new Rig();
+  R.bone('hips', null, 0, LIZ.hipY, 0).bone('spine', 'hips', 0, 0.08, 0).bone('chest', 'spine', 0, 0.32, 0)
+   .bone('neck', 'chest', 0, 0.34, 0.05).bone('head', 'neck', 0, 0.12, 0.05).bone('jaw', 'head', 0, -0.035, 0.0);
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
+    R.bone('sh' + sd, 'chest', sx * 0.29, 0.27, 0).bone('el' + sd, 'sh' + sd, 0, -LIZ.sh, 0).bone('ha' + sd, 'el' + sd, 0, -LIZ.el, 0);
+    R.bone('th' + sd, 'hips', sx * 0.16, -0.04, 0).bone('kn' + sd, 'th' + sd, 0, -LIZ.th, 0).bone('an' + sd, 'kn' + sd, 0, -LIZ.kn, 0);
+  }
+  for (let i = 0; i < 5; i++) R.bone('t' + i, i ? 't' + (i - 1) : 'hips', 0, i ? 0 : -0.02, i ? -LIZ.tail * (1 - i * 0.08) : -0.14);
+  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), F = (b, g, c, ...t) => R.add(b, 'flesh', g, c, ...t), GL = (b, g, c, ...t) => R.add(b, 'glow', g, c, ...t);
+  const S = (b, c, x, y, z, sx, sy, sz, rx = 0) => P(b, G.sph(1, 14, 10), c, x, y, z, rx, 0, 0, sx, sy, sz);
+  // osteodermos: púas cortas en filas, hacia atrás y arriba
+  const ridge = (b, y0, y1, z, n, h, w = 0.028, rx = -Math.PI / 2 + 0.5) => { for (let i = 0; i < n; i++) { const k = n > 1 ? i / (n - 1) : 0, y = lerp(y0, y1, k); for (const x of [-0.045, 0.045]) P(b, G.cone(w, h, 4), C.crocDark, x, y, z, rx, 0, 0); P(b, G.cone(w * 1.2, h * 1.4, 4), C.crocDark, 0, y + 0.01, z + 0.01, rx, 0, 0); } };
+  // cadera y tronco: ancho, con tripa clara de placas
+  S('hips', C.croc, 0, 0.03, -0.01, 0.21, 0.17, 0.18); S('hips', C.belly, 0, -0.01, 0.07, 0.15, 0.11, 0.11);
+  S('spine', C.croc, 0, 0.16, -0.01, 0.24, 0.27, 0.2); S('spine', C.belly, 0, 0.15, 0.09, 0.17, 0.23, 0.12);
+  ridge('spine', 0.05, 0.3, -0.17, 4, 0.06);
+  S('chest', C.croc, 0, 0.16, 0, 0.3, 0.25, 0.22); S('chest', C.belly, 0, 0.12, 0.1, 0.21, 0.22, 0.13);
+  for (let i = 0; i < 5; i++) P('chest', G.box(0.2 - Math.abs(i - 2) * 0.02, 0.012, 0.02), C.crocDark, 0, 0.0 + i * 0.06, 0.225); // surcos de la tripa
+  for (const x of [-1, 1]) S('chest', C.croc, x * 0.24, 0.27, -0.02, 0.15, 0.13, 0.15); // hombros enormes
+  ridge('chest', 0.0, 0.34, -0.21, 5, 0.075);
+  // cuello grueso
+  P('neck', G.cyl(0.11, 0.14, 0.18, 12), C.croc, 0, 0.05, 0); S('neck', C.belly, 0, 0.04, 0.07, 0.09, 0.1, 0.07); ridge('neck', 0.0, 0.1, -0.11, 2, 0.06);
+  // cráneo y hocico largo y redondeado (mira hacia +z); por dentro, paladar rosa y garganta oscura
+  S('head', C.croc, 0, 0.045, 0.0, 0.12, 0.085, 0.12);
+  S('head', C.croc, 0, 0.035, 0.2, 0.078, 0.042, 0.18); S('head', C.crocDark, 0, 0.062, 0.16, 0.05, 0.02, 0.13); // hocico y su lomo
+  for (const x of [-0.025, 0.025]) S('head', C.crocDark, x, 0.07, 0.355, 0.012, 0.01, 0.012); // fosas nasales
+  for (const x of [-1, 1]) {
+    S('head', C.croc, x * 0.06, 0.1, 0.05, 0.04, 0.035, 0.045); // cuencas de los ojos, salientes
+    GL('head', G.sph(0.022, 10, 8), C.eyeY, x * 0.072, 0.105, 0.08); P('head', G.box(0.004, 0.026, 0.004), C.clawK, x * 0.08, 0.105, 0.098); // ojo amarillo y pupila
+    P('head', G.cone(0.02, 0.06, 4), C.crocDark, x * 0.065, 0.135, 0.03, -0.7, 0, x * 0.4); // ceja de púas
+  }
+  ridge('head', 0.08, 0.1, -0.08, 2, 0.05);
+  F('head', G.sph(1, 12, 6), C.mouth, 0, -0.002, 0.2, 0, 0, 0, 0.068, 0.008, 0.165); // paladar
+  F('head', G.sph(1, 12, 8), C.throat, 0, -0.01, 0.05, 0, 0, 0, 0.07, 0.05, 0.05); // garganta
+  const rim = (z, w) => w * Math.sqrt(Math.max(0, 1 - Math.pow((z - 0.2) / 0.18, 2))); // borde de la boca, más estrecho en la punta
+  for (const x of [-1, 1]) for (let i = 0; i < 10; i++) { const z = 0.06 + i * 0.03, big = i === 1 || i === 7; F('head', G.cone(big ? 0.011 : 0.008, big ? 0.055 : 0.032, 4), C.tooth, x * rim(z, 0.068), -0.008 - (big ? 0.012 : 0), z, Math.PI, 0, 0); }
+  // mandíbula: con encía, lengua y dientes hacia arriba
+  S('jaw', C.croc, 0, -0.03, 0.19, 0.074, 0.032, 0.18); S('jaw', C.belly, 0, -0.045, 0.12, 0.06, 0.02, 0.12);
+  F('jaw', G.sph(1, 12, 6), C.mouth, 0, 0.0, 0.19, 0, 0, 0, 0.064, 0.007, 0.165); S('jaw', C.tongue, 0, 0.004, 0.12, 0.04, 0.012, 0.09);
+  for (const x of [-1, 1]) for (let i = 0; i < 10; i++) { const z = 0.05 + i * 0.03, big = i === 2 || i === 8; F('jaw', G.cone(big ? 0.011 : 0.008, big ? 0.05 : 0.03, 4), C.tooth, x * rim(z - 0.01, 0.064), 0.01 + (big ? 0.012 : 0), z); }
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
+    const sh = 'sh' + sd, el = 'el' + sd, ha = 'ha' + sd, th = 'th' + sd, kn = 'kn' + sd, an = 'an' + sd;
+    // brazo: hombro, bíceps grueso, antebrazo y manaza con cuatro dedos y garras
+    S(sh, C.croc, 0, -0.02, 0, 0.12, 0.13, 0.12); P(sh, G.cyl(0.1, 0.075, LIZ.sh, 10), C.croc, 0, -LIZ.sh / 2, 0); S(sh, C.croc, 0, -0.18, 0.03, 0.09, 0.16, 0.09);
+    P(sh, G.cone(0.02, 0.06, 4), C.crocDark, sx * 0.05, -0.12, -0.07, -2.0, 0, 0);
+    S(el, C.croc, 0, 0, 0, 0.075, 0.075, 0.075); P(el, G.cyl(0.07, 0.085, LIZ.el, 10), C.croc, 0, -LIZ.el / 2, 0); S(el, C.belly, 0, -0.18, 0.04, 0.05, 0.14, 0.04);
+    for (let k = 0; k < 3; k++) P(el, G.cone(0.016, 0.05, 4), C.crocDark, sx * 0.04, -0.08 - k * 0.1, -0.06, -2.2, 0, 0);
+    S(ha, C.croc, 0, -0.05, 0.01, 0.08, 0.07, 0.05);
+    for (let k = 0; k < 4; k++) { const fx_ = (k - 1.5) * 0.04, a = (k - 1.5) * 0.12; P(ha, G.cyl(0.018, 0.022, 0.12, 6), C.croc, fx_, -0.15, 0.025, 0.3, 0, a); R.add(ha, 'flesh', G.cone(0.013, 0.06, 4), C.clawK, fx_ - Math.sin(a) * 0.08, -0.23, 0.05, Math.PI - 0.4, 0, a); }
+    P(ha, G.cyl(0.018, 0.022, 0.1, 6), C.croc, sx * 0.05, -0.08, 0.05, 0.9, 0, -sx * 0.4); // pulgar
+    // pierna: muslo enorme, espinilla y pie largo con garras
+    S(th, C.croc, 0, -0.12, 0, 0.12, 0.2, 0.12); P(th, G.cyl(0.1, 0.08, LIZ.th, 10), C.croc, 0, -LIZ.th / 2, 0);
+    S(kn, C.croc, 0, 0, 0, 0.08, 0.08, 0.08); P(kn, G.cyl(0.075, 0.06, LIZ.kn, 10), C.croc, 0, -LIZ.kn / 2, 0); S(kn, C.croc, 0, -0.14, -0.04, 0.07, 0.13, 0.07);
+    S(an, C.croc, 0, -0.03, 0.06, 0.07, 0.04, 0.14);
+    for (let k = 0; k < 3; k++) { const fx_ = (k - 1) * 0.045; P(an, G.cyl(0.02, 0.024, 0.1, 6), C.croc, fx_, -0.045, 0.2, Math.PI / 2, 0, 0); R.add(an, 'flesh', G.cone(0.014, 0.06, 4), C.clawK, fx_, -0.055, 0.27, Math.PI / 2 + 0.3, 0, 0); }
+  }
+  // cola: segmentos que se afinan, con cresta doble
+  for (let i = 0; i < 5; i++) {
+    const r0 = 0.13 * (1 - i * 0.19), r1 = 0.13 * (1 - (i + 1) * 0.19) + 0.008, L = i ? LIZ.tail * (1 - i * 0.08) : 0.16;
+    const nx = i < 4 ? LIZ.tail * (1 - (i + 1) * 0.08) : 0.28;
+    P('t' + i, G.cyl(r1, r0, nx, 10), C.croc, 0, 0, -nx / 2, -Math.PI / 2, 0, 0);
+    S('t' + i, C.belly, 0, -r0 * 0.45, -nx / 2, r0 * 0.6, r0 * 0.5, nx / 2);
+    for (let k = 0; k < 2; k++) for (const x of [-0.03, 0.03]) P('t' + i, G.cone(0.02 * (1 - i * 0.12), 0.07 * (1 - i * 0.12), 4), C.crocDark, i > 2 ? 0 : x, r0 * 0.85, -k * nx / 2 - 0.04, -Math.PI / 2 + 0.6, 0, 0);
+  }
+  const r = R.build(); r.kind = 'lizard'; return r;
+}
+
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
-  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true);
+  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard();
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
@@ -4190,7 +4296,7 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
+    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
@@ -4338,6 +4444,13 @@ const DEMO = {
   jump: { P: 2.4, high: 2.5, keys: [[0, STAND], [0.3, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.5, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.68, STAND], [1, STAND]], fire: 0.5, low: 0.5, desc: 'Flexiona un poco y salta para meter la cabeza en el aro que espera por encima; toca las gemas con la mano.' },
   abs: { P: 2.8, keys: [[0, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }], [0.4, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [0.55, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [1, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }]], fire: 0.45, low: 0.45, desc: 'Boca arriba con las rodillas dobladas: sube el tronco para meter la cabeza en el aro (de frente o girado).' }
 };
+// Flexión inchworm: de pie, te doblas, caminas con las manos por las huellas hasta la plancha, flexión (dispara) y vuelta
+const IW_ST = P_(STAND, { hip: [-1.2, 0.92], legF: { to: [-1.18, 0.04], b: 1 }, legB: { to: [-1.24, 0.04], b: 1 } });
+const IW_LEGS = { legF: { to: [-1.18, 0.04], b: 1 }, legB: { to: [-1.24, 0.04], b: 1 } };
+const IW_FOLD = { hip: [-1.3, 0.86], torso: 160, head: -20, ...IW_LEGS, armF: { to: [-0.98, 0.03], b: -1 }, armB: { to: [-1.0, 0.03], b: -1 } };
+const IW_W1 = { hip: [-1.15, 0.75], torso: 125, head: -10, ...IW_LEGS, armF: { to: [-0.55, 0.03], b: -1 }, armB: { to: [-0.62, 0.03], b: -1 } };
+const IW_W2 = { hip: [-0.85, 0.6], torso: 100, head: 0, ...IW_LEGS, armF: { to: [-0.2, 0.03], b: -1 }, armB: { to: [-0.3, 0.03], b: -1 } };
+DEMO.inchworm = { P: 7, tiny: true, prints: [-1.0, -0.58, 0.08], keys: [[0, IW_ST], [0.08, IW_ST], [0.18, IW_FOLD], [0.27, IW_W1], [0.35, IW_W2], [0.43, PLANK_UP], [0.5, PLANK_DN], [0.55, PLANK_DN], [0.63, PLANK_UP], [0.71, IW_W2], [0.79, IW_W1], [0.87, IW_FOLD], [0.96, IW_ST], [1, IW_ST]], fire: 0.62, low: 0.53, desc: 'De pie, dóblate y camina con las manos por las tres parejas de huellas (las del medio cambian); en las últimas, flexión: disparas al subir. Vuelve andando y ponte de pie.' };
 // Antebrazos con la barra flexible: primer plano de frente (de lado no se ve el giro). Cada mano gira unos 90° en
 // sentido contrario a la otra, como al escurrir una toalla: el primer giro carga y el siguiente, al revés, dispara
 DEMO.twist = { P: 2.6, custom: 'twist', keys: [[0, STAND], [1, STAND]], fire: 0.9, src: 'bar', desc: 'Gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.' };
@@ -4409,6 +4522,10 @@ function demoDraw(c, W, H, ex, mode, t) {
   const X = x => W * (D.keys[0][1].hip[0] < -0.3 ? 0.42 : 0.3) + x * s, Y = y => fy - y * s;
   c.strokeStyle = DC.floor; c.lineWidth = 3; c.beginPath(); c.moveTo(W * 0.04, fy); c.lineTo(W * 0.96, fy); c.stroke();
   const pose = demoPose(D, u), J = demoJoints(pose), lw = Math.max(3, s * 0.045);
+  if (D.prints) D.prints.forEach((x, i) => { // huellas en el suelo, una pareja por sitio: se iluminan las que ya tocaste
+    const lit = u >= [0.18, 0.27, 0.35][i] - 0.02 && u < [0.9, 0.82, 0.74][i]; c.fillStyle = lit ? 'rgba(255,154,60,.95)' : 'rgba(74,168,255,.6)';
+    c.beginPath(); c.ellipse(X(x), fy + 2, s * 0.07, s * 0.022, 0, 0, TAU); c.fill();
+  });
   // aparatos
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (D.chair) { c.strokeStyle = '#6d6699'; c.lineWidth = lw * 0.8; c.beginPath(); c.moveTo(X(-0.11), Y(0.45)); c.lineTo(X(-0.55), Y(0.45)); c.moveTo(X(-0.14), Y(0.45)); c.lineTo(X(-0.14), Y(0)); c.moveTo(X(-0.52), Y(0.45)); c.lineTo(X(-0.52), Y(0)); c.moveTo(X(-0.55), Y(0.45)); c.lineTo(X(-0.57), Y(0.9)); c.stroke(); }
@@ -4974,7 +5091,9 @@ function rigDebris(inst, center, power, smokeChance, mats) {
 const ROBOT_KIND = {
   scout: { rig: 'scout', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.25, stride: 1.8, head: 1.85 },
   heavy: { rig: 'heavy', scale: 1.0, speedF: 0.85, heavy: true, stop: 1.4, stride: 0.85, head: 1.75 },
-  titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true }
+  titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true },
+  lizard: { rig: 'lizard', scale: 1.05, speedF: 1.1, heavy: false, stop: 1.15, stride: 1.2, head: 1.1, beast: true }, // hombre-cocodrilo
+  crocboss: { rig: 'lizard', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.2, head: 1.1, beast: true, boss: true } // y su jefe, enorme
 };
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
@@ -5024,7 +5143,7 @@ const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
 class Robot {
   constructor(spec, gate) {
     const K = ROBOT_KIND[spec.kind]; this.K = K; this.type = 'robot'; this.kind = spec.kind;
-    this.rig = RIGS[K.rig]; this.inst = this.rig.instance(MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
+    this.rig = RIGS[K.rig]; this.inst = this.rig.instance(K.beast ? MAT_LIZARD : MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
     // cabe por el hueco de su compuerta (en realidad mixta, con el techo de tu habitación, las compuertas son más bajas)
     this.sc = K.scale * Math.min(1, 3.0 * gate.scale / (1.95 * K.scale)); this.root.scale.setScalar(this.sc); arena.add(this.root);
     const gr = gate.g.rotation.y, back = 1.3 * gate.scale; this.pos = new V3(gate.x - Math.sin(gr) * back, 0, gate.z - Math.cos(gr) * back); // sale de dentro del túnel
@@ -5045,6 +5164,7 @@ class Robot {
     gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
   }
   center(out) { this.B.chest.getWorldPosition(out); return out; }
+  roar(pos, s) { SND.roar(pos, s); }
   // spd: lo que de verdad avanza (m/s). Quieto respira y se mueve inquieto; andando balancea cadera, hombros y brazos
   // en contra de las piernas; corriendo se inclina, alarga la zancada y bombea los brazos
   animate(dt, t, spd) {
@@ -5101,7 +5221,7 @@ class Robot {
   update(dt, t) {
     const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
     // aturdido tras un bloqueo: tiembla, echa chispas y no ataca; tu contraataque hace el doble
-    if (this.stunT > 0) { this.stunT -= dt; this.stagger = Math.max(this.stagger, 0.5); this.stunFx = (this.stunFx || 0) - dt; if (this.stunFx <= 0) { this.stunFx = 0.25; fx.electric(this.B.head.getWorldPosition(tmpB), 6); } }
+    if (this.stunT > 0) { this.stunT -= dt; this.stagger = Math.max(this.stagger, 0.5); this.stunFx = (this.stunFx || 0) - dt; if (this.stunFx <= 0) { this.stunFx = 0.25; if (this.K.beast) fx.ichor(this.B.head.getWorldPosition(tmpB), 4, 0.8); else fx.electric(this.B.head.getWorldPosition(tmpB), 6); } }
     // espasmos inquietantes
     this.twitchT -= dt;
     if (this.twitchT <= 0) { this.twitchT = rand(2.5, 6); this.twitch = 1; this.twitchYaw = rand(-0.9, 0.9); }
@@ -5112,7 +5232,7 @@ class Robot {
     let faceTo = null, wantV = 0;
     switch (this.state) {
       case 'emerge':
-        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; if (K.heavy || Math.random() < 0.5) { this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : K.heavy ? 0.85 : 1.15); } }
+        if (this.st > 0.9) { this.state = 'walk'; this.st = 0; if (K.heavy || Math.random() < 0.5) { this.jaw = 1; this.roar(this.center(tmpB), K.boss ? 0.7 : K.heavy ? 0.85 : 1.15); } }
         break;
       case 'taunt': // se planta, abre los brazos y te ruge
         this.taunt = Math.min(1, this.taunt + dt * 5); faceTo = faceP;
@@ -5126,14 +5246,14 @@ class Robot {
         const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); if (!K.beast) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : K.beast ? 0.8 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
         to.normalize();
         // amenaza a media distancia (una vez por avance, si hay tiempo)
-        if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
+        if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; this.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
-        if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; SND.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
+        if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; this.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
         wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
@@ -5167,7 +5287,7 @@ class Robot {
       case 'strike': { // zancada hacia ti con el golpe
         faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, dt * 18)); this.lunge = Math.min(1, this.st / 0.15);
         const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
-        this.pos.copy(this.knockFrom).addScaledVector(back, -(swordSet() ? 0.15 : 0.35) * smooth(this.lunge));
+        this.pos.copy(this.knockFrom).addScaledVector(back, -(swordSet() ? 0.15 : K.beast ? 0.5 : 0.35) * smooth(this.lunge)); // el cocodrilo se lanza más: a morderte la cara
         if (this.zone) blockStep(this, t);
         if (this.st > 0.18) {
           const parried = this.zone && blockResolve(this); this.zone = null;
@@ -5176,7 +5296,7 @@ class Robot {
           let kd = 1.4; for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const ox = o.pos.x - this.pos.x, oz = o.pos.z - this.pos.z, al = ox * back.x + oz * back.z, lat = Math.abs(ox * back.z - oz * back.x), min = this.radius + o.radius + 0.05; if (al > 0 && lat < min) kd = Math.min(kd, Math.max(0, al - Math.sqrt(min * min - lat * lat))); }
           if (parried) kd = Math.min(kd, 0.6); // parado: retrocede poco y queda a tu alcance
           this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, kd);
-          fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true);
+          if (K.beast) { SND.chomp(this.B.head.getWorldPosition(tmpB)); fx.dust(tmpB.set(this.pos.x, 0.02, this.pos.z), 4, 0.3); } else { fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true); }
         }
         break;
       }
@@ -5208,7 +5328,7 @@ class Robot {
     this.run += (runK - this.run) * Math.min(1, dt * 4);
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
     this.animate(dt, t, this.spd);
-    if (this.rig.kind !== 'ripper') { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
+    if (this.rig.kind !== 'ripper' && !K.beast) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
@@ -5225,8 +5345,90 @@ class Robot {
   dispose() { arena.remove(this.root); this.inst.skel.dispose(); if (this.zoneSpr) { scene.remove(this.zoneSpr); this.zoneSpr.material.dispose(); } }
 }
 
+/* =================== HOMBRE-COCODRILO =================== */
+// Va encorvado a cuatro patas, apoyando los nudillos (trote: cada mano con la pierna contraria), con la cabeza levantada
+// mirándote y la cola meciéndose. Al amenazar se alza un poco, abre los brazos y ruge con las fauces abiertas meneando la
+// cabeza; al atacar se yergue con los brazos muy abiertos y se lanza con la boca abierta a morderte la cara.
+// Usa el comportamiento de los robots (puestos, compuertas, bloqueos con espada); cambian el cuerpo, la animación y los efectos.
+// Brazos y piernas con cinemática inversa en el plano de avance: los pies y las manos pisan el suelo
+const _lz = { y: 0, z: 0 };
+const pitchYZ = (y, z, a) => { const c = Math.cos(a), s = Math.sin(a); _lz.y = y * c - z * s; _lz.z = y * s + z * c; return _lz; };
+// dos huesos (que en reposo apuntan hacia abajo) desde J hasta T; Pp, la inclinación del padre; bend +1: la articulación hacia delante
+function ik2(Jy, Jz, Ty, Tz, L1, L2, Pp, bend) {
+  let dy = Ty - Jy, dz = Tz - Jz, D = Math.hypot(dy, dz); D = clamp(D, Math.abs(L1 - L2) + 1e-3, L1 + L2 - 1e-3);
+  const pd = Math.atan2(-dz, -dy), a = Math.acos(clamp((L1 * L1 + D * D - L2 * L2) / (2 * L1 * D), -1, 1)), p1 = pd - bend * a;
+  const ky = Jy - Math.cos(p1) * L1, kz = Jz - Math.sin(p1) * L1, p2 = Math.atan2(-(Tz - kz), -(Ty - ky));
+  return [p1 - Pp, p2 - p1, p2];
+}
+// zancada: 60 % apoyado (el pie va hacia atrás) y 40 % en el aire (vuelve adelante, levantado)
+function gaitFoot(q, S, lift) { const u = ((q / TAU) % 1 + 1) % 1; return u < 0.6 ? [S * (0.5 - u / 0.6), 0, u] : [S * (-0.5 + (u - 0.6) / 0.4), lift * Math.sin(Math.PI * (u - 0.6) / 0.4), u]; }
+class Lizard extends Robot {
+  constructor(spec, gate) { super(spec, gate); this.bar.g.position.y = 1.75; this.lastU = [0, 0]; this.sway = rand(0, TAU); this.bite = 0; }
+  center(out) { return this.B.chest.localToWorld(out.set(0, 0.12, 0.08)); }
+  roar(pos, s) { SND.crocRoar(pos, s); }
+  animate(dt, t, spd) {
+    const B = this.B, tn = this.taunt || 0, run = this.run || 0, st = this.state; this.lastU = this.lastU || [0, 0]; this.sway = this.sway || 0; this.bite = this.bite || 0; // (la primera vez, desde el constructor de Robot)
+    if (spd === true) spd = this.vWalk;
+    const amp = clamp(spd / Math.max(0.2, (this.vWalk || 0.5) * 0.7), 0, 1), S = 0.5 * (1 + run * 0.5);
+    this.phase += TAU * 0.6 * clamp(spd / (S * this.sc), 0, 4) * dt;
+    if (beatP() && amp > 0.3) this.phase += wrapAng(Math.PI * beatNow() + (this.beatOff || 0) - this.phase) * Math.min(1, dt * 6);
+    const p = this.phase;
+    // cuánto se yergue: al amenazar, a medias; al preparar el ataque, del todo; al morder se echa hacia delante
+    const windup = st === 'windup' ? smooth(clamp(this.st / 0.6, 0, 1)) : 0, strike = st === 'strike' ? (this.lunge || 0) : 0, knock = st === 'knock' ? 1 - smooth(clamp(this.st / 0.7, 0, 1)) : 0;
+    const up = Math.max(tn * 0.55, windup, strike * 0.6, knock * 0.5), lean = strike * 0.7 + knock * 0.3;
+    const bob = amp * 0.025 * Math.cos(p * 2), breathe = (1 - amp) * Math.sin(t * 1.8 + (this.breath || 0)) * 0.03;
+    const hy = lerp(0.6, 0.84, up) - run * 0.04 + bob;
+    const Ph = lerp(0.55, 0.08, up) + run * 0.08 + lean * 0.35 - (this.hitT || 0) * 0.8 - (this.stagger || 0) * 0.3, Ps = lerp(0.3, 0.02, up) + breathe + lean * 0.25, Pc = lerp(0.25, -0.05, up) + lean * 0.15;
+    B.hips.position.y = hy; B.hips.rotation.set(Ph, 0.1 * Math.sin(p) * amp, 0.04 * Math.cos(p) * amp);
+    B.spine.rotation.set(Ps, -0.12 * Math.sin(p) * amp + (this.twist || 0) * 0.5, (this.stagger || 0) * 0.15 * Math.sin(t * 23));
+    B.chest.rotation.set(Pc, -0.08 * Math.sin(p) * amp, 0.05 * Math.sin(p) * amp);
+    // piernas: los pies en el suelo (o en el aire al avanzar), rodillas hacia delante
+    const legs = [];
+    for (const [sd, sx, off, i] of [['L', 1, 0, 0], ['R', -1, Math.PI, 1]]) {
+      const hj = pitchYZ(-0.04, 0, Ph), Jy = hy + hj.y, Jz = hj.z;
+      const [fz, fy, u] = gaitFoot(p + off, S * amp, 0.12 * amp), Tz = fz - 0.02 + up * 0.04, Ty = 0.075 + fy;
+      const [a1, a2, w2] = ik2(Jy, Jz, Ty, Tz, LIZ.th, LIZ.kn, Ph, 1);
+      B['th' + sd].rotation.set(a1, 0, sx * 0.08); B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = -w2;
+      if (amp > 0.3 && this.lastU[i] > 0.9 && u < 0.1) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, true); fx.dust(fp, 3, 0.25 * this.sc * (1 + run)); }
+      this.lastU[i] = u; legs.push(u);
+    }
+    // brazos: andando, los nudillos al suelo con la pierna contraria; erguido, abiertos de par en par; al morder, abrazan
+    const Pch = Ph + Ps + Pc;
+    for (const [sd, sx, off] of [['L', 1, Math.PI], ['R', -1, 0]]) {
+      const sp = pitchYZ(0.27, 0, Pc), s2 = pitchYZ(0.32 + sp.y, sp.z, Ps), s3 = pitchYZ(0.08 + s2.y, s2.z, Ph);
+      const Jy = hy + s3.y, Jz = s3.z, [fz, fy] = gaitFoot(p + off, S * amp, 0.16 * amp);
+      const [a1, a2, w2] = ik2(Jy, Jz, 0.16 + fy, Jz + 0.12 + fz, LIZ.sh, LIZ.el, Pch, -1);
+      const wide = Math.max(windup, tn * 0.8), hug = strike, claw = Math.sin(t * 13 + off) * 0.25 * Math.max(tn, windup);
+      const ox = lerp(lerp(a1, -1.05 - Pch * 0.4, wide), -1.3, hug), oz = sx * lerp(lerp(0.18, 1.0, wide), 0.5, hug);
+      B['sh' + sd].rotation.set(ox, 0, oz); B['el' + sd].rotation.x = lerp(lerp(a2, -0.75, wide), -0.95, hug);
+      B['ha' + sd].rotation.x = lerp(lerp(-w2 - Pch * 0 + 0.25, -0.3 + claw, wide), -0.6, hug);
+    }
+    // cuello y cabeza: levantados para mirarte; al rugir, la cabeza se menea y las fauces se abren del todo
+    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), dist = Math.hypot(toP.x, toP.z);
+    const headH = (hy + 0.9 * Math.cos(Pch * 0.8)) * this.sc, pitch = Math.atan2(HL.y - headH, Math.max(0.3, dist));
+    this.bite = Math.max(this.bite * Math.max(0, 1 - dt * 6), st === 'windup' || st === 'strike' ? 1 : 0);
+    const jaw = Math.max(this.jaw || 0, tn, this.bite) * (st === 'knock' ? 1 - smooth(clamp(this.st / 0.12, 0, 1)) : 1); // al morder, cierra de golpe
+    B.neck.rotation.set(-Pch * 0.45, clamp(ly, -0.9, 0.9) * 0.4, 0);
+    B.head.rotation.set(-Pch * 0.55 - pitch - jaw * 0.25 + (this.twitch || 0) * 0.2, clamp(ly, -0.9, 0.9) * 0.5 + (this.twitchYaw || 0) * 0.5 + tn * Math.sin(t * 5) * 0.3, tn * Math.sin(t * 7.5) * 0.28 + Math.sin(t * 1.3 + this.sway) * 0.04);
+    B.jaw.rotation.x = jaw * 0.72 + (1 - jaw) * Math.max(0, Math.sin(t * 0.7 + this.sway)) * 0.06;
+    // cola: casi horizontal, con una onda que sigue los pasos y un meneo lento
+    for (let i = 0; i < 5; i++) B['t' + i].rotation.set(i ? 0.06 : -Ph - Ps * 0.3 - 0.12, Math.sin(p - i * 0.7) * 0.18 * amp + Math.sin(t * 1.4 + this.sway - i * 0.6) * 0.1 * (1 - amp * 0.5) + tn * Math.sin(t * 6 - i) * 0.15, 0);
+  }
+  onHit(dmg, perfect, point) {
+    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; this.jaw = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    fx.ichor(point, 14, 1.4); fx.glow(point, [1, 0.6, 0.3], 0.35, 0.08); SND.squish(point);
+    if (this.hp <= 0) this.kill(); else if (Math.random() < 0.35) this.roar(this.center(tmpB), 1.1);
+  }
+  kill() {
+    this.alive = false; const c = this.center(new V3());
+    fx.ichor(c, 40, 2.4); fx.smoke(c, 0.4, 0.4, 1.6, 0.2); fx.glow(c, [1, 0.7, 0.3], 0.8, 0.12); SND.crocRoar(c, 0.8); SND.squish(c);
+    rigDebris(this.inst, c, 2.6, 0, { main: M.scaleStatic, flesh: M.fleshStatic });
+    this.dispose();
+  }
+}
+
 /* =================== ARAÑAS (flexiones) =================== */
-const SPIDER_KIND = { scout: { s: 1.0 }, heavy: { s: 1.4 }, titan: { s: 2.4, boss: true } };
+const SPIDER_KIND = { scout: { s: 1.0 }, heavy: { s: 1.4 }, lizard: { s: 1.2 }, titan: { s: 2.4, boss: true }, crocboss: { s: 2.4, boss: true } };
 const _ikD = new V3(), _ikU = new V3(), _ikP = new V3(), _knee = new V3(), _foot = new V3(), _hip = new V3();
 function ikKnee(H, F, L1, L2, ox, oz, out) {
   _ikD.subVectors(F, H); let d = _ikD.length(); if (d < 1e-5) { _ikD.set(0, -1, 0); d = 1e-5; } _ikD.divideScalar(d);
@@ -5678,6 +5880,7 @@ const DET = {
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
+  iw: { pair: 0, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -5881,6 +6084,62 @@ function twistStep(t, dt) {
     T.first = true; T.lo = T.hi = T.acc;
   }
 }
+/* =================== FLEXIONES INCHWORM =================== */
+// Seis huellas de manos en el suelo, tres por mano (izquierda azul, derecha naranja): las dos primeras, junto a los pies;
+// las dos últimas, en posición de flexión; las dos del medio cambian de sitio en cada repetición. De pie, te doblas y
+// caminas con las manos tocando las huellas en orden (cada mano, las suyas); en las últimas, la flexión carga y al subir
+// dispara a las arañas; luego vuelves caminando y te pones de pie, y las huellas del medio se recolocan.
+// La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
+const iwReachM = () => settings.iwReach > 0 ? Math.max(0.8, settings.iwReach / 100) : clamp(calibRef * 0.8, 1.0, 1.6);
+const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
+const IW = { group: new THREE.Group(), prints: [], mats: [] };
+IW.group.visible = false; arena.add(IW.group);
+for (let i = 0; i < 6; i++) {
+  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, c = mkCanvas(128), x = c.getContext('2d');
+  x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
+  x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); x.fill(); // palma
+  for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.beginPath(); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.fill(); x.restore(); }
+  x.restore(); x.fillStyle = '#10101a'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
+  const mat = new THREE.MeshBasicMaterial({ map: texFrom(c), color: side === 'left' ? 0x4aa8ff : 0xff9a3c, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; IW.group.add(m); IW.mats.push(mat);
+  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, m });
+}
+// Las seis huellas, en la arena: las primeras y las últimas siempre igual; las del medio, a una distancia y un lado distintos cada vez
+function iwLayout() {
+  const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, zm = lerp(z0, z2, rand(0.38, 0.62));
+  const mz = () => clamp(zm + rand(-0.13, 0.13), z2 + 0.27, z0 - 0.27); // nunca pegadas a las primeras ni a las últimas
+  const pos = [[-0.17, z0], [0.17, z0], [-rand(0.11, 0.27), mz()], [rand(0.11, 0.27), mz()], [-0.2, z2], [0.2, z2]];
+  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = false; p.m.position.set(p.x, 0.006, p.z); });
+  Object.assign(DET.iw, { pair: 0, phase: 'stand' });
+}
+const _iww = new V3();
+function iwStep(t, dt) {
+  const W = DET.iw, standing = head.p.y > calibRef - 0.22;
+  if (W.phase === 'stand' && !standing) W.phase = 'walk';
+  if ((W.phase === 'stand' || W.phase === 'walk') && W.pair < 3) { // la siguiente pareja de huellas: cada mano, la suya
+    for (const p of IW.prints) {
+      if (p.pair !== W.pair || p.done) continue; const h = hands[p.side]; if (!h.ok) continue;
+      arena.worldToLocal(_iww.copy(h.wrist)); if (_iww.y < 0.22 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < 0.22) { p.done = true; SND.tick(); haptic(p.side, 0.3, 25); }
+    }
+    if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
+  }
+  if (W.phase === 'plank') {
+    const req = settings.pushDepth / 100, before = stats.reps;
+    vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
+    if (stats.reps > before) W.phase = 'back'; // disparó: ahora, de vuelta y de pie
+    else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
+  } else if (W.phase === 'walk' && standing) { if (W.pair > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
+  else if (W.phase === 'back' && standing) iwLayout(); // de pie otra vez: nuevas huellas
+}
+function iwVisual(t) {
+  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
+  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8);
+  for (const p of IW.prints) {
+    const next = (W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done, fin = W.phase === 'plank' && p.pair === 2;
+    p.m.material.opacity = next ? pulse : fin ? 0.95 : p.done ? 0.35 : W.phase === 'back' ? 0.25 : 0.55;
+    p.m.scale.setScalar(next ? 1.12 : 1);
+  }
+}
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -5993,6 +6252,8 @@ function runDetectors(t, dt) {
         else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
       }
     }
+  } else if (settings.exercise === 'inchworm') {
+    iwStep(t, dt);
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = settings.pushDepth / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
@@ -6181,11 +6442,15 @@ function buildWave(i) {
   if (twoShots()) total *= 2;
   let boss = null;
   const F = foes();
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? 'titan' : 'carrier', hp: b }; total -= b; }
-  let k = 0;
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (settings.crocs >= 100 && !isTiny() ? 'crocboss' : 'titan') : 'carrier', hp: b }; total -= b; }
+  let k = 0, gnd = 0;
   while (total > 0) {
     let kind, hp;
-    if (F === 'robots' || (F === 'mix' && k % 2 === 0)) { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+    if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
+      const cr = isTiny() ? 0 : settings.crocs / 100; gnd++; // hombres-cocodrilo: repartidos entre los de tierra según el porcentaje
+      if (Math.floor(gnd * cr + 0.5) > Math.floor((gnd - 1) * cr + 0.5)) { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
+      else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+    }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
   }
@@ -6209,7 +6474,7 @@ function spawnFromQueue() {
   let e;
   if (isBars()) e = new HeadTarget(spec);
   else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, oneArm() ? sideHatch(stats.spawned++ % 2 === 0) : pick(liveHatches()));
-  else if (ROBOT_KIND[spec.kind]) { const g = spec.kind === 'titan' ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
+  else if (ROBOT_KIND[spec.kind]) { const g = ROBOT_KIND[spec.kind].boss ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = ROBOT_KIND[spec.kind].beast ? new Lizard(spec, g) : new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
 }
@@ -6357,6 +6622,7 @@ function beginRun() {
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
+  if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
 // arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
@@ -6366,16 +6632,19 @@ function bodyYaw() {
   _bu.set(0, 1, 0).applyQuaternion(head.q); if (f.y > 0) _bu.negate(); _bu.y = 0;
   return _bu.lengthSq() > 0.04 ? Math.atan2(-_bu.x, -_bu.z) : lastStandYaw;
 }
-function arenaFromHead() { arena.position.set(head.p.x, 0, head.p.z); arena.rotation.y = bodyYaw(); }
+// (en las flexiones inchworm, el origen va IW_OFF() por delante: donde quedará la cabeza en la plancha)
+function arenaFromHead() { const y = bodyYaw(), o = IW_OFF(); arena.position.set(head.p.x - Math.sin(y) * o, 0, head.p.z - Math.cos(y) * o); arena.rotation.y = y; }
 // Mientras calibras, el entorno y los enemigos se van colocando a tu alrededor; al calibrar se fijan
 function arenaFollow(dt) {
   const k = Math.min(1, dt * 4);
-  arena.position.x += (head.p.x - arena.position.x) * k; arena.position.z += (head.p.z - arena.position.z) * k;
+  const o = IW_OFF(), y = arena.rotation.y;
+  arena.position.x += (head.p.x - Math.sin(y) * o - arena.position.x) * k; arena.position.z += (head.p.z - Math.cos(y) * o - arena.position.z) * k;
   arena.rotation.y += wrapAng(bodyYaw() - arena.rotation.y) * k;
 }
 function calibrate() {
   arenaFromHead();
   const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated() && y > 1.1) { calibRef = y; lastStandY = y; }
+  if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   DET.sp.ref = y;
@@ -6457,6 +6726,7 @@ function gameStep(dt, t) {
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
+  iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt;
@@ -7666,6 +7936,24 @@ const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
 function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
 const _pvw = new V3();
+// Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición de ~7,5 s: te doblas, caminas con
+// las manos por las tres parejas de huellas, flexión, vuelves andando y te pones de pie. PV.iwSkip: se salta la pareja del medio
+const IWS = [[0, 1.6, -1], [0.9, 0.95, 0], [1.7, 0.7, 1], [2.6, 0.45, 2], [3.3, -1, 2], [3.9, -1, 2], [4.6, 0.45, 2], [5.3, 0.7, 1], [6.0, 0.95, 0], [7.0, 1.6, -1], [7.6, 1.6, -1]];
+function iwSim(dt) {
+  if (PV.crouch || PV.iwAuto) PV.iwT = ((PV.iwT || 0) + dt) % 7.6;
+  const u = PV.iwT || 0, i = IWS.findIndex((k, j) => j + 1 < IWS.length && u < IWS[j + 1][0]), a = IWS[i], b = IWS[i + 1], k = smooth(clamp((u - a[0]) / (b[0] - a[0]) * 1.6, 0, 1));
+  const low = 0.45 - settings.pushDepth / 100 - 0.06, hy = v => v < 0 ? low : v, y = lerp(hy(a[1]), hy(b[1]), k);
+  const S = IW_OFF(), zf = v => v < 0 ? S : v === 0 ? S - 0.3 : v === 1 ? S * 0.45 : 0, z = lerp(zf(a[2]), zf(b[2]), k);
+  camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;
+  if (PV.crouch || PV.iwAuto) camera.rotation.x = lerp(-0.12, -0.75, clamp((1.6 - y) / 1.1, 0, 1)); // mirando al suelo al bajar
+  const out = {};
+  for (const s of ['left', 'right']) {
+    const at = v => { if (v < 0) return new V3(s === 'left' ? -0.22 : 0.22, Math.max(0.75, y - 0.75), S); const pr = IW.prints.find(p => p.side === s && p.pair === (PV.iwSkip && v === 1 ? 0 : v)); return new V3(pr.x, 0.05, pr.z + 0.06); };
+    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.sin(Math.PI * k); // la mano se levanta entre huella y huella
+    out[s] = arena.localToWorld(w);
+  }
+  return out;
+}
 function previewInput(dt) {
   const ex = settings.exercise;
   const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
@@ -7698,9 +7986,12 @@ function previewInput(dt) {
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
   if (PV.keys.KeyD) camera.position.addScaledVector(r, sp); if (PV.keys.KeyA) camera.position.addScaledVector(r, -sp);
-  camera.position.y = PV.y; camera.updateMatrixWorld();
+  camera.position.y = PV.y;
+  const iw = ex === 'inchworm' && GAME_STATES.includes(state) && state !== 'calib' ? iwSim(dt) : null; // inchworm: Espacio hace la repetición entera
+  camera.updateMatrixWorld();
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
+  if (iw) for (const s of ['left', 'right']) { const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(iw[s]); }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
   if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }

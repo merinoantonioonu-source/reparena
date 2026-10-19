@@ -41,6 +41,24 @@ const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
 function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
 const _pvw = new V3();
+// Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición de ~7,5 s: te doblas, caminas con
+// las manos por las tres parejas de huellas, flexión, vuelves andando y te pones de pie. PV.iwSkip: se salta la pareja del medio
+const IWS = [[0, 1.6, -1], [0.9, 0.95, 0], [1.7, 0.7, 1], [2.6, 0.45, 2], [3.3, -1, 2], [3.9, -1, 2], [4.6, 0.45, 2], [5.3, 0.7, 1], [6.0, 0.95, 0], [7.0, 1.6, -1], [7.6, 1.6, -1]];
+function iwSim(dt) {
+  if (PV.crouch || PV.iwAuto) PV.iwT = ((PV.iwT || 0) + dt) % 7.6;
+  const u = PV.iwT || 0, i = IWS.findIndex((k, j) => j + 1 < IWS.length && u < IWS[j + 1][0]), a = IWS[i], b = IWS[i + 1], k = smooth(clamp((u - a[0]) / (b[0] - a[0]) * 1.6, 0, 1));
+  const low = 0.45 - settings.pushDepth / 100 - 0.06, hy = v => v < 0 ? low : v, y = lerp(hy(a[1]), hy(b[1]), k);
+  const S = IW_OFF(), zf = v => v < 0 ? S : v === 0 ? S - 0.3 : v === 1 ? S * 0.45 : 0, z = lerp(zf(a[2]), zf(b[2]), k);
+  camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;
+  if (PV.crouch || PV.iwAuto) camera.rotation.x = lerp(-0.12, -0.75, clamp((1.6 - y) / 1.1, 0, 1)); // mirando al suelo al bajar
+  const out = {};
+  for (const s of ['left', 'right']) {
+    const at = v => { if (v < 0) return new V3(s === 'left' ? -0.22 : 0.22, Math.max(0.75, y - 0.75), S); const pr = IW.prints.find(p => p.side === s && p.pair === (PV.iwSkip && v === 1 ? 0 : v)); return new V3(pr.x, 0.05, pr.z + 0.06); };
+    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.sin(Math.PI * k); // la mano se levanta entre huella y huella
+    out[s] = arena.localToWorld(w);
+  }
+  return out;
+}
 function previewInput(dt) {
   const ex = settings.exercise;
   const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? settings.lungeDepth / 100 + 0.1 : ex === 'dips' ? settings.dipDepth / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : settings.squatDepth / 100 + 0.12;
@@ -73,9 +91,12 @@ function previewInput(dt) {
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
   if (PV.keys.KeyW) camera.position.addScaledVector(f, sp); if (PV.keys.KeyS) camera.position.addScaledVector(f, -sp);
   if (PV.keys.KeyD) camera.position.addScaledVector(r, sp); if (PV.keys.KeyA) camera.position.addScaledVector(r, -sp);
-  camera.position.y = PV.y; camera.updateMatrixWorld();
+  camera.position.y = PV.y;
+  const iw = ex === 'inchworm' && GAME_STATES.includes(state) && state !== 'calib' ? iwSim(dt) : null; // inchworm: Espacio hace la repetición entera
+  camera.updateMatrixWorld();
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
   for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
+  if (iw) for (const s of ['left', 'right']) { const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(iw[s]); }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
   if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }

@@ -102,6 +102,15 @@ function noise(dest, { t = 0, a = 0.002, d = 0.3, gain = 0.3, type = 'lowpass', 
 }
 function shaper(dest, hard) { const w = AUD.C.createWaveShaper(); w.curve = hard ? AUD.curveHard : AUD.curve; w.oversample = '2x'; w.connect(dest); return w; }
 
+function roarSynth(pos, s) {
+  if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
+  const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
+  bp.frequency.setValueAtTime(320, T); bp.frequency.linearRampToValueAtTime(1000, T + 0.5); bp.frequency.linearRampToValueAtTime(260, T + 1.7); bp.connect(sh);
+  const am = C.createGain(); am.gain.value = 0.6; am.connect(bp);
+  const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = 31; lg.gain.value = 0.45; lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + 1.9);
+  [55, 58.4, 110.7, 83].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s * 1.5, T); os.frequency.linearRampToValueAtTime(f * s, T + 0.4); os.frequency.linearRampToValueAtTime(f * s * 0.62, T + 1.8); os.connect(envGain(T, 0.15, 0.22, 1.55, am)); os.start(T); os.stop(T + 1.9); });
+  noise(o, { type: 'bandpass', f: 1900, q: 1.3, a: 0.12, d: 1.4, gain: 0.22 });
+}
 const SND = {
   click() { if (!sndOK()) return; const o = sout(null, { rev: 0.05, gain: 0.5 }); tone(o, { type: 'square', f: 1800, d: 0.025, gain: 0.08 }); noise(o, { type: 'highpass', f: 4000, d: 0.02, gain: 0.08 }); },
   tick() { if (!sndOK()) return; const o = sout(null, { rev: 0, gain: 0.3 }); tone(o, { type: 'triangle', f: 2400, d: 0.015, gain: 0.05 }); },
@@ -172,15 +181,9 @@ const SND = {
     os.frequency.setValueAtTime(f0, T); os.frequency.linearRampToValueAtTime(f0 * 1.6, T + 0.15); os.frequency.linearRampToValueAtTime(f0 * 1.1, T + 0.35);
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
-  roar(pos, s = 1) {
-    if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
-    const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
-    bp.frequency.setValueAtTime(320, T); bp.frequency.linearRampToValueAtTime(1000, T + 0.5); bp.frequency.linearRampToValueAtTime(260, T + 1.7); bp.connect(sh);
-    const am = C.createGain(); am.gain.value = 0.6; am.connect(bp);
-    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = 31; lg.gain.value = 0.45; lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + 1.9);
-    [55, 58.4, 110.7, 83].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * s * 1.5, T); os.frequency.linearRampToValueAtTime(f * s, T + 0.4); os.frequency.linearRampToValueAtTime(f * s * 0.62, T + 1.8); os.connect(envGain(T, 0.15, 0.22, 1.55, am)); os.start(T); os.stop(T + 1.9); });
-    noise(o, { type: 'bandpass', f: 1900, q: 1.3, a: 0.12, d: 1.4, gain: 0.22 });
-  },
+  roar(pos, s = 1) { roarSynth(pos, s); },
+  // el cocodrilo: más grave, con un bufido áspero encima
+  crocRoar(pos, s = 1) { if (!sndOK()) return; roarSynth(pos, s * 0.62); const o = sout(pos, { rev: 0.4, gain: 0.9, ref: 2 }); noise(shaper(o, true), { type: 'bandpass', f: 900, to: 500, q: 0.8, a: 0.08, d: 1.2, gain: 0.35 }); },
   hiss(pos, s = 1) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: 0.8, ref: 0.6 });
     noise(o, { type: 'highpass', f: 3200 / s, a: 0.12, d: 0.7, gain: 0.35 }); noise(o, { type: 'bandpass', f: 6500 / Math.sqrt(s), q: 2, a: 0.1, d: 0.6, gain: 0.25 });
@@ -190,6 +193,12 @@ const SND = {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.1, gain: 0.7, ref: 0.5 });
     const n = 5 + Math.floor(Math.random() * 7); let t = 0;
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
+  },
+  // mordisco del cocodrilo: las fauces se cierran de golpe (chasquido de dientes y golpe sordo)
+  chomp(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 1.0, ref: 1.5 });
+    noise(shaper(o, true), { type: 'bandpass', f: 2600, q: 1.5, a: 0.001, d: 0.05, gain: 0.8 }); noise(o, { type: 'highpass', f: 4500, t: 0.012, d: 0.03, gain: 0.4 });
+    tone(o, { f: 140, to: 50, d: 0.18, gain: 0.6 }); noise(o, { brown: true, f: 500, to: 120, d: 0.2, gain: 0.5 });
   },
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
@@ -305,8 +314,8 @@ const SND = {
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
-  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
-  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0], crocRoar: ['rugido-cocodrilo', 0],
+  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], chomp: ['mordisco-cocodrilo', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
