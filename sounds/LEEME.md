@@ -23,6 +23,8 @@ Vale `.mp3`, `.ogg` o `.wav` (por ejemplo `rayo.mp3`). Si un archivo no está, s
 | `paso-robot` | Cada paso de un robot. |
 | `servo` | Un robot levanta el brazo para golpear. |
 | `compuerta` | Se abre una compuerta. |
+| `rugido-cocodrilo` | Un hombre-cocodrilo ruge (al salir, al amenazarte con las fauces abiertas, al recibir un disparo o al caer). |
+| `mordisco-cocodrilo` | Un hombre-cocodrilo cierra las fauces de golpe al morderte. |
 | `siseo-arana` | Una araña sisea. |
 | `patas-arana` | Una araña corretea o salta. |
 | `aplastar` | Revientas una araña o un avispón (chapoteo viscoso). |
