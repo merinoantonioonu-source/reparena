@@ -882,9 +882,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
-    const moves = new Set(), deb0 = RA.debris.length; let maxDeb = 0;
+    const moves = new Set(); let maxDeb = 0, deb0 = RA.debris.length; // la base baja si desaparecen restos de antes
     // si al revés se cuela un corte, dice en qué fase del movimiento (preparar, barrido, retirada, espera) para cazarlo
-    const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
+    const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
     for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
       const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
       XRS.headY = 1.7; XRS.headX = 0;
@@ -899,7 +899,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
         holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, 0.3); FR('retreat', t); // retira la hoja hacia ti, sin volver a pasar por el bloque
         for (let k = 0; k < 20; k++) FR('wait' + k, t); continue; // la hoja se queda retirada hasta el siguiente
       }
-      FR('idle', null); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
+      FR('idle', null); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
     }
     const hits = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.7 && h[2] === 60).length;
     log(`sword touch ${name}: cuts ${RA.stats.reps} misses ${RA.stats.taken} moves ${[...moves].join(',')} halves ${maxDeb} slice haptics ${hits}`);

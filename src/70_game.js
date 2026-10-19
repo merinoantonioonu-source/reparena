@@ -1336,7 +1336,7 @@ function aimSources() {
 // ordenador dispara sola. El gesto se mide respecto a la cabeza; si las gafas pierden la mano en plena sacudida hacia un
 // enemigo, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 50, THROW_STOP = 0.55; // frena de golpe: por debajo del 55 % del pico
+const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 50, THROW_STOP = 0.55, THROW_JUMP = 12; // frena de golpe: por debajo del 55 % del pico
 const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3(), pdir: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
@@ -1381,7 +1381,9 @@ function throwStep(dt, t) {
     }
     T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
+    if (_thv.length() > THROW_JUMP) { T.v.set(0, 0, 0); T.peak = 0; T.armed = false; continue; } // salto del seguimiento: no es un gesto
+    T.v.lerp(_thv, 0.6);
     const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
     if (T.armed && T.peak > THROW_V && sp < T.peak * THROW_STOP) { // frenó de golpe: si la sacudida iba hacia un enemigo, sale el rayo
       const tg = _thr.distanceTo(T.from) > THROW_D && throwTarget(h.wrist, T.pdir);
