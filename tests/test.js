@@ -964,7 +964,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });
     { const s0 = RA.stats.shots; XRS.noHands = true; XRS.headY = 1.38; for (let i = 0; i < 70; i++) { frame(1, 16, xrFrame); scan(); } XRS.headY = 1.7; for (let i = 0; i < 30; i++) { frame(1, 16, xrFrame); scan(); }
       XRS.noHands = false; XRS.hands = rest(); for (let i = 0; i < 10; i++) { frame(1, 16, xrFrame); scan(); } var noHandShots = RA.stats.shots - s0 + autoOrbs, noHandCharges = charges(); }
-    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), d = new THREE.Vector3(0, -0.8, -0.6).normalize();
+    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0);
+      // hacia el suelo, por el lado más alejado de todos los enemigos (un volador puede bajar mucho)
+      const cands = [[0, -0.8, -0.6], [0.6, -0.8, -0.2], [-0.4, -0.8, -0.4], [0.3, -0.9, -0.3], [0.7, -0.7, 0.1]].map(c => new THREE.Vector3(...c).normalize());
+      const gap = c => Math.min(Math.PI, ...RA.enemies.filter(x => x.alive).map(x => x.center(new THREE.Vector3()).sub(back).angleTo(c)));
+      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a);
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 5; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); var floorShots = RA.stats.shots - s0, floorCharges = charges(); }
     { const s0 = RA.stats.shots; XRS.hands.right = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.05); frame(6, 16, xrFrame);
