@@ -38,6 +38,7 @@ const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
+  { key: 'bpm', g: 'partida', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
@@ -86,10 +87,9 @@ const SCHEMA = [
   { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Rodillas: diamante junto a las rodillas.' },
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
-  { key: 'bpm', g: 'toques', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch'], hint: 'Con un ritmo, los objetivos llegan a ti en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
   { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
-  { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'auto', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
+  { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
 
   // Espadas (con los mandos): en Combate contra robots, cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques,
@@ -171,6 +171,8 @@ function fmtVal(f, v = settings[f.key]) {
   else if (LEGACY_MODES[s.mode]) { settings.mode = 'combat'; if (s.foes === undefined) Object.assign(settings, LEGACY_MODES[s.mode], s.mode === 'flyers' && ['hands', 'gaze'].includes(s.aim) ? { aim: s.aim } : {}); }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
+  if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso

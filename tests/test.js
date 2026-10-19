@@ -50,7 +50,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -203,6 +203,26 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.enemies.forEach(e => rsides.add(e.pos.x < 0 ? 'izq' : 'der'));
   }, 420, s => s.kills < 4 ? 'el remo en plancha no mata arañas' : rsides.size < 2 ? 'en el remo en plancha las arañas no llegan por los dos lados' : '');
   RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
+  // las compuertas son sólidas: ningún robot se mete en sus pilares o en los bloques de los lados, ni cruza el hueco con las puertas cerradas
+  { let inSolid = 0, closedPass = 0, frames = 0;
+    await runConfig('Robots y compuertas sólidas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', maxAlive: 6, spawnGap: 0.4, walkTime: 8, waves: 2, repsWave: 6 }, t => {
+      squatSim(2.6)(t); frames++;
+      const S = RA.gateSolids();
+      for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot') continue;
+        if (e.out && S.some(c => Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < c.r * 0.8)) inSolid++;
+        const g = e.gate, r = g.g.rotation.y, lx = (e.pos.x - g.x) * Math.cos(r) - (e.pos.z - g.z) * Math.sin(r), lz = (e.pos.x - g.x) * Math.sin(r) + (e.pos.z - g.z) * Math.cos(r);
+        if (Math.abs(lx) < 1.2 * g.scale && Math.abs(lz) < 0.15 * g.scale && g.open < 0.4) closedPass++; }
+    }, 420, () => '');
+    log(`gates are solid: robot frames inside a pillar or block ${inSolid}, crossing a closed door ${closedPass} (of ${frames} frames)`);
+    if (inSolid) errors.push('los robots atraviesan los pilares o los bloques de las compuertas');
+    if (closedPass) errors.push('los robots cruzan compuertas cerradas'); }
+  // ritmo en Combate: los enemigos salen en el pulso
+  { let spawnBeats = [], lastN = 0;
+    await runConfig('Combate con ritmo (100 BPM)', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'squat', bpm: 100, spawnGap: 0.9 }, t => { squatSim()(t); if (RA.enemies.length > lastN) spawnBeats.push(RA.beatNow() % 1); lastN = RA.enemies.length; }, 420, s => s.kills < 4 ? 'con ritmo no se juega' : '');
+    const off = spawnBeats.map(f => Math.min(f, 1 - f)), worst = Math.max(0, ...off);
+    log(`combat beat: ${spawnBeats.length} spawns, furthest from a beat ${(worst * 100).toFixed(0)}% of a beat`);
+    if ((spawnBeats.length || !process.env.ONLY) && (!spawnBeats.length || worst > 0.15)) errors.push('con ritmo, los enemigos no salen en el pulso');
+    RA.setSetting('bpm', 0); }
   // Combate: cualquier enemigo con cualquier puntería
   await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
   RA.camera.rotation.set(0, 0, 0);
@@ -1053,6 +1073,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('next session: gates on', again, '· robots', fromGate.size, 'from the placed gates', near);
   if (again !== 2) errors.push('en otra sesión no se recuerda la habitación colocada a mano');
   if (fromGate.size < 2 || near < fromGate.size) errors.push('los robots no salen de las compuertas colocadas a mano');
+  // ajustar lo colocado: se agarra una compuerta pellizcando sobre ella, se arrastra mirando a otro sitio y se suelta
+  { RA.exitAll(); frame(2, 16, xrFrame); await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame); RA.lobbyMenu(); frame(2, 16, xrFrame);
+    press('Ajustar (arrastrar)'); frame(2, 16, xrFrame); const R = RA.RPL, g0 = R.gates[0] && { x: R.gates[0].x, z: R.gates[0].z }, n0 = R.gates.length;
+    XRS.noHands = false; XRS.handsAway = true; lookAt(g0.x, g0.z); frame(4, 16, xrFrame); const aim0 = R.aim.clone();
+    XRS.pinch = 'right'; frame(3, 16, xrFrame); const grabbed = !!R.drag; lookAt(1.0, -0.3); frame(6, 16, xrFrame); XRS.pinch = null; frame(3, 16, xrFrame);
+    const g1 = R.gates[0]; XRS.headQ = null; press('Guardar'); frame(20, 16, xrFrame);
+    const st = JSON.parse(storage.get('reparena3-roomset') || 'null');
+    log(`drag in placement: prefilled ${n0} gates · aim at gate ${aim0.x.toFixed(2)},${aim0.z.toFixed(2)} vs ${g0.x.toFixed(2)},${g0.z.toFixed(2)} · grabbed ${grabbed} · moved to ${g1.x.toFixed(2)},${g1.z.toFixed(2)} (wall ${g1.wall}) · saved gates ${st && st.gates.length}`);
+    if (n0 !== 2 || !grabbed || Math.hypot(g1.x - g0.x, g1.z - g0.z) < 0.5 || !st || st.gates.length !== 2) errors.push('no se puede ajustar la habitación arrastrando lo colocado');
+    XRS.noHands = true; XRS.handsAway = false; }
   XRS.headY = 1.7; RA.exitAll(); frame(2, 16, xrFrame); XRS.room = null; XRS.noHands = false; RA.setSetting('roomMode', 'scan');
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
@@ -1090,6 +1120,7 @@ function makeXRFrame() {
           pos = i === 0 ? w : { x: w.x + (i % 5) * 0.004 * sg, y: w.y + Math.sin(a) * 0.08 * (0.6 + (i % 5) * 0.1), z: w.z - Math.cos(a) * 0.08 * (0.6 + (i % 5) * 0.1) };
         }
         if (XRS.hands) { const g = XRS.hands[j.side]; pos = { x: g.x + (i % 5) * 0.01, y: g.y, z: g.z - Math.floor(i / 5) * 0.02 }; }
+        if (XRS.handsAway) pos = { x: pos.x, y: XRS.headY - 0.9, z: 0.4 }; // manos bajadas, junto al cuerpo
         if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };

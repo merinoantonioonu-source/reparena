@@ -382,7 +382,7 @@ function tapTempo() {
   if (TCH.taps.length >= 4) {
     const d = []; for (let i = 1; i < TCH.taps.length; i++) d.push(TCH.taps[i] - TCH.taps[i - 1]);
     d.sort((a, b) => a - b); const med = d[d.length >> 1];
-    if (med > 0.25 && med < 1.6) { setSetting('bpm', Math.round(60 / med)); TCH.beat0 = now; return true; }
+    if (med > 0.25 && med < 1.6) { setSetting('bpm', Math.round(60 / med)); TCH.beat0 = now; if (typeof BEAT !== 'undefined') BEAT.off = null; return true; }
   }
   return false;
 }
@@ -395,7 +395,7 @@ async function spotifyTempo() {
 }
 function tempoRows(back) {
   const P = settings.bpm;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · los objetivos llegan en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
   const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { tapTempo(); back(); } }];
   if (spConnected()) items.push({ label: 'Ritmo de Spotify', onPress: () => { spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
   if (P) items.push({ label: 'Sin ritmo', onPress: () => { setSetting('bpm', 0); back(); } });

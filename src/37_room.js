@@ -58,8 +58,9 @@ function roomFrame(frame, ref, t) {
   // al recentrar, las poses cambian: se vuelve a leer todo (al empezar otra sesión, también: roomSessionStart)
   if (!ROOM.refs.has(ref)) { ROOM.refs.add(ref); if (ref.addEventListener) ref.addEventListener('reset', () => { ROOM.sig = ''; ROOM.fp = ''; ROOM.pollT = -1e9; }); }
   if (!roomWants() || t - ROOM.pollT < 1) return;
-  const planes = frame.detectedPlanes, meshes = frame.detectedMeshes; if (!planes && !meshes) return;
+  const planes = frame.detectedPlanes, meshes = frame.detectedMeshes; if (!planes && !meshes) { ROOM.diag = { none: true }; return; }
   ROOM.pollT = t;
+  { const L = new Set(); if (planes) planes.forEach(p => L.add(roomLabel(p) || 'sin etiqueta')); ROOM.diag = { planes: planes ? planes.size : 0, meshes: meshes ? meshes.size : 0, labels: [...L].slice(0, 6) }; } // lo que entrega el visor (para el diagnóstico)
   let sig = '';
   if (planes) planes.forEach(p => { sig += (p.lastChangedTime || 0) + ','; });
   sig += '|'; if (meshes) meshes.forEach(m => { sig += (m.lastChangedTime || 0) + ','; });
@@ -278,7 +279,7 @@ function makeRoomPlan() { return roomMode() === 'manual' ? manualPlan() : scanPl
 /* ---------- Colocar a mano, en las gafas ---------- */
 // Pasos: sitio de juego → compuertas → trampillas → marcador. Lo que colocas sale donde miras al suelo (o donde apunta
 // tu mano); «Colocar aquí» o pellizcar lo deja. Con la habitación escaneada, compuertas y marcador se pegan a la pared.
-const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null };
+const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null, drag: null, sel: null };
 const rplGood = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplBad = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplDim = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false });
@@ -320,10 +321,31 @@ function rplShowPlaced() {
   if (RPL.spot) add('spot', RPL.spot);
   RPL.gates.forEach(o => add('gate', o, RPL.gs)); RPL.hatches.forEach(o => add('hatch', o)); if (RPL.board) add('board', RPL.board);
 }
-function startRoomPlace(back) {
-  Object.assign(RPL, { on: true, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: ROOM.ceilY > 1.6 ? clamp((ROOM.ceilY - 0.1) / 4.4, 0.4, 0.72) : RSET.gs, back, aimOk: false });
+// adjust: empieza con lo que ya hay (lo colocado a mano o, si no, lo que salió del escaneo) para solo arrastrar lo que esté mal
+function startRoomPlace(back, adjust = false) {
+  Object.assign(RPL, { on: true, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: ROOM.ceilY > 1.6 ? clamp((ROOM.ceilY - 0.1) / 4.4, 0.4, 0.72) : RSET.gs, back, aimOk: false, drag: null, sel: null });
+  const S = eqPose('spot');
+  if (adjust && S.set && (RSET.gates.length || RSET.hatches.length || RSET.board)) { // lo guardado, en el mundo
+    const W = o => { const w = eqWorld(S, o.x, 0, o.z, new V3()); return { x: w.x, z: w.z, yaw: (o.yaw || 0) + S.yaw }; };
+    Object.assign(RPL, { step: 'gates', spot: { x: S.x, z: S.z, yaw: S.yaw }, gs: RSET.gs, gates: RSET.gates.map(W), hatches: RSET.hatches.map(W), board: RSET.board ? Object.assign(W(RSET.board), { wall: RSET.board.wall }) : null });
+  } else if (adjust && ROOM.plan && ROOM.plan.gates.some(Boolean)) { // lo del escaneo: compuertas, trampillas y marcador tal como están
+    arena.updateMatrixWorld(); const ay = arena.rotation.y, W = (x, z, rot) => { const w = arena.localToWorld(new V3(x, 0, z)); return { x: w.x, z: w.z, yaw: (rot || 0) + ay }; };
+    Object.assign(RPL, { step: 'gates', spot: { x: arena.position.x, z: arena.position.z, yaw: ay }, gs: ROOM.plan.gs,
+      gates: ROOM.plan.gates.filter(Boolean).map(g => Object.assign(W(g.x, g.z, g.rot), { wall: true })), hatches: hatches.filter(h => h.on).map(h => W(h.x, h.z, 0)),
+      board: ROOM.plan.board ? Object.assign(W(ROOM.plan.board.x, ROOM.plan.board.z, ROOM.plan.board.rot), { wall: ROOM.plan.board.wall !== false }) : null });
+  }
   rplGroup.visible = true; rplShowPlaced(); SND.click(); roomPlaceMenu();
 }
+// Arrastrar: lo colocado más cercano a donde apuntas (si está a menos de 0,7 m)
+function rplNearest(p) {
+  let best = null, bd = 0.7;
+  const tryOne = (list, i, kind) => { const o = i === null ? RPL.board : list[i], d = Math.hypot(o.x - p.x, o.z - p.z); if (d < bd) { bd = d; best = { list, i, kind }; } };
+  RPL.gates.forEach((o, i) => tryOne(RPL.gates, i, 'gate')); RPL.hatches.forEach((o, i) => tryOne(RPL.hatches, i, 'hatch')); if (RPL.board) tryOne(null, null, 'board');
+  return best;
+}
+const rplGet = r => r.i === null ? RPL.board : r.list[r.i];
+function rplSet(r, pose) { if (r.i === null) RPL.board = pose; else r.list[r.i] = pose; }
+function rplTurn(da) { const r = RPL.sel; if (!r) { SND.partial(); return; } const o = rplGet(r); o.yaw = (o.yaw || 0) + da; o.wall = false; rplShowPlaced(); SND.tick(); }
 function endRoomPlace(save) {
   if (save && RPL.spot) {
     const S = eqPose('spot'); Object.assign(S, { x: RPL.spot.x, z: RPL.spot.z, yaw: RPL.spot.yaw }); S.anchor = null; equipChanged('spot'); equipCommit('spot');
@@ -358,6 +380,8 @@ function roomPlaceMenu() {
     { t: 'btns', items: [{ label: 'Siguiente: marcador', onPress: () => { RPL.step = 'board'; roomPlaceMenu(); } }] });
   else rows.push({ t: 'text', text: `Marcador: donde quieras verlo. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se cuelga en ella.' : ''}` },
     { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
+  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto, apúntale y pellizca (o aprieta el gatillo): síguelo con la mano y suéltalo donde vaya.', color: '#a49fc8' },
+    { t: 'btns', items: [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }, { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }] });
   rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
   openMenu(rows);
 }
@@ -374,9 +398,15 @@ function updateRoomPlace(dt) {
   for (const s of ['right', 'left']) { const h = hands[s]; if (h.rayOk && h.rayD.y < -0.15 && !(h.tipOk && menu && menu.group && h.tip.distanceTo(menu.group.getWorldPosition(_rpd)) < 0.3)) { o = h.rayO; d = h.rayD; break; } }
   if (!o && !atMenu) { const f = fwd(); if (f.y < -0.08) { o = head.p; d = f; } }
   if (o) { const t = -o.y / d.y; if (t > 0 && t < 12) { RPL.aim.set(o.x + d.x * t, 0, o.z + d.z * t); RPL.aimOk = true; } }
-  // pellizcar coloca
-  for (const s of ['left', 'right']) { const p = hands[s].pinch; if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) rplPlace(); RPL.pinch[s] = p; }
+  // pellizcar (o el gatillo): sobre algo ya puesto, lo agarra y lo arrastra mientras sigas pellizcando; en otro sitio, coloca
+  for (const s of ['left', 'right']) {
+    const p = hands[s].pinch || hands[s].trig;
+    if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) { const r = rplNearest(RPL.aim); if (r) { RPL.drag = Object.assign(r, { side: s }); RPL.sel = r; SND.tick(); } else rplPlace(); }
+    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); }
+    RPL.pinch[s] = p;
+  }
   if (!RPL.on) return;
+  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; return; }
   const kind = { gates: 'gate', hatches: 'hatch', board: 'board' }[RPL.step];
   for (const k in rplGhost) rplGhost[k].visible = false;
   if (RPL.step === 'spot') { const g = rplGhost.spot; g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = bodyYaw(); return; }
@@ -403,7 +433,7 @@ function roomRows(back) {
   if (!xrActive || preview || !arMode) return [];
   const s = renderer.xr.getSession(), m = settings.roomMode, P = roomPlan(), n = P ? P.gates.filter(Boolean).length : 0;
   const rows = [{ t: 'field', key: 'roomMode', after: back }, ...(m !== 'off' ? [{ t: 'field', key: 'roomShow' }, { t: 'field', key: 'roomOcclude' }] : [])];
-  const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) });
+  const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) }), adjust = label => ({ label, style: 'primary', onPress: () => startRoomPlace(back, true) });
   let txt, ok = false; const btns = [];
   if (m === 'off') txt = 'Disposición fija: las compuertas no se adaptan a tu habitación';
   else if (m === 'manual') {
@@ -413,6 +443,10 @@ function roomRows(back) {
   else if (!ROOM.walls.length) { txt = 'Habitación sin escanear: escanéala para que las compuertas salgan de tus paredes, o colócala a mano'; btns.push(place('Colocar a mano')); }
   else if (!n) { txt = `La habitación no cumple los requisitos: ${P && P.why ? P.why : 'no cabe ninguna compuerta'}. Hace falta una pared libre de al menos ${fmtNum(2 * 1.85 * (P ? P.gs : 0.55) + 0.1)} m de ancho a 1,7–7,5 m delante de ti, con el camino despejado. Puedes colocarla a mano`; btns.push(place('Colocar a mano', 'primary')); }
   else { ok = true; txt = `Habitación: ${ROOM.walls.length} ${ROOM.walls.length === 1 ? 'pared' : 'paredes'}, ${ROOM.furn.length} ${ROOM.furn.length === 1 ? 'mueble' : 'muebles'} · ${n} ${n === 1 ? 'compuerta' : 'compuertas'} en tus paredes`; }
+  if (m === 'manual' && manualReady()) btns.unshift(adjust('Ajustar (arrastrar)'));
+  else if (m === 'scan' && ROOM.plan && ROOM.plan.gates.some(Boolean)) btns.unshift(adjust('Ajustar a mano'));
+  // diagnóstico: lo que entrega el visor, para saber por qué el escaneo no coloca las compuertas
+  const D = ROOM.diag; if (m !== 'off') rows.push({ t: 'text', text: !D ? 'Escaneo: aún sin datos del visor' : D.none ? 'Escaneo: el visor no entrega planos (¿sin permiso de «datos del espacio»? sal y vuelve a entrar y acéptalo)' : `Escaneo: ${D.planes} planos, ${D.meshes} mallas · ${D.labels.join(', ') || 'sin etiquetas'}`, color: '#a49fc8' });
   rows.push({ t: 'text', text: txt, color: ok ? '#3cf0c6' : m === 'off' ? '#a49fc8' : '#ffd166' });
   if (m === 'scan' && s && s.initiateRoomCapture) btns.push({ label: ROOM.walls.length ? 'Volver a escanear' : 'Escanear la habitación', onPress: () => { s.initiateRoomCapture().catch(() => {}).then(() => { ROOM.sig = ''; back(); }); } });
   if (btns.length) rows.push({ t: 'btns', items: btns });
