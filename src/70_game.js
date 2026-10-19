@@ -1286,12 +1286,12 @@ function lobbyMenu() {
   rows.push({ t: 'btns', items: sub });
   if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows);
-  m.rebuild = () => lobbyMenu();
+  m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido
 }
 // Submenús del principal: elegir ejercicio, música, y sala y vista (realidad mixta); «Volver» deja el principal en el mismo sitio
 function exerciseMenu(back) {
   const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = () => exerciseMenu(back);
+  const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
 function musicMenu(back) {
   const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];

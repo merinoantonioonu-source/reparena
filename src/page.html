@@ -25,6 +25,7 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(2.6rem,9vw,4.6rem)
 h1 span{color:var(--pink)}
 .lede{margin:0;max-width:62ch;color:var(--muted);font-size:1.1rem}
 h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.04em;margin:0 0 12px}
+.demo{margin-top:14px;max-width:720px}.demo canvas{width:100%;height:auto;display:block;border-radius:14px}
 .cards{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
 .cards .zone{grid-column:1/-1;margin:10px 0 -2px;font-size:.95rem;letter-spacing:.04em;color:var(--gold)}
 .cards.four{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -227,6 +228,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Elige una postura y mezcla movimientos: sentadilla + salto, flexión + plancha aguantada, abdominal + oblicuo… en orden o al azar.</small></label>
     </div>
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
+    <div class="demo"><canvas id="demoCv" width="720" height="420" aria-label="Animación del ejercicio elegido: cómo se hace y qué pasa al hacerlo"></canvas></div>
   </section>
 
   <section>

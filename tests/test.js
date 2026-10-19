@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, spVol, WARN, onPartial, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -628,6 +628,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (want ? RA.stats.reps < want : RA.stats.reps) errors.push(`flexiones ${name}: ${RA.stats.reps} repeticiones`);
     RA.exitAll(); frame(2, 16, xrFrame);
   }
+
+  // ---- Caricatura del ejercicio: todos los ejercicios en todos sus modos se dibujan; junto al menú y en la espera ----
+  { const bad = [];
+    for (const mode of Object.keys(RA.MODE_EX)) for (const ex of RA.MODE_EX[mode]) { if (!RA.DEMO[ex]) { bad.push(ex + ' sin caricatura'); continue; } for (const t of [0.1, 0.9, 1.7, 2.6]) { try { RA.demoDraw(RA.DEMOP.ctx, RA.DEMOP.W, RA.DEMOP.H, ex, mode, t); } catch (e) { bad.push(`${ex}/${mode}: ${e.message}`); break; } } }
+    log('demo drawings:', bad.length ? bad.join(' · ') : 'all ok'); if (bad.length) errors.push('caricaturas: ' + bad.join(' · '));
+    RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(3);
+    const inMenu = () => { let n = 0; RA.menu && RA.menu.group.traverse(o => { if (o.material === RA.DEMOP.mesh.material) n++; }); return n; };
+    const m1 = inMenu(); press('EMPEZAR'); frame(10); const waitVis = RA.DEMOV.head.visible, st = RA.state;
+    for (let i = 0; i < 300 && RA.state !== 'play'; i++) frame(1);
+    log('demo next to the lobby menu', m1, '· during', st, 'visible', waitVis, '· in play hidden', !RA.DEMOV.head.visible, '· texture alive', !RA.DEMOP.tex.disposed);
+    if (m1 !== 1 || !waitVis || RA.DEMOV.head.visible) errors.push('la caricatura no aparece junto al menú o en la espera');
+    RA.exitAll(); frame(1); }
 
   // ---- Avisos de corrección: grandes en el suelo durante 4 s ----
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(3); press('EMPEZAR');

@@ -134,6 +134,7 @@ const SCHEMA = [
   { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
   { key: 'roomShow', g: 'sistema', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
   { key: 'boltLight', g: 'sistema', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
+  { key: 'demo', g: 'sistema', label: 'Caricatura del ejercicio', short: 'Caricatura', type: 'toggle', def: 1, hint: 'Junto al menú y mientras calibras o esperas, un monigote enseña el movimiento correcto y qué pasa al hacerlo.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
   { key: 'volume', g: 'sistema', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
   { key: 'ambient', g: 'sistema', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' }
