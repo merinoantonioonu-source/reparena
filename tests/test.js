@@ -946,7 +946,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ---- Combate con las manos desnudas: la repetición carga UN rayo y se lanza con el gesto (atrás y adelante deprisa) con
   // cualquier mano; igual con las pistolas activadas (sin mandos no se dispara pellizcando) ----
   for (const [variant, pis] of [['puntería con las manos', 0], ['pistolas sin mandos', 1]]) {
-    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: pis ? 'auto' : 'hands', exercise: 'squat', lives: 0, waves: 1, repsWave: 5, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: pis, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: pis ? 'auto' : 'hands', exercise: 'squat', lives: 0, waves: 1, repsWave: 14, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: pis, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
     const rest = () => ({ left: new THREE.Vector3(-0.25, 1.0, -0.1), right: new THREE.Vector3(0.25, 1.0, -0.1) });
     XRS.controllers = false; XRS.headY = 1.7; XRS.hands = rest(); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
     const throwAt = (side, slow) => {
@@ -990,6 +990,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     { const back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       const s0 = RA.stats.shots; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0; }
+    // sacudidas como las de verdad: desde la guardia (manos adelantadas), en arco, con el temblor del seguimiento, deprisa o
+    // despacio (1 m/s), hacia el enemigo esté donde esté, y a veces perdiendo la mano justo al final: deben salir casi todas
+    { const jit = () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006); let fired = 0, tried = 0;
+      for (let r = 0; r < 6; r++) { squat(); for (const side of ['left', 'right']) {
+        for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive) && RA.state !== 'end'; i++) frame(1, 16, xrFrame);
+        const e = RA.enemies.find(x => x.alive); if (!e || RA.state === 'end') continue; tried++;
+        const s0 = RA.stats.shots, g = new THREE.Vector3(side === 'left' ? -0.22 : 0.22, XRS.headY - 0.35, -0.3);
+        for (let k = 0; k < 8; k++) { XRS.hands[side] = g.clone().add(jit()); frame(1, 16, xrFrame); }
+        const n = r % 2 ? 9 : 26, up = new THREE.Vector3(0, 1, 0);
+        for (let k = 1; k <= n; k++) { const d = e.center(new THREE.Vector3()).sub(g).normalize(), u = k / n; XRS.hands[side] = g.clone().addScaledVector(d, 0.42 * u).addScaledVector(up, 0.08 * Math.sin(Math.PI * u)).add(jit()); if (r % 3 === 2 && k === n) XRS.noHands = true; frame(1, 16, xrFrame); }
+        XRS.noHands = false; frame(10, 16, xrFrame); XRS.hands = rest(); frame(6, 16, xrFrame);
+        if (RA.stats.shots > s0) fired++;
+      } }
+      log(`throw XR (${variant}): real-looking flicks from guard → ${fired} of ${tried}`);
+      if (fired < tried - 1) errors.push(`lanzar con la mano (${variant}): las sacudidas desde la guardia no salen siempre (${fired} de ${tried})`); }
     let k = 0; for (let i = 0; i < 30 && RA.state !== 'end'; i++) { squat(); throwAt(k++ % 2 ? 'left' : 'right'); }
     log(`throw XR (${variant}): charges after two reps ${charged} · pinch shots ${pinchShots} · slow push shots ${slowShots} · left ${one}, right ${two}, a third without a rep ${extra} · hand lost mid-throw ${lostShot} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits}`);
     if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);

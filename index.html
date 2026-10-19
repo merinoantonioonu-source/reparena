@@ -5705,6 +5705,7 @@ class Neon extends Robot {
 // Se comportan como los robots (puestos, compuertas, bloqueos); el cuerpo lo mueven sus animaciones: andar, trotar o
 // correr según la velocidad (y al ritmo de lo que avanzan), provocarte (el Imp lanza un hechizo, el Puglin baila), un
 // puñetazo que llega justo al golpear, encogerse al recibir y caer al morir; esperando su turno con música, bailan al compás
+const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22] };
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
@@ -5714,30 +5715,36 @@ class Beast extends Robot {
   roar(pos) { SND.roar(pos, this.K.beast3d === 'puglin' ? 1.9 : 1.4); }
   center(out) { return this.B.chest.getWorldPosition(out); }
   act(n) { let a = this.acts[n]; if (!a) { const c = BEAST.kinds[this.K.beast3d].clips[n]; if (!c) return null; a = this.acts[n] = this.mx.clipAction(c); } return a; }
-  play(n, fade = 0.2, once = false, ts = 1) {
-    const a = this.act(n); if (!a) return; a.timeScale = ts; if (this.cur === n) return;
-    const prev = this.cur && this.acts[this.cur]; this.cur = n;
-    a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
-    if (prev) prev.fadeOut(fade);
+  // pone la animación n (o la reinicia, con restart) y apaga todas las demás: si quedara alguna sonando, se mezclarían las posturas
+  play(n, fade = 0.2, once = false, ts = 1, restart = false) {
+    const a = this.act(n); if (!a) return; a.timeScale = ts; if (this.cur === n && !restart) return;
+    this.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
+    for (const k in this.acts) { const o = this.acts[k]; if (o !== a && o.isScheduled()) { o.timeScale = 1; o.fadeOut(fade); } } // también las paradas (el puñetazo va a mano, con velocidad 0)
   }
   animate(dt, t, spd) {
     if (!this.mx) return;
     const K = this.K, D = this.D, st = this.state; if (spd === true) spd = this.vWalk;
-    if (st === 'windup' && this.prevSt !== 'windup') { // el puñetazo, con el impacto justo al acabar la preparación
-      const cross = Math.random() < 0.6, wind = this.zone ? 1.25 : 0.75; this.atk = cross ? 'Punch_Cross' : 'Punch_Jab'; this.atkTs = (cross ? 0.42 : 0.32) / wind; this.cur = null;
-    }
+    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
     this.prevSt = st;
+    // el puñetazo, llevado a mano: recoge el brazo durante la preparación, lo estira justo en el golpe, lo mantiene un
+    // instante mientras retrocede y lo recoge (BEAST_PUNCH: cuándo empieza a salir y cuándo está del todo estirado)
+    let punchT = -1;
+    if (this.atk && (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.8))) {
+      const [t0, t1] = BEAST_PUNCH[this.atk], dur = BEAST.kinds[K.beast3d].clips[this.atk].duration, wind = this.zone ? 1.25 : 0.75;
+      punchT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : this.st < 0.3 ? t1 : lerp(t1, dur, clamp((this.st - 0.3) / 0.5, 0, 1));
+    }
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
     const v = spd / this.sc; // a escala del modelo
-    if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
-    else if (st === 'windup' || st === 'strike') { want = this.atk; once = true; fade = 0.1; ts = this.atkTs; }
+    if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
+    else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop';
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
     else if (v > 0.12) {
       want = v < (D.walk + D.jog) / 2 ? 'Walk_Loop' : v < (D.jog + D.run) / 2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop';
       ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), 0.5, 1.8); // los pies no patinan
     } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
-    this.play(want, fade, once, ts);
+    this.play(want, fade, once, ts, this.restart); this.restart = false;
+    if (punchT >= 0) this.acts[this.atk].time = punchT;
     this.mx.update(dt);
     // al recibir: se tiñe de rojo y le brillan más los ojos; tambaleo hacia atrás
     this.tint = Math.max(0, this.tint - dt * 4); const m = this.inst.mat; m.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); m.emissiveIntensity = 1 + this.tint * 3;
@@ -5745,19 +5752,20 @@ class Beast extends Robot {
   }
   onHit(dmg, perfect, point) {
     this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
-    this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.cur = null;
+    this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true;
     fx.sparks(point, 10, [0.9, 0.15, 0.1], 2.2, 0.04); fx.glow(point, [1, 0.5, 0.3], 0.35, 0.08); SND.squish(point);
     if (this.hp <= 0) this.kill(); else if (Math.random() < 0.3) this.roar(this.center(tmpB));
   }
   // al morir cae con su animación, se hunde en el suelo y desaparece
   kill() {
-    this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.cur = null; this.bar.g.visible = false; this.tint = 1;
+    if (this.mode === 'dying') return; this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.bar.g.visible = false; this.tint = 1;
     const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, this.K.beast3d === 'puglin' ? 1.5 : 1.0); SND.squish(c);
-    this.play('Death01', 0.08, true);
+    this.play('Death01', 0.1, true, 1, true);
   }
   update(dt, t) {
     if (this.mode !== 'dying') return super.update(dt, t);
     this.st += dt; this.mx.update(dt); this.tint = Math.max(0, this.tint - dt * 2); this.inst.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint);
+    this.inst.model.rotation.x *= Math.max(0, 1 - dt * 8); // sin la inclinación del último impacto: queda tumbado en el suelo
     if (this.st > 2.3) this.root.position.y -= dt * 0.45 * this.sc; // se hunde
     if (this.st > 3.8 && !this.gone) { this.gone = true; this.dispose(); }
   }
@@ -6628,13 +6636,16 @@ function aimSources() {
 // ordenador dispara sola. El gesto se mide respecto a la cabeza; si las gafas pierden la mano en plena sacudida hacia un
 // enemigo, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 50, THROW_STOP = 0.55, THROW_JUMP = 12; // frena de golpe: por debajo del 55 % del pico
-const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3(), pdir: new V3() });
+// La mano se mide respecto a la cabeza en horizontal y respecto al suelo en altura (subir y bajar en la sentadilla no la
+// mueve). Una sacudida es un acelerón por encima de THROW_V; empieza donde la mano iba por última vez por debajo de
+// THROW_SLOW y acaba al frenar (por debajo de THROW_STOP del pico) o al recorrer THROW_LONG. THROW_JUMP: más rápido, es un salto del seguimiento
+const THROW_V = 0.8, THROW_SLOW = 0.45, THROW_D = 0.1, THROW_LONG = 0.32, THROW_WIDE = 60, THROW_STOP = 0.75, THROW_JUMP = 15;
+const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [], prev: new V3(), v: new V3(), from: new V3(), last: new V3(), lastR: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
-const _thr = new V3(), _thv = new V3(), _thf = new V3();
+const _thr = new V3(), _thv = new V3(), _thf = new V3(), _thd = new V3();
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0 }); HTH.idle = 0; HTH.taught = false; }
+function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH.idle = 0; HTH.taught = false; }
 // La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect) {
   if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
@@ -6653,9 +6664,14 @@ function throwTarget(o, d) {
   return best;
 }
 function throwFire(s, o, d, tg) {
-  const T = HTH[s], c = T.c; T.armed = false; T.peak = 0; if (!c) return;
+  const T = HTH[s], c = T.c; if (!c) return;
   T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
+}
+// Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí
+function throwTry(s, o, d) {
+  const T = HTH[s], len = d.length(), tg = len > THROW_D && throwTarget(o, d.normalize());
+  T.burst = false; T.peak = 0; T.cool = 0.2; if (tg) throwFire(s, o.clone(), d.clone(), tg);
 }
 function throwStep(dt, t) {
   const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
@@ -6664,25 +6680,31 @@ function throwStep(dt, t) {
     const T = HTH[s], h = hands[s], orb = HTH.orbs[s];
     orb.visible = on && h.ok && !!T.c;
     if (orb.visible) { const sc = 0.075 * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.c.perfect ? 1 : 0]); }
-    if (!on) { T.have = false; T.armed = false; continue; }
-    if (!h.ok) { // perdida en plena sacudida hacia un enemigo: sale el rayo en esa dirección
+    if (!on) { T.have = false; T.burst = false; continue; }
+    if (!h.ok) { // perdida en plena sacudida: sale el rayo en la dirección que llevaba la mano, si va hacia un enemigo
       T.lost += dt;
-      if (T.have && T.armed && T.peak > THROW_V && T.lost < 0.2) { const tg = throwTarget(T.last, T.pdir); if (tg) throwFire(s, T.last.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } }
-      if (T.lost > 0.3) { T.have = false; T.armed = false; T.peak = 0; }
+      if (T.have && T.burst && T.lost < 0.25) throwTry(s, T.last, _thd.subVectors(T.lastR, T.from));
+      if (T.lost > 0.3) { T.have = false; T.burst = false; T.hist.length = 0; }
       continue;
     }
-    T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
+    T.lost = 0; T.cool = Math.max(0, T.cool - dt);
+    _thr.set(h.wrist.x - head.p.x, h.wrist.y, h.wrist.z - head.p.z); T.last.copy(h.wrist); T.lastR.copy(_thr);
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
-    if (_thv.length() > THROW_JUMP) { T.v.set(0, 0, 0); T.peak = 0; T.armed = false; continue; } // salto del seguimiento: no es un gesto
+    if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
-    const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
-    if (T.armed && T.peak > THROW_V && sp < T.peak * THROW_STOP) { // frenó de golpe: si la sacudida iba hacia un enemigo, sale el rayo
-      const tg = _thr.distanceTo(T.from) > THROW_D && throwTarget(h.wrist, T.pdir);
-      if (tg) throwFire(s, h.wrist.clone(), T.pdir.clone(), tg); else { T.armed = false; T.peak = 0; } // hacia ningún enemigo: la carga sigue en la mano
-    } else if (T.armed && sp > THROW_V && T.fwd > 0.3 * sp) { if (sp > T.peak) { T.peak = sp; T.pdir.copy(T.v).normalize(); } } // acelerando: el pico marca la dirección
-    // mano junto al cuerpo (también colgando junto a la cadera) o echándose atrás, sin estar en plena sacudida: lista
-    if (!T.peak && (reach < THROW_NEAR || T.fwd < THROW_BACK) && (sp < THROW_V || T.fwd < 0)) { T.armed = true; T.from.copy(_thr); }
+    const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
+    if (!T.burst) {
+      if (sp > THROW_V && !T.cool) { // empieza un acelerón: se mide desde la última vez que la mano iba despacio
+        T.burst = true; T.peak = sp; let st = T.hist[0];
+        for (let i = T.hist.length - 1; i >= 0; i--) if (T.hist[i].sp < THROW_SLOW) { st = T.hist[i]; break; }
+        T.from.copy(st.p);
+      }
+      continue;
+    }
+    T.peak = Math.max(T.peak, sp);
+    // frenó de golpe, o ya recorrió bastante: si la sacudida va hacia un enemigo, sale el rayo; si no, la carga se queda
+    if (sp < T.peak * THROW_STOP || _thd.subVectors(_thr, T.from).length() > THROW_LONG) throwTry(s, h.wrist, _thd.subVectors(_thr, T.from));
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
