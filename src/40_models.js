@@ -628,7 +628,7 @@ function buildNeon() {
 
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
-  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard(); RIGS.neon = buildNeon();
+  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard(); RIGS.neon = buildNeon(); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin');
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)

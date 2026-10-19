@@ -211,6 +211,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       return '';
     });
   }
+  // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen humanoides de neón, sin errores
+  { const kinds = new Set();
+    await runConfig('monstruos sin modelos → neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 0, beasts: 100 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
+      s => [...kinds].some(k => k !== 'neon' && k !== 'neonboss') ? `sin los modelos deberían salir de neón (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
   // humanoides de neón: salen por las compuertas, se les derriba (estallan en esquirlas) y, si llegan, avisan y golpean
   const neo = { n: 0, boss: false, robot: false, shards: 0, states: new Set(), cols: new Set() };
   await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100 }, t => {
