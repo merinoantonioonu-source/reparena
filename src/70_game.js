@@ -752,6 +752,7 @@ const DET = {
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
+  iw: { pair: 0, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -955,6 +956,61 @@ function twistStep(t, dt) {
     T.first = true; T.lo = T.hi = T.acc;
   }
 }
+/* =================== FLEXIONES INCHWORM =================== */
+// Seis huellas de manos en el suelo, tres por mano (izquierda azul, derecha naranja): las dos primeras, junto a los pies;
+// las dos últimas, en posición de flexión; las dos del medio cambian de sitio en cada repetición. De pie, te doblas y
+// caminas con las manos tocando las huellas en orden (cada mano, las suyas); en las últimas, la flexión carga y al subir
+// dispara a las arañas; luego vuelves caminando y te pones de pie, y las huellas del medio se recolocan.
+// La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
+const iwReachM = () => settings.iwReach > 0 ? settings.iwReach / 100 : clamp(calibRef * 0.8, 1.0, 1.6);
+const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
+const IW = { group: new THREE.Group(), prints: [], mats: [] };
+IW.group.visible = false; arena.add(IW.group);
+for (let i = 0; i < 6; i++) {
+  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, c = mkCanvas(128), x = c.getContext('2d');
+  x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
+  x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); x.fill(); // palma
+  for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.beginPath(); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.fill(); x.restore(); }
+  x.restore(); x.fillStyle = '#10101a'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
+  const mat = new THREE.MeshBasicMaterial({ map: texFrom(c), color: side === 'left' ? 0x4aa8ff : 0xff9a3c, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; IW.group.add(m); IW.mats.push(mat);
+  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, m });
+}
+// Las seis huellas, en la arena: las primeras y las últimas siempre igual; las del medio, a una distancia y un lado distintos cada vez
+function iwLayout() {
+  const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, zm = lerp(z0, z2, rand(0.38, 0.62));
+  const pos = [[-0.17, z0], [0.17, z0], [-rand(0.11, 0.27), zm + rand(-0.13, 0.13)], [rand(0.11, 0.27), zm + rand(-0.13, 0.13)], [-0.2, z2], [0.2, z2]];
+  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = false; p.m.position.set(p.x, 0.006, p.z); });
+  Object.assign(DET.iw, { pair: 0, phase: 'stand' });
+}
+const _iww = new V3();
+function iwStep(t, dt) {
+  const W = DET.iw, standing = head.p.y > calibRef - 0.22;
+  if (W.phase === 'stand' && !standing) W.phase = 'walk';
+  if ((W.phase === 'stand' || W.phase === 'walk') && W.pair < 3) { // la siguiente pareja de huellas: cada mano, la suya
+    for (const p of IW.prints) {
+      if (p.pair !== W.pair || p.done) continue; const h = hands[p.side]; if (!h.ok) continue;
+      arena.worldToLocal(_iww.copy(h.wrist)); if (_iww.y < 0.22 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < 0.22) { p.done = true; SND.tick(); haptic(p.side, 0.3, 25); }
+    }
+    if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
+  }
+  if (W.phase === 'plank') {
+    const req = settings.pushDepth / 100, before = stats.reps;
+    vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
+    if (stats.reps > before) W.phase = 'back'; // disparó: ahora, de vuelta y de pie
+    else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
+  } else if (W.phase === 'walk' && standing) { if (W.pair > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
+  else if (W.phase === 'back' && standing) iwLayout(); // de pie otra vez: nuevas huellas
+}
+function iwVisual(t) {
+  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
+  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8);
+  for (const p of IW.prints) {
+    const next = (W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done, fin = W.phase === 'plank' && p.pair === 2;
+    p.m.material.opacity = next ? pulse : fin ? 0.95 : p.done ? 0.35 : W.phase === 'back' ? 0.25 : 0.55;
+    p.m.scale.setScalar(next ? 1.12 : 1);
+  }
+}
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -1067,6 +1123,8 @@ function runDetectors(t, dt) {
         else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
       }
     }
+  } else if (settings.exercise === 'inchworm') {
+    iwStep(t, dt);
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = settings.pushDepth / 100;
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
@@ -1431,6 +1489,7 @@ function beginRun() {
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
+  if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
 // arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
@@ -1440,16 +1499,19 @@ function bodyYaw() {
   _bu.set(0, 1, 0).applyQuaternion(head.q); if (f.y > 0) _bu.negate(); _bu.y = 0;
   return _bu.lengthSq() > 0.04 ? Math.atan2(-_bu.x, -_bu.z) : lastStandYaw;
 }
-function arenaFromHead() { arena.position.set(head.p.x, 0, head.p.z); arena.rotation.y = bodyYaw(); }
+// (en las flexiones inchworm, el origen va IW_OFF() por delante: donde quedará la cabeza en la plancha)
+function arenaFromHead() { const y = bodyYaw(), o = IW_OFF(); arena.position.set(head.p.x - Math.sin(y) * o, 0, head.p.z - Math.cos(y) * o); arena.rotation.y = y; }
 // Mientras calibras, el entorno y los enemigos se van colocando a tu alrededor; al calibrar se fijan
 function arenaFollow(dt) {
   const k = Math.min(1, dt * 4);
-  arena.position.x += (head.p.x - arena.position.x) * k; arena.position.z += (head.p.z - arena.position.z) * k;
+  const o = IW_OFF(), y = arena.rotation.y;
+  arena.position.x += (head.p.x - Math.sin(y) * o - arena.position.x) * k; arena.position.z += (head.p.z - Math.cos(y) * o - arena.position.z) * k;
   arena.rotation.y += wrapAng(bodyYaw() - arena.rotation.y) * k;
 }
 function calibrate() {
   arenaFromHead();
   const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated() && y > 1.1) { calibRef = y; lastStandY = y; }
+  if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   DET.sp.ref = y;
@@ -1531,6 +1593,7 @@ function gameStep(dt, t) {
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
+  iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt;

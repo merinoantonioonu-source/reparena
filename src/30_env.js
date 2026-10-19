@@ -175,7 +175,7 @@ function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settin
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
 function layoutArena() {
-  const D = arenaDepth(), push = isTiny(), low = isFloor(), gs = gateScale(), arcs = settings.mode === 'arcs';
+  const D = arenaDepth(), push = isTiny(), low = isFloor() || settings.exercise === 'inchworm', gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
   const plan = roomPlan(), roomGates = plan && plan.gates.some(Boolean); // realidad mixta: en tus paredes
   gates.forEach((g, i) => {
