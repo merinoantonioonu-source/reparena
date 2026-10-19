@@ -92,10 +92,10 @@ const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { valu
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
 function moveSpec(move) {
   const r = settings.tchRing / 100, S = TCH.ref, D = arMode ? 4 : 6.5, side = Math.random() < 0.5 ? -1 : 1;
-  const sd = settings.squatDepth / 100, pd = settings.pushDepth / 100, jh = settings.jumpHeight / 100;
+  const sd = dv('squatDepth') / 100, pd = dv('pushDepth') / 100, jh = settings.jumpHeight / 100;
   const o = { move, part: CUT_MOVES.includes(move) ? 'cut' : HAND_MOVES.includes(move) ? 'hand' : 'head', hand: side < 0 ? 'left' : 'right', n: new V3(0, 0, 1), r, hold: 0 };
   const rin = r * 0.75; // la cabeza está dentro si su centro cae a menos de esto del centro de la ameba
-  if (move === 'lunge') { const ld = settings.lungeDepth / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
+  if (move === 'lunge') { const ld = dv('lungeDepth') / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
   else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
@@ -204,7 +204,7 @@ class TouchTarget {
   touching() {
     if (this.part === 'cut') { // la espada lo atraviesa deprisa y en la dirección de la flecha, en la postura que pide
       const side = swordCutTest(this); if (!side) return false;
-      const S = TCH.ref, sd = settings.squatDepth / 100, jh = settings.jumpHeight / 100;
+      const S = TCH.ref, sd = dv('squatDepth') / 100, jh = settings.jumpHeight / 100;
       const ok = { cutLow: HL.y < S - sd * 0.6, cutFwd: HL.z < -0.12, cutSide: HL.x * Math.sign(this.pos.x) > 0.1, cutHigh: HL.y > S + jh * 0.5 }[this.move];
       if (!ok) { touchHint(CUT_POSE[this.move]); haptic(side, 0.2, 20); return false; }
       this.by = side; return true;
@@ -348,14 +348,14 @@ function snapBeat(c) {
   return TCH.beat0 + k * P - off;
 }
 function tchGapFor(move) {
-  const P = tchPeriod(), base = settings.tchGap + (move === 'plank' ? settings.plankHold : 0);
+  const P = tchPeriod(), base = dv('tchGap') + (move === 'plank' ? settings.plankHold : 0);
   return P ? Math.max(1, Math.round(base / P)) * P : base;
 }
-function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + settings.tchArrive + 0.6); touchRearm(); }
+function touchStartWave() { TCH.nextArrive = snapBeat(TCH.clock + dv('tchArrive') + 0.6); touchRearm(); }
 function touchRearm() { TCH.headArm.armed = true; TCH.hadHL = false; for (const s of ['left', 'right']) Object.assign(TCH.arm[s], { armed: true, had: false, n: 0 }); }
 function touchStep(dt, t) {
   if (state !== 'paused') TCH.clock += dt;
-  if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - settings.tchArrive) {
+  if (state === 'play' && spawnQueue.length && TCH.clock >= TCH.nextArrive - dv('tchArrive')) {
     const spec = spawnQueue.shift(); touches.push(new TouchTarget(spec.move, Math.max(TCH.nextArrive, TCH.clock + 0.3)));
     TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
   }
