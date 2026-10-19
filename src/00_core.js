@@ -52,8 +52,8 @@ const SCHEMA = [
   { key: 'pressRange', g: 'ejercicio', label: 'Recorrido del press', short: 'Recorrido press', type: 'num', min: 15, max: 60, step: 1, def: 32, unit: 'cm', ex: ['press', 'press2'], hint: 'Cuánto deben subir las manos desde los hombros. Con mancuernas cada brazo dispara al llegar arriba; con barra, los dos a la vez.' },
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
-  { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 35, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; al subir, tirar de los codos hacia atrás dispara.' },
-  { key: 'rowRange', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 20, unit: 'cm', ex: ['dlrow', 'plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
+  { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
+  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['dlrow', 'plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
@@ -211,10 +211,12 @@ const aimManual = () => isCombat() && !pistolOn() && !autoAim();
 // Espadas: en Combate contra robots (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
 const swordSet = () => settings.sword !== 'off' && (isCombat() ? handsFree() && foes() === 'robots' : settings.mode === 'touch' && (['squat', 'lunge', 'jump'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase === 'stand')));
 // Apuntando con las manos (o con las pistolas, contra voladores) cada repetición da dos disparos (uno por mano)
-// (lanzando el rayo con la mano, cada repetición es un solo rayo: lo lanza la mano que quieras)
-const twoShots = () => isCombat() && handsFree() && pistolOn() && !bareHands() && foes() !== 'robots';
+// Cada repetición da un disparo por mano (dos pistolas o dos manos que lanzan); con una espada y el bláster, uno cada uno
+const twoShots = () => isCombat() && handsFree() && ((pistolOn() && !swordSet()) || (aimManual() && settings.aim === 'hands'));
 // Con las manos desnudas (seguimiento de manos, sin mandos)
-const bareHands = () => typeof hands !== 'undefined' && ((hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand));
+// (si las gafas pierden las manos un momento, sigue valiendo lo último que se vio)
+const BARE = { v: false };
+const bareHands = () => { if (hands.left.ok || hands.right.ok) BARE.v = (hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand); return BARE.v; };
 const isFloor = () => ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
 // Sentado en el borde de una silla (fondos): la cabeza, a media altura
 const isSeated = () => settings.exercise === 'dips';
@@ -228,12 +230,16 @@ const settingHooks = [];
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
 /* =================== FORMULARIO WEB =================== */
+// La página: las opciones comunes (Sistema) aparte; las del modo y el ejercicio, en su sección; y el orden de los
+// ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
-  const host = $('#settingsGroups');
-  host.innerHTML = Object.keys(GROUP_NAMES).map(g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3><div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`).join('');
-  host.addEventListener('input', onFormInput);
-  host.addEventListener('change', onFormInput);
+  const group = g => `
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3><div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+  const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
+  common.innerHTML = group('sistema');
+  host.innerHTML = Object.keys(GROUP_NAMES).filter(g => g !== 'sistema').map(group).join('');
+  const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
+  for (const h of [host, common, sortBox]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
     syncForm();
@@ -282,6 +288,7 @@ function syncForm() {
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
   const byBody = settings.exSort === 'body'; sortExCards(byBody);
   Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = byBody || exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
+  const st = $('#specTitle'); if (st) st.textContent = `4 · Opciones de ${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`;
   const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
   note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza las amebas y con la mano que piden los diamantes que vienen hacia ti; entre un toque y otro, vuelve a la postura de partida.' }[settings.mode] || '';
   for (const f of SCHEMA) {
