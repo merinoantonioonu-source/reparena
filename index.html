@@ -3595,45 +3595,58 @@ function loadBeasts() {
       const orm = tex(k + '_orm');
       BEAST.kinds[k] = { scene, clips, maps: [1, 2, 3].map(v => tex(`${k}_color${v}`, true)), normal: tex(k + '_normal'), orm, emissive: tex(k + '_emissive', true) };
     });
-    try { BEAST.neonClips = bakeNeonClips(U); } catch (e) { console.log('Animaciones de neón:', e && e.message); }
+    BEAST.rigClips = {};
+    for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
+    BEAST.neonClips = BEAST.rigClips.neon;
     BEAST.ready = true;
   }).catch(e => { BEAST.failed = true; console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
-/* ---------- Las mismas animaciones, en los humanoides de neón ---------- */
-// Su esqueleto es otro (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
+/* ---------- Las mismas animaciones, en los humanoides de neón y en los robots ---------- */
+// Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
 // reproduce cada animación en el esqueleto de la biblioteca y, fotograma a fotograma, cada brazo y cada pierna del
 // humanoide se orienta hacia donde apunta el suyo; el tronco, el cuello y la cabeza giran lo mismo que respecto a su
-// reposo, y la cadera sube y baja a su escala. Las dos figuras miran hacia +Z con la izquierda en +X
+// reposo, y la cadera sube y baja a su escala. Las dos figuras miran hacia +Z con la izquierda en +X.
+// Mapas: body, [hueso del rig, de la biblioteca]; limb, [rig, desde, hasta] (el hueso apunta de uno a otro); foot, igual
+// pero con la punta (+Z) hacia delante; parent, el padre de cada hueso del rig (null: el giro es respecto al rig entero)
 const NEON_BODY = [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['neck', 'neck_01'], ['head', 'Head']];
 const NEON_LIMB = [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['haL', 'hand_l', 'middle_01_l'], ['shR', 'upperarm_r', 'lowerarm_r'], ['elR', 'lowerarm_r', 'hand_r'], ['haR', 'hand_r', 'middle_01_r'],
   ['thL', 'thigh_l', 'calf_l'], ['knL', 'calf_l', 'foot_l'], ['thR', 'thigh_r', 'calf_r'], ['knR', 'calf_r', 'foot_r']];
-const NEON_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']]; // el pie: su punta (+Z) hacia la del otro
+const NEON_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']];
 const NEON_PARENT = { hips: null, spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck', shL: 'chest', elL: 'shL', haL: 'elL', shR: 'chest', elR: 'shR', haR: 'elR', thL: 'hips', knL: 'thL', anL: 'knL', thR: 'hips', knR: 'thR', anR: 'knR' };
-function bakeNeonClips(U) {
+const RIG_MAPS = {
+  neon: { body: NEON_BODY, limb: NEON_LIMB, foot: NEON_FOOT, parent: NEON_PARENT, hip0: () => NEO.hipY },
+  // el robot pequeño: solo de cintura para arriba (sus piernas, de ave, siguen con su animación y la cadera es suya)
+  ripper: { body: NEON_BODY.slice(1), limb: NEON_LIMB.slice(0, 6), foot: [], parent: { ...NEON_PARENT, spine: null } },
+  // el grande y el coloso: entero menos el brazo del cañón, que sigue apuntándote; no tienen cuello
+  destroyer: { body: [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['head', 'Head']], limb: [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['clawL', 'hand_l', 'middle_01_l'], ...NEON_LIMB.slice(6)],
+    foot: NEON_FOOT, parent: { ...NEON_PARENT, head: 'chest', clawL: 'elL' }, hip0: () => 1.06, leg: 0.92 }
+};
+function bakeRigClips(U, M) {
   const S = U.scene, get = n => S.getObjectByName(n), mx = new THREE.AnimationMixer(S), out = {};
   const pos = n => get(n).getWorldPosition(new V3()), wq = n => get(n).getWorldQuaternion(new Q4());
   S.updateMatrixWorld(true);
-  const rest = {}; for (const [, b] of NEON_BODY) rest[b] = wq(b).invert();
-  const pel0 = pos('pelvis'), k = NEO.hipY / pel0.y, down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4();
+  const rest = {}; for (const [, b] of M.body) rest[b] = wq(b).invert();
+  const pel0 = pos('pelvis'), hip0 = M.hip0 && M.hip0(), k = M.leg ? M.leg / (pos('thigh_l').distanceTo(pos('calf_l')) + pos('calf_l').distanceTo(pos('foot_l'))) : hip0 / pel0.y;
+  const down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4(), I = new Q4();
   for (const clip of U.animations) {
     const act = mx.clipAction(clip); act.play();
     const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [], prev = {};
     for (let f = 0; f < n; f++) {
       const t = Math.min(clip.duration, f / 30); act.time = t; mx.update(0); S.updateMatrixWorld(true); times.push(t);
-      const W = {};
-      for (const [nb, b] of NEON_BODY) W[nb] = wq(b).multiply(rest[b]); // giro respecto al reposo
-      for (const [nb, a, b] of NEON_LIMB) { const pw = W[NEON_PARENT[nb]]; d.subVectors(pos(b), pos(a)).normalize(); ax.copy(down).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
-      for (const [nb, a, b] of NEON_FOOT) { const pw = W[NEON_PARENT[nb]]; d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
+      const W = {}, par = nb => M.parent[nb] ? W[M.parent[nb]] : I;
+      for (const [nb, b] of M.body) W[nb] = wq(b).multiply(rest[b]); // giro respecto al reposo
+      for (const [nb, a, b] of M.limb) { const pw = par(nb); d.subVectors(pos(b), pos(a)).normalize(); ax.copy(down).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
+      for (const [nb, a, b] of M.foot) { const pw = par(nb); d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
       for (const nb in W) {
-        const par = NEON_PARENT[nb], l = par ? W[par].clone().invert().multiply(W[nb]) : W[nb].clone();
+        const l = par(nb).clone().invert().multiply(W[nb]);
         if (prev[nb] && prev[nb].dot(l) < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } prev[nb] = l; // sin saltos de signo
         (Q[nb] = Q[nb] || []).push(l.x, l.y, l.z, l.w);
       }
-      const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, NEO.hipY + pv.y * k, pv.z * k);
+      if (hip0) { const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, hip0 + pv.y * k, pv.z * k); }
     }
     act.stop();
     const tracks = Object.keys(Q).map(nb => new THREE.QuaternionKeyframeTrack(nb + '.quaternion', times, Q[nb]));
-    tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, hp));
+    if (hip0) tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, hp));
     out[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
   }
   mx.stopAllAction(); return out;
@@ -5389,6 +5402,9 @@ class Robot {
     this.speed = this.vWalk;
     this.yaw = Math.atan2(this.slot.x - this.pos.x, this.slot.z - this.pos.z);
     this.bar = makeHpBar(this.root, 2.25, 0.7); if (K.boss) setHpBar(this.bar, 1);
+    // con las animaciones de la biblioteca cargadas, se mueven con ellas (el pequeño, de cintura para arriba)
+    const mk = { ripper: 'ripper', destroyer: 'destroyer', colossus: 'destroyer' }[this.rig.kind];
+    if (mk && BEAST.rigClips && BEAST.rigClips[mk]) Object.assign(this, { clips: BEAST.rigClips[mk], mx: new THREE.AnimationMixer(this.root), acts: {}, cur: null, react: 0, prevSt: '', mxLegs: mk === 'destroyer', stepU: 0, stepClip: '' });
     gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
   }
   center(out) { this.B.chest.getWorldPosition(out); return out; }
@@ -5411,7 +5427,7 @@ class Robot {
       else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
-      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
+      if (!this.mxLegs && amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
       this.lastCos[i] = c;
     });
     // cadera: sube y baja con los pasos, gira y cae hacia la pierna que se levanta
@@ -5445,6 +5461,40 @@ class Robot {
     B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw + tn * Math.sin(t * 9) * 0.25;
     B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4 - tn * 0.5 + lean * 0.5;
     B.jaw.rotation.x = Math.max(this.jaw, tn) * (isR ? 0.55 : 0.35);
+    if (this.mx) this.animMx(dt, t, spd);
+  }
+  // Con animaciones: andar, trotar o correr según la velocidad (el pequeño mueve los brazos al paso de sus piernas);
+  // amenazar señalándote; el golpe (llevado a mano para que caiga justo al golpear): el pequeño, un zarpazo; el grande,
+  // un directo con la garra (el cañón sigue apuntándote); encogerse al recibir
+  animMx(dt, t, spd) {
+    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = isR ? 'Sword_Attack' : 'Punch_Jab';
+    if (st === 'windup' && this.prevSt !== 'windup') { this.restart = true; this.react = 0; }
+    this.prevSt = st;
+    let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2, atkT = -1, w = 0;
+    if (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.5)) {
+      const [t0, t1] = BEAST_PUNCH[atk], wind = this.zone ? 1.25 : 0.75;
+      w = st === 'windup' ? smooth(clamp(this.st / wind, 0, 1)) : 0;
+      atkT = st === 'windup' ? t0 * w : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, t1 + 0.35, clamp(this.st / 0.5, 0, 1));
+      want = atk; once = true; fade = st === 'windup' ? 0.3 : 0.1; ts = 0;
+    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    else if (st === 'taunt') want = 'Spell_Simple_Shoot';
+    else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
+      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); } }
+    mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
+    const a = this.acts[want], loco = !!a && want !== 'Idle_Loop' && /_Loop$/.test(want);
+    if (a && atkT >= 0) a.time = atkT;
+    else if (loco && isR) a.time = a.getClip().duration * (((this.phase - Math.PI / 2) / TAU % 1 + 1) % 1); // en las animaciones, el pie izquierdo empieza delante
+    this.mx.update(dt);
+    // pasos del grande: cuando cada pie, según la animación, apoya
+    if (this.mxLegs && loco) {
+      const u = a.time / a.getClip().duration, pu = this.stepClip === want ? this.stepU : u;
+      for (const [c, sd] of [[0.02, 'L'], [0.52, 'R']]) if (pu <= u ? pu < c && c <= u : c > pu || c <= u) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + this.run)); if (Math.random() < 0.3) SND.servo(fp); }
+      this.stepU = u; this.stepClip = want;
+    }
+    // la cabeza, además, se vuelve hacia ti; el pequeño va encorvado; al recibir, se echa atrás
+    const toP = tmpA.subVectors(HL, this.pos), ly = clamp(wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), -0.9, 0.9);
+    B.head.quaternion.multiply(_nq.setFromAxisAngle(_up, ly * 0.6 + this.twitchYaw * 0.4));
+    B.spine.rotation.x += (isR ? 0.25 + this.run * 0.2 : 0) - this.hitT * 0.45 - this.stagger * 0.3;
   }
   update(dt, t) {
     const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
@@ -5560,6 +5610,7 @@ class Robot {
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
+    if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true; }
     this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();

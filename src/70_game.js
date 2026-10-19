@@ -123,6 +123,9 @@ class Robot {
     this.speed = this.vWalk;
     this.yaw = Math.atan2(this.slot.x - this.pos.x, this.slot.z - this.pos.z);
     this.bar = makeHpBar(this.root, 2.25, 0.7); if (K.boss) setHpBar(this.bar, 1);
+    // con las animaciones de la biblioteca cargadas, se mueven con ellas (el pequeño, de cintura para arriba)
+    const mk = { ripper: 'ripper', destroyer: 'destroyer', colossus: 'destroyer' }[this.rig.kind];
+    if (mk && BEAST.rigClips && BEAST.rigClips[mk]) Object.assign(this, { clips: BEAST.rigClips[mk], mx: new THREE.AnimationMixer(this.root), acts: {}, cur: null, react: 0, prevSt: '', mxLegs: mk === 'destroyer', stepU: 0, stepClip: '' });
     gate.openT = Math.min(12, 1.3 + 1.6 / Math.max(0.05, this.speed)); this.animate(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
   }
   center(out) { this.B.chest.getWorldPosition(out); return out; }
@@ -145,7 +148,7 @@ class Robot {
       else { a1 = -0.36 * la * Math.sin(q) * amp - run * 0.12; a2 = 0.08 + (0.62 + run * 0.35) * Math.max(0, c) * amp + run * 0.1; a3 = -(a1 + a2); }
       B['th' + sd].rotation.x = a1; B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = a3;
       drops.push(L[0] * Math.cos(a1) + L[1] * Math.cos(a1 + a2) + L[2] * Math.cos(a1 + a2 + a3));
-      if (amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
+      if (!this.mxLegs && amp > 0.3 && this.lastCos[i] > 0 && c <= 0) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + run)); if (Math.random() < 0.3) SND.servo(fp); }
       this.lastCos[i] = c;
     });
     // cadera: sube y baja con los pasos, gira y cae hacia la pierna que se levanta
@@ -179,6 +182,40 @@ class Robot {
     B.head.rotation.y = clamp(ly, -1.1, 1.1) + this.twitchYaw + tn * Math.sin(t * 9) * 0.25;
     B.head.rotation.x = -pitch - (isR ? 0.1 : 0.3) + this.twitch * 0.4 - tn * 0.5 + lean * 0.5;
     B.jaw.rotation.x = Math.max(this.jaw, tn) * (isR ? 0.55 : 0.35);
+    if (this.mx) this.animMx(dt, t, spd);
+  }
+  // Con animaciones: andar, trotar o correr según la velocidad (el pequeño mueve los brazos al paso de sus piernas);
+  // amenazar señalándote; el golpe (llevado a mano para que caiga justo al golpear): el pequeño, un zarpazo; el grande,
+  // un directo con la garra (el cañón sigue apuntándote); encogerse al recibir
+  animMx(dt, t, spd) {
+    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = isR ? 'Sword_Attack' : 'Punch_Jab';
+    if (st === 'windup' && this.prevSt !== 'windup') { this.restart = true; this.react = 0; }
+    this.prevSt = st;
+    let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2, atkT = -1, w = 0;
+    if (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.5)) {
+      const [t0, t1] = BEAST_PUNCH[atk], wind = this.zone ? 1.25 : 0.75;
+      w = st === 'windup' ? smooth(clamp(this.st / wind, 0, 1)) : 0;
+      atkT = st === 'windup' ? t0 * w : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, t1 + 0.35, clamp(this.st / 0.5, 0, 1));
+      want = atk; once = true; fade = st === 'windup' ? 0.3 : 0.1; ts = 0;
+    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    else if (st === 'taunt') want = 'Spell_Simple_Shoot';
+    else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
+      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); } }
+    mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
+    const a = this.acts[want], loco = !!a && want !== 'Idle_Loop' && /_Loop$/.test(want);
+    if (a && atkT >= 0) a.time = atkT;
+    else if (loco && isR) a.time = a.getClip().duration * (((this.phase - Math.PI / 2) / TAU % 1 + 1) % 1); // en las animaciones, el pie izquierdo empieza delante
+    this.mx.update(dt);
+    // pasos del grande: cuando cada pie, según la animación, apoya
+    if (this.mxLegs && loco) {
+      const u = a.time / a.getClip().duration, pu = this.stepClip === want ? this.stepU : u;
+      for (const [c, sd] of [[0.02, 'L'], [0.52, 'R']]) if (pu <= u ? pu < c && c <= u : c > pu || c <= u) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, K.heavy); fx.dust(fp, K.heavy ? 5 : 3, 0.25 * this.sc * (1 + this.run)); if (Math.random() < 0.3) SND.servo(fp); }
+      this.stepU = u; this.stepClip = want;
+    }
+    // la cabeza, además, se vuelve hacia ti; el pequeño va encorvado; al recibir, se echa atrás
+    const toP = tmpA.subVectors(HL, this.pos), ly = clamp(wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), -0.9, 0.9);
+    B.head.quaternion.multiply(_nq.setFromAxisAngle(_up, ly * 0.6 + this.twitchYaw * 0.4));
+    B.spine.rotation.x += (isR ? 0.25 + this.run * 0.2 : 0) - this.hitT * 0.45 - this.stagger * 0.3;
   }
   update(dt, t) {
     const K = this.K; this.st += dt; this.hitT = Math.max(0, this.hitT - dt * 4); this.stagger = Math.max(0, this.stagger - dt * 3);
@@ -294,6 +331,7 @@ class Robot {
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
+    if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true; }
     this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();

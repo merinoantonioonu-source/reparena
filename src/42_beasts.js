@@ -36,45 +36,58 @@ function loadBeasts() {
       const orm = tex(k + '_orm');
       BEAST.kinds[k] = { scene, clips, maps: [1, 2, 3].map(v => tex(`${k}_color${v}`, true)), normal: tex(k + '_normal'), orm, emissive: tex(k + '_emissive', true) };
     });
-    try { BEAST.neonClips = bakeNeonClips(U); } catch (e) { console.log('Animaciones de neón:', e && e.message); }
+    BEAST.rigClips = {};
+    for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
+    BEAST.neonClips = BEAST.rigClips.neon;
     BEAST.ready = true;
   }).catch(e => { BEAST.failed = true; console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
-/* ---------- Las mismas animaciones, en los humanoides de neón ---------- */
-// Su esqueleto es otro (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
+/* ---------- Las mismas animaciones, en los humanoides de neón y en los robots ---------- */
+// Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
 // reproduce cada animación en el esqueleto de la biblioteca y, fotograma a fotograma, cada brazo y cada pierna del
 // humanoide se orienta hacia donde apunta el suyo; el tronco, el cuello y la cabeza giran lo mismo que respecto a su
-// reposo, y la cadera sube y baja a su escala. Las dos figuras miran hacia +Z con la izquierda en +X
+// reposo, y la cadera sube y baja a su escala. Las dos figuras miran hacia +Z con la izquierda en +X.
+// Mapas: body, [hueso del rig, de la biblioteca]; limb, [rig, desde, hasta] (el hueso apunta de uno a otro); foot, igual
+// pero con la punta (+Z) hacia delante; parent, el padre de cada hueso del rig (null: el giro es respecto al rig entero)
 const NEON_BODY = [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['neck', 'neck_01'], ['head', 'Head']];
 const NEON_LIMB = [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['haL', 'hand_l', 'middle_01_l'], ['shR', 'upperarm_r', 'lowerarm_r'], ['elR', 'lowerarm_r', 'hand_r'], ['haR', 'hand_r', 'middle_01_r'],
   ['thL', 'thigh_l', 'calf_l'], ['knL', 'calf_l', 'foot_l'], ['thR', 'thigh_r', 'calf_r'], ['knR', 'calf_r', 'foot_r']];
-const NEON_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']]; // el pie: su punta (+Z) hacia la del otro
+const NEON_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']];
 const NEON_PARENT = { hips: null, spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck', shL: 'chest', elL: 'shL', haL: 'elL', shR: 'chest', elR: 'shR', haR: 'elR', thL: 'hips', knL: 'thL', anL: 'knL', thR: 'hips', knR: 'thR', anR: 'knR' };
-function bakeNeonClips(U) {
+const RIG_MAPS = {
+  neon: { body: NEON_BODY, limb: NEON_LIMB, foot: NEON_FOOT, parent: NEON_PARENT, hip0: () => NEO.hipY },
+  // el robot pequeño: solo de cintura para arriba (sus piernas, de ave, siguen con su animación y la cadera es suya)
+  ripper: { body: NEON_BODY.slice(1), limb: NEON_LIMB.slice(0, 6), foot: [], parent: { ...NEON_PARENT, spine: null } },
+  // el grande y el coloso: entero menos el brazo del cañón, que sigue apuntándote; no tienen cuello
+  destroyer: { body: [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['head', 'Head']], limb: [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['clawL', 'hand_l', 'middle_01_l'], ...NEON_LIMB.slice(6)],
+    foot: NEON_FOOT, parent: { ...NEON_PARENT, head: 'chest', clawL: 'elL' }, hip0: () => 1.06, leg: 0.92 }
+};
+function bakeRigClips(U, M) {
   const S = U.scene, get = n => S.getObjectByName(n), mx = new THREE.AnimationMixer(S), out = {};
   const pos = n => get(n).getWorldPosition(new V3()), wq = n => get(n).getWorldQuaternion(new Q4());
   S.updateMatrixWorld(true);
-  const rest = {}; for (const [, b] of NEON_BODY) rest[b] = wq(b).invert();
-  const pel0 = pos('pelvis'), k = NEO.hipY / pel0.y, down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4();
+  const rest = {}; for (const [, b] of M.body) rest[b] = wq(b).invert();
+  const pel0 = pos('pelvis'), hip0 = M.hip0 && M.hip0(), k = M.leg ? M.leg / (pos('thigh_l').distanceTo(pos('calf_l')) + pos('calf_l').distanceTo(pos('foot_l'))) : hip0 / pel0.y;
+  const down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4(), I = new Q4();
   for (const clip of U.animations) {
     const act = mx.clipAction(clip); act.play();
     const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [], prev = {};
     for (let f = 0; f < n; f++) {
       const t = Math.min(clip.duration, f / 30); act.time = t; mx.update(0); S.updateMatrixWorld(true); times.push(t);
-      const W = {};
-      for (const [nb, b] of NEON_BODY) W[nb] = wq(b).multiply(rest[b]); // giro respecto al reposo
-      for (const [nb, a, b] of NEON_LIMB) { const pw = W[NEON_PARENT[nb]]; d.subVectors(pos(b), pos(a)).normalize(); ax.copy(down).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
-      for (const [nb, a, b] of NEON_FOOT) { const pw = W[NEON_PARENT[nb]]; d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
+      const W = {}, par = nb => M.parent[nb] ? W[M.parent[nb]] : I;
+      for (const [nb, b] of M.body) W[nb] = wq(b).multiply(rest[b]); // giro respecto al reposo
+      for (const [nb, a, b] of M.limb) { const pw = par(nb); d.subVectors(pos(b), pos(a)).normalize(); ax.copy(down).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
+      for (const [nb, a, b] of M.foot) { const pw = par(nb); d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
       for (const nb in W) {
-        const par = NEON_PARENT[nb], l = par ? W[par].clone().invert().multiply(W[nb]) : W[nb].clone();
+        const l = par(nb).clone().invert().multiply(W[nb]);
         if (prev[nb] && prev[nb].dot(l) < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } prev[nb] = l; // sin saltos de signo
         (Q[nb] = Q[nb] || []).push(l.x, l.y, l.z, l.w);
       }
-      const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, NEO.hipY + pv.y * k, pv.z * k);
+      if (hip0) { const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, hip0 + pv.y * k, pv.z * k); }
     }
     act.stop();
     const tracks = Object.keys(Q).map(nb => new THREE.QuaternionKeyframeTrack(nb + '.quaternion', times, Q[nb]));
-    tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, hp));
+    if (hip0) tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, hp));
     out[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
   }
   mx.stopAllAction(); return out;
