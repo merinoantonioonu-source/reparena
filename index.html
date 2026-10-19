@@ -368,6 +368,7 @@ const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
+  { key: 'bpm', g: 'partida', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
@@ -416,10 +417,9 @@ const SCHEMA = [
   { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Rodillas: diamante junto a las rodillas.' },
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
-  { key: 'bpm', g: 'toques', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch'], hint: 'Con un ritmo, los objetivos llegan a ti en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
   { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
-  { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'auto', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
+  { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
 
   // Espadas (con los mandos): en Combate contra robots, cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques,
@@ -501,6 +501,8 @@ function fmtVal(f, v = settings[f.key]) {
   else if (LEGACY_MODES[s.mode]) { settings.mode = 'combat'; if (s.foes === undefined) Object.assign(settings, LEGACY_MODES[s.mode], s.mode === 'flyers' && ['hands', 'gaze'].includes(s.aim) ? { aim: s.aim } : {}); }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
+  if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
@@ -2459,8 +2461,9 @@ function roomFrame(frame, ref, t) {
   // al recentrar, las poses cambian: se vuelve a leer todo (al empezar otra sesión, también: roomSessionStart)
   if (!ROOM.refs.has(ref)) { ROOM.refs.add(ref); if (ref.addEventListener) ref.addEventListener('reset', () => { ROOM.sig = ''; ROOM.fp = ''; ROOM.pollT = -1e9; }); }
   if (!roomWants() || t - ROOM.pollT < 1) return;
-  const planes = frame.detectedPlanes, meshes = frame.detectedMeshes; if (!planes && !meshes) return;
+  const planes = frame.detectedPlanes, meshes = frame.detectedMeshes; if (!planes && !meshes) { ROOM.diag = { none: true }; return; }
   ROOM.pollT = t;
+  { const L = new Set(); if (planes) planes.forEach(p => L.add(roomLabel(p) || 'sin etiqueta')); ROOM.diag = { planes: planes ? planes.size : 0, meshes: meshes ? meshes.size : 0, labels: [...L].slice(0, 6) }; } // lo que entrega el visor (para el diagnóstico)
   let sig = '';
   if (planes) planes.forEach(p => { sig += (p.lastChangedTime || 0) + ','; });
   sig += '|'; if (meshes) meshes.forEach(m => { sig += (m.lastChangedTime || 0) + ','; });
@@ -2679,7 +2682,7 @@ function makeRoomPlan() { return roomMode() === 'manual' ? manualPlan() : scanPl
 /* ---------- Colocar a mano, en las gafas ---------- */
 // Pasos: sitio de juego → compuertas → trampillas → marcador. Lo que colocas sale donde miras al suelo (o donde apunta
 // tu mano); «Colocar aquí» o pellizcar lo deja. Con la habitación escaneada, compuertas y marcador se pegan a la pared.
-const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null };
+const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null, drag: null, sel: null };
 const rplGood = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplBad = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplDim = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false });
@@ -2721,10 +2724,31 @@ function rplShowPlaced() {
   if (RPL.spot) add('spot', RPL.spot);
   RPL.gates.forEach(o => add('gate', o, RPL.gs)); RPL.hatches.forEach(o => add('hatch', o)); if (RPL.board) add('board', RPL.board);
 }
-function startRoomPlace(back) {
-  Object.assign(RPL, { on: true, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: ROOM.ceilY > 1.6 ? clamp((ROOM.ceilY - 0.1) / 4.4, 0.4, 0.72) : RSET.gs, back, aimOk: false });
+// adjust: empieza con lo que ya hay (lo colocado a mano o, si no, lo que salió del escaneo) para solo arrastrar lo que esté mal
+function startRoomPlace(back, adjust = false) {
+  Object.assign(RPL, { on: true, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: ROOM.ceilY > 1.6 ? clamp((ROOM.ceilY - 0.1) / 4.4, 0.4, 0.72) : RSET.gs, back, aimOk: false, drag: null, sel: null });
+  const S = eqPose('spot');
+  if (adjust && S.set && (RSET.gates.length || RSET.hatches.length || RSET.board)) { // lo guardado, en el mundo
+    const W = o => { const w = eqWorld(S, o.x, 0, o.z, new V3()); return { x: w.x, z: w.z, yaw: (o.yaw || 0) + S.yaw }; };
+    Object.assign(RPL, { step: 'gates', spot: { x: S.x, z: S.z, yaw: S.yaw }, gs: RSET.gs, gates: RSET.gates.map(W), hatches: RSET.hatches.map(W), board: RSET.board ? Object.assign(W(RSET.board), { wall: RSET.board.wall }) : null });
+  } else if (adjust && ROOM.plan && ROOM.plan.gates.some(Boolean)) { // lo del escaneo: compuertas, trampillas y marcador tal como están
+    arena.updateMatrixWorld(); const ay = arena.rotation.y, W = (x, z, rot) => { const w = arena.localToWorld(new V3(x, 0, z)); return { x: w.x, z: w.z, yaw: (rot || 0) + ay }; };
+    Object.assign(RPL, { step: 'gates', spot: { x: arena.position.x, z: arena.position.z, yaw: ay }, gs: ROOM.plan.gs,
+      gates: ROOM.plan.gates.filter(Boolean).map(g => Object.assign(W(g.x, g.z, g.rot), { wall: true })), hatches: hatches.filter(h => h.on).map(h => W(h.x, h.z, 0)),
+      board: ROOM.plan.board ? Object.assign(W(ROOM.plan.board.x, ROOM.plan.board.z, ROOM.plan.board.rot), { wall: ROOM.plan.board.wall !== false }) : null });
+  }
   rplGroup.visible = true; rplShowPlaced(); SND.click(); roomPlaceMenu();
 }
+// Arrastrar: lo colocado más cercano a donde apuntas (si está a menos de 0,7 m)
+function rplNearest(p) {
+  let best = null, bd = 0.7;
+  const tryOne = (list, i, kind) => { const o = i === null ? RPL.board : list[i], d = Math.hypot(o.x - p.x, o.z - p.z); if (d < bd) { bd = d; best = { list, i, kind }; } };
+  RPL.gates.forEach((o, i) => tryOne(RPL.gates, i, 'gate')); RPL.hatches.forEach((o, i) => tryOne(RPL.hatches, i, 'hatch')); if (RPL.board) tryOne(null, null, 'board');
+  return best;
+}
+const rplGet = r => r.i === null ? RPL.board : r.list[r.i];
+function rplSet(r, pose) { if (r.i === null) RPL.board = pose; else r.list[r.i] = pose; }
+function rplTurn(da) { const r = RPL.sel; if (!r) { SND.partial(); return; } const o = rplGet(r); o.yaw = (o.yaw || 0) + da; o.wall = false; rplShowPlaced(); SND.tick(); }
 function endRoomPlace(save) {
   if (save && RPL.spot) {
     const S = eqPose('spot'); Object.assign(S, { x: RPL.spot.x, z: RPL.spot.z, yaw: RPL.spot.yaw }); S.anchor = null; equipChanged('spot'); equipCommit('spot');
@@ -2759,6 +2783,8 @@ function roomPlaceMenu() {
     { t: 'btns', items: [{ label: 'Siguiente: marcador', onPress: () => { RPL.step = 'board'; roomPlaceMenu(); } }] });
   else rows.push({ t: 'text', text: `Marcador: donde quieras verlo. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se cuelga en ella.' : ''}` },
     { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
+  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto, apúntale y pellizca (o aprieta el gatillo): síguelo con la mano y suéltalo donde vaya.', color: '#a49fc8' },
+    { t: 'btns', items: [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }, { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }] });
   rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
   openMenu(rows);
 }
@@ -2775,9 +2801,15 @@ function updateRoomPlace(dt) {
   for (const s of ['right', 'left']) { const h = hands[s]; if (h.rayOk && h.rayD.y < -0.15 && !(h.tipOk && menu && menu.group && h.tip.distanceTo(menu.group.getWorldPosition(_rpd)) < 0.3)) { o = h.rayO; d = h.rayD; break; } }
   if (!o && !atMenu) { const f = fwd(); if (f.y < -0.08) { o = head.p; d = f; } }
   if (o) { const t = -o.y / d.y; if (t > 0 && t < 12) { RPL.aim.set(o.x + d.x * t, 0, o.z + d.z * t); RPL.aimOk = true; } }
-  // pellizcar coloca
-  for (const s of ['left', 'right']) { const p = hands[s].pinch; if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) rplPlace(); RPL.pinch[s] = p; }
+  // pellizcar (o el gatillo): sobre algo ya puesto, lo agarra y lo arrastra mientras sigas pellizcando; en otro sitio, coloca
+  for (const s of ['left', 'right']) {
+    const p = hands[s].pinch || hands[s].trig;
+    if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) { const r = rplNearest(RPL.aim); if (r) { RPL.drag = Object.assign(r, { side: s }); RPL.sel = r; SND.tick(); } else rplPlace(); }
+    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); }
+    RPL.pinch[s] = p;
+  }
   if (!RPL.on) return;
+  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; return; }
   const kind = { gates: 'gate', hatches: 'hatch', board: 'board' }[RPL.step];
   for (const k in rplGhost) rplGhost[k].visible = false;
   if (RPL.step === 'spot') { const g = rplGhost.spot; g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = bodyYaw(); return; }
@@ -2804,7 +2836,7 @@ function roomRows(back) {
   if (!xrActive || preview || !arMode) return [];
   const s = renderer.xr.getSession(), m = settings.roomMode, P = roomPlan(), n = P ? P.gates.filter(Boolean).length : 0;
   const rows = [{ t: 'field', key: 'roomMode', after: back }, ...(m !== 'off' ? [{ t: 'field', key: 'roomShow' }, { t: 'field', key: 'roomOcclude' }] : [])];
-  const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) });
+  const place = (label, style) => ({ label, style, onPress: () => startRoomPlace(back) }), adjust = label => ({ label, style: 'primary', onPress: () => startRoomPlace(back, true) });
   let txt, ok = false; const btns = [];
   if (m === 'off') txt = 'Disposición fija: las compuertas no se adaptan a tu habitación';
   else if (m === 'manual') {
@@ -2814,6 +2846,10 @@ function roomRows(back) {
   else if (!ROOM.walls.length) { txt = 'Habitación sin escanear: escanéala para que las compuertas salgan de tus paredes, o colócala a mano'; btns.push(place('Colocar a mano')); }
   else if (!n) { txt = `La habitación no cumple los requisitos: ${P && P.why ? P.why : 'no cabe ninguna compuerta'}. Hace falta una pared libre de al menos ${fmtNum(2 * 1.85 * (P ? P.gs : 0.55) + 0.1)} m de ancho a 1,7–7,5 m delante de ti, con el camino despejado. Puedes colocarla a mano`; btns.push(place('Colocar a mano', 'primary')); }
   else { ok = true; txt = `Habitación: ${ROOM.walls.length} ${ROOM.walls.length === 1 ? 'pared' : 'paredes'}, ${ROOM.furn.length} ${ROOM.furn.length === 1 ? 'mueble' : 'muebles'} · ${n} ${n === 1 ? 'compuerta' : 'compuertas'} en tus paredes`; }
+  if (m === 'manual' && manualReady()) btns.unshift(adjust('Ajustar (arrastrar)'));
+  else if (m === 'scan' && ROOM.plan && ROOM.plan.gates.some(Boolean)) btns.unshift(adjust('Ajustar a mano'));
+  // diagnóstico: lo que entrega el visor, para saber por qué el escaneo no coloca las compuertas
+  const D = ROOM.diag; if (m !== 'off') rows.push({ t: 'text', text: !D ? 'Escaneo: aún sin datos del visor' : D.none ? 'Escaneo: el visor no entrega planos (¿sin permiso de «datos del espacio»? sal y vuelve a entrar y acéptalo)' : `Escaneo: ${D.planes} planos, ${D.meshes} mallas · ${D.labels.join(', ') || 'sin etiquetas'}`, color: '#a49fc8' });
   rows.push({ t: 'text', text: txt, color: ok ? '#3cf0c6' : m === 'off' ? '#a49fc8' : '#ffd166' });
   if (m === 'scan' && s && s.initiateRoomCapture) btns.push({ label: ROOM.walls.length ? 'Volver a escanear' : 'Escanear la habitación', onPress: () => { s.initiateRoomCapture().catch(() => {}).then(() => { ROOM.sig = ''; back(); }); } });
   if (btns.length) rows.push({ t: 'btns', items: btns });
@@ -4944,6 +4980,25 @@ const ROBOT_KIND = {
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
 // Con espada hay que esperarlos a tu alcance: vienen directos (como mucho SWORD_WALK s), sin pararse a amenazar
+// Partes sólidas de las compuertas, como círculos en el suelo de la arena: los pilares del marco y los bloques de los lados
+function gateSolids() {
+  const out = [];
+  for (const g of gates) {
+    if (!g.on || !g.g.visible) continue; const r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale;
+    const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc });
+    for (const sd of [-1, 1]) { put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); }
+  }
+  return out;
+}
+// Ritmo (BPM) en Combate: periodo del pulso y si acaba de sonar uno (cuenta desde el pulso marcado al compás o por Spotify)
+const beatP = () => isCombat() && settings.bpm > 0 ? 60 / settings.bpm : 0;
+// El pulso va con el reloj del juego, enganchado al reloj real al empezar y al volver de la pausa (el compás marcado lo da el reloj real)
+const BEAT = { last: -1, hit: false, t: 0, off: null };
+const beatNow = () => { const P = beatP(); return P ? (BEAT.t + (BEAT.off || 0) - TCH.beat0) / P : 0; }; // pulsos desde la referencia (con decimales)
+function beatStep(dt) {
+  BEAT.t += dt; if (BEAT.off === null) BEAT.off = perfNow() - BEAT.t;
+  const P = beatP(); if (!P) { BEAT.hit = false; return; } const k = Math.floor(beatNow()); BEAT.hit = k !== BEAT.last && BEAT.last >= 0; BEAT.last = k;
+}
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(settings.walkTime, SWORD_WALK) : settings.walkTime;
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
@@ -4973,6 +5028,9 @@ class Robot {
     // cabe por el hueco de su compuerta (en realidad mixta, con el techo de tu habitación, las compuertas son más bajas)
     this.sc = K.scale * Math.min(1, 3.0 * gate.scale / (1.95 * K.scale)); this.root.scale.setScalar(this.sc); arena.add(this.root);
     const gr = gate.g.rotation.y, back = 1.3 * gate.scale; this.pos = new V3(gate.x - Math.sin(gr) * back, 0, gate.z - Math.cos(gr) * back); // sale de dentro del túnel
+    // primero sale recto por el hueco hasta delante de la compuerta (sin cruzar el marco ni los bloques de los lados) y
+    // luego va a su puesto; la compuerta no se cierra mientras no haya salido
+    this.gate = gate; this.out = false; this.exit = new V3(gate.x + Math.sin(gr) * 1.7 * gate.scale, 0, gate.z + Math.cos(gr) * 1.7 * gate.scale);
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * this.sc, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
@@ -4994,6 +5052,7 @@ class Robot {
     if (spd === true) spd = this.vWalk; // pose de prueba
     const amp = clamp(spd / Math.max(0.2, this.vWalk * 0.7), 0, 1), run = this.run;
     this.phase += TAU * clamp(spd / (K.stride * this.sc * (1 + run * 0.35)), 0, 2.8) * dt;
+    if (beatP() && amp > 0.3) this.phase += wrapAng(Math.PI * beatNow() + (this.beatOff || 0) - this.phase) * Math.min(1, dt * 6); // con ritmo: un paso en cada pulso
     const p = this.phase, drops = [], la = 1 + run * 0.55;
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
@@ -5063,13 +5122,14 @@ class Robot {
         if (!active) break;
         // cada poco busca un puesto mejor (al morir otro, los de atrás avanzan)
         this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } }
-        const to = _rd.subVectors(this.slot, this.pos); to.y = 0; const d = to.length();
+        if (!this.out) { this.gate.openT = Math.max(this.gate.openT, 0.8); if (Math.hypot(this.exit.x - this.pos.x, this.exit.z - this.pos.z) < 0.35) this.out = true; }
+        const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
-        to.divideScalar(d);
+        to.normalize();
         // amenaza a media distancia (una vez por avance, si hay tiempo)
         if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
@@ -5077,7 +5137,10 @@ class Robot {
         wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
+        // las compuertas son sólidas: rodea sus pilares y los bloques de los lados (al salir del túnel va recto por el hueco)
+        if (this.out) for (const c of gateSolids()) { const dx = this.pos.x - c.x, dz = this.pos.z - c.z, dd = Math.hypot(dx, dz) || 1e-3, min = c.r + this.radius; if (dd < min + 0.6) { const k = Math.pow((min + 0.6 - dd) / 0.6, 2) * 2.2; steer.x += dx / dd * k; steer.z += dz / dd * k; } }
         for (const o of enemies) {
+          if (!this.out) break; // dentro del túnel no se aparta: sale recto
           if (o === this || !o.alive || o.type !== 'robot') continue;
           const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz) || 1e-3, min = this.radius + o.radius + 0.3;
           if (dd < min + 0.9) { const k = Math.pow((min + 0.9 - dd) / 0.9, 2) * 1.6; steer.x += dx / dd * k; steer.z += dz / dd * k; }
@@ -5362,7 +5425,7 @@ class Flyer {
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
         if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5; this.windT = 0; }
       }
-      if (this.t > this.nextDart && !this.windT) {
+      if (this.t > this.nextDart && !this.windT && (!beatP() || BEAT.hit)) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
         this.dartT.set(rand(-1, 1) * A, rand(-0.4, 0.6) * A * (low ? 0.2 : 0.7), rand(-0.5, 0.5) * A * 0.4);
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
@@ -5577,6 +5640,7 @@ function onRep(opts, side) {
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
   } else if (!throwCharge(dmg, opts.perfect)) { // apuntando con las manos: carga las manos y se lanza con el gesto
+    if (throwAim()) { fireOrb(head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
     for (const s of aimSources()) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
@@ -6216,7 +6280,7 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
-  if (spConnected()) sub.push({ label: 'Música  ▸', onPress: () => musicMenu(lobbyMenu) });
+  if (spConnected() || settings.mode === 'touch' || isCombat()) sub.push({ label: spConnected() ? 'Música  ▸' : 'Ritmo  ▸', onPress: () => musicMenu(lobbyMenu) }); // música (Spotify) y ritmo
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (viewRows(lobbyMenu).length || rr.length) sub.push({ label: 'Sala y vista  ▸', style: roomBad ? 'primary' : undefined, onPress: () => roomMenu(lobbyMenu) });
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Sala y vista»', color: '#ffd166' });
@@ -6232,8 +6296,9 @@ function exerciseMenu(back) {
   const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
 function musicMenu(back) {
-  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = () => musicMenu(back);
+  const again = () => musicMenu(back), beat = settings.mode === 'touch' || isCombat(); // el ritmo: al compás o el de Spotify (Toques y Combate)
+  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), ...(beat ? tempoRows(again) : []), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = again;
 }
 function roomMenu(back) {
   const again = () => roomMenu(back), rows = [{ t: 'title', text: 'SALA Y VISTA' }, ...viewRows(again), ...roomRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
@@ -6256,6 +6321,7 @@ function openPause() {
   pauseMenu();
 }
 function resumeGame() {
+  BEAT.off = null; // el pulso se vuelve a enganchar a la música
   hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
@@ -6283,7 +6349,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset();
+  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -6395,7 +6461,8 @@ function gameStep(dt, t) {
   if (state === 'play') {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
+    beatStep(dt); // con ritmo, los enemigos salen en el pulso
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
@@ -7275,7 +7342,7 @@ function tapTempo() {
   if (TCH.taps.length >= 4) {
     const d = []; for (let i = 1; i < TCH.taps.length; i++) d.push(TCH.taps[i] - TCH.taps[i - 1]);
     d.sort((a, b) => a - b); const med = d[d.length >> 1];
-    if (med > 0.25 && med < 1.6) { setSetting('bpm', Math.round(60 / med)); TCH.beat0 = now; return true; }
+    if (med > 0.25 && med < 1.6) { setSetting('bpm', Math.round(60 / med)); TCH.beat0 = now; if (typeof BEAT !== 'undefined') BEAT.off = null; return true; }
   }
   return false;
 }
@@ -7288,7 +7355,7 @@ async function spotifyTempo() {
 }
 function tempoRows(back) {
   const P = settings.bpm;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · los objetivos llegan en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
   const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { tapTempo(); back(); } }];
   if (spConnected()) items.push({ label: 'Ritmo de Spotify', onPress: () => { spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
   if (P) items.push({ label: 'Sin ritmo', onPress: () => { setSetting('bpm', 0); back(); } });

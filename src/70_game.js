@@ -54,6 +54,25 @@ const ROBOT_KIND = {
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
 // Con espada hay que esperarlos a tu alcance: vienen directos (como mucho SWORD_WALK s), sin pararse a amenazar
+// Partes sólidas de las compuertas, como círculos en el suelo de la arena: los pilares del marco y los bloques de los lados
+function gateSolids() {
+  const out = [];
+  for (const g of gates) {
+    if (!g.on || !g.g.visible) continue; const r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale;
+    const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc });
+    for (const sd of [-1, 1]) { put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); }
+  }
+  return out;
+}
+// Ritmo (BPM) en Combate: periodo del pulso y si acaba de sonar uno (cuenta desde el pulso marcado al compás o por Spotify)
+const beatP = () => isCombat() && settings.bpm > 0 ? 60 / settings.bpm : 0;
+// El pulso va con el reloj del juego, enganchado al reloj real al empezar y al volver de la pausa (el compás marcado lo da el reloj real)
+const BEAT = { last: -1, hit: false, t: 0, off: null };
+const beatNow = () => { const P = beatP(); return P ? (BEAT.t + (BEAT.off || 0) - TCH.beat0) / P : 0; }; // pulsos desde la referencia (con decimales)
+function beatStep(dt) {
+  BEAT.t += dt; if (BEAT.off === null) BEAT.off = perfNow() - BEAT.t;
+  const P = beatP(); if (!P) { BEAT.hit = false; return; } const k = Math.floor(beatNow()); BEAT.hit = k !== BEAT.last && BEAT.last >= 0; BEAT.last = k;
+}
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(settings.walkTime, SWORD_WALK) : settings.walkTime;
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
@@ -83,6 +102,9 @@ class Robot {
     // cabe por el hueco de su compuerta (en realidad mixta, con el techo de tu habitación, las compuertas son más bajas)
     this.sc = K.scale * Math.min(1, 3.0 * gate.scale / (1.95 * K.scale)); this.root.scale.setScalar(this.sc); arena.add(this.root);
     const gr = gate.g.rotation.y, back = 1.3 * gate.scale; this.pos = new V3(gate.x - Math.sin(gr) * back, 0, gate.z - Math.cos(gr) * back); // sale de dentro del túnel
+    // primero sale recto por el hueco hasta delante de la compuerta (sin cruzar el marco ni los bloques de los lados) y
+    // luego va a su puesto; la compuerta no se cierra mientras no haya salido
+    this.gate = gate; this.out = false; this.exit = new V3(gate.x + Math.sin(gr) * 1.7 * gate.scale, 0, gate.z + Math.cos(gr) * 1.7 * gate.scale);
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * this.sc, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
@@ -104,6 +126,7 @@ class Robot {
     if (spd === true) spd = this.vWalk; // pose de prueba
     const amp = clamp(spd / Math.max(0.2, this.vWalk * 0.7), 0, 1), run = this.run;
     this.phase += TAU * clamp(spd / (K.stride * this.sc * (1 + run * 0.35)), 0, 2.8) * dt;
+    if (beatP() && amp > 0.3) this.phase += wrapAng(Math.PI * beatNow() + (this.beatOff || 0) - this.phase) * Math.min(1, dt * 6); // con ritmo: un paso en cada pulso
     const p = this.phase, drops = [], la = 1 + run * 0.55;
     [['L', 0], ['R', Math.PI]].forEach(([sd, off], i) => {
       const q = p + off, c = Math.cos(q);
@@ -173,13 +196,14 @@ class Robot {
         if (!active) break;
         // cada poco busca un puesto mejor (al morir otro, los de atrás avanzan)
         this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } }
-        const to = _rd.subVectors(this.slot, this.pos); to.y = 0; const d = to.length();
+        if (!this.out) { this.gate.openT = Math.max(this.gate.openT, 0.8); if (Math.hypot(this.exit.x - this.pos.x, this.exit.z - this.pos.z) < 0.35) this.out = true; }
+        const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); SND.servo(this.center(tmpB)); SND.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
-        to.divideScalar(d);
+        to.normalize();
         // amenaza a media distancia (una vez por avance, si hay tiempo)
         if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; SND.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
@@ -187,7 +211,10 @@ class Robot {
         wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
+        // las compuertas son sólidas: rodea sus pilares y los bloques de los lados (al salir del túnel va recto por el hueco)
+        if (this.out) for (const c of gateSolids()) { const dx = this.pos.x - c.x, dz = this.pos.z - c.z, dd = Math.hypot(dx, dz) || 1e-3, min = c.r + this.radius; if (dd < min + 0.6) { const k = Math.pow((min + 0.6 - dd) / 0.6, 2) * 2.2; steer.x += dx / dd * k; steer.z += dz / dd * k; } }
         for (const o of enemies) {
+          if (!this.out) break; // dentro del túnel no se aparta: sale recto
           if (o === this || !o.alive || o.type !== 'robot') continue;
           const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = Math.hypot(dx, dz) || 1e-3, min = this.radius + o.radius + 0.3;
           if (dd < min + 0.9) { const k = Math.pow((min + 0.9 - dd) / 0.9, 2) * 1.6; steer.x += dx / dd * k; steer.z += dz / dd * k; }
@@ -472,7 +499,7 @@ class Flyer {
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
         if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5; this.windT = 0; }
       }
-      if (this.t > this.nextDart && !this.windT) {
+      if (this.t > this.nextDart && !this.windT && (!beatP() || BEAT.hit)) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
         this.dartT.set(rand(-1, 1) * A, rand(-0.4, 0.6) * A * (low ? 0.2 : 0.7), rand(-0.5, 0.5) * A * 0.4);
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
@@ -687,6 +714,7 @@ function onRep(opts, side) {
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
   } else if (!throwCharge(dmg, opts.perfect)) { // apuntando con las manos: carga las manos y se lanza con el gesto
+    if (throwAim()) { fireOrb(head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
     for (const s of aimSources()) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
@@ -1326,7 +1354,7 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
-  if (spConnected()) sub.push({ label: 'Música  ▸', onPress: () => musicMenu(lobbyMenu) });
+  if (spConnected() || settings.mode === 'touch' || isCombat()) sub.push({ label: spConnected() ? 'Música  ▸' : 'Ritmo  ▸', onPress: () => musicMenu(lobbyMenu) }); // música (Spotify) y ritmo
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (viewRows(lobbyMenu).length || rr.length) sub.push({ label: 'Sala y vista  ▸', style: roomBad ? 'primary' : undefined, onPress: () => roomMenu(lobbyMenu) });
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Sala y vista»', color: '#ffd166' });
@@ -1342,8 +1370,9 @@ function exerciseMenu(back) {
   const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
 function musicMenu(back) {
-  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = () => musicMenu(back);
+  const again = () => musicMenu(back), beat = settings.mode === 'touch' || isCombat(); // el ritmo: al compás o el de Spotify (Toques y Combate)
+  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), ...(beat ? tempoRows(again) : []), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = again;
 }
 function roomMenu(back) {
   const again = () => roomMenu(back), rows = [{ t: 'title', text: 'SALA Y VISTA' }, ...viewRows(again), ...roomRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
@@ -1366,6 +1395,7 @@ function openPause() {
   pauseMenu();
 }
 function resumeGame() {
+  BEAT.off = null; // el pulso se vuelve a enganchar a la música
   hideMenu(); state = pausedFrom; center.mesh.visible = ['calib', 'ready', 'mount'].includes(state); boardDirty = true;
   AUD.loops.forEach(l => { if (l.out && !l.dead) l.out.gain.setTargetAtTime(0.2, AUD.C.currentTime, 0.1); });
 }
@@ -1393,7 +1423,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset();
+  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -1505,7 +1535,8 @@ function gameStep(dt, t) {
   if (state === 'play') {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
+    beatStep(dt); // con ritmo, los enemigos salen en el pulso
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : settings.maxAlive) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
