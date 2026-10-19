@@ -175,6 +175,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-curl2" value="curl2">
         <span class="tag">Barra o kettlebell · muñecas</span><b>Curl con barra</b>
         <small>Con una barra, una kettlebell o dos mancuernas a la vez: sube las dos manos juntas hasta los hombros. Cada subida es un disparo.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-twist" value="twist">
+        <span class="tag">Barra flexible · muñecas</span><b>Antebrazos (barra flexible)</b>
+        <small>Agarra la barra flexible por los extremos y gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-press2" value="press2">
         <span class="tag">Barra o kettlebell · muñecas</span><b>Press con barra</b>
         <small>Desde los hombros, sube la barra (o la kettlebell con las dos manos) hasta estirar los brazos. Las dos manos a la vez, un disparo.</small></label>
@@ -336,21 +339,21 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'dips', 'curl', 'curl2', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['squat', 'lunge', 'jump', 'abs', 'pushup', 'combo']
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump']],
-  ['Brazos y hombros', ['curl', 'curl2', 'press', 'press2', 'dips']],
+  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
   ['Pecho', ['pushup']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['plankrow', 'row', 'pullup', 'hang']],
@@ -384,6 +387,7 @@ const SCHEMA = [
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
+  { key: 'twistDeg', g: 'ejercicio', label: 'Giro de cada mano (barra flexible)', short: 'Giro muñecas', type: 'num', min: 30, max: 120, step: 5, def: 70, unit: '°', ex: ['twist'], hint: 'Cuánto debe girar cada mano, en sentido contrario a la otra, para que cuente un giro. Un giro carga y el siguiente, al revés, dispara.' },
   { key: 'curlRange', g: 'ejercicio', label: 'Recorrido del curl', short: 'Recorrido curl', type: 'num', min: 10, max: 50, step: 1, def: 27, unit: 'cm', ex: ['curl', 'curl2'], hint: 'Cuánto debe subir la muñeca (con barra, las dos a la vez).' },
   { key: 'rowRange', g: 'ejercicio', label: 'Subida en el remo invertido', short: 'Subida remo', type: 'num', min: 10, max: 70, step: 1, def: 30, unit: 'cm', ex: ['row'], hint: 'Cuánto debe subir la cabeza desde los brazos estirados.' },
   { key: 'pullRange', g: 'ejercicio', label: 'Subida en la dominada', short: 'Subida dominada', type: 'num', min: 10, max: 70, step: 1, def: 35, unit: 'cm', ex: ['pullup'], hint: 'Cuánto debe subir la cabeza desde colgado con los brazos estirados.' },
@@ -523,7 +527,7 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 // Con pesas en las manos (no se abre la pausa juntando los dedos)
-const holdsWeights = () => ['curl', 'curl2', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
+const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
 const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'plankrow';
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
@@ -533,7 +537,7 @@ const foes = () => oneArm() ? 'robots' : settings.exercise === 'superman' ? 'fly
 const foesHas = k => isCombat() && (foes() === k || foes() === 'mix');
 // Puntería: automática (cada repetición dispara sola al más cercano) o la tuya, con las manos o la mirada. En la plancha
 // con un brazo (cada brazo dispara a su lado) y en el superman (tumbado no se apunta) siempre es automática
-const aimForced = () => oneArm() || settings.exercise === 'superman';
+const aimForced = () => oneArm() || settings.exercise === 'superman' || settings.exercise === 'twist'; // con la barra flexible las dos manos están ocupadas
 const autoAim = () => isCombat() && !pistolOn() && (settings.aim === 'auto' || aimForced());
 const aimManual = () => isCombat() && !pistolOn() && !autoAim();
 // Espadas: en Combate contra robots (sentadillas o zancadas) y en Toques de pie; solo se ven si llevas los mandos
@@ -651,7 +655,7 @@ function sortExCards(byBody) {
   }
   EXCARDS.order.forEach(c => { if (!used.has(c)) host.appendChild(c); });
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, curl2: 2.0, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -4150,7 +4154,7 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise];
+    const L = { twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
@@ -4298,6 +4302,40 @@ const DEMO = {
   jump: { P: 2.4, high: 2.5, keys: [[0, STAND], [0.3, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.5, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.68, STAND], [1, STAND]], fire: 0.5, low: 0.5, desc: 'Flexiona un poco y salta para meter la cabeza en el aro que espera por encima; toca las gemas con la mano.' },
   abs: { P: 2.8, keys: [[0, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }], [0.4, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [0.55, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [1, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }]], fire: 0.45, low: 0.45, desc: 'Boca arriba con las rodillas dobladas: sube el tronco para meter la cabeza en el aro (de frente o girado).' }
 };
+// Antebrazos con la barra flexible: primer plano de frente (de lado no se ve el giro). Cada mano gira unos 90° en
+// sentido contrario a la otra, como al escurrir una toalla: el primer giro carga y el siguiente, al revés, dispara
+DEMO.twist = { P: 2.6, custom: 'twist', keys: [[0, STAND], [1, STAND]], fire: 0.9, src: 'bar', desc: 'Gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.' };
+const TW_A = dg(45), TW_Z = 1.45; // giro de cada mano desde el centro (90° de un extremo al otro)
+function twistAt(u) { return u < 0.4 ? lerp(-TW_A, TW_A, smooth(u / 0.4)) : u < 0.5 ? TW_A : u < 0.9 ? lerp(TW_A, -TW_A, smooth((u - 0.5) / 0.4)) : -TW_A; }
+function demoTwist(c, X, Y, s, u, lw) {
+  c.save(); c.translate(X(0), Y(0.75)); c.scale(TW_Z, TW_Z); c.translate(-X(0), -Y(0.75)); // primer plano, más grande
+  const a = twistAt(u), da = twistAt(Math.min(1, u + 0.02)) - a, by = 1.12, hx = 0.44;
+  // antebrazos desde abajo hasta los puños
+  c.strokeStyle = DC.ink; c.lineWidth = lw * 2.2; c.beginPath(); c.moveTo(X(-0.8), Y(0.3)); c.lineTo(X(-hx), Y(by - 0.04)); c.moveTo(X(0.8), Y(0.3)); c.lineTo(X(hx), Y(by - 0.04)); c.stroke();
+  // la barra, con las estrías inclinadas según lo retorcida que esté
+  c.fillStyle = '#3ddc97'; rr(c, X(-hx), Y(by + 0.07), (2 * hx) * s, 0.14 * s, 0.07 * s); c.fill();
+  c.strokeStyle = '#1f8f60'; c.lineWidth = 2; rr(c, X(-hx), Y(by + 0.07), (2 * hx) * s, 0.14 * s, 0.07 * s); c.stroke();
+  const tw = a / TW_A * 0.06; c.strokeStyle = 'rgba(15,90,60,.75)'; c.lineWidth = 3;
+  for (let i = 1; i < 10; i++) { const x = -hx + (2 * hx) * i / 10; c.beginPath(); c.moveTo(X(x - tw), Y(by - 0.06)); c.lineTo(X(x + tw), Y(by + 0.06)); c.stroke(); }
+  // brillo de la carga entre el primer y el segundo giro
+  if (u >= 0.4 && u < 0.9) { c.save(); c.shadowColor = DC.teal; c.shadowBlur = 22; c.fillStyle = 'rgba(60,240,198,.85)'; c.beginPath(); c.arc(X(0.05), Y(by), s * (0.05 + 0.01 * Math.sin(u * 60)), 0, TAU); c.fill(); c.restore(); }
+  // puños: los nudillos suben en uno y bajan en el otro
+  for (const sg of [-1, 1]) {
+    const x = sg * hx, k = Math.sin(sg * a);
+    c.fillStyle = '#e6dcff'; rr(c, X(x) - s * 0.075, Y(by + 0.1), s * 0.15, s * 0.2, s * 0.05); c.fill();
+    c.fillStyle = '#8e86c0'; for (let n = 0; n < 4; n++) { c.beginPath(); c.arc(X(x - sg * 0.04 + sg * n * 0.0), Y(by + 0.02 + k * 0.06 - n * 0.035 + 0.05), s * 0.018, 0, TAU); c.fill(); }
+    // flecha curva: hacia dónde gira cada mano ahora mismo (sentidos contrarios)
+    if (Math.abs(da) > 1e-3) {
+      const dir = Math.sign(da) * sg, cx = X(x), cy = Y(by), R = s * 0.17;
+      c.strokeStyle = DC.gold; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, R, dir > 0 ? Math.PI * 1.15 : Math.PI * 1.85, dir > 0 ? Math.PI * 1.85 : Math.PI * 1.15, dir < 0); c.stroke();
+      const end = dir > 0 ? Math.PI * 1.85 : Math.PI * 1.15, ex_ = cx + Math.cos(end) * R, ey = cy + Math.sin(end) * R;
+      c.fillStyle = DC.gold; c.beginPath(); c.arc(ex_, ey, 4, 0, TAU); c.fill();
+    }
+  }
+  c.fillStyle = DC.gold; c.font = `700 ${Math.round(s * 0.11)}px ${FB}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  c.fillText(u < 0.4 ? 'giro 1…' : u < 0.5 ? '¡cargado!' : u < 0.9 ? 'giro 2, al revés…' : '¡disparo!', X(0), Y(by - 0.25));
+  c.restore();
+}
 DEMO.combo = { P: 4.8, high: 2.5, keys: [[0, STAND], [0.18, SQUAT], [0.28, SQUAT], [0.45, STAND], [0.6, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.72, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.86, STAND], [1, STAND]], fire: [0.24, 0.72], low: [0.24, 0.72], desc: 'Tú eliges la postura y los movimientos: por ejemplo, un aro bajo (sentadilla) y luego uno alto (salto).' };
 // Postura del ejercicio en la fase u (0..1), suavizada entre claves
 function demoPose(D, u) {
@@ -4343,12 +4381,16 @@ function demoDraw(c, W, H, ex, mode, t) {
   // monigote: lo de atrás, más apagado
   const seg = (pts, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(X(pts[0][0]), Y(pts[0][1])); for (let i = 1; i < pts.length; i++) c.lineTo(X(pts[i][0]), Y(pts[i][1])); c.stroke(); };
   const foot = (kn, an, col) => { const dx = an[0] - kn[0], dy = an[1] - kn[1], l = Math.hypot(dx, dy) || 1; seg([an, [an[0] - dy / l * 0.1, an[1] + dx / l * 0.1]], col, lw * 0.85); }; // la punta, hacia delante
-  seg([J.hip, ...J.legB], DC.back, lw); foot(...J.legB, DC.back); seg([J.sh, ...J.armB], DC.back, lw * 0.85);
-  seg([J.hip, J.neck], DC.ink, lw * 1.25);
-  c.fillStyle = DC.ink; c.beginPath(); c.arc(X(J.head[0]), Y(J.head[1]), DL.head * s, 0, TAU); c.fill();
-  seg([J.hip, ...J.legF], DC.ink, lw); foot(...J.legF, DC.ink); seg([J.sh, ...J.armF], DC.ink, lw * 0.9);
+  if (D.custom === 'twist') demoTwist(c, X, Y, s, u, lw);
+  else {
+    seg([J.hip, ...J.legB], DC.back, lw); foot(...J.legB, DC.back); seg([J.sh, ...J.armB], DC.back, lw * 0.85);
+    seg([J.hip, J.neck], DC.ink, lw * 1.25);
+    c.fillStyle = DC.ink; c.beginPath(); c.arc(X(J.head[0]), Y(J.head[1]), DL.head * s, 0, TAU); c.fill();
+    seg([J.hip, ...J.legF], DC.ink, lw); foot(...J.legF, DC.ink); seg([J.sh, ...J.armF], DC.ink, lw * 0.9);
+  }
   // pesas en las manos
   const wF = J.armF[1], wB = J.armB[1];
+  if (D.custom) { /* el primer plano ya lleva su aparato */ } else {
   if (D.dumb) for (const w of [wB, wF]) { c.fillStyle = DC.gold; c.fillRect(X(w[0]) - s * 0.05, Y(w[1]) - s * 0.03, s * 0.1, s * 0.06); }
   if (D.bar) { c.fillStyle = '#c9c4e8'; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.11, 0, TAU); c.fill(); c.fillStyle = DC.bg1; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.03, 0, TAU); c.fill(); }
   if (D.kb) { c.fillStyle = DC.gold; c.beginPath(); const dx = wF[0] - J.sh[0], dy = wF[1] - J.sh[1], l = Math.hypot(dx, dy) || 1; c.arc(X(wF[0] + dx / l * 0.08), Y(wF[1] + dy / l * 0.08), s * 0.075, 0, TAU); c.fill(); }
@@ -4357,6 +4399,7 @@ function demoDraw(c, W, H, ex, mode, t) {
     c.strokeStyle = settings.swordKind === 'laser' ? DC.teal : '#d8dcff'; c.lineWidth = lw * 0.7; c.beginPath(); c.moveTo(X(wF[0]), Y(wF[1])); c.lineTo(X(wF[0] + dx / l * 0.6), Y(wF[1] + dy / l * 0.6)); c.stroke();
   }
   if (D.ball) { c.fillStyle = DC.gold; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.08, 0, TAU); c.fill(); }
+  }
   // objetivo: dónde está, cuándo cae
   const fi = fires.findIndex(f => f >= 0 && u >= f && u < f + 0.22), lastFire = fires.filter(f => f >= 0 && f <= u).pop();
   const tgtPose = i => demoJoints(demoPose(D, lows[Math.min(i, lows.length - 1)]));
@@ -4385,7 +4428,7 @@ function demoDraw(c, W, H, ex, mode, t) {
     if (fi < 0) drawFoe(c, X, Y, s, ePos, fl ? 'flyer' : sp ? 'spider' : 'robot', t);
     if (fi >= 0) { // rayo y explosión
       const p = (u - fires[fi]) / 0.22, kp = [lerp(2.6, ex_, 1), ePos[1]], src = srcs[fi] || 'chest';
-      const o = src === 'chest' ? [J.neck[0] + 0.18, J.neck[1] - 0.18] : (src === 'armB' ? J.armB[1] : J.armF[1]);
+      const o = src === 'bar' ? [0.05 * TW_Z, 0.75 + (1.12 - 0.75) * TW_Z] : src === 'chest' ? [J.neck[0] + 0.18, J.neck[1] - 0.18] : (src === 'armB' ? J.armB[1] : J.armF[1]);
       const tgt = [kp[0], kp[1] + (fl ? 0 : sp ? 0.04 : 0.45)];
       if (typeof swordSet === 'function' && swordSet() && !fl && !sp) { c.strokeStyle = '#d8dcff'; c.lineWidth = s * 0.04; c.beginPath(); c.arc(X(o[0]), Y(o[1]), s * 0.55, -1.2, 0.9); c.stroke(); }
       else if (p < 0.6) demoBolt(c, X(o[0]), Y(o[1]), X(tgt[0]), Y(tgt[1]), cyc * 7 + fi);
@@ -5566,6 +5609,7 @@ const DET = {
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 } },
   pair: { side: null, t: 0, perfect: false, fast: false },
+  tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
@@ -5728,6 +5772,51 @@ function chopStep(t, dt) {
   else if (high && x * C.side > 0.05) { onPartial('En diagonal: hasta el hombro contrario'); C.state = 'idle'; } // subió por el mismo lado
   else if (t - C.t0 > CHOP_WIN) { if (C.top > calibRef * 0.78) onPartial('¡Más arriba, por encima del hombro!'); C.state = 'idle'; }
 }
+// Barra flexible de antebrazos: las manos, agarradas a los extremos, giran alrededor del eje de la barra (la línea
+// entre las muñecas) en sentidos contrarios. Se mide el ángulo de cada mano alrededor de ese eje con la dirección
+// muñeca → nudillos y se usa la diferencia entre las dos: así da igual que el cuerpo o la barra entera se muevan.
+// Un giro (escurrir hacia un lado, ~2 × twistDeg de diferencia) carga; el siguiente, hacia el otro, dispara.
+const _tw0 = new V3(), _tw1 = new V3(), _tw2 = new V3(), _tw3 = new V3();
+function twistHandAngle(h, ax, r1, r2) {
+  const K = h.J[10].ok ? h.J[10].p : h.J[11].ok ? h.J[11].p : null; // nudillo del dedo corazón (o la falange)
+  if (K) _tw3.subVectors(K, h.wrist); else _tw3.set(0, 0, -1).applyQuaternion(h.wristQ);
+  _tw3.addScaledVector(ax, -_tw3.dot(ax)); if (_tw3.lengthSq() < 1e-6) return null;
+  return Math.atan2(_tw3.dot(r2), _tw3.dot(r1));
+}
+function twistAngle() {
+  const L = hands.left, R = hands.right; if (!L.ok || !R.ok) return null;
+  const ax = _tw0.subVectors(R.wrist, L.wrist), len = ax.length(); if (len < 0.12 || len > 0.95) return null; ax.divideScalar(len);
+  const r1 = _tw1.set(0, 1, 0).addScaledVector(ax, -ax.y); if (r1.lengthSq() < 0.05) r1.set(0, 0, 1).addScaledVector(ax, -ax.z); r1.normalize();
+  const r2 = _tw2.crossVectors(ax, r1);
+  const a = twistHandAngle(L, ax, r1, r2), b = twistHandAngle(R, ax, r1, r2);
+  return a == null || b == null ? null : wrapAng(b - a);
+}
+function twistStep(t, dt) {
+  const T = DET.tw, req = 2 * settings.twistDeg * Math.PI / 180 * 0.85, phi = twistAngle();
+  T.warnT -= dt; if (T.t0 < 0) T.t0 = t;
+  if (phi == null) { T.lostT += dt; if (T.lostT > 1.2 && state === 'play' && T.warnT <= 0) { say('Mira la barra: no veo tus dos manos', '#ff8a3d', 1.2); T.warnT = 4; } T.last = null; return; }
+  T.lostT = 0;
+  if (T.last == null) { T.last = phi; T.lo = T.hi = T.acc; return; } // al recuperar las manos no se cuenta el salto
+  T.acc += wrapAng(phi - T.last); T.last = phi;
+  if (T.acc < T.lo) { T.lo = T.acc; T.ext = -1; } if (T.acc > T.hi) { T.hi = T.acc; T.ext = 1; } // último extremo alcanzado
+  // giro completo hacia el lado que toca (el primero, hacia cualquiera)
+  let done = 0;
+  if (T.dir <= 0 && T.acc - T.lo >= req) done = 1; else if (T.dir >= 0 && T.hi - T.acc >= req) done = -1;
+  if (done) {
+    const span = done > 0 ? T.acc - T.lo : T.hi - T.acc, dur = t - T.t0;
+    T.dir = done; T.lo = T.hi = T.acc; T.t0 = t; T.n++;
+    if (T.n % 2) { onCharge(); say('¡Cargado! Ahora al revés', '#3cf0c6', 0.8, false); SND.charge(); }
+    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2 });
+    return;
+  }
+  // se dio la vuelta antes de completar el giro que tocaba: avisa si se quedó corto
+  const sweep = T.hi - T.lo, back = T.ext > 0 ? T.hi - T.acc : T.acc - T.lo; // cuánto ha vuelto desde el último extremo
+  // (el primer medio giro, desde las manos rectas hasta un extremo, no cuenta como corto)
+  if (back > 0.5 && sweep > req * 0.45 && sweep < req) {
+    if (T.n || T.first) { if (T.warnT <= 0) { onPartial(`Gira más las muñecas (unos ${settings.twistDeg}° cada una)`); T.warnT = 2.5; } }
+    T.first = true; T.lo = T.hi = T.acc;
+  }
+}
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -5749,6 +5838,8 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
     // cada brazo por su cuenta: dispara al llegar arriba (press) o al hombro (curl)
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
+  } else if (settings.exercise === 'twist') {
+    twistStep(t, dt);
   } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
     // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
     pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
@@ -6194,7 +6285,7 @@ function beginRun() {
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
@@ -6218,7 +6309,8 @@ function arenaFollow(dt) {
 }
 function calibrate() {
   arenaFromHead();
-  const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated()) { calibRef = y; lastStandY = y; }
+  const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated() && y > 1.1) { calibRef = y; lastStandY = y; }
+  Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   DET.sp.ref = y;
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
@@ -6292,7 +6384,7 @@ function gameStep(dt, t) {
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     arenaFollow(dt);
-    const ok = isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
+    const ok = settings.exercise === 'twist' ? head.p.y > 0.55 && hands.left.ok && hands.right.ok : isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
@@ -7501,7 +7593,7 @@ function readXR(frame, t = 0) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, curl: 0, thrUp: 0, wasCrouch: false };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, twist: 0, curl: 0, thrUp: 0, wasCrouch: false };
 // Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
 const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2 : isSeated() ? 1.0 : isFloor() ? 0.45 : 1.6;
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
@@ -7545,6 +7637,18 @@ function previewInput(dt) {
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
   if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }
+  // barra flexible: las manos sujetan la barra delante del pecho; al pulsar Espacio escurres hacia un lado y al
+  // soltarlo, hacia el otro (cada mano gira en sentido contrario a la otra alrededor de la barra)
+  if (settings.exercise === 'twist' && GAME_STATES.includes(state)) {
+    // cada mano recorre algo más de twistDeg de un extremo al otro
+    const want = (PV.crouch ? 1 : -1) * (settings.twistDeg / 2 + 8) * (PV.twistScale || 1) * Math.PI / 180; PV.twist += clamp(want - PV.twist, -5 * dt, 5 * dt);
+    for (const [s, sg] of [['left', -1], ['right', 1]]) {
+      const h = hands[s], a = sg * PV.twist; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion);
+      h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.38); h.wrist.y -= 0.42;
+      // nudillos: hacia delante, girados alrededor de la barra (eje izquierda-derecha)
+      _pvw.copy(f).multiplyScalar(Math.cos(a) * 0.08); _pvw.y = Math.sin(a) * 0.08; h.J[10].p.copy(h.wrist).add(_pvw); h.J[10].ok = true;
+    }
+  }
   // press de hombro: las mancuernas a la altura de los hombros; Espacio las sube por encima de la cabeza
   // curl con barra: las dos manos a la altura de la cadera; Espacio las sube juntas hasta los hombros
   if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }

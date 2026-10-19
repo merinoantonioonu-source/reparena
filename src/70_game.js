@@ -719,6 +719,7 @@ const DET = {
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 } },
   pair: { side: null, t: 0, perfect: false, fast: false },
+  tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
@@ -881,6 +882,51 @@ function chopStep(t, dt) {
   else if (high && x * C.side > 0.05) { onPartial('En diagonal: hasta el hombro contrario'); C.state = 'idle'; } // subió por el mismo lado
   else if (t - C.t0 > CHOP_WIN) { if (C.top > calibRef * 0.78) onPartial('¡Más arriba, por encima del hombro!'); C.state = 'idle'; }
 }
+// Barra flexible de antebrazos: las manos, agarradas a los extremos, giran alrededor del eje de la barra (la línea
+// entre las muñecas) en sentidos contrarios. Se mide el ángulo de cada mano alrededor de ese eje con la dirección
+// muñeca → nudillos y se usa la diferencia entre las dos: así da igual que el cuerpo o la barra entera se muevan.
+// Un giro (escurrir hacia un lado, ~2 × twistDeg de diferencia) carga; el siguiente, hacia el otro, dispara.
+const _tw0 = new V3(), _tw1 = new V3(), _tw2 = new V3(), _tw3 = new V3();
+function twistHandAngle(h, ax, r1, r2) {
+  const K = h.J[10].ok ? h.J[10].p : h.J[11].ok ? h.J[11].p : null; // nudillo del dedo corazón (o la falange)
+  if (K) _tw3.subVectors(K, h.wrist); else _tw3.set(0, 0, -1).applyQuaternion(h.wristQ);
+  _tw3.addScaledVector(ax, -_tw3.dot(ax)); if (_tw3.lengthSq() < 1e-6) return null;
+  return Math.atan2(_tw3.dot(r2), _tw3.dot(r1));
+}
+function twistAngle() {
+  const L = hands.left, R = hands.right; if (!L.ok || !R.ok) return null;
+  const ax = _tw0.subVectors(R.wrist, L.wrist), len = ax.length(); if (len < 0.12 || len > 0.95) return null; ax.divideScalar(len);
+  const r1 = _tw1.set(0, 1, 0).addScaledVector(ax, -ax.y); if (r1.lengthSq() < 0.05) r1.set(0, 0, 1).addScaledVector(ax, -ax.z); r1.normalize();
+  const r2 = _tw2.crossVectors(ax, r1);
+  const a = twistHandAngle(L, ax, r1, r2), b = twistHandAngle(R, ax, r1, r2);
+  return a == null || b == null ? null : wrapAng(b - a);
+}
+function twistStep(t, dt) {
+  const T = DET.tw, req = 2 * settings.twistDeg * Math.PI / 180 * 0.85, phi = twistAngle();
+  T.warnT -= dt; if (T.t0 < 0) T.t0 = t;
+  if (phi == null) { T.lostT += dt; if (T.lostT > 1.2 && state === 'play' && T.warnT <= 0) { say('Mira la barra: no veo tus dos manos', '#ff8a3d', 1.2); T.warnT = 4; } T.last = null; return; }
+  T.lostT = 0;
+  if (T.last == null) { T.last = phi; T.lo = T.hi = T.acc; return; } // al recuperar las manos no se cuenta el salto
+  T.acc += wrapAng(phi - T.last); T.last = phi;
+  if (T.acc < T.lo) { T.lo = T.acc; T.ext = -1; } if (T.acc > T.hi) { T.hi = T.acc; T.ext = 1; } // último extremo alcanzado
+  // giro completo hacia el lado que toca (el primero, hacia cualquiera)
+  let done = 0;
+  if (T.dir <= 0 && T.acc - T.lo >= req) done = 1; else if (T.dir >= 0 && T.hi - T.acc >= req) done = -1;
+  if (done) {
+    const span = done > 0 ? T.acc - T.lo : T.hi - T.acc, dur = t - T.t0;
+    T.dir = done; T.lo = T.hi = T.acc; T.t0 = t; T.n++;
+    if (T.n % 2) { onCharge(); say('¡Cargado! Ahora al revés', '#3cf0c6', 0.8, false); SND.charge(); }
+    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2 });
+    return;
+  }
+  // se dio la vuelta antes de completar el giro que tocaba: avisa si se quedó corto
+  const sweep = T.hi - T.lo, back = T.ext > 0 ? T.hi - T.acc : T.acc - T.lo; // cuánto ha vuelto desde el último extremo
+  // (el primer medio giro, desde las manos rectas hasta un extremo, no cuenta como corto)
+  if (back > 0.5 && sweep > req * 0.45 && sweep < req) {
+    if (T.n || T.first) { if (T.warnT <= 0) { onPartial(`Gira más las muñecas (unos ${settings.twistDeg}° cada una)`); T.warnT = 2.5; } }
+    T.first = true; T.lo = T.hi = T.acc;
+  }
+}
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -902,6 +948,8 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
     // cada brazo por su cuenta: dispara al llegar arriba (press) o al hombro (curl)
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
+  } else if (settings.exercise === 'twist') {
+    twistStep(t, dt);
   } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
     // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
     pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
@@ -1347,7 +1395,7 @@ function beginRun() {
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
@@ -1371,7 +1419,8 @@ function arenaFollow(dt) {
 }
 function calibrate() {
   arenaFromHead();
-  const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated()) { calibRef = y; lastStandY = y; }
+  const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated() && y > 1.1) { calibRef = y; lastStandY = y; }
+  Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   DET.sp.ref = y;
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
@@ -1445,7 +1494,7 @@ function gameStep(dt, t) {
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   if (state === 'calib') {
     arenaFollow(dt);
-    const ok = isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
+    const ok = settings.exercise === 'twist' ? head.p.y > 0.55 && hands.left.ok && hands.right.ok : isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
     if (ok && head.speed < 0.07) calibT += dt; else calibT = Math.max(0, calibT - dt * 2);
     if (calibT >= 2) calibrate();
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
