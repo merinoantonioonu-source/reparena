@@ -158,11 +158,36 @@ const fx = {
     for (let i = 0; i < (big ? 22 : 12); i++) PNORM.add({ pos: pos.clone().add(rv(0.25 * size)), v: rv(1).multiplyScalar(1.2 * size).add(new V3(0, 0.5 * size, 0)), life: rand(1.8, 3.2), c0: [0.13, 0.11, 0.1], c1: [0.07, 0.065, 0.06], a: 0.75, s0: 0.5 * size, s1: 2.3 * size, tile: 1, rotV: rand(-0.6, 0.6), drag: 1.6, fin: 0.12 });
     fx.sparks(pos, big ? 46 : 26, [1, 0.45, 0.1], 6 * Math.sqrt(size), 0.06 * Math.sqrt(size));
     shockRing(pos, 3.5 * size, 0xff8a3a); scorch(pos, 1.6 * size);
-    flashLight.position.copy(pos); flashLight.intensity = big ? 9 : 5; flashLight.distance = 10 * size + 4;
+    flashLight.color.setHex(0xffa050); flashLight.position.copy(pos); flashLight.intensity = big ? 9 : 5; flashLight.distance = 10 * size + 4;
   }
 };
+// Esquirlas de neón (humanoides que estallan): triángulos que salen disparados girando, frenan y se apagan
+const SHARDS = { pool: [], live: [] };
+(() => {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.6, 0, -0.5, -0.4, 0.1, 0.55, -0.35, -0.1], 3)); g.computeVertexNormals();
+  for (let i = 0; i < 220; i++) { const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false })); m.visible = false; scene.add(m); SHARDS.pool.push(m); }
+})();
+// n esquirlas desde pos (o repartidas por pts), con los colores de cols (hex) y la velocidad dada
+function shardBurst(pos, n, cols, speed = 3, pts = null) {
+  for (let i = 0; i < n; i++) {
+    const m = SHARDS.pool.pop() || (SHARDS.live.length ? SHARDS.live.shift().m : null); if (!m) return;
+    m.position.copy(pts ? pts[i % pts.length] : pos).add(new V3(rand(-0.06, 0.06), rand(-0.06, 0.06), rand(-0.06, 0.06)));
+    m.rotation.set(rand(0, TAU), rand(0, TAU), rand(0, TAU)); const s = rand(0.04, 0.12); m.scale.set(s, s, s);
+    m.material.color.setHex(cols[i % cols.length]); m.material.opacity = 1; m.visible = true;
+    const v = rUp(0.6).multiplyScalar(speed * rand(0.4, 1.2)); if (pts) { tmpA.subVectors(m.position, pos); tmpA.y = 0; v.add(tmpA.normalize().multiplyScalar(speed * 0.5)); } // desde el centro hacia fuera
+    SHARDS.live.push({ m, v, w: new V3(rand(-14, 14), rand(-14, 14), rand(-14, 14)), life: rand(0.7, 1.3), max: 1, s });
+  }
+}
+function updateShards(dt) {
+  for (let i = SHARDS.live.length - 1; i >= 0; i--) {
+    const d = SHARDS.live[i]; d.life -= dt; d.v.multiplyScalar(Math.max(0, 1 - dt * 2.2)); d.v.y -= 2.5 * dt;
+    d.m.position.addScaledVector(d.v, dt); d.m.rotation.x += d.w.x * dt; d.m.rotation.y += d.w.y * dt; d.m.rotation.z += d.w.z * dt;
+    const k = clamp(d.life / 0.5, 0, 1); d.m.material.opacity = k; d.m.scale.setScalar(d.s * (0.4 + 0.6 * k));
+    if (d.life <= 0) { d.m.visible = false; SHARDS.pool.push(d.m); SHARDS.live.splice(i, 1); }
+  }
+}
 function updateFX(dt) {
-  PNORM.update(dt); PADD.update(dt); updateDebris(dt); updateWater(dt);
+  PNORM.update(dt); PADD.update(dt); updateDebris(dt); updateWater(dt); updateShards(dt);
   flashLight.intensity = Math.max(0, flashLight.intensity - dt * 22);
   for (const r of rings) if (r.active) { r.t += dt / 0.45; const s = 0.2 + r.size * smooth(Math.min(1, r.t)); r.mesh.scale.set(s, s, s); r.mesh.material.opacity = Math.max(0, 1 - r.t) * 0.8; if (r.t >= 1) { r.active = false; r.mesh.visible = false; } }
   for (const s of scorches) if (s.active) { s.t += dt; s.mesh.material.opacity = Math.min(1, Math.max(0, (12 - s.t) / 4)) * 0.9; if (s.t > 12) { s.active = false; s.mesh.visible = false; } }
@@ -171,6 +196,7 @@ function updateFX(dt) {
 function clearFX() {
   PNORM.clear(); PADD.clear(); WDROP.list.length = 0; WDROP.mesh.count = 0;
   while (debris.length) { scene.remove(debris.pop().obj); }
+  while (SHARDS.live.length) { const d = SHARDS.live.pop(); d.m.visible = false; SHARDS.pool.push(d.m); }
   while (popups.length) killPopup(popups.length - 1);
   rings.forEach(r => { r.active = false; r.mesh.visible = false; });
 }

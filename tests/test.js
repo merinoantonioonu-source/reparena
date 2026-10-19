@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, SHARDS, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -211,6 +211,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       return '';
     });
   }
+  // humanoides de neón: salen por las compuertas, se les derriba (estallan en esquirlas) y, si llegan, avisan y golpean
+  const neo = { n: 0, boss: false, robot: false, shards: 0, states: new Set(), cols: new Set() };
+  await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100 }, t => {
+    squatSim(2.6)(t); neo.shards = Math.max(neo.shards, RA.SHARDS.live.length);
+    RA.enemies.forEach(e => { if (e.kind === 'neon') { neo.n++; neo.cols.add(e.pal.glow); } else if (e.kind === 'neonboss') neo.boss = true; else if (e.type === 'robot') neo.robot = true; });
+  }, 420, s => !neo.n ? 'no sale ningún humanoide de neón' : s.kills < 4 ? `a los de neón no se les derriba (${s.kills})` : neo.robot ? 'con 100 % de neón sale algún robot' : !neo.boss ? 'con 100 % de neón el jefe no es de neón' : neo.shards < 20 ? 'los de neón no estallan en esquirlas' : '');
+  await runConfig('neón que llega y golpea', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, walkTime: 4 }, t => {
+    RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'neon') neo.states.add(e.state); });
+  }, 30, s => s.taken < 1 ? 'los de neón no atacan' : !['windup', 'strike', 'knock'].every(k => neo.states.has(k)) ? `al de neón le falta parte del ataque (${[...neo.states]})` : '', true);
+  log(`neon: spawned frames ${neo.n} · colors ${neo.cols.size} · max shards ${neo.shards} · boss ${neo.boss}`);
   // hombres-cocodrilo: salen por las compuertas, se les derriba como a los robots y, si los dejas llegar, muerden
   const croc = { n: 0, boss: false, robot: false };
   await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100 }, t => {
@@ -872,9 +882,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
-    const moves = new Set(), deb0 = RA.debris.length; let maxDeb = 0;
+    const moves = new Set(); let maxDeb = 0, deb0 = RA.debris.length; // la base baja si desaparecen restos de antes
     // si al revés se cuela un corte, dice en qué fase del movimiento (preparar, barrido, retirada, espera) para cazarlo
-    const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
+    const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
     for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
       const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
       XRS.headY = 1.7; XRS.headX = 0;
@@ -889,7 +899,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
         holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, 0.3); FR('retreat', t); // retira la hoja hacia ti, sin volver a pasar por el bloque
         for (let k = 0; k < 20; k++) FR('wait' + k, t); continue; // la hoja se queda retirada hasta el siguiente
       }
-      FR('idle', null); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
+      FR('idle', null); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0);
     }
     const hits = XRS.haptics.filter(h => h[0] === 'right' && h[1] >= 0.7 && h[2] === 60).length;
     log(`sword touch ${name}: cuts ${RA.stats.reps} misses ${RA.stats.taken} moves ${[...moves].join(',')} halves ${maxDeb} slice haptics ${hits}`);
@@ -954,7 +964,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });
     { const s0 = RA.stats.shots; XRS.noHands = true; XRS.headY = 1.38; for (let i = 0; i < 70; i++) { frame(1, 16, xrFrame); scan(); } XRS.headY = 1.7; for (let i = 0; i < 30; i++) { frame(1, 16, xrFrame); scan(); }
       XRS.noHands = false; XRS.hands = rest(); for (let i = 0; i < 10; i++) { frame(1, 16, xrFrame); scan(); } var noHandShots = RA.stats.shots - s0 + autoOrbs, noHandCharges = charges(); }
-    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), d = new THREE.Vector3(0, -0.8, -0.6).normalize();
+    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0);
+      // hacia el suelo, por el lado más alejado de todos los enemigos (un volador puede bajar mucho)
+      const cands = [[0, -0.8, -0.6], [0.6, -0.8, -0.2], [-0.4, -0.8, -0.4], [0.3, -0.9, -0.3], [0.7, -0.7, 0.1]].map(c => new THREE.Vector3(...c).normalize());
+      const gap = c => Math.min(Math.PI, ...RA.enemies.filter(x => x.alive).map(x => x.center(new THREE.Vector3()).sub(back).angleTo(c)));
+      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a);
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 5; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); var floorShots = RA.stats.shots - s0, floorCharges = charges(); }
     { const s0 = RA.stats.shots; XRS.hands.right = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.05); frame(6, 16, xrFrame);

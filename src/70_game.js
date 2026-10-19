@@ -50,6 +50,8 @@ const ROBOT_KIND = {
   heavy: { rig: 'heavy', scale: 1.0, speedF: 0.85, heavy: true, stop: 1.4, stride: 0.85, head: 1.75 },
   titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true },
   lizard: { rig: 'lizard', scale: 1.05, speedF: 1.1, heavy: false, stop: 1.15, stride: 1.2, head: 1.1, beast: true }, // hombre-cocodrilo
+  neon: { rig: 'neon', scale: 1.0, speedF: 1.05, heavy: false, stop: 1.2, stride: 1.4, head: 1.75, neon: true }, // humanoide de neón (estilo Pistol Whip)
+  neonboss: { rig: 'neon', scale: 1.55, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.4, head: 1.75, neon: true, boss: true },
   crocboss: { rig: 'lizard', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.2, head: 1.1, beast: true, boss: true } // y su jefe, enorme
 };
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
@@ -100,7 +102,7 @@ const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
 class Robot {
   constructor(spec, gate) {
     const K = ROBOT_KIND[spec.kind]; this.K = K; this.type = 'robot'; this.kind = spec.kind;
-    this.rig = RIGS[K.rig]; this.inst = this.rig.instance(K.beast ? MAT_LIZARD : MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
+    this.rig = RIGS[K.rig]; this.inst = this.rig.instance(K.beast ? MAT_LIZARD : K.neon ? neonMats() : MAT_ROBOT); this.root = this.inst.root; this.B = this.inst.bones;
     // cabe por el hueco de su compuerta (en realidad mixta, con el techo de tu habitación, las compuertas son más bajas)
     this.sc = K.scale * Math.min(1, 3.0 * gate.scale / (1.95 * K.scale)); this.root.scale.setScalar(this.sc); arena.add(this.root);
     const gr = gate.g.rotation.y, back = 1.3 * gate.scale; this.pos = new V3(gate.x - Math.sin(gr) * back, 0, gate.z - Math.cos(gr) * back); // sale de dentro del túnel
@@ -203,7 +205,7 @@ class Robot {
         const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); if (!K.beast) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : K.beast ? 0.8 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); if (K.neon) SND.neonWarn(this.center(tmpB)); else if (!K.beast) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : K.beast ? 0.8 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
         to.normalize();
@@ -253,7 +255,7 @@ class Robot {
           let kd = 1.4; for (const o of enemies) if (o !== this && o.alive && o.type === 'robot') { const ox = o.pos.x - this.pos.x, oz = o.pos.z - this.pos.z, al = ox * back.x + oz * back.z, lat = Math.abs(ox * back.z - oz * back.x), min = this.radius + o.radius + 0.05; if (al > 0 && lat < min) kd = Math.min(kd, Math.max(0, al - Math.sqrt(min * min - lat * lat))); }
           if (parried) kd = Math.min(kd, 0.6); // parado: retrocede poco y queda a tu alcance
           this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, kd);
-          if (K.beast) { SND.chomp(this.B.head.getWorldPosition(tmpB)); fx.dust(tmpB.set(this.pos.x, 0.02, this.pos.z), 4, 0.3); } else { fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true); }
+          if (K.beast) { SND.chomp(this.B.head.getWorldPosition(tmpB)); fx.dust(tmpB.set(this.pos.x, 0.02, this.pos.z), 4, 0.3); } else if (K.neon) { const p = this.B.haR.localToWorld(tmpB.set(0, -0.1, 0.45)); SND.zap(p); shardBurst(p, 6, [this.pal.glow, 0xffffff], 2.5); } else { fx.electric(this.center(tmpB), 18); SND.metalHit(this.center(tmpB), true); }
         }
         break;
       }
@@ -285,7 +287,7 @@ class Robot {
     this.run += (runK - this.run) * Math.min(1, dt * 4);
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
     this.animate(dt, t, this.spd);
-    if (this.rig.kind !== 'ripper' && !K.beast) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
+    if (this.rig.kind !== 'ripper' && !K.beast && !K.neon) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   onHit(dmg, perfect, point) {
@@ -384,8 +386,94 @@ class Lizard extends Robot {
   }
 }
 
+/* =================== HUMANOIDES DE NEÓN (estilo Pistol Whip) =================== */
+// Maniquíes facetados sin cara, cada uno con su combinación de colores: cuerpo claro u oscuro y franjas de luz que laten
+// con el ritmo (o, sin ritmo, dos veces por segundo) y cambian levemente de tono. Se materializan de los pies a la cabeza
+// al salir, andan con un balanceo marcado y cabecean al compás; amenazan apuntándote con la porra; al preparar el golpe la
+// levantan y su luz parpadea deprisa (es el aviso), y al recibir un disparo destellan en blanco. Al morir estallan en esquirlas.
+// cuerpo, luz y el segundo tono hacia el que deriva la luz
+// cuerpo, paneles de armadura, luz y el segundo tono hacia el que deriva la luz
+const NEON_PAL = [
+  { body: 0x23262f, panel: 0xf0f2f6, glow: 0xff2d6f, glow2: 0xff7a2d }, { body: 0x11131a, panel: 0x1f5fff, glow: 0x24e8ff, glow2: 0x6b8bff },
+  { body: 0xe9edf5, panel: 0x2a2e3a, glow: 0xff2d6f, glow2: 0xc04dff }, { body: 0x14161c, panel: 0x7a24d6, glow: 0xc04dff, glow2: 0xff3df2 },
+  { body: 0xdfe4ec, panel: 0x1d8f55, glow: 0x6dff3c, glow2: 0x1effc8 }, { body: 0x1b1e2a, panel: 0xd9a03a, glow: 0xffb21e, glow2: 0xff4d8a }
+];
+const NEON_BOSS = { body: 0x16110a, panel: 0xc9a85a, glow: 0xff5a1f, glow2: 0xffd21e };
+const neonMats = () => ({ main: std({ vertexColors: true, skinning: true, flatShading: true, roughness: 0.42, metalness: 0.18 }), paint: std({ vertexColors: true, skinning: true, flatShading: true, roughness: 0.25, metalness: 0.45 }), glow: new THREE.MeshBasicMaterial({ vertexColors: true, skinning: true, toneMapped: false }) });
+const _nc = new THREE.Color(), _nc2 = new THREE.Color(), _nw = new THREE.Color(1, 1, 1);
+class Neon extends Robot {
+  constructor(spec, gate) {
+    super(spec, gate); this.bar.g.position.y = 2.05; this.pal = this.K.boss ? NEON_BOSS : pick(NEON_PAL); this.flash = 0; this.hue = rand(0, TAU);
+    this.mat = { body: this.inst.meshes.main.material, paint: this.inst.meshes.paint.material, glow: this.inst.meshes.glow.material }; this.mat.body.color.setHex(this.pal.body); this.mat.paint.color.setHex(this.pal.panel);
+    if (!this.mat.body.emissive || typeof this.mat.body.emissive.copy !== 'function') this.mat.body.emissive = new THREE.Color(0);
+  }
+  roar(pos) { SND.neonWarn(pos); }
+  animate(dt, t, spd) {
+    const B = this.B, tn = this.taunt || 0, run = this.run || 0, st = this.state; this.lastU = this.lastU || [0, 0];
+    if (spd === true) spd = this.vWalk;
+    const amp = clamp(spd / Math.max(0.2, (this.vWalk || 0.5) * 0.7), 0, 1), S = 0.62 * (1 + run * 0.5);
+    this.phase += TAU * 0.6 * clamp(spd / (S * this.sc), 0, 4) * dt;
+    if (beatP() && amp > 0.3) this.phase += wrapAng(Math.PI * beatNow() + (this.beatOff || 0) - this.phase) * Math.min(1, dt * 6);
+    const p = this.phase, bp = beatP(), ph = bp ? beatNow() : t * 2 + (this.hue || 0), fr = ph - Math.floor(ph), pulse = Math.exp(-fr * 5);
+    // materializarse: crece de los pies a la cabeza, encendido
+    const mat = st === 'emerge' ? smooth(clamp(this.st / 0.8, 0, 1)) : 1;
+    this.root.scale.set(this.sc, this.sc * (0.03 + 0.97 * mat), this.sc);
+    const windup = st === 'windup' ? smooth(clamp(this.st / 0.5, 0, 1)) : 0, strike = st === 'strike' ? (this.lunge || 0) : 0, knock = st === 'knock' ? 1 - smooth(clamp(this.st / 0.7, 0, 1)) : 0;
+    // cuerpo: erguido, con un rebote al compás y balanceo de cadera
+    const groove = (1 - amp) * pulse * 0.025, hy = NEO.hipY - 0.05 - run * 0.05 + amp * 0.025 * Math.cos(p * 2) - groove - strike * 0.08;
+    const Ph = 0.06 + run * 0.18 + strike * 0.35 - windup * 0.12 - (this.hitT || 0) * 0.9 - (this.stagger || 0) * 0.35 - knock * 0.2;
+    B.hips.position.y = hy; B.hips.rotation.set(Ph, 0.16 * Math.sin(p) * amp, 0.07 * Math.cos(p) * amp + (1 - amp) * Math.sin(t * 1.3 + this.hue) * 0.04);
+    B.spine.rotation.set(0.04 + groove * 2, -0.22 * Math.sin(p) * amp + (this.twist || 0) - windup * 0.4 + strike * 0.5, (this.stagger || 0) * 0.2 * Math.sin(t * 23));
+    B.chest.rotation.set(0.03, -0.1 * Math.sin(p) * amp, -0.05 * Math.cos(p) * amp);
+    // piernas: los pies pisan el suelo (rodillas al frente)
+    for (const [sd, sx, off, i] of [['L', 1, 0, 0], ['R', -1, Math.PI, 1]]) {
+      const hj = pitchYZ(-0.05, 0, Ph), [fz, fy, u] = gaitFoot(p + off, S * amp, 0.13 * amp);
+      const [a1, a2, w2] = ik2(hy + hj.y, hj.z, 0.055 + fy, fz + 0.02 + strike * (i ? 0.35 : -0.1), NEO.th, NEO.kn, Ph, 1);
+      B['th' + sd].rotation.set(a1, 0, sx * 0.05); B['kn' + sd].rotation.x = a2; B['an' + sd].rotation.x = -w2;
+      if (amp > 0.3 && this.lastU[i] > 0.9 && u < 0.1) { const fp = B['an' + sd].getWorldPosition(new V3()); fp.y = 0.02; SND.step(fp, false); }
+      this.lastU[i] = u;
+    }
+    // brazos: braceo andando; amenaza: te apunta con la porra y te hace señas; golpe: la porra arriba y tajo hacia abajo
+    const sw = (0.45 + run * 0.4) * amp;
+    let lx = -0.1 + sw * Math.sin(p), lz = 0.14, le = -0.25 - run * 0.7, rx = -0.1 - sw * Math.sin(p), rz = -0.14, re = -0.35 - run * 0.7;
+    lx = lerp(lx, -1.2, tn); le = lerp(le, -1.3 + Math.sin(t * 9) * 0.5, tn); rx = lerp(rx, -1.55, tn); re = lerp(re, 0, tn); rz = lerp(rz, -0.05, tn);
+    lx = lerp(lx, -0.9, Math.max(windup, strike)); le = lerp(le, -1.2, Math.max(windup, strike)); lz = lerp(lz, 0.35, windup);
+    rx = lerp(lerp(rx, -2.7, windup), -0.5, strike); rz = lerp(lerp(rz, -0.35, windup), -0.15, strike); re = lerp(lerp(re, -1.1, windup), -0.2, strike);
+    B.shL.rotation.set(lx, 0, lz); B.elL.rotation.x = le; B.shR.rotation.set(rx, 0, rz); B.elR.rotation.x = re;
+    B.haL.rotation.x = -0.15; B.haR.rotation.x = lerp(lerp(0.1, 1.45, tn), 0.6, windup) - strike * 0.3; // al amenazar, la muñeca dobla la porra hacia ti
+    // cabeza: te mira y cabecea al compás; en la amenaza, la ladea
+    const toP = tmpA.subVectors(HL, this.pos), ly = wrapAng(Math.atan2(toP.x, toP.z) - this.yaw), dist = Math.hypot(toP.x, toP.z);
+    const pitch = Math.atan2(HL.y - this.K.head * this.sc, Math.max(0.3, dist));
+    B.neck.rotation.set(-Ph * 0.5, clamp(ly, -1, 1) * 0.35, 0);
+    B.head.rotation.set(-pitch - Ph * 0.4 + pulse * 0.12 * (1 - amp * 0.5) + (this.twitch || 0) * 0.25, clamp(ly, -1, 1) * 0.6 + (this.twitchYaw || 0) * 0.6, tn * 0.35 + Math.sin(t * 0.8 + this.hue) * 0.05);
+    // luces: laten con el compás, cambian un poco de tono, parpadean deprisa al avisar del golpe y destellan en blanco al recibir
+    if (!this.pal) return;
+    this.flash = Math.max(0, (this.flash || 0) - dt * 6);
+    const warn = windup > 0 || strike > 0 ? 0.55 + 0.45 * Math.sign(Math.sin(t * 38)) : 0;
+    const glowK = Math.max(0.5 + 0.5 * pulse, warn, 1 - mat * 0.5);
+    _nc.setHex(this.pal.glow).lerp(_nc2.setHex(this.pal.glow2), 0.5 + 0.5 * Math.sin(t * 0.9 + this.hue)); // el tono deriva despacio
+    const gk = 0.55 + 0.75 * glowK, ek = 0.06 + 0.1 * pulse + (1 - mat) * 0.8;
+    this.mat.glow.color.setRGB(_nc.r * gk, _nc.g * gk, _nc.b * gk).lerp(_nw, Math.max(this.flash, warn * 0.25, (1 - mat) * 0.5));
+    this.mat.body.emissive.setRGB(_nc.r * ek, _nc.g * ek, _nc.b * ek).lerp(_nw, this.flash * 0.8);
+  }
+  onHit(dmg, perfect, point) {
+    this.hp -= dmg; this.hitT = 0.3; this.flash = 1; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    shardBurst(point, 8, [this.pal.glow, this.pal.panel, 0xffffff], 2.2); fx.glow(point, [1, 1, 1], 0.4, 0.08); SND.zap(point);
+    if (this.hp <= 0) this.kill();
+  }
+  kill() {
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss; this.root.updateMatrixWorld(true);
+    const pts = this.inst.list.map(b => b.getWorldPosition(new V3()));
+    shardBurst(c, big ? 80 : 56, [this.pal.glow, this.pal.panel, this.pal.body, this.pal.glow, 0xffffff], big ? 4.5 : 3.2, pts);
+    fx.glow(c, [1, 1, 1], big ? 1.6 : 1.0, 0.14); flashLight.position.copy(c); flashLight.intensity = big ? 7 : 4; flashLight.color.setHex(this.pal.glow);
+    SND.shatter(c); if (big) SND.explosion(c, true);
+    this.dispose();
+  }
+  dispose() { super.dispose(); for (const k in this.mat) this.mat[k].dispose(); }
+}
+
 /* =================== ARAÑAS (flexiones) =================== */
-const SPIDER_KIND = { scout: { s: 1.0 }, heavy: { s: 1.4 }, lizard: { s: 1.2 }, titan: { s: 2.4, boss: true }, crocboss: { s: 2.4, boss: true } };
+const SPIDER_KIND = { scout: { s: 1.0 }, heavy: { s: 1.4 }, lizard: { s: 1.2 }, neon: { s: 1.0 }, neonboss: { s: 2.4, boss: true }, titan: { s: 2.4, boss: true }, crocboss: { s: 2.4, boss: true } };
 const _ikD = new V3(), _ikU = new V3(), _ikP = new V3(), _knee = new V3(), _foot = new V3(), _hip = new V3();
 function ikKnee(H, F, L1, L2, ox, oz, out) {
   _ikD.subVectors(F, H); let d = _ikD.length(); if (d < 1e-5) { _ikD.set(0, -1, 0); d = 1e-5; } _ikD.divideScalar(d);
@@ -1248,7 +1336,7 @@ function aimSources() {
 // ordenador dispara sola. El gesto se mide respecto a la cabeza; si las gafas pierden la mano en plena sacudida hacia un
 // enemigo, el rayo sale igual
 const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.aim === 'hands') || (pistolOn() && bareHands()));
-const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 40, THROW_STOP = 0.55; // frena de golpe: por debajo del 55 % del pico
+const THROW_V = 1.2, THROW_D = 0.12, THROW_NEAR = 0.22, THROW_BACK = -0.5, THROW_WIDE = 50, THROW_STOP = 0.55, THROW_JUMP = 12; // frena de golpe: por debajo del 55 % del pico
 const mkThrow = () => ({ c: null, armed: false, have: false, lost: 0, fwd: 0, peak: 0, prev: new V3(), v: new V3(), from: new V3(), last: new V3(), pdir: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
@@ -1293,7 +1381,9 @@ function throwStep(dt, t) {
     }
     T.lost = 0; _thr.subVectors(h.wrist, head.p); T.last.copy(h.wrist);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; continue; }
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.v.lerp(_thv, 0.6); T.prev.copy(_thr);
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
+    if (_thv.length() > THROW_JUMP) { T.v.set(0, 0, 0); T.peak = 0; T.armed = false; continue; } // salto del seguimiento: no es un gesto
+    T.v.lerp(_thv, 0.6);
     const reach = _thr.x * _thf.x + _thr.z * _thf.z, sp = T.v.length(); T.fwd = T.v.dot(_thf);
     if (T.armed && T.peak > THROW_V && sp < T.peak * THROW_STOP) { // frenó de golpe: si la sacudida iba hacia un enemigo, sale el rayo
       const tg = _thr.distanceTo(T.from) > THROW_D && throwTarget(h.wrist, T.pdir);
@@ -1408,13 +1498,16 @@ function buildWave(i) {
   if (twoShots()) total *= 2;
   let boss = null;
   const F = foes();
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (settings.crocs >= 100 && !isTiny() ? 'crocboss' : 'titan') : 'carrier', hp: b }; total -= b; }
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() ? 'titan' : settings.crocs >= 100 ? 'crocboss' : settings.neons >= 100 ? 'neonboss' : 'titan') : 'carrier', hp: b }; total -= b; }
   let k = 0, gnd = 0;
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
-      const cr = isTiny() ? 0 : settings.crocs / 100; gnd++; // hombres-cocodrilo: repartidos entre los de tierra según el porcentaje
-      if (Math.floor(gnd * cr + 0.5) > Math.floor((gnd - 1) * cr + 0.5)) { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
+      // hombres-cocodrilo y humanoides de neón: repartidos entre los de tierra según sus porcentajes (el cocodrilo, primero)
+      const cr = isTiny() ? 0 : settings.crocs / 100, nr = isTiny() ? 0 : Math.min(settings.neons / 100, 1 - cr); gnd++;
+      const turn = (r, a) => Math.floor(gnd * r + a) > Math.floor((gnd - 1) * r + a);
+      if (turn(cr, 0.5)) { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
+      else if (turn(nr, 0.25)) { kind = 'neon'; hp = 2 + Math.floor(i / 4); }
       else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
@@ -1440,7 +1533,7 @@ function spawnFromQueue() {
   let e;
   if (isBars()) e = new HeadTarget(spec);
   else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, oneArm() ? sideHatch(stats.spawned++ % 2 === 0) : pick(liveHatches()));
-  else if (ROBOT_KIND[spec.kind]) { const g = ROBOT_KIND[spec.kind].boss ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = ROBOT_KIND[spec.kind].beast ? new Lizard(spec, g) : new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
+  else if (ROBOT_KIND[spec.kind]) { const g = ROBOT_KIND[spec.kind].boss ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = ROBOT_KIND[spec.kind].beast ? new Lizard(spec, g) : ROBOT_KIND[spec.kind].neon ? new Neon(spec, g) : new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else e = new Flyer(spec);
   enemies.push(e);
 }

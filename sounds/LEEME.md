@@ -25,6 +25,8 @@ Vale `.mp3`, `.ogg` o `.wav` (por ejemplo `rayo.mp3`). Si un archivo no está, s
 | `compuerta` | Se abre una compuerta. |
 | `rugido-cocodrilo` | Un hombre-cocodrilo ruge (al salir, al amenazarte con las fauces abiertas, al recibir un disparo o al caer). |
 | `mordisco-cocodrilo` | Un hombre-cocodrilo cierra las fauces de golpe al morderte. |
+| `neon-aviso` | Un humanoide de neón levanta la porra para golpear (y al amenazarte). |
+| `neon-estalla` | Un humanoide de neón estalla en esquirlas. |
 | `siseo-arana` | Una araña sisea. |
 | `patas-arana` | Una araña corretea o salta. |
 | `aplastar` | Revientas una araña o un avispón (chapoteo viscoso). |

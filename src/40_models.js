@@ -575,9 +575,60 @@ function buildLizard() {
   const r = R.build(); r.kind = 'lizard'; return r;
 }
 
+/* ---------- Humanoide de neón (estilo Pistol Whip): maniquí facetado, sin cara, con franjas que brillan ---------- */
+// Piezas de pocas caras (sombreado plano) y franjas de luz en el pecho, la columna, los brazos y las piernas, el visor y una
+// porra de energía en la mano derecha. 'main' (el cuerpo), 'paint' (los paneles de armadura) y 'glow' (las luces) van en
+// blanco: el color lo pone cada uno
+const NEO = { th: 0.45, kn: 0.45, sh: 0.3, el: 0.28, hipY: 0.98 };
+function buildNeon() {
+  const R = new Rig();
+  R.bone('hips', null, 0, NEO.hipY, 0).bone('spine', 'hips', 0, 0.1, 0).bone('chest', 'spine', 0, 0.28, 0)
+   .bone('neck', 'chest', 0, 0.3, 0).bone('head', 'neck', 0, 0.08, 0.01);
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
+    R.bone('sh' + sd, 'chest', sx * 0.22, 0.24, 0).bone('el' + sd, 'sh' + sd, 0, -NEO.sh, 0).bone('ha' + sd, 'el' + sd, 0, -NEO.el, 0);
+    R.bone('th' + sd, 'hips', sx * 0.11, -0.05, 0).bone('kn' + sd, 'th' + sd, 0, -NEO.th, 0).bone('an' + sd, 'kn' + sd, 0, -NEO.kn, 0);
+  }
+  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GL = (b, g, ...t) => R.add(b, 'glow', g, C.white, ...t), PA = (b, g, ...t) => R.add(b, 'paint', g, C.white, ...t);
+  const W = C.white, D = col(0.62, 0.64, 0.7); // piezas claras y juntas algo más oscuras (el material las tiñe)
+  const strip = (b, x, y0, y1, z, w = 0.026, d = 0.014) => GL(b, G.box(w, Math.abs(y1 - y0), d), x, (y0 + y1) / 2, z);
+  // cadera y abdomen: prismas de seis caras
+  P('hips', G.cyl(0.15, 0.12, 0.17, 6), W, 0, -0.02, 0, 0, Math.PI / 6, 0, 1, 1, 0.75);
+  GL('hips', G.box(0.2, 0.018, 0.012), 0, 0.045, 0.1); // cinturón de luz
+  P('spine', G.cyl(0.14, 0.12, 0.24, 6), D, 0, 0.12, 0, 0, Math.PI / 6, 0, 1, 1, 0.72);
+  strip('spine', 0, 0.02, 0.24, 0.095);
+  // torso en V con hombreras y un núcleo de luz
+  P('chest', G.cyl(0.24, 0.14, 0.34, 6), W, 0, 0.14, 0, 0, Math.PI / 6, 0, 1, 1, 0.58);
+  PA('chest', G.cyl(0.2, 0.12, 0.26, 6), 0, 0.16, 0.025, 0, Math.PI / 6, 0, 0.98, 1, 0.55); // peto de color
+  for (const sx of [-1, 1]) {
+    PA('chest', new THREE.OctahedronGeometry(0.1), sx * 0.2, 0.27, 0, 0, 0, sx * 0.4, 1.1, 0.7, 1); // hombreras de color
+    GL('chest', G.box(0.024, 0.25, 0.014), sx * 0.075, 0.15, 0.14, 0, 0, sx * 0.42); // la V del pecho
+    GL('chest', G.box(0.12, 0.018, 0.014), sx * 0.21, 0.31, 0.05, 0, 0, sx * 0.4); // filo de la hombrera
+  }
+  GL('chest', new THREE.OctahedronGeometry(0.045), 0, 0.1, 0.14);
+  strip('chest', 0, 0.0, 0.3, -0.13); // la espalda también brilla
+  P('neck', G.cyl(0.045, 0.055, 0.1, 5), D, 0, 0.04, 0);
+  // cabeza: una gema facetada sin cara, con visor
+  P('head', G.sph(1, 6, 4), W, 0, 0.1, 0, 0, Math.PI / 6, 0, 0.095, 0.125, 0.105);
+  GL('head', G.box(0.15, 0.026, 0.03), 0, 0.115, 0.082, -0.08, 0, 0);
+  GL('head', G.box(0.012, 0.09, 0.012), 0, 0.17, -0.06, -0.5, 0, 0); // cresta
+  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
+    const sh = 'sh' + sd, el = 'el' + sd, ha = 'ha' + sd, th = 'th' + sd, kn = 'kn' + sd, an = 'an' + sd;
+    P(sh, G.cyl(0.055, 0.045, NEO.sh, 5), W, 0, -NEO.sh / 2, 0); strip(sh, sx * 0.0, -0.05, -NEO.sh + 0.04, 0.05);
+    GL(el, new THREE.OctahedronGeometry(0.042)); P(el, G.cyl(0.045, 0.035, NEO.el, 5), W, 0, -NEO.el / 2, 0); strip(el, 0, -0.04, -NEO.el + 0.03, 0.04, 0.012);
+    P(ha, G.box(0.07, 0.09, 0.05), D, 0, -0.05, 0);
+    P(th, G.cyl(0.075, 0.055, NEO.th, 5), W, 0, -NEO.th / 2, 0); PA(th, G.box(0.09, 0.2, 0.03), 0, -0.14, 0.065); // muslera de color strip(th, sx * 0.03, -0.06, -NEO.th + 0.05, 0.06);
+    GL(kn, new THREE.OctahedronGeometry(0.05)); P(kn, G.cyl(0.055, 0.04, NEO.kn, 5), W, 0, -NEO.kn / 2, 0); PA(kn, G.box(0.075, 0.24, 0.03), 0, -0.17, 0.05); // espinillera de color strip(kn, 0, -0.05, -NEO.kn + 0.06, 0.045, 0.014);
+    P(an, G.box(0.08, 0.05, 0.2), D, 0, -0.03, 0.05); GL(an, G.box(0.06, 0.012, 0.012), 0, -0.005, 0.15); // pie y puntera de luz
+  }
+  // porra de energía en la mano derecha (empuñadura y hoja de luz)
+  P('haR', G.cyl(0.018, 0.018, 0.12, 5), D, 0, -0.1, 0.02, Math.PI / 2, 0, 0);
+  GL('haR', G.box(0.04, 0.04, 0.55), 0, -0.1, 0.36);
+  const r = R.build(); r.kind = 'neon'; return r;
+}
+
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
-  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard();
+  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard(); RIGS.neon = buildNeon();
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
