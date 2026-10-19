@@ -73,6 +73,40 @@ const DEMO = {
   jump: { P: 2.4, high: 2.5, keys: [[0, STAND], [0.3, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.5, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.68, STAND], [1, STAND]], fire: 0.5, low: 0.5, desc: 'Flexiona un poco y salta para meter la cabeza en el aro que espera por encima; toca las gemas con la mano.' },
   abs: { P: 2.8, keys: [[0, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }], [0.4, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [0.55, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [1, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }]], fire: 0.45, low: 0.45, desc: 'Boca arriba con las rodillas dobladas: sube el tronco para meter la cabeza en el aro (de frente o girado).' }
 };
+// Antebrazos con la barra flexible: primer plano de frente (de lado no se ve el giro). Cada mano gira unos 90° en
+// sentido contrario a la otra, como al escurrir una toalla: el primer giro carga y el siguiente, al revés, dispara
+DEMO.twist = { P: 2.6, custom: 'twist', keys: [[0, STAND], [1, STAND]], fire: 0.9, src: 'bar', desc: 'Gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.' };
+const TW_A = dg(45), TW_Z = 1.45; // giro de cada mano desde el centro (90° de un extremo al otro)
+function twistAt(u) { return u < 0.4 ? lerp(-TW_A, TW_A, smooth(u / 0.4)) : u < 0.5 ? TW_A : u < 0.9 ? lerp(TW_A, -TW_A, smooth((u - 0.5) / 0.4)) : -TW_A; }
+function demoTwist(c, X, Y, s, u, lw) {
+  c.save(); c.translate(X(0), Y(0.75)); c.scale(TW_Z, TW_Z); c.translate(-X(0), -Y(0.75)); // primer plano, más grande
+  const a = twistAt(u), da = twistAt(Math.min(1, u + 0.02)) - a, by = 1.12, hx = 0.44;
+  // antebrazos desde abajo hasta los puños
+  c.strokeStyle = DC.ink; c.lineWidth = lw * 2.2; c.beginPath(); c.moveTo(X(-0.8), Y(0.3)); c.lineTo(X(-hx), Y(by - 0.04)); c.moveTo(X(0.8), Y(0.3)); c.lineTo(X(hx), Y(by - 0.04)); c.stroke();
+  // la barra, con las estrías inclinadas según lo retorcida que esté
+  c.fillStyle = '#3ddc97'; rr(c, X(-hx), Y(by + 0.07), (2 * hx) * s, 0.14 * s, 0.07 * s); c.fill();
+  c.strokeStyle = '#1f8f60'; c.lineWidth = 2; rr(c, X(-hx), Y(by + 0.07), (2 * hx) * s, 0.14 * s, 0.07 * s); c.stroke();
+  const tw = a / TW_A * 0.06; c.strokeStyle = 'rgba(15,90,60,.75)'; c.lineWidth = 3;
+  for (let i = 1; i < 10; i++) { const x = -hx + (2 * hx) * i / 10; c.beginPath(); c.moveTo(X(x - tw), Y(by - 0.06)); c.lineTo(X(x + tw), Y(by + 0.06)); c.stroke(); }
+  // brillo de la carga entre el primer y el segundo giro
+  if (u >= 0.4 && u < 0.9) { c.save(); c.shadowColor = DC.teal; c.shadowBlur = 22; c.fillStyle = 'rgba(60,240,198,.85)'; c.beginPath(); c.arc(X(0.05), Y(by), s * (0.05 + 0.01 * Math.sin(u * 60)), 0, TAU); c.fill(); c.restore(); }
+  // puños: los nudillos suben en uno y bajan en el otro
+  for (const sg of [-1, 1]) {
+    const x = sg * hx, k = Math.sin(sg * a);
+    c.fillStyle = '#e6dcff'; rr(c, X(x) - s * 0.075, Y(by + 0.1), s * 0.15, s * 0.2, s * 0.05); c.fill();
+    c.fillStyle = '#8e86c0'; for (let n = 0; n < 4; n++) { c.beginPath(); c.arc(X(x - sg * 0.04 + sg * n * 0.0), Y(by + 0.02 + k * 0.06 - n * 0.035 + 0.05), s * 0.018, 0, TAU); c.fill(); }
+    // flecha curva: hacia dónde gira cada mano ahora mismo (sentidos contrarios)
+    if (Math.abs(da) > 1e-3) {
+      const dir = Math.sign(da) * sg, cx = X(x), cy = Y(by), R = s * 0.17;
+      c.strokeStyle = DC.gold; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, R, dir > 0 ? Math.PI * 1.15 : Math.PI * 1.85, dir > 0 ? Math.PI * 1.85 : Math.PI * 1.15, dir < 0); c.stroke();
+      const end = dir > 0 ? Math.PI * 1.85 : Math.PI * 1.15, ex_ = cx + Math.cos(end) * R, ey = cy + Math.sin(end) * R;
+      c.fillStyle = DC.gold; c.beginPath(); c.arc(ex_, ey, 4, 0, TAU); c.fill();
+    }
+  }
+  c.fillStyle = DC.gold; c.font = `700 ${Math.round(s * 0.11)}px ${FB}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  c.fillText(u < 0.4 ? 'giro 1…' : u < 0.5 ? '¡cargado!' : u < 0.9 ? 'giro 2, al revés…' : '¡disparo!', X(0), Y(by - 0.25));
+  c.restore();
+}
 DEMO.combo = { P: 4.8, high: 2.5, keys: [[0, STAND], [0.18, SQUAT], [0.28, SQUAT], [0.45, STAND], [0.6, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.72, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.86, STAND], [1, STAND]], fire: [0.24, 0.72], low: [0.24, 0.72], desc: 'Tú eliges la postura y los movimientos: por ejemplo, un aro bajo (sentadilla) y luego uno alto (salto).' };
 // Postura del ejercicio en la fase u (0..1), suavizada entre claves
 function demoPose(D, u) {
@@ -118,12 +152,16 @@ function demoDraw(c, W, H, ex, mode, t) {
   // monigote: lo de atrás, más apagado
   const seg = (pts, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(X(pts[0][0]), Y(pts[0][1])); for (let i = 1; i < pts.length; i++) c.lineTo(X(pts[i][0]), Y(pts[i][1])); c.stroke(); };
   const foot = (kn, an, col) => { const dx = an[0] - kn[0], dy = an[1] - kn[1], l = Math.hypot(dx, dy) || 1; seg([an, [an[0] - dy / l * 0.1, an[1] + dx / l * 0.1]], col, lw * 0.85); }; // la punta, hacia delante
-  seg([J.hip, ...J.legB], DC.back, lw); foot(...J.legB, DC.back); seg([J.sh, ...J.armB], DC.back, lw * 0.85);
-  seg([J.hip, J.neck], DC.ink, lw * 1.25);
-  c.fillStyle = DC.ink; c.beginPath(); c.arc(X(J.head[0]), Y(J.head[1]), DL.head * s, 0, TAU); c.fill();
-  seg([J.hip, ...J.legF], DC.ink, lw); foot(...J.legF, DC.ink); seg([J.sh, ...J.armF], DC.ink, lw * 0.9);
+  if (D.custom === 'twist') demoTwist(c, X, Y, s, u, lw);
+  else {
+    seg([J.hip, ...J.legB], DC.back, lw); foot(...J.legB, DC.back); seg([J.sh, ...J.armB], DC.back, lw * 0.85);
+    seg([J.hip, J.neck], DC.ink, lw * 1.25);
+    c.fillStyle = DC.ink; c.beginPath(); c.arc(X(J.head[0]), Y(J.head[1]), DL.head * s, 0, TAU); c.fill();
+    seg([J.hip, ...J.legF], DC.ink, lw); foot(...J.legF, DC.ink); seg([J.sh, ...J.armF], DC.ink, lw * 0.9);
+  }
   // pesas en las manos
   const wF = J.armF[1], wB = J.armB[1];
+  if (D.custom) { /* el primer plano ya lleva su aparato */ } else {
   if (D.dumb) for (const w of [wB, wF]) { c.fillStyle = DC.gold; c.fillRect(X(w[0]) - s * 0.05, Y(w[1]) - s * 0.03, s * 0.1, s * 0.06); }
   if (D.bar) { c.fillStyle = '#c9c4e8'; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.11, 0, TAU); c.fill(); c.fillStyle = DC.bg1; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.03, 0, TAU); c.fill(); }
   if (D.kb) { c.fillStyle = DC.gold; c.beginPath(); const dx = wF[0] - J.sh[0], dy = wF[1] - J.sh[1], l = Math.hypot(dx, dy) || 1; c.arc(X(wF[0] + dx / l * 0.08), Y(wF[1] + dy / l * 0.08), s * 0.075, 0, TAU); c.fill(); }
@@ -132,6 +170,7 @@ function demoDraw(c, W, H, ex, mode, t) {
     c.strokeStyle = settings.swordKind === 'laser' ? DC.teal : '#d8dcff'; c.lineWidth = lw * 0.7; c.beginPath(); c.moveTo(X(wF[0]), Y(wF[1])); c.lineTo(X(wF[0] + dx / l * 0.6), Y(wF[1] + dy / l * 0.6)); c.stroke();
   }
   if (D.ball) { c.fillStyle = DC.gold; c.beginPath(); c.arc(X(wF[0]), Y(wF[1]), s * 0.08, 0, TAU); c.fill(); }
+  }
   // objetivo: dónde está, cuándo cae
   const fi = fires.findIndex(f => f >= 0 && u >= f && u < f + 0.22), lastFire = fires.filter(f => f >= 0 && f <= u).pop();
   const tgtPose = i => demoJoints(demoPose(D, lows[Math.min(i, lows.length - 1)]));
@@ -160,7 +199,7 @@ function demoDraw(c, W, H, ex, mode, t) {
     if (fi < 0) drawFoe(c, X, Y, s, ePos, fl ? 'flyer' : sp ? 'spider' : 'robot', t);
     if (fi >= 0) { // rayo y explosión
       const p = (u - fires[fi]) / 0.22, kp = [lerp(2.6, ex_, 1), ePos[1]], src = srcs[fi] || 'chest';
-      const o = src === 'chest' ? [J.neck[0] + 0.18, J.neck[1] - 0.18] : (src === 'armB' ? J.armB[1] : J.armF[1]);
+      const o = src === 'bar' ? [0.05 * TW_Z, 0.75 + (1.12 - 0.75) * TW_Z] : src === 'chest' ? [J.neck[0] + 0.18, J.neck[1] - 0.18] : (src === 'armB' ? J.armB[1] : J.armF[1]);
       const tgt = [kp[0], kp[1] + (fl ? 0 : sp ? 0.04 : 0.45)];
       if (typeof swordSet === 'function' && swordSet() && !fl && !sp) { c.strokeStyle = '#d8dcff'; c.lineWidth = s * 0.04; c.beginPath(); c.arc(X(o[0]), Y(o[1]), s * 0.55, -1.2, 0.9); c.stroke(); }
       else if (p < 0.6) demoBolt(c, X(o[0]), Y(o[1]), X(tgt[0]), Y(tgt[1]), cyc * 7 + fi);

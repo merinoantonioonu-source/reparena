@@ -35,7 +35,7 @@ function readXR(frame, t = 0) {
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
-const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, curl: 0, thrUp: 0, wasCrouch: false };
+const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, twist: 0, curl: 0, thrUp: 0, wasCrouch: false };
 // Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
 const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2 : isSeated() ? 1.0 : isFloor() ? 0.45 : 1.6;
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
@@ -79,6 +79,18 @@ function previewInput(dt) {
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
   if (settings.exercise === 'superman' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, PV.keys.KeyR ? 0.1 : 0.55); }
+  // barra flexible: las manos sujetan la barra delante del pecho; al pulsar Espacio escurres hacia un lado y al
+  // soltarlo, hacia el otro (cada mano gira en sentido contrario a la otra alrededor de la barra)
+  if (settings.exercise === 'twist' && GAME_STATES.includes(state)) {
+    // cada mano recorre algo más de twistDeg de un extremo al otro
+    const want = (PV.crouch ? 1 : -1) * (settings.twistDeg / 2 + 8) * (PV.twistScale || 1) * Math.PI / 180; PV.twist += clamp(want - PV.twist, -5 * dt, 5 * dt);
+    for (const [s, sg] of [['left', -1], ['right', 1]]) {
+      const h = hands[s], a = sg * PV.twist; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion);
+      h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.38); h.wrist.y -= 0.42;
+      // nudillos: hacia delante, girados alrededor de la barra (eje izquierda-derecha)
+      _pvw.copy(f).multiplyScalar(Math.cos(a) * 0.08); _pvw.y = Math.sin(a) * 0.08; h.J[10].p.copy(h.wrist).add(_pvw); h.J[10].ok = true;
+    }
+  }
   // press de hombro: las mancuernas a la altura de los hombros; Espacio las sube por encima de la cabeza
   // curl con barra: las dos manos a la altura de la cadera; Espacio las sube juntas hasta los hombros
   if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }

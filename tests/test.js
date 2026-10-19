@@ -169,6 +169,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Asalto+fondos en silla', { ...base, mode: 'walkers', exercise: 'dips' }, squatSim(2.6), 420, s => s.partial > 1 ? 'fondos completos cuentan como medios' : '');
   await runConfig('Enjambre+fondos en silla', { ...base, mode: 'flyers', exercise: 'dips', flySpeed: 8 }, squatSim(2.6));
   await runConfig('Asalto+press de hombro', { ...base, mode: 'walkers', exercise: 'press' }, squatSim(1.8), 420, s => s.reps < 10 ? 'el press no cuenta las repeticiones' : '');
+  // ---- Antebrazos con la barra flexible: un giro carga y el siguiente (al revés) dispara ----
+  await runConfig('Combate+antebrazos (barra flexible)', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, walkTime: 14 }, squatSim(1.6), 420, s => s.reps < 9 ? `pocos disparos girando la barra (${s.reps})` : s.partial ? 'giros completos cuentan como cortos' : s.kills < 4 ? 'no mata robots' : '');
+  RA.PV.twistScale = 0.55;
+  await runConfig('Antebrazos con giros cortos', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, waves: 1, walkTime: 30 }, squatSim(1.6), 25, s => s.reps ? 'giros cortos no deberían disparar' : !s.partial ? 'debería avisar de que hay que girar más' : '', true);
+  RA.PV.twistScale = 1; RA.PV.crouch = false;
   await runConfig('Enjambre+press de hombro', { ...base, mode: 'flyers', exercise: 'press', flySpeed: 8 }, squatSim(1.8));
   await runConfig('Asalto+plancha lateral', { ...base, mode: 'walkers', exercise: 'splank', splHold: 2, walkTime: 14 }, () => { RA.PV.crouch = false; }, 420, s => s.partial ? 'aguantando quieto no debería cortarse' : '');
   await runConfig('Enjambre+plancha lateral', { ...base, mode: 'flyers', exercise: 'splank', splHold: 2, flySpeed: 8 }, () => { RA.PV.crouch = false; }, 420);
@@ -885,6 +890,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }
 
+  // ---- Antebrazos en XR: las muñecas giran unos 90° cada una en sentidos contrarios ----
+  for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20 })) RA.setSetting(k, v);
+  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+  XRS.twist = -Math.PI / 4; RA.beginRun(); frame(250, 16, xrFrame); log('twist XR calib', RA.state);
+  { const r0 = RA.stats.reps; let ch = 0;
+    for (let n = 0; n < 6; n++) { const from = n % 2 ? Math.PI / 4 : -Math.PI / 4; for (let k = 0; k <= 30; k++) { XRS.twist = from + (-2 * from) * k / 30; frame(1, 16, xrFrame); } if (RA.DET.tw.n % 2) ch++; frame(10, 16, xrFrame); }
+    log('twist XR: 6 twists → shots', RA.stats.reps - r0, 'charges seen', ch); if (RA.stats.reps - r0 !== 3) errors.push(`antebrazos XR: 6 giros deberían ser 3 disparos (${RA.stats.reps - r0})`);
+    const r1 = RA.stats.reps; for (let n = 0; n < 6; n++) { const from = n % 2 ? 0.25 : -0.25; for (let k = 0; k <= 30; k++) { XRS.twist = from - 2 * from * k / 30; frame(1, 16, xrFrame); } }
+    log('twist XR: wiggling 30° each way → shots', RA.stats.reps - r1); if (RA.stats.reps !== r1) errors.push('antebrazos XR: un meneo pequeño no debería disparar'); }
+  XRS.twist = null; RA.exitAll(); frame(2, 16, xrFrame);
+
   // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----
   for (const [k, v] of Object.entries({ mode: 'flyers', exercise: 'superman', lives: 0, waves: 1, repsWave: 30, rest: 0, supHold: 2, supRange: 8, supArms: 'yes' })) RA.setSetting(k, v);
   for (const [name, calibY, lieY, liftY, handsZ, want] of [['normal', 0.25, 0.25, 0.35, -0.6, 3], ['calibrado más bajo', 0.15, 0.25, 0.35, -0.6, 3], ['calibrado más alto', 0.45, 0.25, 0.35, -0.6, 3], ['manos junto a la cabeza', 0.25, 0.25, 0.35, 0.0, 0], ['subiendo poco', 0.25, 0.25, 0.29, -0.6, 0]]) {
@@ -1069,6 +1085,10 @@ function makeXRFrame() {
         if (j.side === 'left' && XRS.wristUp) { pos = { x: -0.1 + (i % 5) * 0.01, y: XRS.headY - 0.3, z: -0.35 - Math.floor(i / 5) * 0.02 }; ori = { x: 0.7071, y: 0, z: 0, w: 0.7071 }; }
         if (j.side === 'right' && i === 9 && XRS.tip) pos = { x: XRS.tip.x, y: XRS.tip.y, z: XRS.tip.z };
         if (XRS.lift === j.side || XRS.lift === 'both') pos.y += 0.4;
+        if (XRS.twist != null) { // barra flexible: muñecas fijas, nudillos girando alrededor del eje izquierda-derecha
+          const sg = j.side === 'left' ? -1 : 1, a = sg * XRS.twist, w = { x: sg * 0.2, y: XRS.headY - 0.42, z: -0.38 };
+          pos = i === 0 ? w : { x: w.x + (i % 5) * 0.004 * sg, y: w.y + Math.sin(a) * 0.08 * (0.6 + (i % 5) * 0.1), z: w.z - Math.cos(a) * 0.08 * (0.6 + (i % 5) * 0.1) };
+        }
         if (XRS.hands) { const g = XRS.hands[j.side]; pos = { x: g.x + (i % 5) * 0.01, y: g.y, z: g.z - Math.floor(i / 5) * 0.02 }; }
         if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
