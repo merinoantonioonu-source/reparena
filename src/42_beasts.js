@@ -1,12 +1,18 @@
 
-/* =================== MONSTRUOS DE ARCHIVO (glTF): Imp y Puglin =================== */
+/* =================== MONSTRUOS DE ARCHIVO (glTF): Imp, Puglin y el zombi =================== */
 // models/imp.glb y models/puglin.glb (Bestiary · Dungeon Monsters Kit, de Quaternius) traen el cuerpo y el esqueleto;
 // models/anims.glb, las animaciones de la Universal Animation Library (Quaternius, CC0), hechas para ese mismo esqueleto.
 // Las texturas, reducidas, están en models/tex (tres colores por monstruo). Se cargan al abrir la página y, mientras no
-// estén (o si no se pueden cargar), en su lugar salen robots.
+// estén (o si no se pueden cargar), en su lugar salen robots. El zombi (models/zombie.glb, Quaternius, CC0) trae sus propias
+// animaciones (andar, correr, reposo y morder) y una paleta de colores (models/tex/zombie.png) en vez de texturas.
 const BEAST = { ready: false, failed: false, loading: false, kinds: {} };
 // h: altura del modelo (m); walk/jog/run: a qué velocidad (m/s, a escala 1) avanza cada animación de andar
-const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 } };
+// own: con sus propias animaciones (alias: nombre de la biblioteca → el suyo), a escala k; atk: la animación del ataque y
+// cuándo empieza (s) y cuándo llega (s); bones: sus huesos del pecho, la cabeza y la mano derecha
+const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 },
+  zombie: { h: 1.8, walk: 0.35, jog: 1.5, run: 2.4, maxTs: 2.6, own: true, k: 0.27, prefix: 'Zombie|Zombie',
+    alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Bite: 'Bite', Dance_Loop: 'Idle' }, atk: ['Bite', 1.0, 2.5], taunt: 'Idle_Loop',
+    bones: { chest: 'Spine2', head: 'Head', handR: 'RightHand' } } };
 const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
@@ -22,7 +28,7 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
 }
 // Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
 function animStatus() {
-  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, Imp y Puglin' : 'Imp y Puglin'})`;
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, Imp, Puglin y zombi' : 'Imp, Puglin y zombi'})`;
   if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
   return 'Animaciones de Quaternius: cargando…';
 }
@@ -37,6 +43,12 @@ function loadBeasts() {
   Promise.all([get('anims'), ...Object.keys(BEAST_DEF).map(get)]).then(([U, ...models]) => {
     const up = U.scene.getObjectByName('pelvis').position.z;
     Object.keys(BEAST_DEF).forEach((k, i) => {
+      const D = BEAST_DEF[k];
+      if (D.own) { // sus propias animaciones, con los nombres de la biblioteca; sus colores, de una paleta pequeña (sin suavizar)
+        const clips = {}; for (const a in D.alias) { const c = models[i].animations.find(x => x.name === D.prefix + D.alias[a]); if (c) clips[a] = c; }
+        const map = T.load(`models/tex/${k}.png`); map.flipY = false; map.encoding = THREE.sRGBEncoding; map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestFilter; map.generateMipmaps = false;
+        BEAST.kinds[k] = { scene: models[i].scene, clips, map }; return;
+      }
       const scene = models[i].scene, mp = scene.getObjectByName('pelvis').position.z, clips = {}, has = new Set();
       scene.traverse(o => has.add(o.name));
       for (const n of BEAST_CLIPS) { const c = U.animations.find(a => a.name === n); if (c) clips[n] = beastRetarget(c, up, mp, has); }
@@ -100,11 +112,14 @@ function bakeRigClips(U, M) {
 // Hace de «rig» para el constructor de los robots: cada ejemplar es una copia del modelo con su propio esqueleto y material
 function beastRig(kind) {
   return { kind: 'beast', instance() {
-    const B = BEAST.kinds[kind], model = THREE.SkeletonUtils.clone(B.scene), v = Math.floor(Math.random() * 3);
-    const mat = new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
+    const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), v = Math.floor(Math.random() * 3);
+    const mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true })
+      : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
     model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
-    const root = new THREE.Group(); root.add(model); model.rotation.y = Math.PI; // con las animaciones, el modelo mira hacia −Z: se gira para que mire hacia donde va
-    const bones = { chest: model.getObjectByName('spine_03'), head: model.getObjectByName('Head'), handR: model.getObjectByName('hand_r') };
+    const root = new THREE.Group(); root.add(model);
+    if (D.own) model.scale.setScalar(D.k); // el zombi ya mira hacia +Z
+    else model.rotation.y = Math.PI; // con las animaciones de la biblioteca, el modelo mira hacia −Z: se gira para que mire hacia donde va
+    const bn = D.bones || { chest: 'spine_03', head: 'Head', handR: 'hand_r' }, bones = { chest: model.getObjectByName(bn.chest), head: model.getObjectByName(bn.head), handR: model.getObjectByName(bn.handR) };
     return { root, model, mat, bones, meshes: {}, list: [], skel: { dispose() {} }, variant: v };
   } };
 }

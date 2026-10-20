@@ -51,7 +51,9 @@ const ROBOT_KIND = {
   titan: { rig: 'titan', scale: 1.55, speedF: 0.7, heavy: true, stop: 1.9, stride: 0.9, head: 1.75, boss: true },
   imp: { rig: 'imp', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.2, stride: 1.4, head: 1.5, beast3d: 'imp' }, // monstruos de archivo (Quaternius)
   puglin: { rig: 'puglin', scale: 1.15, speedF: 1.25, heavy: false, stop: 1.0, stride: 1.0, head: 0.95, beast3d: 'puglin' },
-  impboss: { rig: 'imp', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.4, head: 1.5, beast3d: 'imp', boss: true }
+  impboss: { rig: 'imp', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.4, head: 1.5, beast3d: 'imp', boss: true },
+  zombie: { rig: 'zombie', scale: 1.0, speedF: 0.9, heavy: false, stop: 1.05, stride: 1.0, head: 1.65, beast3d: 'zombie' }, // zombi de Quaternius
+  zombieboss: { rig: 'zombie', scale: 1.6, speedF: 0.7, heavy: true, stop: 1.7, stride: 1.0, head: 1.65, beast3d: 'zombie', boss: true }
 };
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
@@ -112,7 +114,7 @@ class Robot {
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
     // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
-    const grp = K.beast3d ? 'beast' : 'robot';
+    const grp = K.beast3d === 'zombie' ? 'zombie' : K.beast3d ? 'beast' : 'robot';
     this.pace = clamp((settings['pace_' + grp] || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1); // rapidez de sus gestos
     const travel = clamp((settings['spd_' + grp] || 100) / 100, 1, 3); // velocidad al desplazarse (1 = la justa para llegar a tiempo)
     this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
@@ -409,19 +411,19 @@ class Beast extends Robot {
     this.mx = new THREE.AnimationMixer(this.inst.model); this.clips = BEAST.kinds[this.K.beast3d].clips; this.acts = {}; this.cur = null; this.react = 0; this.tint = 0; this.prevSt = '';
     this.animate(0, 0, 0);
   }
-  roar(pos) { SND.roar(pos, this.K.beast3d === 'puglin' ? 1.9 : 1.4); }
+  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave
   center(out) { return this.B.chest.getWorldPosition(out); }
   play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
     if (!this.mx) return;
     const K = this.K, D = this.D, st = this.state; if (spd === true) spd = this.vWalk;
-    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
+    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = D.atk ? D.atk[0] : Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
     this.prevSt = st;
     // el puñetazo, llevado a mano: recoge el brazo durante la preparación, lo estira justo en el golpe, lo mantiene un
     // instante mientras retrocede y lo recoge (BEAST_PUNCH: cuándo empieza a salir y cuándo está del todo estirado)
     let punchT = -1;
     if (this.atk && (st === 'windup' || st === 'strike' || (st === 'knock' && this.st < 0.8))) {
-      const [t0, t1] = BEAST_PUNCH[this.atk], dur = this.clips[this.atk].duration, wind = this.zone ? 1.25 : 0.75;
+      const [t0, t1] = D.atk ? D.atk.slice(1) : BEAST_PUNCH[this.atk], dur = this.clips[this.atk].duration, wind = this.zone ? 1.25 : 0.75;
       punchT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : this.st < 0.3 ? t1 : lerp(t1, dur, clamp((this.st - 0.3) / 0.5, 0, 1));
     }
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
@@ -429,11 +431,11 @@ class Beast extends Robot {
     if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
     else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / this.dodgeDur; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
-    else if (st === 'taunt') want = K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop';
+    else if (st === 'taunt') want = D.taunt || (K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop');
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
     else if (v > 0.12) {
       want = v < (D.walk + D.jog) / 2 ? 'Walk_Loop' : v < (D.jog + D.run) / 2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop';
-      ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), 0.5, 1.8); // los pies no patinan
+      ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), 0.5, D.maxTs || 1.8); // los pies no patinan
     } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
     else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; // o, sin música, en guardia
     this.play(want, fade, once, ts, this.restart); this.restart = false;
@@ -449,16 +451,19 @@ class Beast extends Robot {
     fx.sparks(point, 10, [0.9, 0.15, 0.1], 2.2, 0.04); fx.glow(point, [1, 0.5, 0.3], 0.35, 0.08); SND.squish(point);
     if (this.hp <= 0) this.kill(); else if (Math.random() < 0.3) this.roar(this.center(tmpB));
   }
-  // al morir cae con su animación, se hunde en el suelo y desaparece
+  // al morir cae con su animación (el zombi, que no la tiene, se desploma de espaldas), se hunde en el suelo y desaparece
   kill() {
     if (this.mode === 'dying') return; this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.bar.g.visible = false; this.tint = 1;
-    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, this.K.beast3d === 'puglin' ? 1.5 : 1.0); SND.squish(c);
-    this.play('Death01', 0.1, true, 1, true);
+    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6 }[this.K.beast3d] || 1.0); SND.squish(c);
+    if (this.clips.Death01) this.play('Death01', 0.1, true, 1, true); else { this.fall = this.inst.model.rotation.x; if (this.acts[this.cur]) this.acts[this.cur].timeScale = 0.3; }
   }
   update(dt, t) {
     if (this.mode !== 'dying') return super.update(dt, t);
     this.st += dt; this.mx.update(dt); this.tint = Math.max(0, this.tint - dt * 2); this.inst.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint);
-    this.inst.model.rotation.x *= Math.max(0, 1 - dt * 8); // sin la inclinación del último impacto: queda tumbado en el suelo
+    if (this.fall !== undefined) { // se desploma de espaldas: cae cada vez más deprisa, rebota un poco y se queda tumbado
+      const k = Math.min(1, this.st / 0.75), e = k * k, b = k >= 1 ? Math.sin(Math.min(1, (this.st - 0.75) / 0.25) * Math.PI) * 0.06 : 0;
+      this.inst.model.rotation.x = lerp(this.fall, -Math.PI / 2, e) + b; if (this.st > 0.75 && !this.thud) { this.thud = true; SND.step(this.root.position, true); fx.dust(tmpB.set(this.root.position.x, 0.02, this.root.position.z), 6, 0.35); }
+    } else this.inst.model.rotation.x *= Math.max(0, 1 - dt * 8); // sin la inclinación del último impacto: queda tumbado en el suelo
     if (this.st > 2.3) this.root.position.y -= dt * 0.45 * this.sc; // se hunde
     if (this.st > 3.8 && !this.gone) { this.gone = true; this.dispose(); }
   }
@@ -466,7 +471,7 @@ class Beast extends Robot {
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
-const SPIDER_KIND = { imp: { s: 1.0 }, puglin: { s: 0.9 }, impboss: { s: 2.4, boss: true }, scout: { s: 1.0 }, heavy: { s: 1.4 }, titan: { s: 2.4, boss: true } };
+const SPIDER_KIND = { imp: { s: 1.0 }, puglin: { s: 0.9 }, impboss: { s: 2.4, boss: true }, zombie: { s: 1.0 }, zombieboss: { s: 2.4, boss: true }, scout: { s: 1.0 }, heavy: { s: 1.4 }, titan: { s: 2.4, boss: true } };
 const _ikD = new V3(), _ikU = new V3(), _ikP = new V3(), _knee = new V3(), _foot = new V3(), _hip = new V3();
 function ikKnee(H, F, L1, L2, ox, oz, out) {
   _ikD.subVectors(F, H); let d = _ikD.length(); if (d < 1e-5) { _ikD.set(0, -1, 0); d = 1e-5; } _ikD.divideScalar(d);
@@ -1543,16 +1548,17 @@ function buildWave(i) {
   const F = foes();
   // los que vienen andando: cada clase en proporción a «cuántos salen» (Ajustes → Cada enemigo), bien repartidos; si solo
   // sale una clase, el jefe es de esa clase
-  const GW = isTiny() ? { robot: 1 } : { beast: settings.beasts, robot: settings.robotsW };
+  const GW = isTiny() ? { robot: 1 } : { beast: settings.beasts, zombie: settings.zombies, robot: settings.robotsW };
   const gsum = Object.values(GW).reduce((a, b) => a + b, 0) || (GW.robot = 1), only = Object.keys(GW).filter(k => GW[k] > 0), acc = {};
   for (const k in GW) acc[k] = Math.random() * 0.5;
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { beast: 'impboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { beast: 'impboss', zombie: 'zombieboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
   let k = 0;
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
       let g = 'robot', top = -1; for (const kk in GW) { acc[kk] += GW[kk] / (gsum || 1); if (acc[kk] > top) { top = acc[kk]; g = kk; } } acc[g] -= 1;
       if (g === 'beast') { kind = Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
+      else if (g === 'zombie') { kind = 'zombie'; hp = 2 + Math.floor(i / 3); }
       else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
