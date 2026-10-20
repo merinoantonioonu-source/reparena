@@ -72,6 +72,7 @@ espada láser y la normal con la metálica. Si solo pones la normal, suena con l
 | `trueno` | Los truenos lejanos de la arena. |
 | `metal-lejano` | Golpes metálicos lejanos de la arena. |
 | `buho` | Un búho en el bosque. |
+| `pajaro` | Un pájaro que canta en el bosque de día (Entorno: Bosque), cada pocos segundos y desde un sitio distinto. |
 | `crujido` | Crujidos de ramas en el bosque. |
 
 ## Sonidos continuos (se repiten en bucle)
@@ -82,6 +83,7 @@ Que el final empalme con el principio sin corte. Pueden durar varios segundos.
 | --- | --- |
 | `ambiente-arena` | Fondo de la arena (realidad virtual). Sustituye a todo el ambiente sintetizado. |
 | `ambiente-bosque` | Fondo del bosque (viento, grillos…). |
+| `ambiente-naturaleza` | Fondo del bosque de día (Ajustes → Sistema → Entorno: Bosque): brisa entre las hojas. |
 | `zumbido-dron` | Vuelo de drones, bombarderos y nodrizas (cada uno con su tono). |
 | `zumbido-avispa` | Vuelo de avispones, avispas y la reina (cada uno con su tono). |
 | `espada-laser-zumbido` | Zumbido de la espada láser (sube de tono y volumen al moverla). |

@@ -7,6 +7,8 @@
 | `zombie.glb` | **Zombi** («Zombie», de Quaternius, 2017): cuerpo, esqueleto y sus propias animaciones (andar, correr, reposo, morder y arrastrarse), convertido de `ZombieSmooth.fbx` con FBX2glTF. No trae animaciones de morir ni de encajar golpes: eso lo hace el juego. |
 | `tex/zombie.png` | Su paleta de colores (32 × 32 px): cada parte del modelo toma un color de aquí. |
 | `trex.glb`, `raptor.glb` | **T-Rex** y **velociraptor** (Dinosaur Animated Pack, Quaternius, dic. 2018, CC0): cuerpo, esqueleto, colores y sus animaciones (reposo, andar, correr, saltar, atacar y morir), convertidos de sus `.fbx` con FBX2glTF. |
+| `nature.glb` | **Bosque de día** (Stylized Nature MegaKit, de Quaternius, versión gratuita, CC0): árboles, pinos, árboles secos, arbustos, rocas, setas, flores, helechos, tréboles y hierba, convertidos de sus `.fbx` con FBX2glTF, juntos en un solo archivo y simplificados (los árboles, a la cuarta parte de triángulos) para que vayan fluidos en las Quest. Sin texturas dentro: el juego les pone las de `tex/nature/`. |
+| `tex/nature/` | Sus texturas, reducidas: cortezas, hojas de los árboles, de los pinos y de los arbustos, flores, hierba, setas y rocas. |
 | `anims.glb` | Las animaciones que usa el juego (andar, trotar, correr, puñetazos, tajo de espada, recibir golpe, morir, bailar, lanzar un hechizo, voltereta y guardia), sacadas de la **Universal Animation Library** (Quaternius, CC0), hecha para el mismo esqueleto. Solo lleva el esqueleto y esas animaciones (sin los dedos ni la malla). |
 | `tex/` | Las texturas, reducidas a 1024 px para que carguen deprisa en las Quest: tres colores por monstruo (`*_color1..3.jpg`), relieve (`*_normal`), rugosidad y metal (`*_orm`) y brillo de los ojos (`*_emissive`). |
 
@@ -19,3 +21,5 @@ Cómo se prepararon, por si hay que añadir otro monstruo del mismo tipo (esquel
 Licencias: las animaciones de la Universal Animation Library son CC0. Los modelos y texturas del Bestiary están bajo la Quaternius Asset License (QAL) v1.0: se pueden usar gratis en juegos y otros proyectos, también comerciales y sin citar al autor, siempre que vayan dentro del proyecto; lo que no se permite es redistribuirlos o revenderlos sueltos, como recurso o paquete de recursos. Por eso aquí están ya convertidos y preparados para este juego, no el pack original.
 
 El zombi: el zip no trae archivo de licencia; Quaternius publica sus packs gratuitos como CC0 (dominio público).
+
+El bosque de día: el pack trae su licencia (`License_Standard.txt`): CC0 1.0 (dominio público).
