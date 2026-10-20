@@ -12,7 +12,15 @@ const BEAST = { ready: false, failed: false, loading: false, kinds: {} };
 const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 },
   zombie: { h: 1.8, walk: 0.35, jog: 1.5, run: 2.4, maxTs: 2.6, own: true, k: 0.27, prefix: 'Zombie|Zombie',
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Bite: 'Bite', Dance_Loop: 'Idle' }, atk: ['Bite', 1.0, 2.5], taunt: 'Idle_Loop',
-    bones: { chest: 'Spine2', head: 'Head', handR: 'RightHand' } } };
+    bones: { chest: 'Spine2', head: 'Head', handR: 'RightHand' } },
+  // dinosaurios (Dinosaur Animated Pack, Quaternius, CC0): con sus colores (sin textura) y sus animaciones; a una escala que
+  // cabe por las compuertas (el T-Rex, 2,3 m; el velociraptor, 1,4 m). trim: la animación acaba antes de lo que dura el clip
+  trex: { h: 2.3, walk: 2.0, jog: 3.5, run: 5.0, minTs: 0.35, own: true, keepMats: true, k: 0.175, prefix: 'Armature|TRex_',
+    alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.29, 0.58], taunt: 'Idle_Loop',
+    bones: { chest: 'Torso', head: 'Head', handR: 'Head' } },
+  raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.35, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
+    alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.21, 0.42], taunt: 'Idle_Loop',
+    bones: { chest: 'Torso', head: 'Head', handR: 'Head' } } };
 const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
@@ -28,7 +36,7 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
 }
 // Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
 function animStatus() {
-  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, Imp, Puglin y zombi' : 'Imp, Puglin y zombi'})`;
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, ' : ''}Imp, Puglin, zombi, T-Rex y velociraptor)`;
   if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
   return 'Animaciones de Quaternius: cargando…';
 }
@@ -45,8 +53,8 @@ function loadBeasts() {
     Object.keys(BEAST_DEF).forEach((k, i) => {
       const D = BEAST_DEF[k];
       if (D.own) { // sus propias animaciones, con los nombres de la biblioteca; sus colores, de una paleta pequeña (sin suavizar)
-        const clips = {}; for (const a in D.alias) { const c = models[i].animations.find(x => x.name === D.prefix + D.alias[a]); if (c) clips[a] = c; }
-        const map = T.load(`models/tex/${k}.png`); map.flipY = false; map.encoding = THREE.sRGBEncoding; map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestFilter; map.generateMipmaps = false;
+        const clips = {}; for (const a in D.alias) { let c = models[i].animations.find(x => x.name === D.prefix + D.alias[a]); if (!c) continue; if (D.trim && D.trim[D.alias[a]]) { c = c.clone(); c.duration = D.trim[D.alias[a]]; } clips[a] = c; }
+        let map = null; if (!D.keepMats) { map = T.load(`models/tex/${k}.png`); map.flipY = false; map.encoding = THREE.sRGBEncoding; map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestFilter; map.generateMipmaps = false; }
         BEAST.kinds[k] = { scene: models[i].scene, clips, map }; return;
       }
       const scene = models[i].scene, mp = scene.getObjectByName('pelvis').position.z, clips = {}, has = new Set();
@@ -113,11 +121,18 @@ function bakeRigClips(U, M) {
 function beastRig(kind) {
   return { kind: 'beast', instance() {
     const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), v = Math.floor(Math.random() * 3);
-    const mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true })
-      : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
-    model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
+    let mat;
+    if (D.keepMats) { // sus propios colores, uno por pieza: copias para poder teñirlas de rojo al recibir
+      const mats = [], base = [];
+      model.traverse(m => { if (!m.isMesh) return; const one = x => { const c = new THREE.MeshStandardMaterial({ color: x.color, roughness: 0.8, metalness: 0, skinning: true, flatShading: true }); mats.push(c); base.push(x.color.clone()); return c; }; m.material = Array.isArray(m.material) ? m.material.map(one) : one(m.material); m.castShadow = true; m.frustumCulled = false; });
+      const tc = new THREE.Color(); mat = { color: { setRGB: (r, g, b) => mats.forEach((m, i) => m.color.copy(base[i]).multiply(tc.setRGB(r, g, b))) }, emissiveIntensity: 1, dispose: () => mats.forEach(m => m.dispose()) };
+    } else {
+      mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true })
+        : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
+      model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
+    }
     const root = new THREE.Group(); root.add(model);
-    if (D.own) model.scale.setScalar(D.k); // el zombi ya mira hacia +Z
+    if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z
     else model.rotation.y = Math.PI; // con las animaciones de la biblioteca, el modelo mira hacia −Z: se gira para que mire hacia donde va
     const bn = D.bones || { chest: 'spine_03', head: 'Head', handR: 'hand_r' }, bones = { chest: model.getObjectByName(bn.chest), head: model.getObjectByName(bn.head), handR: model.getObjectByName(bn.handR) };
     return { root, model, mat, bones, meshes: {}, list: [], skel: { dispose() {} }, variant: v };

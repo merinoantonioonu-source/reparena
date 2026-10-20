@@ -505,7 +505,7 @@ function updateGloves(dt) {
 
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
-  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin'); RIGS.zombie = beastRig('zombie');
+  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin'); RIGS.zombie = beastRig('zombie'); RIGS.trex = beastRig('trex'); RIGS.raptor = beastRig('raptor');
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)

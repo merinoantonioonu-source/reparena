@@ -6,6 +6,7 @@
 | `puglin.glb` | **Puglin**, del mismo pack. |
 | `zombie.glb` | **Zombi** («Zombie», de Quaternius, 2017): cuerpo, esqueleto y sus propias animaciones (andar, correr, reposo, morder y arrastrarse), convertido de `ZombieSmooth.fbx` con FBX2glTF. No trae animaciones de morir ni de encajar golpes: eso lo hace el juego. |
 | `tex/zombie.png` | Su paleta de colores (32 × 32 px): cada parte del modelo toma un color de aquí. |
+| `trex.glb`, `raptor.glb` | **T-Rex** y **velociraptor** (Dinosaur Animated Pack, Quaternius, dic. 2018, CC0): cuerpo, esqueleto, colores y sus animaciones (reposo, andar, correr, saltar, atacar y morir), convertidos de sus `.fbx` con FBX2glTF. |
 | `anims.glb` | Las animaciones que usa el juego (andar, trotar, correr, puñetazos, tajo de espada, recibir golpe, morir, bailar, lanzar un hechizo, voltereta y guardia), sacadas de la **Universal Animation Library** (Quaternius, CC0), hecha para el mismo esqueleto. Solo lleva el esqueleto y esas animaciones (sin los dedos ni la malla). |
 | `tex/` | Las texturas, reducidas a 1024 px para que carguen deprisa en las Quest: tres colores por monstruo (`*_color1..3.jpg`), relieve (`*_normal`), rugosidad y metal (`*_orm`) y brillo de los ojos (`*_emissive`). |
 
