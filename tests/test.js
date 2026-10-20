@@ -235,18 +235,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'lizard') bites.states.add(e.state); });
   }, 30, s => s.taken < 1 ? 'los cocodrilos no atacan' : !['windup', 'strike', 'knock'].every(k => bites.states.has(k)) ? `al cocodrilo le falta parte del ataque (${[...bites.states]})` : '', true);
   // cada enemigo: rapidez y forma de moverse. Más rápidos no llegan antes (lo gastan en zigzag); con esquivas se apartan de golpe
-  { const runMove = async (name, pace, move) => { const R = { arrive: [], vmax: 0, lat: 0, dodges: 0 }, born = new Map(), seen = new Set();
+  { const runMove = async (name, pace, move) => { const R = { arrive: [], vmax: 0, lat: 0, dodges: 0, sp: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
       await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0, walkTime: 8, maxAlive: 2, pace_neon: pace, move_neon: move }, t => {
         RA.PV.crouch = false;
-        for (const e of RA.enemies) { if (!e.alive || e.kind !== 'neon') continue; if (!born.has(e)) born.set(e, t); if (e.out) R.vmax = Math.max(R.vmax, e.vel.length()); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
-          if (e.state === 'windup' && !e._arr) { e._arr = 1; R.arrive.push(t - born.get(e)); } }
+        for (const e of RA.enemies) { if (!e.alive || e.kind !== 'neon') continue; if (!born.has(e)) born.set(e, t); if (e.out) R.vmax = Math.max(R.vmax, e.vel.length()); if (e.out && e.state === 'walk' && !e.charged && e.spd > 0.15) R.sp.push(e.spd); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
+          if (e.state === 'windup' && !e._arr) { e._arr = 1; R.arrive.push(t - born.get(e)); }
+          if (e.state === 'windup' && !wu.has(e)) wu.set(e, t); if (e.state === 'walk' && wu.has(e)) { R.atk.push(t - wu.get(e)); wu.delete(e); } } // golpe entero: preparar, golpear y retroceder
       }, 40, s => '', true);
-      R.arrive.sort((a, b) => a - b); R.med = R.arrive[R.arrive.length >> 1] || 0; return R; };
-    if (!process.env.ONLY || /neón|zigzag|esquivas/.test(process.env.ONLY)) {
-    const A = await runMove('neón recto a su ritmo', 100, 'straight'), Z = await runMove('neón en zigzag al 200 %', 200, 'zigzag'), D = await runMove('neón con esquivas', 150, 'dodge');
-    log(`movement: straight 100 % arrives ${A.med.toFixed(1)} s (vmax ${A.vmax.toFixed(2)}) · zigzag 200 % arrives ${Z.med.toFixed(1)} s (vmax ${Z.vmax.toFixed(2)}) · dodges seen ${D.dodges}`);
-    if (!A.med || !Z.med || Math.abs(Z.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: con más rapidez no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${Z.med.toFixed(1)} s)`);
-    if (Z.vmax < A.vmax * 1.5) errors.push(`cada enemigo: al 200 % deberían moverse más deprisa (${A.vmax.toFixed(2)} → ${Z.vmax.toFixed(2)} m/s)`);
+      R.arrive.sort((a, b) => a - b); R.med = R.arrive[R.arrive.length >> 1] || 0; R.sp.sort((a, b) => a - b); R.v = R.sp[R.sp.length >> 1] || 0; R.atk.sort((a, b) => a - b); R.a = R.atk[R.atk.length >> 1] || 0; return R; };
+    if (!process.env.ONLY || /neón|zigzag|esquivas|recto/.test(process.env.ONLY)) {
+    const A = await runMove('neón recto a su ritmo', 100, 'straight'), F = await runMove('neón recto al 250 %', 250, 'straight'), Z = await runMove('neón en zigzag al 200 %', 200, 'zigzag'), D = await runMove('neón con esquivas', 150, 'dodge');
+    log(`gestures: a whole attack takes ${A.a.toFixed(2)} s at 100 % and ${F.a.toFixed(2)} s at 250 %`);
+    if (!A.a || !F.a || F.a > A.a / 1.8) errors.push(`cada enemigo: con más rapidez sus gestos (el golpe entero) deberían ir más deprisa (${A.a.toFixed(2)} → ${F.a.toFixed(2)} s)`);
+    log(`movement: straight 100 % moves at ${A.v.toFixed(2)} m/s, arrives ${A.med.toFixed(1)} s · straight 250 % ${F.v.toFixed(2)} m/s, arrives ${F.med.toFixed(1)} s · zigzag 200 % ${Z.v.toFixed(2)} m/s, arrives ${Z.med.toFixed(1)} s · dodges seen ${D.dodges}`);
+    if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: con más rapidez no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
+    if (A.v < 1.2 || F.v < A.v * 1.8 || Z.v < A.v * 1.5) errors.push(`cada enemigo: la rapidez no cambia lo deprisa que se mueven de verdad (100 % ${A.v.toFixed(2)}, 250 % ${F.v.toFixed(2)}, zigzag 200 % ${Z.v.toFixed(2)} m/s)`);
     if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
     for (const g of ['robot', 'croc', 'neon', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); }
