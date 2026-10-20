@@ -46,7 +46,7 @@ const SCHEMA = [
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
   { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
-  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 10, step: 1, def: 3, unit: '% por oleada', zero: 'No', hint: 'Cada oleada superada lo pone un poco más difícil: los enemigos (o los arcos, los objetivos…) llegan antes y son más, y el ejercicio pide algo más de recorrido. Sube este porcentaje en cada oleada, hasta un +50 % (el recorrido, como mucho un +20 %). 0 = siempre igual.' },
+  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 6, unit: '% por oleada', zero: 'No', hint: 'Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen más seguidos y son más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
@@ -199,6 +199,8 @@ function fmtVal(f, v = settings[f.key]) {
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
   if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
+  // la dificultad creciente subía un 3 % por oleada y apenas se notaba: a quien la tenía así (lo de antes) se le pasa a 6 % una vez
+  if (s.rampV !== 2) { if (s.ramp === undefined || s.ramp === 3) settings.ramp = 6; } settings.rampV = 2;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
@@ -362,14 +364,16 @@ function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? setting
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
-// Dificultad creciente: el valor efectivo de un ajuste en la oleada en curso. Más rápido (o menos tiempo) un ramp % por
-// oleada superada, hasta +50 %; más enemigos a la vez en la misma proporción; y más recorrido, a un 40 % de ese ritmo (hasta +20 %)
-const RAMP_CAP = 0.5, RAMP_SLOWER = ['walkTime', 'tchArrive', 'barArrive', 'tchGap'], RAMP_DEEPER = ['squatDepth', 'pushDepth', 'lungeDepth', 'dipDepth'];
-const rampK = () => settings.ramp > 0 && GAME_STATES.concat('paused').includes(state) ? Math.min(RAMP_CAP, settings.ramp / 100 * Math.max(0, waveIdx)) : 0;
+// Dificultad creciente: el valor efectivo de un ajuste en la oleada en curso. Sube un ramp % por cada oleada superada con
+// soltura (RAMP.lvl, en el juego), hasta +60 %: llegan antes y hay menos tiempo para tocarlos o reventarlos; más enemigos a
+// la vez; y, a la mitad de ese ritmo, sus gestos y el vuelo errático; más recorrido, a un 40 % (hasta +24 %)
+const RAMP_CAP = 0.6, RAMP_SLOWER = ['walkTime', 'tchArrive', 'barArrive', 'tchGap', 'tchWindow', 'barWait'], RAMP_DEEPER = ['squatDepth', 'pushDepth', 'lungeDepth', 'dipDepth', 'arcMin', 'arcMax'];
+const rampK = () => settings.ramp > 0 && GAME_STATES.concat('paused').includes(state) ? Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) : 0;
 function dv(key) {
   const v = settings[key], k = rampK(); if (!k) return v;
   if (RAMP_DEEPER.includes(key)) { const f = SCHEMA.find(x => x.key === key); return Math.min(f ? f.max : v * 2, v * (1 + k * 0.4)); }
   if (key === 'maxAlive') return Math.round(v * (1 + k));
+  if (key === 'erratic' || key.startsWith('pace_')) return v * (1 + k * 0.5);
   return RAMP_SLOWER.includes(key) ? v / (1 + k) : v * (1 + k);
 }
 function waveReps(i) { return sesWave(i) || Math.max(1, Math.round(settings.repsWave + settings.repsInc * i)); }

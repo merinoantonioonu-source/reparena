@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, boardDay, drawBoard, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, boardDay, drawBoard, RAMP, rampWaveEnd, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -201,16 +201,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const ramp of [10, 0]) {
     const seen = {};
     await runConfig(`dificultad creciente ${ramp} %`, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 4, repsWave: 3, repsInc: 0, rest: 0, ramp, walkTime: 8, squatDepth: 26, maxAlive: 5 }, t => {
-      squatSim(2.6)(t); if (RA.state === 'play') seen[RA.waveIdx] = [RA.dv('walkTime'), RA.dv('squatDepth'), RA.dv('maxAlive')];
+      squatSim(2.6)(t); if (RA.state === 'play') seen[RA.waveIdx] = [RA.dv('walkTime'), RA.dv('squatDepth'), RA.dv('maxAlive'), RA.dv('pace_robot'), RA.RAMP.lvl];
     }, 420, s => {
       const w = Object.keys(seen).map(Number).sort((a, b) => a - b), last = seen[w[w.length - 1]], first = seen[0];
-      log(`  ramp ${ramp} %: ` + w.map(i => `oleada ${i + 1}: llegan en ${seen[i][0].toFixed(2)} s, bajada ${seen[i][1].toFixed(1)} cm, ${seen[i][2]} a la vez`).join(' · '));
+      log(`  ramp ${ramp} %: ` + w.map(i => `oleada ${i + 1} (nivel ${seen[i][4]}): llegan en ${seen[i][0].toFixed(2)} s, bajada ${seen[i][1].toFixed(1)} cm, ${seen[i][2]} a la vez, gestos ${Math.round(seen[i][3])} %`).join(' · '));
       if (w.length < 4) return 'no se juegan las cuatro oleadas';
-      if (ramp && !(Math.abs(last[0] - 8 / 1.3) < 0.01 && Math.abs(last[1] - 26 * 1.12) < 0.01 && last[2] === 7 && first[0] === 8 && first[1] === 26)) return 'la dificultad creciente no sube como debe';
+      if (ramp && !(last[4] === 3 && Math.abs(last[0] - 8 / 1.3) < 0.01 && Math.abs(last[1] - 26 * 1.12) < 0.01 && last[2] === 7 && Math.abs(last[3] - RA.settings.pace_robot * 1.15) < 0.01 && first[0] === 8 && first[1] === 26)) return 'la dificultad creciente no sube como debe';
       if (!ramp && (last[0] !== 8 || last[1] !== 26 || last[2] !== 5)) return 'sin dificultad creciente algo cambia';
       return '';
     });
   }
+  // si en una oleada te dan mucho, la siguiente no sube; superada con soltura, sí
+  { RA.setSetting('ramp', 6); const R = RA.RAMP, st = RA.stats; Object.assign(R, { lvl: 2, t0: st.taken, f0: st.falls }); st.taken += 6; RA.rampWaveEnd(true); const held = R.lvl, n1 = R.note;
+    Object.assign(R, { t0: st.taken, f0: st.falls }); st.taken += 1; RA.rampWaveEnd(true); const up = R.lvl, n2 = R.note; RA.rampWaveEnd(false); const lost = R.lvl;
+    log(`ramp after a rough wave: level ${held} (“${n1}”) · after a clean one ${up} (“${n2}”) · after a lost one ${lost}`);
+    if (held !== 2 || up !== 3 || lost !== 3 || !/18 %/.test(n2)) errors.push('dificultad creciente: no se para tras una oleada con muchos golpes o no sube tras una limpia'); R.lvl = 0; }
   // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen robots, sin errores
   { const kinds = new Set();
     await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 30, zombies: 30, dinos: 40, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,

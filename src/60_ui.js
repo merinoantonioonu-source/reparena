@@ -609,7 +609,7 @@ function drawBoard() {
   }
   const N = settings.waves, hang = settings.exercise === 'hang', bars = isBars();
   // arriba: oleada (y bloque), puntos y vidas
-  const wv = (SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`);
+  const rk = Math.round(rampK() * 100), wv = (SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` · ▲${rk} %` : '');
   c.textAlign = 'left'; fitFont(c, wv, 330, 28, '%px ' + FD); const ww = c.measureText(wv).width + 44;
   boardPill(c, 32, 26, ww, 50, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
   c.textAlign = 'center'; c.font = `50px ${FD}`; glowText(c, String(score).padStart(6, '0'), W / 2 + 40, 52, BC.gold, 16);
@@ -627,7 +627,8 @@ function drawBoard() {
   c.textAlign = 'right'; const RX = W - 40;
   if (state === 'rest') {
     c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.ceil(settings.rest - stateT)}`, RX, 140, BC.teal, 14);
-    c.fillStyle = BC.ink; c.font = `500 30px ${FB}`; c.fillText(hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} reps`, RX, 200);
+    c.fillStyle = BC.ink; c.font = `500 30px ${FB}`; c.fillText(hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} reps`, RX, 196);
+    if (RAMP.note) { c.fillStyle = RAMP.up ? BC.gold : BC.lil; fitFont(c, (RAMP.up ? '▲ ' : '= ') + RAMP.note, 560, 28, '500 %px ' + FB); c.fillText((RAMP.up ? '▲ ' : '= ') + RAMP.note, RX, 234); }
   } else if (state === 'mount') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', RX, 150); }
   else if (state === 'calib') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText('CALIBRANDO', RX, 150); }
   else if (state === 'ready') { c.font = `110px ${FD}`; glowText(c, String(Math.max(1, Math.ceil(3 - stateT))), RX - 20, 165, BC.gold, 20); }
@@ -635,7 +636,7 @@ function drawBoard() {
   else if (state === 'between') { c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, RX, 150, BC.teal, 14); }
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 450, 66, '%px ' + FD); c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; const t = nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`; fitFont(c, t, 450, 44, '%px ' + FD); c.fillText(t, RX, 150); }
-  let ch = null; const live = ['play', 'rest', 'ready'].includes(state);
+  let ch = null; const live = ['play', 'ready'].includes(state) || (state === 'rest' && !RAMP.note); // (en el descanso, ahí va la dificultad)
   if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', n ? BC.teal : '#ff8a3d']; }
   else if (throwAim() && live) { const n = throwCount(); ch = [n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', n ? BC.teal : BC.lil]; }
   else if (pistolOn() && live) ch = [GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', GUN.ammo ? BC.teal : '#ff8a3d'];
