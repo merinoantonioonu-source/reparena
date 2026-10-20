@@ -113,7 +113,7 @@ function natureBuild() {
 function applyNature() {
   const want = !arMode && !forestOn() && sceneryPick() === 'nature';
   if (want && !NAT.ready) natureLoad();
-  const on = natureOn(); NAT.group.visible = on;
+  const on = natureOn(); NAT.group.visible = on; natGateStyle(on);
   if (!on) return;
   natureBuild(); env.visible = false;
   scene.fog = new THREE.FogExp2(0xc4dcea, 0.014); renderer.setClearColor(0xc4dcea, 1);
@@ -122,6 +122,80 @@ function applyNature() {
   applyVolume(); ambientRefresh();
 }
 layoutHooks.push(() => { if (NAT.group.visible) natureBuild(); });
+
+/* ---------- Compuertas de piedra y madera ---------- */
+// Las compuertas metálicas desentonan en el bosque: aquí cada una es la entrada de una cueva al pie de un montículo de
+// hierba, con pilares de sillares, dintel de dovelas, puertas de tablones con herrajes que se abren hacia dentro y luz
+// cálida al fondo. Se hacen la primera vez que
+// hacen falta y se cambian por las de siempre al volver a la fortaleza
+let natGateTpl = null;
+function natGateBuild() {
+  SURF.stone = surface(256, 256, 97, S => {
+    fillAll(S, '#8d897f', 128, 0.95, 0);
+    const { a, h, rnd } = S;
+    mottle(S, 160, 46, 0.16, 0.08); speckle(S, 9000, 0.22, 0.12, 0.25, 1.4);
+    for (let i = 0; i < 14; i++) { // grietas
+      let x = rnd() * 256, y = rnd() * 256; a.strokeStyle = 'rgba(30,26,22,0.55)'; h.strokeStyle = '#000'; a.lineWidth = 1.2; h.lineWidth = 2.2; a.beginPath(); h.beginPath(); a.moveTo(x, y); h.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * 30; y += (rnd() - 0.5) * 30; a.lineTo(x, y); h.lineTo(x, y); }
+      a.stroke(); h.stroke();
+    }
+    for (let i = 0; i < 26; i++) { const x = rnd() * 256, y = rnd() * 256, r = 4 + rnd() * 14, c = rnd() < 0.6 ? 'rgba(130,150,60,0.5)' : 'rgba(200,190,120,0.4)'; wrapDraw(256, x, y, r, (X, Y) => blob(a, X, Y, r, c)); } // líquenes
+  }, 2.6);
+  SURF.planks = surface(256, 640, 101, S => {
+    fillAll(S, '#7a5434', 128, 0.85, 0);
+    const { a, h, r, rnd } = S, pw = 256 / 5;
+    for (let i = 0; i < 5; i++) {
+      const x0 = i * pw;
+      a.fillStyle = rnd() < 0.5 ? `rgba(40,24,12,${0.08 + rnd() * 0.12})` : `rgba(255,220,170,${0.05 + rnd() * 0.08})`; a.fillRect(x0, 0, pw, 640);
+      for (let k = 0; k < 24; k++) { const x = x0 + 4 + rnd() * (pw - 8); a.strokeStyle = `rgba(50,30,15,${0.15 + rnd() * 0.25})`; a.lineWidth = 0.6 + rnd() * 1.2; a.beginPath(); a.moveTo(x, 0); for (let y = 40; y <= 640; y += 40) a.lineTo(x + Math.sin(y * 0.02 + k) * 2.5, y); a.stroke(); } // vetas
+      for (let k = 0; k < 2; k++) { const y = rnd() * 640, x = x0 + pw * (0.3 + rnd() * 0.4); a.fillStyle = 'rgba(45,26,12,0.7)'; a.beginPath(); a.ellipse(x, y, 3 + rnd() * 3, 6 + rnd() * 6, 0, 0, TAU); a.fill(); } // nudos
+      a.fillStyle = 'rgba(20,12,6,0.9)'; a.fillRect(x0, 0, 3, 640); h.fillStyle = '#000'; h.fillRect(x0, 0, 4, 640); // juntas
+    }
+    for (const y of [110, 500]) { // herrajes con remaches
+      a.fillStyle = '#2b2a2c'; a.fillRect(0, y, 256, 34); h.fillStyle = '#fff'; h.fillRect(0, y, 256, 34); r.fillStyle = 'rgb(0,140,220)'; r.fillRect(0, y, 256, 34);
+      a.fillStyle = 'rgba(160,80,30,0.35)'; for (let k = 0; k < 40; k++) a.fillRect(rnd() * 256, y + rnd() * 34, 2, 2);
+      for (let x = 16; x < 256; x += 48) { a.fillStyle = '#5a585c'; a.beginPath(); a.arc(x, y + 17, 5, 0, TAU); a.fill(); }
+    }
+    speckle(S, 3000, 0.12, 0.05, 0.15, 1.2);
+  }, 2.2);
+  M.stone = std({ map: SURF.stone.map, normalMap: SURF.stone.normal, roughnessMap: SURF.stone.orm, metalness: 0, roughness: 1, vertexColors: true });
+  M.planks = std({ map: SURF.planks.map, normalMap: SURF.planks.normal, roughnessMap: SURF.planks.orm, metalnessMap: SURF.planks.orm, metalness: 1, roughness: 1 });
+  const grass = natGround.material.map.clone(); grass.repeat.set(0.6, 0.6); grass.needsUpdate = true; // (las UV del montículo ya van en metros)
+  const k = new Kit(), R = rng(31), STONES = [col(0.66, 0.64, 0.58), col(0.56, 0.55, 0.5), col(0.72, 0.7, 0.63), col(0.5, 0.48, 0.44)], st = () => STONES[R() * STONES.length | 0];
+  const MOSS = col(0.3, 0.46, 0.16), DARK = col(0.2, 0.18, 0.16);
+  // pilares de sillares, algo irregulares
+  for (const s of [-1, 1]) {
+    for (let y = 0; y < 3.05;) { const hh = Math.min(3.05 - y, 0.36 + R() * 0.16), w = 0.86 + R() * 0.06; k.add('stone', G.box(w, hh, 1.06 + R() * 0.08), st(), s * (1.25 + w / 2) + (R() - 0.5) * 0.03, y + hh / 2, 0, 0, (R() - 0.5) * 0.06, (R() - 0.5) * 0.02); y += hh; }
+    k.add('stone', G.box(0.9, 3.3, 1.3), st(), s * 1.72, 1.65, -1.15); // el pasadizo: muros de piedra hasta el montículo
+  }
+  // dintel de dovelas en abanico (arco plano), con la clave más alta y clara; encima, la cornisa con musgo. Baja,
+  // para que el marcador siga viéndose encima de la compuerta del centro
+  for (let i = 0; i < 9; i++) { const x = (i - 4) * 0.48, key = i === 4; k.add('stone', G.box(0.47, key ? 0.74 : 0.62, key ? 1.12 : 1.04), key ? col(0.8, 0.78, 0.72) : st(), x, key ? 3.39 : 3.36, key ? 0.04 : 0, 0, 0, -Math.atan2(x, 2.8)); }
+  for (const s of [-1, 1]) k.add('stone', G.box(0.5, 0.62, 1.0), st(), s * 1.92, 3.36, 0);
+  for (let x = -2.2; x < 2.15;) { const w = Math.min(2.2 - x, 0.7 + R() * 0.5); k.add('stone', G.box(w, 0.3, 1.18), st(), x + w / 2, 3.82, 0.02, 0, 0, (R() - 0.5) * 0.02); x += w; }
+  for (let i = 0; i < 9; i++) k.add('moss', G.sph(0.26 + R() * 0.22, 9, 6), MOSS, (R() - 0.5) * 4.1, 3.98, (R() - 0.5) * 0.8, 0, R() * 3, 0, 1, 0.3, 1);
+  for (let i = 0; i < 4; i++) { const s = R() < 0.5 ? -1 : 1; k.add('moss', G.sph(0.18 + R() * 0.1, 9, 6), MOSS, s * (1.5 + R() * 0.5), 3.7, 0.5, 0.4, 0, 0, 1, 0.7, 0.35); } // musgo que cae de la cornisa
+  // el pasadizo por dentro, oscuro, con luz de antorcha al fondo
+  k.add('stone', G.box(2.5, 3.1, 0.12), DARK, 0, 1.55, -1.75);
+  for (const s of [-1, 1]) k.add('stone', G.box(0.12, 3.1, 1.8), DARK, s * 1.31, 1.55, -0.85);
+  k.add('stone', G.box(2.6, 0.12, 1.8), DARK, 0, 3.08, -0.85);
+  k.add('halo', G.plane(3.0, 3.0), col(0.5, 0.26, 0.06), 0, 1.4, -1.6);
+  // montículo de hierba detrás: la cueva se mete en él
+  k.add('mound', G.sph(1, 20, 10, TS, 0, TAU, 0, Math.PI / 2), col(1, 1, 1), 0, 0, -5.6, 0, 0, 0, 4.4, 5.4, 3.9);
+  const mats = { stone: M.stone, moss: M.leaf, halo: M.halo, mound: std({ map: grass, roughness: 1, metalness: 0, vertexColors: true }) };
+  return k.build(mats, { cast: true, receive: true });
+}
+function natGateStyle(on) {
+  if (on && !natGateTpl) natGateTpl = natGateBuild();
+  if (!natGateTpl) return;
+  for (const g of gates) {
+    if (on && !g.natG) { g.natG = natGateTpl.clone(); g.g.add(g.natG); }
+    g.nat = on; if (g.natG) g.natG.visible = on;
+    g.frame.visible = g.ramp.visible = !on; g.side.children.forEach(m => m.visible = !on);
+    g.doorL.material = g.doorR.material = on ? M.planks : M.door;
+  }
+  gateLight.color.setHex(on ? 0xff8a30 : 0xff3a10);
+}
 settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
 // Con «Alternar», cada partida en un sitio distinto
 function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NAT.pick === 'nature' ? 'arena' : 'nature'; applyEnvMode(); }

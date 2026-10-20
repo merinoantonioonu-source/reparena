@@ -83,7 +83,7 @@ Que el final empalme con el principio sin corte. Pueden durar varios segundos.
 | --- | --- |
 | `ambiente-arena` | Fondo de la arena (realidad virtual). Sustituye a todo el ambiente sintetizado. |
 | `ambiente-bosque` | Fondo del bosque (viento, grillos…). |
-| `ambiente-naturaleza` | Fondo del bosque de día (Ajustes → Sistema → Entorno: Bosque): brisa entre las hojas. |
+| `ambiente-naturaleza` | Fondo del bosque de día (Entorno ▸ → Entorno: Bosque): brisa entre las hojas. |
 | `zumbido-dron` | Vuelo de drones, bombarderos y nodrizas (cada uno con su tono). |
 | `zumbido-avispa` | Vuelo de avispones, avispas y la reina (cada uno con su tono). |
 | `espada-laser-zumbido` | Zumbido de la espada láser (sube de tono y volumen al moverla). |

@@ -137,7 +137,7 @@ function makeGate() {
   const glowSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color: 0xff4010, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
   glowSpr.scale.set(1.6, 1.6, 1); beacon.add(glowSpr);
   arena.add(g);
-  return { g, side, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false, on: true };
+  return { g, frame, side, ramp, beacon, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false, on: true };
 }
 const gates = [makeGate(), makeGate(), makeGate()];
 // Las compuertas en uso (en una habitación pequeña puede que solo quepan una o dos)
@@ -192,7 +192,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots');
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn();
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && !forestOn();
@@ -295,7 +295,10 @@ function updateGates(dt, t) {
   for (const g of gates) {
     if (g.openT > 0) g.openT -= dt;
     const target = g.openT > 0 ? 1 : 0; g.open += (target - g.open) * Math.min(1, dt * 3.2);
-    g.doorL.position.x = -0.62 - g.open * 1.25; g.doorR.position.x = 0.62 + g.open * 1.25;
+    if (g.nat) { // en el bosque, puertas de tablones que se abren hacia dentro, sobre sus goznes
+      const a = g.open * 1.35, cx = 0.63 * Math.cos(a), cz = 0.06 - 0.63 * Math.sin(a);
+      g.doorL.position.set(-1.25 + cx, 1.5, cz); g.doorL.rotation.y = a; g.doorR.position.set(1.25 - cx, 1.5, cz); g.doorR.rotation.y = Math.PI - a;
+    } else { g.doorL.position.set(-0.62 - g.open * 1.25, 1.5, 0.06); g.doorR.position.set(0.62 + g.open * 1.25, 1.5, 0.06); g.doorL.rotation.y = 0; g.doorR.rotation.y = Math.PI; }
     const on = g.openT > 0 || g.open > 0.05;
     g.spin.rotation.y += dt * 6;
     g.beamMat.opacity = on ? 0.35 : 0; g.glowSpr.material.opacity = on ? 0.6 + 0.4 * Math.sin(t * 12) : 0;

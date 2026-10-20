@@ -279,14 +279,16 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section>
     <h2>3 · Opciones comunes</h2>
-    <p class="note">Valen para todos los modos y ejercicios: menú, sonido, vista, habitación…</p>
+    <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
   </section>
 
   <section class="music">
-    <h2>Música con Spotify</h2>
-    <p class="note">Común a todos los modos y ejercicios.</p>
-    <p>El juego es también un reproductor de Spotify: aparece en tu cuenta como el dispositivo <b>RepArena (Quest)</b> y, al pulsar Play en el menú del juego (Música ▸), la música pasa a las gafas y suena en ellas, aunque antes sonara en el móvil. Desde el menú principal y el de pausa controlas anterior, pausa, siguiente y volumen. Hace falta <b>Spotify Premium</b>. Si ya lo habías conectado antes, <b>vuelve a pulsar Conectar con Spotify</b>: hace falta un permiso nuevo para reproducir en el navegador.</p>
+    <h2>Sonido y música</h2>
+    <p class="note">Común a todos los modos y ejercicios. En el juego, todo esto está en «Sonido ▸».</p>
+    <div class="groups" id="soundGroups"></div>
+    <h3>Música con Spotify</h3>
+    <p>El juego es también un reproductor de Spotify: aparece en tu cuenta como el dispositivo <b>RepArena (Quest)</b> y, al pulsar Play en el menú del juego (Sonido ▸), la música pasa a las gafas y suena en ellas, aunque antes sonara en el móvil. Desde el menú principal y el de pausa controlas anterior, pausa, siguiente y volumen. Hace falta <b>Spotify Premium</b>. Si ya lo habías conectado antes, <b>vuelve a pulsar Conectar con Spotify</b>: hace falta un permiso nuevo para reproducir en el navegador.</p>
     <ol class="steps">
       <li>Entra en <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> con tu cuenta y crea una app. El nombre y la descripción dan igual.</li>
       <li>En <b>Redirect URIs</b> añade exactamente <code id="spRedirect"></code> y, en las API, marca <b>Web API</b>.</li>
@@ -335,7 +337,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section class="how">
     <h2>Dentro del juego</h2>
     <ul>
-      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Se coloca a la distancia de los ojos que elijas en Ajustes → Sistema (si te cuesta enfocarlo, aléjalo). Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Sistema → Menú en.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Se coloca a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo). Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Menú → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Ahí mismo eliges si los arcos salen con ritmo regular o irregular.</li>
@@ -344,9 +346,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción, o, con Spotify conectado, elige «Ritmo de Spotify» y el ritmo seguirá a cada canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
+      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Sistema), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
+      <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -389,7 +391,10 @@ const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones',
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
+// Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
+const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
+const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
@@ -413,7 +418,6 @@ const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
-  { key: 'bpm', g: 'partida', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
@@ -519,24 +523,25 @@ const SCHEMA = [
   { key: 'dipGap', g: 'barras', cond: () => settings.dipBars !== '1', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
-  { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
+  { key: 'depth', g: 'entorno', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
   { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se coloca a esta distancia. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
-  { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
-  { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
-  { key: 'scenery', g: 'sistema', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
-  { key: 'goalMin', g: 'sistema', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
-  { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
+  { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
+  { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
+  { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
+  { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
-  { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
-  { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
-  { key: 'roomShow', g: 'sistema', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
-  { key: 'boltLight', g: 'sistema', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
+  { key: 'roomMode', g: 'entorno', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
+  { key: 'roomOcclude', g: 'entorno', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
+  { key: 'roomShow', g: 'entorno', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
+  { key: 'boltLight', g: 'entorno', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
   { key: 'demo', g: 'sistema', label: 'Caricatura del ejercicio', short: 'Caricatura', type: 'toggle', def: 1, hint: 'Junto al menú y mientras calibras o esperas, un monigote enseña el movimiento correcto y qué pasa al hacerlo.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
-  { key: 'volume', g: 'sistema', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
-  { key: 'ambient', g: 'sistema', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' }
+  { key: 'volume', g: 'sonido', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
+  { key: 'ambient', g: 'sonido', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' },
+  { key: 'bpm', g: 'sonido', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' }
 ];
 const FIELD = {}; SCHEMA.forEach(f => FIELD[f.key] = f);
 const settings = { mode: 'combat', exercise: 'squat' };
@@ -633,16 +638,18 @@ settingHooks.push(k => { if (k === 'goalMin') renderToday(); });
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
 /* =================== FORMULARIO WEB =================== */
-// La página: las opciones comunes (Sistema) aparte; las del modo y el ejercicio, en su sección; y el orden de los
+// La página: las opciones comunes (entorno, menú y tu meta) y el sonido aparte; las del modo y el ejercicio, en su sección; y el orden de los
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
     <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
-  common.innerHTML = group('sistema');
-  host.innerHTML = Object.keys(GROUP_NAMES).filter(g => g !== 'sistema').map(group).join('');
+  const COMMON = ['entorno', 'sistema', 'perfil'];
+  common.innerHTML = COMMON.map(group).join('');
+  $('#soundGroups').innerHTML = group('sonido').replace(/<h3>.*?<\/h3>/, ''); // (la sección ya se titula así)
+  host.innerHTML = Object.keys(GROUP_NAMES).filter(g => !COMMON.includes(g) && g !== 'sonido').map(group).join('');
   const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
-  for (const h of [host, common, sortBox]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
+  for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
     syncForm();
@@ -1887,7 +1894,7 @@ function makeGate() {
   const glowSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.halo, color: 0xff4010, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
   glowSpr.scale.set(1.6, 1.6, 1); beacon.add(glowSpr);
   arena.add(g);
-  return { g, side, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false, on: true };
+  return { g, frame, side, ramp, beacon, doorL, doorR, bMat, beamMat, glowSpr, spin, open: 0, openT: 0, x: 0, z: 0, scale: 1, wasOpen: false, on: true };
 }
 const gates = [makeGate(), makeGate(), makeGate()];
 // Las compuertas en uso (en una habitación pequeña puede que solo quepan una o dos)
@@ -1942,7 +1949,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots');
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn();
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && !forestOn();
@@ -2045,7 +2052,10 @@ function updateGates(dt, t) {
   for (const g of gates) {
     if (g.openT > 0) g.openT -= dt;
     const target = g.openT > 0 ? 1 : 0; g.open += (target - g.open) * Math.min(1, dt * 3.2);
-    g.doorL.position.x = -0.62 - g.open * 1.25; g.doorR.position.x = 0.62 + g.open * 1.25;
+    if (g.nat) { // en el bosque, puertas de tablones que se abren hacia dentro, sobre sus goznes
+      const a = g.open * 1.35, cx = 0.63 * Math.cos(a), cz = 0.06 - 0.63 * Math.sin(a);
+      g.doorL.position.set(-1.25 + cx, 1.5, cz); g.doorL.rotation.y = a; g.doorR.position.set(1.25 - cx, 1.5, cz); g.doorR.rotation.y = Math.PI - a;
+    } else { g.doorL.position.set(-0.62 - g.open * 1.25, 1.5, 0.06); g.doorR.position.set(0.62 + g.open * 1.25, 1.5, 0.06); g.doorL.rotation.y = 0; g.doorR.rotation.y = Math.PI; }
     const on = g.openT > 0 || g.open > 0.05;
     g.spin.rotation.y += dt * 6;
     g.beamMat.opacity = on ? 0.35 : 0; g.glowSpr.material.opacity = on ? 0.6 + 0.4 * Math.sin(t * 12) : 0;
@@ -2318,7 +2328,7 @@ function natureBuild() {
 function applyNature() {
   const want = !arMode && !forestOn() && sceneryPick() === 'nature';
   if (want && !NAT.ready) natureLoad();
-  const on = natureOn(); NAT.group.visible = on;
+  const on = natureOn(); NAT.group.visible = on; natGateStyle(on);
   if (!on) return;
   natureBuild(); env.visible = false;
   scene.fog = new THREE.FogExp2(0xc4dcea, 0.014); renderer.setClearColor(0xc4dcea, 1);
@@ -2327,6 +2337,80 @@ function applyNature() {
   applyVolume(); ambientRefresh();
 }
 layoutHooks.push(() => { if (NAT.group.visible) natureBuild(); });
+
+/* ---------- Compuertas de piedra y madera ---------- */
+// Las compuertas metálicas desentonan en el bosque: aquí cada una es la entrada de una cueva al pie de un montículo de
+// hierba, con pilares de sillares, dintel de dovelas, puertas de tablones con herrajes que se abren hacia dentro y luz
+// cálida al fondo. Se hacen la primera vez que
+// hacen falta y se cambian por las de siempre al volver a la fortaleza
+let natGateTpl = null;
+function natGateBuild() {
+  SURF.stone = surface(256, 256, 97, S => {
+    fillAll(S, '#8d897f', 128, 0.95, 0);
+    const { a, h, rnd } = S;
+    mottle(S, 160, 46, 0.16, 0.08); speckle(S, 9000, 0.22, 0.12, 0.25, 1.4);
+    for (let i = 0; i < 14; i++) { // grietas
+      let x = rnd() * 256, y = rnd() * 256; a.strokeStyle = 'rgba(30,26,22,0.55)'; h.strokeStyle = '#000'; a.lineWidth = 1.2; h.lineWidth = 2.2; a.beginPath(); h.beginPath(); a.moveTo(x, y); h.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * 30; y += (rnd() - 0.5) * 30; a.lineTo(x, y); h.lineTo(x, y); }
+      a.stroke(); h.stroke();
+    }
+    for (let i = 0; i < 26; i++) { const x = rnd() * 256, y = rnd() * 256, r = 4 + rnd() * 14, c = rnd() < 0.6 ? 'rgba(130,150,60,0.5)' : 'rgba(200,190,120,0.4)'; wrapDraw(256, x, y, r, (X, Y) => blob(a, X, Y, r, c)); } // líquenes
+  }, 2.6);
+  SURF.planks = surface(256, 640, 101, S => {
+    fillAll(S, '#7a5434', 128, 0.85, 0);
+    const { a, h, r, rnd } = S, pw = 256 / 5;
+    for (let i = 0; i < 5; i++) {
+      const x0 = i * pw;
+      a.fillStyle = rnd() < 0.5 ? `rgba(40,24,12,${0.08 + rnd() * 0.12})` : `rgba(255,220,170,${0.05 + rnd() * 0.08})`; a.fillRect(x0, 0, pw, 640);
+      for (let k = 0; k < 24; k++) { const x = x0 + 4 + rnd() * (pw - 8); a.strokeStyle = `rgba(50,30,15,${0.15 + rnd() * 0.25})`; a.lineWidth = 0.6 + rnd() * 1.2; a.beginPath(); a.moveTo(x, 0); for (let y = 40; y <= 640; y += 40) a.lineTo(x + Math.sin(y * 0.02 + k) * 2.5, y); a.stroke(); } // vetas
+      for (let k = 0; k < 2; k++) { const y = rnd() * 640, x = x0 + pw * (0.3 + rnd() * 0.4); a.fillStyle = 'rgba(45,26,12,0.7)'; a.beginPath(); a.ellipse(x, y, 3 + rnd() * 3, 6 + rnd() * 6, 0, 0, TAU); a.fill(); } // nudos
+      a.fillStyle = 'rgba(20,12,6,0.9)'; a.fillRect(x0, 0, 3, 640); h.fillStyle = '#000'; h.fillRect(x0, 0, 4, 640); // juntas
+    }
+    for (const y of [110, 500]) { // herrajes con remaches
+      a.fillStyle = '#2b2a2c'; a.fillRect(0, y, 256, 34); h.fillStyle = '#fff'; h.fillRect(0, y, 256, 34); r.fillStyle = 'rgb(0,140,220)'; r.fillRect(0, y, 256, 34);
+      a.fillStyle = 'rgba(160,80,30,0.35)'; for (let k = 0; k < 40; k++) a.fillRect(rnd() * 256, y + rnd() * 34, 2, 2);
+      for (let x = 16; x < 256; x += 48) { a.fillStyle = '#5a585c'; a.beginPath(); a.arc(x, y + 17, 5, 0, TAU); a.fill(); }
+    }
+    speckle(S, 3000, 0.12, 0.05, 0.15, 1.2);
+  }, 2.2);
+  M.stone = std({ map: SURF.stone.map, normalMap: SURF.stone.normal, roughnessMap: SURF.stone.orm, metalness: 0, roughness: 1, vertexColors: true });
+  M.planks = std({ map: SURF.planks.map, normalMap: SURF.planks.normal, roughnessMap: SURF.planks.orm, metalnessMap: SURF.planks.orm, metalness: 1, roughness: 1 });
+  const grass = natGround.material.map.clone(); grass.repeat.set(0.6, 0.6); grass.needsUpdate = true; // (las UV del montículo ya van en metros)
+  const k = new Kit(), R = rng(31), STONES = [col(0.66, 0.64, 0.58), col(0.56, 0.55, 0.5), col(0.72, 0.7, 0.63), col(0.5, 0.48, 0.44)], st = () => STONES[R() * STONES.length | 0];
+  const MOSS = col(0.3, 0.46, 0.16), DARK = col(0.2, 0.18, 0.16);
+  // pilares de sillares, algo irregulares
+  for (const s of [-1, 1]) {
+    for (let y = 0; y < 3.05;) { const hh = Math.min(3.05 - y, 0.36 + R() * 0.16), w = 0.86 + R() * 0.06; k.add('stone', G.box(w, hh, 1.06 + R() * 0.08), st(), s * (1.25 + w / 2) + (R() - 0.5) * 0.03, y + hh / 2, 0, 0, (R() - 0.5) * 0.06, (R() - 0.5) * 0.02); y += hh; }
+    k.add('stone', G.box(0.9, 3.3, 1.3), st(), s * 1.72, 1.65, -1.15); // el pasadizo: muros de piedra hasta el montículo
+  }
+  // dintel de dovelas en abanico (arco plano), con la clave más alta y clara; encima, la cornisa con musgo. Baja,
+  // para que el marcador siga viéndose encima de la compuerta del centro
+  for (let i = 0; i < 9; i++) { const x = (i - 4) * 0.48, key = i === 4; k.add('stone', G.box(0.47, key ? 0.74 : 0.62, key ? 1.12 : 1.04), key ? col(0.8, 0.78, 0.72) : st(), x, key ? 3.39 : 3.36, key ? 0.04 : 0, 0, 0, -Math.atan2(x, 2.8)); }
+  for (const s of [-1, 1]) k.add('stone', G.box(0.5, 0.62, 1.0), st(), s * 1.92, 3.36, 0);
+  for (let x = -2.2; x < 2.15;) { const w = Math.min(2.2 - x, 0.7 + R() * 0.5); k.add('stone', G.box(w, 0.3, 1.18), st(), x + w / 2, 3.82, 0.02, 0, 0, (R() - 0.5) * 0.02); x += w; }
+  for (let i = 0; i < 9; i++) k.add('moss', G.sph(0.26 + R() * 0.22, 9, 6), MOSS, (R() - 0.5) * 4.1, 3.98, (R() - 0.5) * 0.8, 0, R() * 3, 0, 1, 0.3, 1);
+  for (let i = 0; i < 4; i++) { const s = R() < 0.5 ? -1 : 1; k.add('moss', G.sph(0.18 + R() * 0.1, 9, 6), MOSS, s * (1.5 + R() * 0.5), 3.7, 0.5, 0.4, 0, 0, 1, 0.7, 0.35); } // musgo que cae de la cornisa
+  // el pasadizo por dentro, oscuro, con luz de antorcha al fondo
+  k.add('stone', G.box(2.5, 3.1, 0.12), DARK, 0, 1.55, -1.75);
+  for (const s of [-1, 1]) k.add('stone', G.box(0.12, 3.1, 1.8), DARK, s * 1.31, 1.55, -0.85);
+  k.add('stone', G.box(2.6, 0.12, 1.8), DARK, 0, 3.08, -0.85);
+  k.add('halo', G.plane(3.0, 3.0), col(0.5, 0.26, 0.06), 0, 1.4, -1.6);
+  // montículo de hierba detrás: la cueva se mete en él
+  k.add('mound', G.sph(1, 20, 10, TS, 0, TAU, 0, Math.PI / 2), col(1, 1, 1), 0, 0, -5.6, 0, 0, 0, 4.4, 5.4, 3.9);
+  const mats = { stone: M.stone, moss: M.leaf, halo: M.halo, mound: std({ map: grass, roughness: 1, metalness: 0, vertexColors: true }) };
+  return k.build(mats, { cast: true, receive: true });
+}
+function natGateStyle(on) {
+  if (on && !natGateTpl) natGateTpl = natGateBuild();
+  if (!natGateTpl) return;
+  for (const g of gates) {
+    if (on && !g.natG) { g.natG = natGateTpl.clone(); g.g.add(g.natG); }
+    g.nat = on; if (g.natG) g.natG.visible = on;
+    g.frame.visible = g.ramp.visible = !on; g.side.children.forEach(m => m.visible = !on);
+    g.doorL.material = g.doorR.material = on ? M.planks : M.door;
+  }
+  gateLight.color.setHex(on ? 0xff8a30 : 0xff3a10);
+}
 settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
 // Con «Alternar», cada partida en un sitio distinto
 function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NAT.pick === 'nature' ? 'arena' : 'nature'; applyEnvMode(); }
@@ -4724,54 +4808,108 @@ function repsLeft() {
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
   return Math.ceil(hp / (twoShots() ? 2 : 1));
 }
+// Marcador: arriba la oleada, los puntos y las vidas; a la izquierda tus repeticiones con la barra de la oleada; a la
+// derecha los avisos y la carga; debajo combo y precisión; y abajo lo de hoy: los minutos frente a tu meta diaria y
+// cuánto te falta para superar tu récord de un día con este ejercicio
+const BC = { teal: '#3cf0c6', pink: '#ff4fa3', gold: '#ffd166', lil: '#a49fc8', ink: '#eeeaff' };
+// el fondo (degradados, brillos y marco) no cambia: se pinta una vez y se copia (el marcador se redibuja cada segundo)
+let boardBg = null;
+function boardFrame(c, W, H) {
+  if (!boardBg) { boardBg = mkCanvas(W, H); boardFrameDraw(boardBg.getContext('2d'), W, H); }
+  c.drawImage(boardBg, 0, 0);
+}
+function boardFrameDraw(c, W, H) {
+  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1b1338'); g.addColorStop(0.55, '#0d0a20'); g.addColorStop(1, '#190b27'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  for (const [x, y, r, col] of [[0.18, 0.45, 0.45, '60,240,198'], [0.88, 0.15, 0.4, '255,79,163']]) {
+    const q = c.createRadialGradient(W * x, H * y, 8, W * x, H * y, W * r); q.addColorStop(0, `rgba(${col},0.13)`); q.addColorStop(1, `rgba(${col},0)`); c.fillStyle = q; c.fillRect(0, 0, W, H);
+  }
+  c.fillStyle = 'rgba(255,255,255,0.022)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
+  const e = c.createLinearGradient(0, 0, W, 0); e.addColorStop(0, BC.teal); e.addColorStop(1, BC.pink);
+  c.strokeStyle = e; c.lineWidth = 4; rr(c, 8, 8, W - 16, H - 16, 26); c.stroke();
+  c.lineWidth = 8; c.lineCap = 'round'; const L = 46, m = 8; // esquinas más gruesas
+  for (const [x, y, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]]) {
+    c.strokeStyle = sx > 0 ? BC.teal : BC.pink; c.beginPath(); c.moveTo(x, y + sy * (L + 26)); c.lineTo(x, y + sy * 26); c.arcTo(x, y, x + sx * 26, y, 26); c.lineTo(x + sx * (L + 26), y); c.stroke();
+  }
+  c.lineCap = 'butt';
+}
+function boardPill(c, x, y, w, h, fill, stroke) { rr(c, x, y, w, h, h / 2); c.fillStyle = fill; c.fill(); if (stroke) { c.strokeStyle = stroke; c.lineWidth = 2; c.stroke(); } }
+function boardBar(c, x, y, w, h, k, c0, c1) {
+  rr(c, x, y, w, h, h / 2); c.fillStyle = 'rgba(255,255,255,0.09)'; c.fill();
+  if (!(k > 0)) return;
+  const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, c0); g.addColorStop(1, c1);
+  rr(c, x, y, Math.max(h, w * Math.min(1, k)), h, h / 2); c.fillStyle = g; c.fill();
+}
+function glowText(c, t, x, y, col, blur) { c.save(); c.shadowColor = col; c.shadowBlur = blur; c.fillStyle = col; c.fillText(t, x, y); c.restore(); }
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+// Las dos tarjetas de hoy: minutos (y calorías y racha) y el récord diario de este ejercicio
+function boardDayCards(c, W, y, h) {
+  const D = boardDay(), hang = settings.exercise === 'hang', u = hang ? 's' : 'reps', gap = 18, w = (W - 64 - gap) / 2, goal = settings.goalMin * 60;
+  const card = (x, title, tcol, val, vcol, side, k, c0, c1) => {
+    rr(c, x, y, w, h, 18); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 2; c.stroke();
+    c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = tcol; fitFont(c, title, w - 40, 22, '%px ' + FD); c.fillText(title, x + 20, y + 24);
+    c.textAlign = 'right'; c.fillStyle = BC.lil; c.font = `500 26px ${FB}`; c.fillText(side, x + w - 20, y + h * 0.56);
+    c.textAlign = 'left'; c.fillStyle = vcol; fitFont(c, val, w - 60 - c.measureText(side).width, 36, '600 %px ' + FB); c.fillText(val, x + 20, y + h * 0.56);
+    boardBar(c, x + 20, y + h - 22, w - 40, 11, k, c0, c1);
+  };
+  const met = D.time >= goal;
+  card(32, `HOY${D.streak > 1 ? ` · RACHA ${D.streak} DÍAS` : ''}`, met ? BC.gold : BC.teal, `${mmss(D.time)} / ${settings.goalMin} min`, met ? BC.gold : BC.ink,
+    met ? '¡meta!' : `≈ ${Math.round(D.kcal)} kcal`, D.time / goal, BC.teal, met ? BC.gold : BC.pink);
+  const name = `RÉCORD DE UN DÍA · ${(EX_SHORT[settings.exercise] || '').toUpperCase()}`;
+  if (!D.best) card(32 + w + gap, name, BC.pink, D.n ? `${D.n} ${u} hoy` : 'Aún sin récord', BC.ink, 'tu primer día', D.n ? 1 : 0, BC.pink, BC.gold);
+  else if (D.n > D.best) card(32 + w + gap, name, BC.gold, `¡Superado! ${D.n} ${u}`, BC.gold, `+${D.n - D.best} ${u}`, 1, BC.pink, BC.gold);
+  else card(32 + w + gap, name, BC.pink, `Faltan ${D.best + 1 - D.n} ${u}`, BC.ink, `${D.n} de ${D.best}`, D.n / (D.best + 1), BC.pink, BC.gold);
+}
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
-  c.clearRect(0, 0, W, H);
-  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#140f28'); g.addColorStop(1, '#0a0817'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
-  c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
+  c.clearRect(0, 0, W, H); boardFrame(c, W, H);
   c.textBaseline = 'middle';
   if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
-    c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
-    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
-    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 320);
+    c.textAlign = 'center'; c.font = `84px ${FD}`; glowText(c, 'REPARENA', W / 2, 82, BC.pink, 22);
+    c.fillStyle = BC.ink; c.font = `500 36px ${FB}`; fitFont(c, `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W - 120, 36, '500 %px ' + FB); c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 158);
+    boardDayCards(c, W, 210, 112);
+    c.textAlign = 'center'; c.fillStyle = BC.lil; c.font = `500 28px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 384);
     board.tex.needsUpdate = true; return;
   }
-  const N = settings.waves;
-  const wv = N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`;
-  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; fitFont(c, SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 330, 40, '%px ' + FD); c.fillText(SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 36, 52);
-  c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
+  const N = settings.waves, hang = settings.exercise === 'hang', bars = isBars();
+  // arriba: oleada (y bloque), puntos y vidas
+  const wv = (SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`);
+  c.textAlign = 'left'; fitFont(c, wv, 330, 28, '%px ' + FD); const ww = c.measureText(wv).width + 44;
+  boardPill(c, 32, 26, ww, 50, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
+  c.textAlign = 'center'; c.font = `50px ${FD}`; glowText(c, String(score).padStart(6, '0'), W / 2 + 40, 52, BC.gold, 16);
   c.textAlign = 'right';
-  if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
-  else if (settings.lives <= 8) { c.font = `50px ${FB}`; let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; c.fillStyle = '#ff4fa3'; fitFont(c, s, 360, 50, '%px ' + FB); c.fillText(s, W - 36, 52); }
-  else { c.fillStyle = '#ff4fa3'; c.fillText(`♥ ${lives}/${settings.lives}`, W - 36, 52); }
-  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, 88, W - 60, 3);
-  const hang = settings.exercise === 'hang', bars = isBars();
-  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 36, 210);
-  c.fillStyle = '#a49fc8'; const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
-  c.textAlign = 'right';
+  if (!settings.lives) { c.font = `32px ${FD}`; c.fillStyle = BC.teal; c.fillText('VIDAS ∞', W - 40, 52); }
+  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 300, 46, '%px ' + FB); glowText(c, s, W - 40, 52, BC.pink, 10); }
+  else { c.font = `34px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}/${settings.lives}`, W - 40, 52); }
+  // izquierda: el número grande y la barra de la oleada
+  c.textAlign = 'left'; c.font = `140px ${FD}`; glowText(c, String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 40, 168, '#ffffff', 18);
+  const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()}` : 'REPETICIONES';
+  c.fillStyle = BC.lil; fitFont(c, sub, 470, 24, '%px ' + FD); c.fillText(sub, 44, 252);
+  const wk = state !== 'play' ? 0 : hang ? BAR.hold / Math.max(1, BAR.need) : waveTarget ? waveDone / waveTarget : 0;
+  boardBar(c, 44, 272, 450, 12, wk, BC.teal, '#7af7ff');
+  // derecha: descanso, pausa, avisos y carga
+  c.textAlign = 'right'; const RX = W - 40;
   if (state === 'rest') {
-    c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
-    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
-    c.fillStyle = '#a49fc8'; c.font = `500 30px ${FB}`; c.fillText(`${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, '0')} entrenando · ≈ ${Math.round(runStatsKcal())} kcal`, W - 36, 300);
-  } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
-  else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
-  else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
-  else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
-  else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
-  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (isCombat() && swordActive() && ['play', 'rest', 'ready'].includes(state)) { const n = SWD.perf.length; c.fillStyle = n ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', W - 36, 262); }
-  else if (throwAim() && ['play', 'rest', 'ready'].includes(state)) { const n = throwCount(); c.fillStyle = n ? '#3cf0c6' : '#a49fc8'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', W - 36, 262); }
-  else if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
-  else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
-  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
-  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
-  c.textAlign = 'center'; c.fillStyle = '#eeeaff';
+    c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.ceil(settings.rest - stateT)}`, RX, 140, BC.teal, 14);
+    c.fillStyle = BC.ink; c.font = `500 30px ${FB}`; c.fillText(hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} reps`, RX, 200);
+  } else if (state === 'mount') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', RX, 150); }
+  else if (state === 'calib') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText('CALIBRANDO', RX, 150); }
+  else if (state === 'ready') { c.font = `110px ${FD}`; glowText(c, String(Math.max(1, Math.ceil(3 - stateT))), RX - 20, 165, BC.gold, 20); }
+  else if (state === 'paused') { c.font = `76px ${FD}`; glowText(c, 'PAUSA', RX, 160, BC.gold, 16); }
+  else if (state === 'between') { c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, RX, 150, BC.teal, 14); }
+  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 450, 66, '%px ' + FD); c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
+  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; const t = nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`; fitFont(c, t, 450, 44, '%px ' + FD); c.fillText(t, RX, 150); }
+  let ch = null; const live = ['play', 'rest', 'ready'].includes(state);
+  if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', n ? BC.teal : '#ff8a3d']; }
+  else if (throwAim() && live) { const n = throwCount(); ch = [n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', n ? BC.teal : BC.lil]; }
+  else if (pistolOn() && live) ch = [GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', GUN.ammo ? BC.teal : '#ff8a3d'];
+  else if (charged) ch = [chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
+  if (ch) { c.font = `34px ${FD}`; fitFont(c, ch[0], 440, 34, '%px ' + FD); const w = c.measureText(ch[0]).width + 40; boardPill(c, RX - w + 14, 222, w, 52, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 6, 249); }
+  // debajo: combo, precisión (o lo que toque) y lo que queda
   const mid = bars ? `Caídas ${stats.falls}` : aimManual() || pistolOn() ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' || settings.mode === 'touch' ? `${settings.mode === 'touch' ? 'Fallos' : 'Golpes recibidos'} ${stats.taken}` : `Perfectas ${stats.perfect}`;
-  c.fillText(mid, W / 2, H - 48);
-  c.textAlign = 'right';
-  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : settings.mode === 'touch' ? `Objetivos ${touches.filter(x => x.alive && !x.judged).length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  const right = hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : settings.mode === 'touch' ? `Objetivos ${touches.filter(x => x.alive && !x.judged).length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`;
+  const chips = [[hang ? `Racha ${combo} s` : `Combo ×${combo}`, combo >= 5 ? BC.gold : BC.ink], [mid, BC.ink], [right, BC.ink]], cw = (W - 64 - 2 * 14) / 3;
+  chips.forEach(([t, col], i) => { const x = 32 + i * (cw + 14); boardPill(c, x, 298, cw, 40, 'rgba(255,255,255,0.05)'); c.textAlign = 'center'; c.fillStyle = col; fitFont(c, t, cw - 30, 26, '500 %px ' + FB); c.fillText(t, x + cw / 2, 319); });
+  boardDayCards(c, W, 350, 92);
   board.tex.needsUpdate = true;
 }
 
@@ -5553,7 +5691,7 @@ function gateSolids() {
   for (const g of gates) {
     if (!g.on || !g.g.visible) continue; const r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale;
     const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc });
-    for (const sd of [-1, 1]) { put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); }
+    for (const sd of [-1, 1]) { if (g.nat) { put(sd * 1.7, 0, 0.55); continue; } put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); } // (en el bosque, los pilares de piedra)
   }
   return out;
 }
@@ -7118,7 +7256,7 @@ function exerciseRows(back) {
 }
 function lobbyMenu() {
   endSession();
-  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
+  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
   const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   const rows = [
@@ -7146,35 +7284,42 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
-  if (spConnected() || settings.mode === 'touch' || isCombat()) sub.push({ label: spConnected() ? 'Música  ▸' : 'Ritmo  ▸', onPress: () => musicMenu(lobbyMenu) }); // música (Spotify) y ritmo
+  // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
-  if (viewRows(lobbyMenu).length || rr.length) sub.push({ label: 'Sala y vista  ▸', style: roomBad ? 'primary' : undefined, onPress: () => roomMenu(lobbyMenu) });
-  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Sala y vista»', color: '#ffd166' });
-  sub.push({ label: 'Más ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
+  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
+  sub.push({ label: 'Sonido  ▸', onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
+    { label: 'Ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
   rows.push({ t: 'btns', items: sub });
   if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows);
   m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido
 }
-// Submenús del principal: elegir ejercicio, música, y sala y vista (realidad mixta); «Volver» deja el principal en el mismo sitio
+// Submenús del principal: elegir ejercicio, sonido y música, y entorno y vista; «Volver» deja el principal en el mismo sitio
 function exerciseMenu(back) {
   const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
-function musicMenu(back) {
-  const again = () => musicMenu(back), beat = settings.mode === 'touch' || isCombat(); // el ritmo: al compás o el de Spotify (Toques y Combate)
-  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), ...(beat ? tempoRows(again) : []), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+// Todo lo que suena: Spotify, el ritmo (al compás o el de Spotify, en Toques y Combate) y los volúmenes
+function soundMenu(back) {
+  const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
+  const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
+    ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
+    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
-function roomMenu(back) {
-  const again = () => roomMenu(back), rows = [{ t: 'title', text: 'SALA Y VISTA' }, ...viewRows(again), ...roomRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+// Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
+function sceneMenu(back, inGame) {
+  const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
+  const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key })),
+    ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
 let settingsTab = 'partida';
 function settingsMenu(back, tab = settingsTab) {
-  const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
+  const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
-  const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
+  const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
@@ -7206,8 +7351,8 @@ function pauseMenu() {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
-    ...musicRows(), ...viewRows(() => pauseMenu()),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: 'Sonido  ▸', onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : [])] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
     { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { border: '#ffd166' });
@@ -7216,7 +7361,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
+  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -7276,10 +7421,28 @@ function saveRun(win) {
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
   h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
-  store(HIST_KEY, h.slice(-400));
+  store(HIST_KEY, h.slice(-400)); boardDayRefresh();
 }
 // Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
 const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
+// Lo de hoy para el marcador: lo ya guardado hoy, tu mejor día con este ejercicio (sin contar hoy) y la racha; la
+// ronda en curso se suma en vivo mientras no esté guardada
+const DAYB = { time: 0, kcal: 0, ex: 0, best: 0, streak: 0 };
+function boardDayRefresh() {
+  const h = store(HIST_KEY) || [], now = Date.now(), today = dayKey(now), x = settings.exercise, by = new Map();
+  DAYB.time = DAYB.kcal = DAYB.ex = 0;
+  for (const r of h) {
+    const k = dayKey(r.date);
+    if (k === today) { DAYB.time += r.time || 0; DAYB.kcal += runKcal(r); if (r.ex === x) DAYB.ex += r.reps || 0; }
+    else if (r.ex === x) by.set(k, (by.get(k) || 0) + (r.reps || 0));
+  }
+  DAYB.best = Math.max(0, ...by.values()); DAYB.streak = progress(h, now).streak; boardDirty = true;
+}
+function boardDay() {
+  const L = !runSaved && GAME_STATES.concat('paused').includes(state), hang = settings.exercise === 'hang';
+  return { time: DAYB.time + (L ? stats.time : 0), kcal: DAYB.kcal + (L ? runStatsKcal() : 0), n: DAYB.ex + (L ? Math.floor(hang ? stats.hold : stats.reps) : 0), best: DAYB.best, streak: Math.max(DAYB.streak, L && stats.time > 0 && !DAYB.time ? DAYB.streak + 1 : 0) };
+}
+settingHooks.push(k => { if (k === 'exercise' || k === 'mode' || k === '*') boardDayRefresh(); });
 function progressLine(P = progress()) {
   return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
 }
@@ -7327,7 +7490,8 @@ function gameStep(dt, t) {
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
-  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
+  // (el marcador se redibuja cada segundo: lleva el tiempo de hoy)
+  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') { stats.time += dt; if ((stats.time | 0) !== ((stats.time - dt) | 0)) boardDirty = true; } if (state === 'play') stats.work += dt; runDetectors(t, dt); }
   iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
