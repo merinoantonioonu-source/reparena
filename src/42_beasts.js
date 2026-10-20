@@ -3,7 +3,7 @@
 // models/imp.glb y models/puglin.glb (Bestiary · Dungeon Monsters Kit, de Quaternius) traen el cuerpo y el esqueleto;
 // models/anims.glb, las animaciones de la Universal Animation Library (Quaternius, CC0), hechas para ese mismo esqueleto.
 // Las texturas, reducidas, están en models/tex (tres colores por monstruo). Se cargan al abrir la página y, mientras no
-// estén (o si no se pueden cargar), en su lugar salen humanoides de neón.
+// estén (o si no se pueden cargar), en su lugar salen robots.
 const BEAST = { ready: false, failed: false, loading: false, kinds: {} };
 // h: altura del modelo (m); walk/jog/run: a qué velocidad (m/s, a escala 1) avanza cada animación de andar
 const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 } };
@@ -22,7 +22,7 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
 }
 // Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
 function animStatus() {
-  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, humanoides de neón, Imp y Puglin' : 'Imp y Puglin'})`;
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, Imp y Puglin' : 'Imp y Puglin'})`;
   if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
   return 'Animaciones de Quaternius: cargando…';
 }
@@ -45,29 +45,27 @@ function loadBeasts() {
     });
     BEAST.rigClips = {};
     for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
-    BEAST.neonClips = BEAST.rigClips.neon;
     BEAST.ready = true; animNote();
   }).catch(e => { BEAST.failed = true; animNote(); console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
-/* ---------- Las mismas animaciones, en los humanoides de neón y en los robots ---------- */
+/* ---------- Las mismas animaciones, en los robots ---------- */
 // Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
 // reproduce cada animación en el esqueleto de la biblioteca y, fotograma a fotograma, cada brazo y cada pierna del
 // humanoide se orienta hacia donde apunta el suyo; el tronco, el cuello y la cabeza giran lo mismo que respecto a su
 // reposo, y la cadera sube y baja a su escala. Las dos figuras miran hacia +Z con la izquierda en +X.
 // Mapas: body, [hueso del rig, de la biblioteca]; limb, [rig, desde, hasta] (el hueso apunta de uno a otro); foot, igual
 // pero con la punta (+Z) hacia delante; parent, el padre de cada hueso del rig (null: el giro es respecto al rig entero)
-const NEON_BODY = [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['neck', 'neck_01'], ['head', 'Head']];
-const NEON_LIMB = [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['haL', 'hand_l', 'middle_01_l'], ['shR', 'upperarm_r', 'lowerarm_r'], ['elR', 'lowerarm_r', 'hand_r'], ['haR', 'hand_r', 'middle_01_r'],
+const UAL_BODY = [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['neck', 'neck_01'], ['head', 'Head']];
+const UAL_LIMB = [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['haL', 'hand_l', 'middle_01_l'], ['shR', 'upperarm_r', 'lowerarm_r'], ['elR', 'lowerarm_r', 'hand_r'], ['haR', 'hand_r', 'middle_01_r'],
   ['thL', 'thigh_l', 'calf_l'], ['knL', 'calf_l', 'foot_l'], ['thR', 'thigh_r', 'calf_r'], ['knR', 'calf_r', 'foot_r']];
-const NEON_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']];
-const NEON_PARENT = { hips: null, spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck', shL: 'chest', elL: 'shL', haL: 'elL', shR: 'chest', elR: 'shR', haR: 'elR', thL: 'hips', knL: 'thL', anL: 'knL', thR: 'hips', knR: 'thR', anR: 'knR' };
+const UAL_FOOT = [['anL', 'foot_l', 'ball_l'], ['anR', 'foot_r', 'ball_r']];
+const UAL_PARENT = { hips: null, spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck', shL: 'chest', elL: 'shL', haL: 'elL', shR: 'chest', elR: 'shR', haR: 'elR', thL: 'hips', knL: 'thL', anL: 'knL', thR: 'hips', knR: 'thR', anR: 'knR' };
 const RIG_MAPS = {
-  neon: { body: NEON_BODY, limb: NEON_LIMB, foot: NEON_FOOT, parent: NEON_PARENT, hip0: () => NEO.hipY },
   // el robot pequeño: solo de cintura para arriba (sus piernas, de ave, siguen con su animación y la cadera es suya)
-  ripper: { body: NEON_BODY.slice(1), limb: NEON_LIMB.slice(0, 6), foot: [], parent: { ...NEON_PARENT, spine: null } },
+  ripper: { body: UAL_BODY.slice(1), limb: UAL_LIMB.slice(0, 6), foot: [], parent: { ...UAL_PARENT, spine: null } },
   // el grande y el coloso: entero menos el brazo del cañón, que sigue apuntándote; no tienen cuello
-  destroyer: { body: [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['head', 'Head']], limb: [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['clawL', 'hand_l', 'middle_01_l'], ...NEON_LIMB.slice(6)],
-    foot: NEON_FOOT, parent: { ...NEON_PARENT, head: 'chest', clawL: 'elL' }, hip0: () => 1.06, leg: 0.92 }
+  destroyer: { body: [['hips', 'pelvis'], ['spine', 'spine_01'], ['chest', 'spine_03'], ['head', 'Head']], limb: [['shL', 'upperarm_l', 'lowerarm_l'], ['elL', 'lowerarm_l', 'hand_l'], ['clawL', 'hand_l', 'middle_01_l'], ...UAL_LIMB.slice(6)],
+    foot: UAL_FOOT, parent: { ...UAL_PARENT, head: 'chest', clawL: 'elL' }, hip0: () => 1.06, leg: 0.92 }
 };
 function bakeRigClips(U, M) {
   const S = U.scene, get = n => S.getObjectByName(n), mx = new THREE.AnimationMixer(S), out = {};

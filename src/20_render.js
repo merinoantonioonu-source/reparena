@@ -206,20 +206,6 @@ SURF.chitin = surface(256, 256, 61, S => {
   const { h, rnd } = S;
   for (let i = 0; i < 600; i++) { const x = rnd() * 256, y = rnd() * 256; h.strokeStyle = 'rgba(255,255,255,0.35)'; h.lineWidth = 0.8; h.beginPath(); h.moveTo(x, y); h.lineTo(x + (rnd() - 0.5) * 3, y + 4 + rnd() * 4); h.stroke(); }
 }, 3.0);
-// Escamas del hombre-cocodrilo: placas redondeadas en filas al tresbolillo, con surcos oscuros y relieve en el centro
-// (casi gris: el verde del lomo y el amarillento de la tripa los pone el color de cada pieza)
-SURF.scales = surface(256, 256, 83, S => {
-  fillAll(S, '#5d5f52', 60, 0.62, 0.0);
-  const { a, h, r, rnd } = S;
-  for (let row = 0, y = 0; y < 256 + 12; row++, y += 12) for (let x = (row % 2) * 8 - 8; x < 256 + 16; x += 16) {
-    const k = 0.8 + rnd() * 0.32, cx = x + 8, cy = y + 6, g = h.createRadialGradient(cx, cy - 1, 1, cx, cy, 9);
-    g.addColorStop(0, 'rgb(190,190,190)'); g.addColorStop(0.75, 'rgb(150,150,150)'); g.addColorStop(1, 'rgb(90,90,90)');
-    h.fillStyle = g; rr(h, x + 1, y + 1, 14, 10, 4); h.fill();
-    a.fillStyle = `rgb(${200 * k | 0},${204 * k | 0},${186 * k | 0})`; rr(a, x + 1, y + 1, 14, 10, 4); a.fill();
-    r.fillStyle = `rgb(0,${(0.45 + rnd() * 0.15) * 255 | 0},0)`; rr(r, x + 2, y + 2, 12, 8, 3); r.fill();
-  }
-  speckle(S, 3000, 0.12, 0.05, 0.08);
-}, 1.3);
 SURF.carbon = surface(256, 256, 71, S => {
   fillAll(S, '#5a5d63', 128, 0.32, 0.25);
   const { a, h, r } = S;
@@ -312,14 +298,8 @@ const M = {
   addGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, map: TX.beam, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide }),
   shadowCatcher: new THREE.ShadowMaterial({ opacity: 0.45 })
 };
-// Hombre-cocodrilo: escamas (con y sin esqueleto, para los pedazos) y la boca, húmeda
-M.scaleSkin = std({ map: SURF.scales.map, normalMap: SURF.scales.normal, roughnessMap: SURF.scales.orm, metalness: 0, roughness: 1, vertexColors: true, skinning: true });
-M.scaleStatic = std({ map: SURF.scales.map, normalMap: SURF.scales.normal, roughnessMap: SURF.scales.orm, metalness: 0, roughness: 1, vertexColors: true });
-M.fleshSkin = std({ vertexColors: true, roughness: 0.28, metalness: 0, skinning: true });
-M.fleshStatic = std({ vertexColors: true, roughness: 0.28, metalness: 0 });
-Object.assign(C, { croc: col(0.25, 0.3, 0.17), crocDark: col(0.13, 0.16, 0.09), belly: col(0.62, 0.62, 0.42), mouth: col(0.62, 0.24, 0.3), tongue: col(0.75, 0.36, 0.42), throat: col(0.18, 0.04, 0.06), tooth: col(0.95, 0.92, 0.8), eyeY: col(1, 0.85, 0.12), clawK: col(0.12, 0.11, 0.09) });
 // Las texturas de detalle se repiten según el tamaño real (G.* reescala las UV)
-[SURF.steel, SURF.paint, SURF.chitin, SURF.carbon, SURF.concrete, SURF.scales].forEach(s => { [s.map, s.normal, s.orm].forEach(t => t.repeat.set(1, 1)); });
+[SURF.steel, SURF.paint, SURF.chitin, SURF.carbon, SURF.concrete].forEach(s => { [s.map, s.normal, s.orm].forEach(t => t.repeat.set(1, 1)); });
 SURF.floor.map.repeat.set(40, 40); SURF.floor.normal.repeat.set(40, 40); SURF.floor.orm.repeat.set(40, 40);
 [SURF.door.map, SURF.door.normal, SURF.door.orm].forEach(t => { t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; });
 
