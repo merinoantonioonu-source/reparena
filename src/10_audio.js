@@ -185,8 +185,6 @@ const SND = {
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
-  // el cocodrilo: más grave, con un bufido áspero encima
-  crocRoar(pos, s = 1) { if (!sndOK()) return; roarSynth(pos, s * 0.62); const o = sout(pos, { rev: 0.4, gain: 0.9, ref: 2 }); noise(shaper(o, true), { type: 'bandpass', f: 900, to: 500, q: 0.8, a: 0.08, d: 1.2, gain: 0.35 }); },
   hiss(pos, s = 1) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: 0.8, ref: 0.6 });
     noise(o, { type: 'highpass', f: 3200 / s, a: 0.12, d: 0.7, gain: 0.35 }); noise(o, { type: 'bandpass', f: 6500 / Math.sqrt(s), q: 2, a: 0.1, d: 0.6, gain: 0.25 });
@@ -196,23 +194,6 @@ const SND = {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.1, gain: 0.7, ref: 0.5 });
     const n = 5 + Math.floor(Math.random() * 7); let t = 0;
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
-  },
-  // mordisco del cocodrilo: las fauces se cierran de golpe (chasquido de dientes y golpe sordo)
-  chomp(pos) {
-    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 1.0, ref: 1.5 });
-    noise(shaper(o, true), { type: 'bandpass', f: 2600, q: 1.5, a: 0.001, d: 0.05, gain: 0.8 }); noise(o, { type: 'highpass', f: 4500, t: 0.012, d: 0.03, gain: 0.4 });
-    tone(o, { f: 140, to: 50, d: 0.18, gain: 0.6 }); noise(o, { brown: true, f: 500, to: 120, d: 0.2, gain: 0.5 });
-  },
-  // humanoide de neón: estalla en cristales (chasquido brillante y tintineo que se apaga)
-  shatter(pos) {
-    if (!sndOK()) return; const o = sout(pos, { rev: 0.5, gain: 1.0, ref: 2 });
-    noise(shaper(o, true), { type: 'highpass', f: 2500, a: 0.001, d: 0.12, gain: 0.7 }); tone(o, { f: 180, to: 60, d: 0.25, gain: 0.35 });
-    for (let i = 0; i < 16; i++) tone(o, { type: 'triangle', f: rand(2400, 6800), t: 0.02 + i * rand(0.015, 0.04), d: 0.12, gain: 0.05 });
-  },
-  // y su aviso al prepararse para golpear: un zumbido eléctrico que sube
-  neonWarn(pos) {
-    if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: 0.8, ref: 2 });
-    tone(o, { type: 'sawtooth', f: 220, to: 880, d: 0.6, gain: 0.08 }); tone(o, { type: 'square', f: 110, to: 440, d: 0.6, gain: 0.04 }); noise(o, { type: 'bandpass', f: 3000, q: 4, d: 0.5, gain: 0.08 });
   },
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
@@ -328,8 +309,8 @@ const SND = {
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
-  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0], crocRoar: ['rugido-cocodrilo', 0], shatter: ['neon-estalla', 0], neonWarn: ['neon-aviso', 0],
-  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], chomp: ['mordisco-cocodrilo', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
+  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]

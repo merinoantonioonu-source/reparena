@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, SHARDS, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -211,48 +211,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       return '';
     });
   }
-  // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen humanoides de neón, sin errores
+  // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen robots, sin errores
   { const kinds = new Set();
-    await runConfig('monstruos sin modelos → neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 0, beasts: 100, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
-      s => [...kinds].some(k => k !== 'neon' && k !== 'neonboss') ? `sin los modelos deberían salir de neón (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
-  // humanoides de neón: salen por las compuertas, se les derriba (estallan en esquirlas) y, si llegan, avisan y golpean
-  const neo = { n: 0, boss: false, robot: false, shards: 0, states: new Set(), cols: new Set() };
-  await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0 }, t => {
-    squatSim(2.6)(t); neo.shards = Math.max(neo.shards, RA.SHARDS.live.length);
-    RA.enemies.forEach(e => { if (e.kind === 'neon') { neo.n++; neo.cols.add(e.pal.glow); } else if (e.kind === 'neonboss') neo.boss = true; else if (e.type === 'robot') neo.robot = true; });
-  }, 420, s => !neo.n ? 'no sale ningún humanoide de neón' : s.kills < 4 ? `a los de neón no se les derriba (${s.kills})` : neo.robot ? 'con 100 % de neón sale algún robot' : !neo.boss ? 'con 100 % de neón el jefe no es de neón' : neo.shards < 20 ? 'los de neón no estallan en esquirlas' : '');
-  await runConfig('neón que llega y golpea', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0, walkTime: 4 }, t => {
-    RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'neon') neo.states.add(e.state); });
-  }, 30, s => s.taken < 1 ? 'los de neón no atacan' : !['windup', 'strike', 'knock'].every(k => neo.states.has(k)) ? `al de neón le falta parte del ataque (${[...neo.states]})` : '', true);
-  log(`neon: spawned frames ${neo.n} · colors ${neo.cols.size} · max shards ${neo.shards} · boss ${neo.boss}`);
-  // hombres-cocodrilo: salen por las compuertas, se les derriba como a los robots y, si los dejas llegar, muerden
-  const croc = { n: 0, boss: false, robot: false };
-  await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, neons: 0, beasts: 0, robotsW: 0 }, t => {
-    squatSim(2.6)(t); RA.enemies.forEach(e => { if (e.kind === 'lizard') croc.n++; else if (e.kind === 'crocboss') croc.boss = true; else if (e.type === 'robot') croc.robot = true; });
-  }, 420, s => !croc.n ? 'no sale ningún hombre-cocodrilo' : s.kills < 4 ? `a los cocodrilos no se les derriba (${s.kills})` : croc.robot ? 'con 100 % de cocodrilos sale algún robot' : !croc.boss ? 'con 100 % de cocodrilos el jefe no es un cocodrilo' : '');
-  const bites = { taken: 0, states: new Set() };
-  await runConfig('cocodrilos que llegan y muerden', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, neons: 0, beasts: 0, robotsW: 0, walkTime: 4 }, t => {
-    RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'lizard') bites.states.add(e.state); });
-  }, 30, s => s.taken < 1 ? 'los cocodrilos no atacan' : !['windup', 'strike', 'knock'].every(k => bites.states.has(k)) ? `al cocodrilo le falta parte del ataque (${[...bites.states]})` : '', true);
-  // cada enemigo: rapidez y forma de moverse. Más rápidos no llegan antes (lo gastan en zigzag); con esquivas se apartan de golpe
-  { const runMove = async (name, pace, move) => { const R = { arrive: [], vmax: 0, lat: 0, dodges: 0, sp: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
-      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0, walkTime: 8, maxAlive: 2, pace_neon: pace, move_neon: move }, t => {
+    await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 100, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
+      s => [...kinds].some(k => !['scout', 'heavy', 'titan'].includes(k)) ? `sin los modelos deberían salir robots (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
+  // cada enemigo: rapidez de gestos y velocidad al desplazarse, por separado; más rápidos no llegan antes (lo gastan en
+  // zigzag o paradas); con esquivas se apartan de golpe
+  { const runMove = async (name, pace, spd, move) => { const R = { arrive: [], vmax: 0, dodges: 0, sp: [], ex: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 0, robotsW: 100, walkTime: 8, maxAlive: 2, pace_robot: pace, spd_robot: spd, move_robot: move }, t => {
         RA.PV.crouch = false;
-        for (const e of RA.enemies) { if (!e.alive || e.kind !== 'neon') continue; if (!born.has(e)) born.set(e, t); if (e.out) R.vmax = Math.max(R.vmax, e.vel.length()); if (e.out && e.state === 'walk' && !e.charged && e.spd > 0.15) R.sp.push(e.spd); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
+        for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot' || e.K.boss) continue; if (!born.has(e)) born.set(e, t);
+          if (e.state === 'walk' && !e.charged && e.spd > 0.15) (e.out ? R.sp : R.ex).push(e.spd); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
           if (e.state === 'windup' && !e._arr) { e._arr = 1; R.arrive.push(t - born.get(e)); }
           if (e.state === 'windup' && !wu.has(e)) wu.set(e, t); if (e.state === 'walk' && wu.has(e)) { R.atk.push(t - wu.get(e)); wu.delete(e); } } // golpe entero: preparar, golpear y retroceder
       }, 40, s => '', true);
-      R.arrive.sort((a, b) => a - b); R.med = R.arrive[R.arrive.length >> 1] || 0; R.sp.sort((a, b) => a - b); R.v = R.sp[R.sp.length >> 1] || 0; R.atk.sort((a, b) => a - b); R.a = R.atk[R.atk.length >> 1] || 0; return R; };
-    if (!process.env.ONLY || /neón|zigzag|esquivas|recto/.test(process.env.ONLY)) {
-    const A = await runMove('neón recto a su ritmo', 100, 'straight'), F = await runMove('neón recto al 250 %', 250, 'straight'), Z = await runMove('neón en zigzag al 200 %', 200, 'zigzag'), D = await runMove('neón con esquivas', 150, 'dodge');
-    log(`gestures: a whole attack takes ${A.a.toFixed(2)} s at 100 % and ${F.a.toFixed(2)} s at 250 %`);
-    if (!A.a || !F.a || F.a > A.a / 1.8) errors.push(`cada enemigo: con más rapidez sus gestos (el golpe entero) deberían ir más deprisa (${A.a.toFixed(2)} → ${F.a.toFixed(2)} s)`);
-    log(`movement: straight 100 % moves at ${A.v.toFixed(2)} m/s, arrives ${A.med.toFixed(1)} s · straight 250 % ${F.v.toFixed(2)} m/s, arrives ${F.med.toFixed(1)} s · zigzag 200 % ${Z.v.toFixed(2)} m/s, arrives ${Z.med.toFixed(1)} s · dodges seen ${D.dodges}`);
-    if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: con más rapidez no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
-    if (A.v < 1.2 || F.v < A.v * 1.8 || Z.v < A.v * 1.5) errors.push(`cada enemigo: la rapidez no cambia lo deprisa que se mueven de verdad (100 % ${A.v.toFixed(2)}, 250 % ${F.v.toFixed(2)}, zigzag 200 % ${Z.v.toFixed(2)} m/s)`);
-    if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
+      const med = a => { a.sort((x, y) => x - y); return a[a.length >> 1] || 0; }; R.med = med(R.arrive); R.v = med(R.sp); R.vx = med(R.ex); R.a = med(R.atk); return R; };
+    if (!process.env.ONLY || new RegExp(process.env.ONLY).test('robots a su ritmo')) {
+      const A = await runMove('robots a su ritmo', 100, 100, 'straight'), G = await runMove('robots con gestos al 250 %', 250, 100, 'straight'), F = await runMove('robots que se desplazan al 250 %', 100, 250, 'straight');
+      const Z = await runMove('robots en zigzag al 200 %', 100, 200, 'zigzag'), D = await runMove('robots con esquivas', 150, 100, 'dodge');
+      log(`gestures: a whole attack ${A.a.toFixed(2)} s at 100 %, ${G.a.toFixed(2)} s with gestures at 250 %, ${F.a.toFixed(2)} s with travel at 250 %`);
+      log(`travel: 100 % ${A.v.toFixed(2)} m/s (leaving the gate ${A.vx.toFixed(2)}), arrives ${A.med.toFixed(1)} s · gestures 250 % ${G.v.toFixed(2)} m/s · travel 250 % ${F.v.toFixed(2)} m/s (leaving ${F.vx.toFixed(2)}), arrives ${F.med.toFixed(1)} s · zigzag 200 % ${Z.v.toFixed(2)} m/s, arrives ${Z.med.toFixed(1)} s · dodges ${D.dodges}`);
+      if (!A.a || !G.a || G.a > A.a / 1.8) errors.push(`cada enemigo: con más rapidez de gestos el golpe debería ir más deprisa (${A.a.toFixed(2)} → ${G.a.toFixed(2)} s)`);
+      if (!F.a || Math.abs(F.a - A.a) > A.a * 0.2) errors.push(`cada enemigo: la velocidad al desplazarse no debería cambiar sus gestos (${A.a.toFixed(2)} → ${F.a.toFixed(2)} s)`);
+      if (Math.abs(G.v - A.v) > A.v * 0.25) errors.push(`cada enemigo: la rapidez de gestos no debería cambiar lo deprisa que se desplazan (${A.v.toFixed(2)} → ${G.v.toFixed(2)} m/s)`);
+      if (F.v < A.v * 1.8 || Z.v < A.v * 1.5 || F.vx < A.vx * 1.8) errors.push(`cada enemigo: la velocidad al desplazarse no cambia lo deprisa que van (100 % ${A.v.toFixed(2)}, 250 % ${F.v.toFixed(2)}, al salir ${A.vx.toFixed(2)} → ${F.vx.toFixed(2)}, zigzag ${Z.v.toFixed(2)} m/s)`);
+      if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: más deprisa no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
+      if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
-    for (const g of ['robot', 'croc', 'neon', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); }
+    for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('robotsW', 50); RA.setSetting('beasts', 50); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
   const iwMid = new Set();
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {

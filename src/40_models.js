@@ -2,7 +2,6 @@
 /* =================== MODELOS =================== */
 const RIGS = {};
 const MAT_ROBOT = { main: M.robot, paint: M.robotPaint, glow: M.glowSkin, halo: M.haloSkin };
-const MAT_LIZARD = { main: M.scaleSkin, flesh: M.fleshSkin, glow: M.glowSkin };
 const MAT_ROBOT_STATIC = { main: M.steel, paint: M.paint, glow: M.glow, halo: M.halo };
 
 /* ---------- Segador: esqueleto de pesadilla con patas invertidas ---------- */
@@ -504,131 +503,9 @@ function updateGloves(dt) {
   }
 }
 
-/* ---------- Hombre-cocodrilo: bípedo encorvado, hocico largo lleno de dientes, cresta en el lomo y cola ---------- */
-// En reposo, de pie y recto (brazos colgando, cola hacia atrás); la postura encorvada y el andar a cuatro patas los pone la animación
-const LIZ = { th: 0.4, kn: 0.4, sh: 0.45, el: 0.42, tail: 0.3, hipY: 0.66 };
-function buildLizard() {
-  const R = new Rig();
-  R.bone('hips', null, 0, LIZ.hipY, 0).bone('spine', 'hips', 0, 0.08, 0).bone('chest', 'spine', 0, 0.32, 0)
-   .bone('neck', 'chest', 0, 0.34, 0.05).bone('head', 'neck', 0, 0.12, 0.05).bone('jaw', 'head', 0, -0.035, 0.0);
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
-    R.bone('sh' + sd, 'chest', sx * 0.29, 0.27, 0).bone('el' + sd, 'sh' + sd, 0, -LIZ.sh, 0).bone('ha' + sd, 'el' + sd, 0, -LIZ.el, 0);
-    R.bone('th' + sd, 'hips', sx * 0.16, -0.04, 0).bone('kn' + sd, 'th' + sd, 0, -LIZ.th, 0).bone('an' + sd, 'kn' + sd, 0, -LIZ.kn, 0);
-  }
-  for (let i = 0; i < 5; i++) R.bone('t' + i, i ? 't' + (i - 1) : 'hips', 0, i ? 0 : -0.02, i ? -LIZ.tail * (1 - i * 0.08) : -0.14);
-  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), F = (b, g, c, ...t) => R.add(b, 'flesh', g, c, ...t), GL = (b, g, c, ...t) => R.add(b, 'glow', g, c, ...t);
-  const S = (b, c, x, y, z, sx, sy, sz, rx = 0) => P(b, G.sph(1, 14, 10), c, x, y, z, rx, 0, 0, sx, sy, sz);
-  // osteodermos: púas cortas en filas, hacia atrás y arriba
-  const ridge = (b, y0, y1, z, n, h, w = 0.028, rx = -Math.PI / 2 + 0.5) => { for (let i = 0; i < n; i++) { const k = n > 1 ? i / (n - 1) : 0, y = lerp(y0, y1, k); for (const x of [-0.045, 0.045]) P(b, G.cone(w, h, 4), C.crocDark, x, y, z, rx, 0, 0); P(b, G.cone(w * 1.2, h * 1.4, 4), C.crocDark, 0, y + 0.01, z + 0.01, rx, 0, 0); } };
-  // cadera y tronco: ancho, con tripa clara de placas
-  S('hips', C.croc, 0, 0.03, -0.01, 0.21, 0.17, 0.18); S('hips', C.belly, 0, -0.01, 0.07, 0.15, 0.11, 0.11);
-  S('spine', C.croc, 0, 0.16, -0.01, 0.24, 0.27, 0.2); S('spine', C.belly, 0, 0.15, 0.09, 0.17, 0.23, 0.12);
-  ridge('spine', 0.05, 0.3, -0.17, 4, 0.06);
-  S('chest', C.croc, 0, 0.16, 0, 0.3, 0.25, 0.22); S('chest', C.belly, 0, 0.12, 0.1, 0.21, 0.22, 0.13);
-  for (let i = 0; i < 5; i++) P('chest', G.box(0.2 - Math.abs(i - 2) * 0.02, 0.012, 0.02), C.crocDark, 0, 0.0 + i * 0.06, 0.225); // surcos de la tripa
-  for (const x of [-1, 1]) S('chest', C.croc, x * 0.24, 0.27, -0.02, 0.15, 0.13, 0.15); // hombros enormes
-  ridge('chest', 0.0, 0.34, -0.21, 5, 0.075);
-  // cuello grueso
-  P('neck', G.cyl(0.11, 0.14, 0.18, 12), C.croc, 0, 0.05, 0); S('neck', C.belly, 0, 0.04, 0.07, 0.09, 0.1, 0.07); ridge('neck', 0.0, 0.1, -0.11, 2, 0.06);
-  // cráneo y hocico largo y redondeado (mira hacia +z); por dentro, paladar rosa y garganta oscura
-  S('head', C.croc, 0, 0.045, 0.0, 0.12, 0.085, 0.12);
-  S('head', C.croc, 0, 0.035, 0.2, 0.078, 0.042, 0.18); S('head', C.crocDark, 0, 0.062, 0.16, 0.05, 0.02, 0.13); // hocico y su lomo
-  for (const x of [-0.025, 0.025]) S('head', C.crocDark, x, 0.07, 0.355, 0.012, 0.01, 0.012); // fosas nasales
-  for (const x of [-1, 1]) {
-    S('head', C.croc, x * 0.06, 0.1, 0.05, 0.04, 0.035, 0.045); // cuencas de los ojos, salientes
-    GL('head', G.sph(0.022, 10, 8), C.eyeY, x * 0.072, 0.105, 0.08); P('head', G.box(0.004, 0.026, 0.004), C.clawK, x * 0.08, 0.105, 0.098); // ojo amarillo y pupila
-    P('head', G.cone(0.02, 0.06, 4), C.crocDark, x * 0.065, 0.135, 0.03, -0.7, 0, x * 0.4); // ceja de púas
-  }
-  ridge('head', 0.08, 0.1, -0.08, 2, 0.05);
-  F('head', G.sph(1, 12, 6), C.mouth, 0, -0.002, 0.2, 0, 0, 0, 0.068, 0.008, 0.165); // paladar
-  F('head', G.sph(1, 12, 8), C.throat, 0, -0.01, 0.05, 0, 0, 0, 0.07, 0.05, 0.05); // garganta
-  const rim = (z, w) => w * Math.sqrt(Math.max(0, 1 - Math.pow((z - 0.2) / 0.18, 2))); // borde de la boca, más estrecho en la punta
-  for (const x of [-1, 1]) for (let i = 0; i < 10; i++) { const z = 0.06 + i * 0.03, big = i === 1 || i === 7; F('head', G.cone(big ? 0.011 : 0.008, big ? 0.055 : 0.032, 4), C.tooth, x * rim(z, 0.068), -0.008 - (big ? 0.012 : 0), z, Math.PI, 0, 0); }
-  // mandíbula: con encía, lengua y dientes hacia arriba
-  S('jaw', C.croc, 0, -0.03, 0.19, 0.074, 0.032, 0.18); S('jaw', C.belly, 0, -0.045, 0.12, 0.06, 0.02, 0.12);
-  F('jaw', G.sph(1, 12, 6), C.mouth, 0, 0.0, 0.19, 0, 0, 0, 0.064, 0.007, 0.165); S('jaw', C.tongue, 0, 0.004, 0.12, 0.04, 0.012, 0.09);
-  for (const x of [-1, 1]) for (let i = 0; i < 10; i++) { const z = 0.05 + i * 0.03, big = i === 2 || i === 8; F('jaw', G.cone(big ? 0.011 : 0.008, big ? 0.05 : 0.03, 4), C.tooth, x * rim(z - 0.01, 0.064), 0.01 + (big ? 0.012 : 0), z); }
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
-    const sh = 'sh' + sd, el = 'el' + sd, ha = 'ha' + sd, th = 'th' + sd, kn = 'kn' + sd, an = 'an' + sd;
-    // brazo: hombro, bíceps grueso, antebrazo y manaza con cuatro dedos y garras
-    S(sh, C.croc, 0, -0.02, 0, 0.12, 0.13, 0.12); P(sh, G.cyl(0.1, 0.075, LIZ.sh, 10), C.croc, 0, -LIZ.sh / 2, 0); S(sh, C.croc, 0, -0.18, 0.03, 0.09, 0.16, 0.09);
-    P(sh, G.cone(0.02, 0.06, 4), C.crocDark, sx * 0.05, -0.12, -0.07, -2.0, 0, 0);
-    S(el, C.croc, 0, 0, 0, 0.075, 0.075, 0.075); P(el, G.cyl(0.07, 0.085, LIZ.el, 10), C.croc, 0, -LIZ.el / 2, 0); S(el, C.belly, 0, -0.18, 0.04, 0.05, 0.14, 0.04);
-    for (let k = 0; k < 3; k++) P(el, G.cone(0.016, 0.05, 4), C.crocDark, sx * 0.04, -0.08 - k * 0.1, -0.06, -2.2, 0, 0);
-    S(ha, C.croc, 0, -0.05, 0.01, 0.08, 0.07, 0.05);
-    for (let k = 0; k < 4; k++) { const fx_ = (k - 1.5) * 0.04, a = (k - 1.5) * 0.12; P(ha, G.cyl(0.018, 0.022, 0.12, 6), C.croc, fx_, -0.15, 0.025, 0.3, 0, a); R.add(ha, 'flesh', G.cone(0.013, 0.06, 4), C.clawK, fx_ - Math.sin(a) * 0.08, -0.23, 0.05, Math.PI - 0.4, 0, a); }
-    P(ha, G.cyl(0.018, 0.022, 0.1, 6), C.croc, sx * 0.05, -0.08, 0.05, 0.9, 0, -sx * 0.4); // pulgar
-    // pierna: muslo enorme, espinilla y pie largo con garras
-    S(th, C.croc, 0, -0.12, 0, 0.12, 0.2, 0.12); P(th, G.cyl(0.1, 0.08, LIZ.th, 10), C.croc, 0, -LIZ.th / 2, 0);
-    S(kn, C.croc, 0, 0, 0, 0.08, 0.08, 0.08); P(kn, G.cyl(0.075, 0.06, LIZ.kn, 10), C.croc, 0, -LIZ.kn / 2, 0); S(kn, C.croc, 0, -0.14, -0.04, 0.07, 0.13, 0.07);
-    S(an, C.croc, 0, -0.03, 0.06, 0.07, 0.04, 0.14);
-    for (let k = 0; k < 3; k++) { const fx_ = (k - 1) * 0.045; P(an, G.cyl(0.02, 0.024, 0.1, 6), C.croc, fx_, -0.045, 0.2, Math.PI / 2, 0, 0); R.add(an, 'flesh', G.cone(0.014, 0.06, 4), C.clawK, fx_, -0.055, 0.27, Math.PI / 2 + 0.3, 0, 0); }
-  }
-  // cola: segmentos que se afinan, con cresta doble
-  for (let i = 0; i < 5; i++) {
-    const r0 = 0.13 * (1 - i * 0.19), r1 = 0.13 * (1 - (i + 1) * 0.19) + 0.008, L = i ? LIZ.tail * (1 - i * 0.08) : 0.16;
-    const nx = i < 4 ? LIZ.tail * (1 - (i + 1) * 0.08) : 0.28;
-    P('t' + i, G.cyl(r1, r0, nx, 10), C.croc, 0, 0, -nx / 2, -Math.PI / 2, 0, 0);
-    S('t' + i, C.belly, 0, -r0 * 0.45, -nx / 2, r0 * 0.6, r0 * 0.5, nx / 2);
-    for (let k = 0; k < 2; k++) for (const x of [-0.03, 0.03]) P('t' + i, G.cone(0.02 * (1 - i * 0.12), 0.07 * (1 - i * 0.12), 4), C.crocDark, i > 2 ? 0 : x, r0 * 0.85, -k * nx / 2 - 0.04, -Math.PI / 2 + 0.6, 0, 0);
-  }
-  const r = R.build(); r.kind = 'lizard'; return r;
-}
-
-/* ---------- Humanoide de neón (estilo Pistol Whip): maniquí facetado, sin cara, con franjas que brillan ---------- */
-// Piezas de pocas caras (sombreado plano) y franjas de luz en el pecho, la columna, los brazos y las piernas, el visor y una
-// porra de energía en la mano derecha. 'main' (el cuerpo), 'paint' (los paneles de armadura) y 'glow' (las luces) van en
-// blanco: el color lo pone cada uno
-const NEO = { th: 0.45, kn: 0.45, sh: 0.3, el: 0.28, hipY: 0.98 };
-function buildNeon() {
-  const R = new Rig();
-  R.bone('hips', null, 0, NEO.hipY, 0).bone('spine', 'hips', 0, 0.1, 0).bone('chest', 'spine', 0, 0.28, 0)
-   .bone('neck', 'chest', 0, 0.3, 0).bone('head', 'neck', 0, 0.08, 0.01);
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
-    R.bone('sh' + sd, 'chest', sx * 0.22, 0.24, 0).bone('el' + sd, 'sh' + sd, 0, -NEO.sh, 0).bone('ha' + sd, 'el' + sd, 0, -NEO.el, 0);
-    R.bone('th' + sd, 'hips', sx * 0.11, -0.05, 0).bone('kn' + sd, 'th' + sd, 0, -NEO.th, 0).bone('an' + sd, 'kn' + sd, 0, -NEO.kn, 0);
-  }
-  const P = (b, g, c, ...t) => R.add(b, 'main', g, c, ...t), GL = (b, g, ...t) => R.add(b, 'glow', g, C.white, ...t), PA = (b, g, ...t) => R.add(b, 'paint', g, C.white, ...t);
-  const W = C.white, D = col(0.62, 0.64, 0.7); // piezas claras y juntas algo más oscuras (el material las tiñe)
-  const strip = (b, x, y0, y1, z, w = 0.026, d = 0.014) => GL(b, G.box(w, Math.abs(y1 - y0), d), x, (y0 + y1) / 2, z);
-  // cadera y abdomen: prismas de seis caras
-  P('hips', G.cyl(0.15, 0.12, 0.17, 6), W, 0, -0.02, 0, 0, Math.PI / 6, 0, 1, 1, 0.75);
-  GL('hips', G.box(0.2, 0.018, 0.012), 0, 0.045, 0.1); // cinturón de luz
-  P('spine', G.cyl(0.14, 0.12, 0.24, 6), D, 0, 0.12, 0, 0, Math.PI / 6, 0, 1, 1, 0.72);
-  strip('spine', 0, 0.02, 0.24, 0.095);
-  // torso en V con hombreras y un núcleo de luz
-  P('chest', G.cyl(0.24, 0.14, 0.34, 6), W, 0, 0.14, 0, 0, Math.PI / 6, 0, 1, 1, 0.58);
-  PA('chest', G.cyl(0.2, 0.12, 0.26, 6), 0, 0.16, 0.025, 0, Math.PI / 6, 0, 0.98, 1, 0.55); // peto de color
-  for (const sx of [-1, 1]) {
-    PA('chest', new THREE.OctahedronGeometry(0.1), sx * 0.2, 0.27, 0, 0, 0, sx * 0.4, 1.1, 0.7, 1); // hombreras de color
-    GL('chest', G.box(0.024, 0.25, 0.014), sx * 0.075, 0.15, 0.14, 0, 0, sx * 0.42); // la V del pecho
-    GL('chest', G.box(0.12, 0.018, 0.014), sx * 0.21, 0.31, 0.05, 0, 0, sx * 0.4); // filo de la hombrera
-  }
-  GL('chest', new THREE.OctahedronGeometry(0.045), 0, 0.1, 0.14);
-  strip('chest', 0, 0.0, 0.3, -0.13); // la espalda también brilla
-  P('neck', G.cyl(0.045, 0.055, 0.1, 5), D, 0, 0.04, 0);
-  // cabeza: una gema facetada sin cara, con visor
-  P('head', G.sph(1, 6, 4), W, 0, 0.1, 0, 0, Math.PI / 6, 0, 0.095, 0.125, 0.105);
-  GL('head', G.box(0.15, 0.026, 0.03), 0, 0.115, 0.082, -0.08, 0, 0);
-  GL('head', G.box(0.012, 0.09, 0.012), 0, 0.17, -0.06, -0.5, 0, 0); // cresta
-  for (const [sd, sx] of [['L', 1], ['R', -1]]) {
-    const sh = 'sh' + sd, el = 'el' + sd, ha = 'ha' + sd, th = 'th' + sd, kn = 'kn' + sd, an = 'an' + sd;
-    P(sh, G.cyl(0.055, 0.045, NEO.sh, 5), W, 0, -NEO.sh / 2, 0); strip(sh, sx * 0.0, -0.05, -NEO.sh + 0.04, 0.05);
-    GL(el, new THREE.OctahedronGeometry(0.042)); P(el, G.cyl(0.045, 0.035, NEO.el, 5), W, 0, -NEO.el / 2, 0); strip(el, 0, -0.04, -NEO.el + 0.03, 0.04, 0.012);
-    P(ha, G.box(0.07, 0.09, 0.05), D, 0, -0.05, 0);
-    P(th, G.cyl(0.075, 0.055, NEO.th, 5), W, 0, -NEO.th / 2, 0); PA(th, G.box(0.09, 0.2, 0.03), 0, -0.14, 0.065); // muslera de color strip(th, sx * 0.03, -0.06, -NEO.th + 0.05, 0.06);
-    GL(kn, new THREE.OctahedronGeometry(0.05)); P(kn, G.cyl(0.055, 0.04, NEO.kn, 5), W, 0, -NEO.kn / 2, 0); PA(kn, G.box(0.075, 0.24, 0.03), 0, -0.17, 0.05); // espinillera de color strip(kn, 0, -0.05, -NEO.kn + 0.06, 0.045, 0.014);
-    P(an, G.box(0.08, 0.05, 0.2), D, 0, -0.03, 0.05); GL(an, G.box(0.06, 0.012, 0.012), 0, -0.005, 0.15); // pie y puntera de luz
-  }
-  // porra de energía en la mano derecha (empuñadura y hoja de luz)
-  P('haR', G.cyl(0.018, 0.018, 0.12, 5), D, 0, -0.1, 0.02, Math.PI / 2, 0, 0);
-  GL('haR', G.box(0.04, 0.04, 0.55), 0, -0.1, 0.36);
-  const r = R.build(); r.kind = 'neon'; return r;
-}
-
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
-  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.lizard = buildLizard(); RIGS.neon = buildNeon(); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin');
+  RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin');
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
