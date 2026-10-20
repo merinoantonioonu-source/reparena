@@ -6,7 +6,7 @@ function ctx2d(canvas) {
   return new Proxy({
     canvas, fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, font: '10px sans', textAlign: 'left', textBaseline: 'alphabetic', globalAlpha: 1, globalCompositeOperation: 'source-over',
     fillRect: noop, clearRect: noop, strokeRect: noop, beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc(x, y, r) { if (r < 0) throw new Error('negative radius ' + r); }, arcTo(x1, y1, x2, y2, r) { if (r < 0) throw new Error('negative arcTo radius'); }, ellipse(x, y, rx, ry) { if (rx < 0 || ry < 0) throw new Error('negative ellipse'); },
-    bezierCurveTo: noop, quadraticCurveTo: noop, rect: noop, fill: noop, stroke: noop, clip: noop, save: noop, restore: noop, translate: noop, rotate: noop, scale: noop,
+    bezierCurveTo: noop, quadraticCurveTo: noop, rect: noop, drawImage: noop, fill: noop, stroke: noop, clip: noop, save: noop, restore: noop, translate: noop, rotate: noop, scale: noop,
     fillText(t) { if (t === undefined || (typeof t === 'number' && isNaN(t))) throw new Error('fillText undefined'); if (String(t).includes('undefined') || String(t).includes('NaN')) throw new Error('fillText bad text: ' + t); },
     strokeText: noop, measureText(t) { const m = /(\d+)px/.exec(this.font); return { width: String(t).length * (m ? +m[1] : 10) * 0.55 }; },
     createRadialGradient(x0, y0, r0, x1, y1, r1) { if (r0 < 0 || r1 < 0) throw new Error('negative gradient radius'); return grad(); }, createLinearGradient: grad,

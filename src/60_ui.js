@@ -545,53 +545,107 @@ function repsLeft() {
   let hp = spawnQueue.reduce((a, e) => a + e.hp, 0); for (const e of enemies) if (e.alive) hp += Math.max(0, e.hp - e.pending);
   return Math.ceil(hp / (twoShots() ? 2 : 1));
 }
+// Marcador: arriba la oleada, los puntos y las vidas; a la izquierda tus repeticiones con la barra de la oleada; a la
+// derecha los avisos y la carga; debajo combo y precisión; y abajo lo de hoy: los minutos frente a tu meta diaria y
+// cuánto te falta para superar tu récord de un día con este ejercicio
+const BC = { teal: '#3cf0c6', pink: '#ff4fa3', gold: '#ffd166', lil: '#a49fc8', ink: '#eeeaff' };
+// el fondo (degradados, brillos y marco) no cambia: se pinta una vez y se copia (el marcador se redibuja cada segundo)
+let boardBg = null;
+function boardFrame(c, W, H) {
+  if (!boardBg) { boardBg = mkCanvas(W, H); boardFrameDraw(boardBg.getContext('2d'), W, H); }
+  c.drawImage(boardBg, 0, 0);
+}
+function boardFrameDraw(c, W, H) {
+  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1b1338'); g.addColorStop(0.55, '#0d0a20'); g.addColorStop(1, '#190b27'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  for (const [x, y, r, col] of [[0.18, 0.45, 0.45, '60,240,198'], [0.88, 0.15, 0.4, '255,79,163']]) {
+    const q = c.createRadialGradient(W * x, H * y, 8, W * x, H * y, W * r); q.addColorStop(0, `rgba(${col},0.13)`); q.addColorStop(1, `rgba(${col},0)`); c.fillStyle = q; c.fillRect(0, 0, W, H);
+  }
+  c.fillStyle = 'rgba(255,255,255,0.022)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
+  const e = c.createLinearGradient(0, 0, W, 0); e.addColorStop(0, BC.teal); e.addColorStop(1, BC.pink);
+  c.strokeStyle = e; c.lineWidth = 4; rr(c, 8, 8, W - 16, H - 16, 26); c.stroke();
+  c.lineWidth = 8; c.lineCap = 'round'; const L = 46, m = 8; // esquinas más gruesas
+  for (const [x, y, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]]) {
+    c.strokeStyle = sx > 0 ? BC.teal : BC.pink; c.beginPath(); c.moveTo(x, y + sy * (L + 26)); c.lineTo(x, y + sy * 26); c.arcTo(x, y, x + sx * 26, y, 26); c.lineTo(x + sx * (L + 26), y); c.stroke();
+  }
+  c.lineCap = 'butt';
+}
+function boardPill(c, x, y, w, h, fill, stroke) { rr(c, x, y, w, h, h / 2); c.fillStyle = fill; c.fill(); if (stroke) { c.strokeStyle = stroke; c.lineWidth = 2; c.stroke(); } }
+function boardBar(c, x, y, w, h, k, c0, c1) {
+  rr(c, x, y, w, h, h / 2); c.fillStyle = 'rgba(255,255,255,0.09)'; c.fill();
+  if (!(k > 0)) return;
+  const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, c0); g.addColorStop(1, c1);
+  rr(c, x, y, Math.max(h, w * Math.min(1, k)), h, h / 2); c.fillStyle = g; c.fill();
+}
+function glowText(c, t, x, y, col, blur) { c.save(); c.shadowColor = col; c.shadowBlur = blur; c.fillStyle = col; c.fillText(t, x, y); c.restore(); }
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+// Las dos tarjetas de hoy: minutos (y calorías y racha) y el récord diario de este ejercicio
+function boardDayCards(c, W, y, h) {
+  const D = boardDay(), hang = settings.exercise === 'hang', u = hang ? 's' : 'reps', gap = 18, w = (W - 64 - gap) / 2, goal = settings.goalMin * 60;
+  const card = (x, title, tcol, val, vcol, side, k, c0, c1) => {
+    rr(c, x, y, w, h, 18); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 2; c.stroke();
+    c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = tcol; fitFont(c, title, w - 40, 22, '%px ' + FD); c.fillText(title, x + 20, y + 24);
+    c.textAlign = 'right'; c.fillStyle = BC.lil; c.font = `500 26px ${FB}`; c.fillText(side, x + w - 20, y + h * 0.56);
+    c.textAlign = 'left'; c.fillStyle = vcol; fitFont(c, val, w - 60 - c.measureText(side).width, 36, '600 %px ' + FB); c.fillText(val, x + 20, y + h * 0.56);
+    boardBar(c, x + 20, y + h - 22, w - 40, 11, k, c0, c1);
+  };
+  const met = D.time >= goal;
+  card(32, `HOY${D.streak > 1 ? ` · RACHA ${D.streak} DÍAS` : ''}`, met ? BC.gold : BC.teal, `${mmss(D.time)} / ${settings.goalMin} min`, met ? BC.gold : BC.ink,
+    met ? '¡meta!' : `≈ ${Math.round(D.kcal)} kcal`, D.time / goal, BC.teal, met ? BC.gold : BC.pink);
+  const name = `RÉCORD DE UN DÍA · ${(EX_SHORT[settings.exercise] || '').toUpperCase()}`;
+  if (!D.best) card(32 + w + gap, name, BC.pink, D.n ? `${D.n} ${u} hoy` : 'Aún sin récord', BC.ink, 'tu primer día', D.n ? 1 : 0, BC.pink, BC.gold);
+  else if (D.n > D.best) card(32 + w + gap, name, BC.gold, `¡Superado! ${D.n} ${u}`, BC.gold, `+${D.n - D.best} ${u}`, 1, BC.pink, BC.gold);
+  else card(32 + w + gap, name, BC.pink, `Faltan ${D.best + 1 - D.n} ${u}`, BC.ink, `${D.n} de ${D.best}`, D.n / (D.best + 1), BC.pink, BC.gold);
+}
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
-  c.clearRect(0, 0, W, H);
-  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#140f28'); g.addColorStop(1, '#0a0817'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  c.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = 0; y < H; y += 6) c.fillRect(0, y, W, 2);
-  c.strokeStyle = '#3cf0c6'; c.lineWidth = 6; c.strokeRect(3, 3, W - 6, H - 6);
+  c.clearRect(0, 0, W, H); boardFrame(c, W, H);
   c.textBaseline = 'middle';
   if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
-    c.textAlign = 'center'; c.fillStyle = '#ff4fa3'; c.font = `96px ${FD}`; c.fillText('REPARENA', W / 2, 150);
-    c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 250);
-    c.fillStyle = '#a49fc8'; c.font = `500 32px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 320);
+    c.textAlign = 'center'; c.font = `84px ${FD}`; glowText(c, 'REPARENA', W / 2, 82, BC.pink, 22);
+    c.fillStyle = BC.ink; c.font = `500 36px ${FB}`; fitFont(c, `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W - 120, 36, '500 %px ' + FB); c.fillText(`${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`, W / 2, 158);
+    boardDayCards(c, W, 210, 112);
+    c.textAlign = 'center'; c.fillStyle = BC.lil; c.font = `500 28px ${FB}`; c.fillText(wristMenuOn() ? 'Gira la muñeca izquierda hacia ti: ahí está el menú' : 'Acércate al menú y pulsa EMPEZAR', W / 2, 384);
     board.tex.needsUpdate = true; return;
   }
-  const N = settings.waves;
-  const wv = N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`;
-  c.textAlign = 'left'; c.font = `40px ${FD}`; c.fillStyle = '#a49fc8'; fitFont(c, SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 330, 40, '%px ' + FD); c.fillText(SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ${wv}` : wv, 36, 52);
-  c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.fillText(String(score).padStart(6, '0'), W / 2, 52);
+  const N = settings.waves, hang = settings.exercise === 'hang', bars = isBars();
+  // arriba: oleada (y bloque), puntos y vidas
+  const wv = (SES.active ? `BLOQUE ${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`);
+  c.textAlign = 'left'; fitFont(c, wv, 330, 28, '%px ' + FD); const ww = c.measureText(wv).width + 44;
+  boardPill(c, 32, 26, ww, 50, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
+  c.textAlign = 'center'; c.font = `50px ${FD}`; glowText(c, String(score).padStart(6, '0'), W / 2 + 40, 52, BC.gold, 16);
   c.textAlign = 'right';
-  if (!settings.lives) { c.fillStyle = '#3cf0c6'; c.fillText('VIDAS ∞', W - 36, 52); }
-  else if (settings.lives <= 8) { c.font = `50px ${FB}`; let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; c.fillStyle = '#ff4fa3'; fitFont(c, s, 360, 50, '%px ' + FB); c.fillText(s, W - 36, 52); }
-  else { c.fillStyle = '#ff4fa3'; c.fillText(`♥ ${lives}/${settings.lives}`, W - 36, 52); }
-  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, 88, W - 60, 3);
-  const hang = settings.exercise === 'hang', bars = isBars();
-  c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.font = `170px ${FD}`; c.fillText(String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 36, 210);
-  c.fillStyle = '#a49fc8'; const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()} EN ESTA OLEADA` : 'REPETICIONES'; fitFont(c, sub, W - 90, 30, '%px ' + FD); c.fillText(sub, 42, 312);
-  c.textAlign = 'right';
+  if (!settings.lives) { c.font = `32px ${FD}`; c.fillStyle = BC.teal; c.fillText('VIDAS ∞', W - 40, 52); }
+  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 300, 46, '%px ' + FB); glowText(c, s, W - 40, 52, BC.pink, 10); }
+  else { c.font = `34px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}/${settings.lives}`, W - 40, 52); }
+  // izquierda: el número grande y la barra de la oleada
+  c.textAlign = 'left'; c.font = `140px ${FD}`; glowText(c, String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps), 40, 168, '#ffffff', 18);
+  const sub = hang ? (state === 'play' ? `SEGUNDOS COLGADO · FALTAN ${repsLeft()} S` : 'SEGUNDOS COLGADO EN TOTAL') : state === 'play' ? `REPETICIONES · FALTAN ~${repsLeft()}` : 'REPETICIONES';
+  c.fillStyle = BC.lil; fitFont(c, sub, 470, 24, '%px ' + FD); c.fillText(sub, 44, 252);
+  const wk = state !== 'play' ? 0 : hang ? BAR.hold / Math.max(1, BAR.need) : waveTarget ? waveDone / waveTarget : 0;
+  boardBar(c, 44, 272, 450, 12, wk, BC.teal, '#7af7ff');
+  // derecha: descanso, pausa, avisos y carga
+  c.textAlign = 'right'; const RX = W - 40;
   if (state === 'rest') {
-    c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, W - 36, 160);
-    c.fillStyle = '#eeeaff'; c.font = `500 34px ${FB}`; c.fillText(hang ? `Siguiente oleada: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} repeticiones`, W - 36, 226);
-    c.fillStyle = '#a49fc8'; c.font = `500 30px ${FB}`; c.fillText(`${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, '0')} entrenando · ≈ ${Math.round(runStatsKcal())} kcal`, W - 36, 300);
-  } else if (state === 'mount') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', W - 36, 170); }
-  else if (state === 'calib') { c.fillStyle = '#3cf0c6'; c.font = `52px ${FD}`; c.fillText('CALIBRANDO', W - 36, 170); }
-  else if (state === 'ready') { c.fillStyle = '#ffd166'; c.font = `110px ${FD}`; c.fillText(String(Math.max(1, Math.ceil(3 - stateT))), W - 60, 190); }
-  else if (state === 'paused') { c.fillStyle = '#ffd166'; c.font = `80px ${FD}`; c.fillText('PAUSA', W - 36, 180); }
-  else if (state === 'between') { c.fillStyle = '#3cf0c6'; c.font = `58px ${FD}`; c.fillText(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, W - 36, 160); }
-  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 560, 72, '%px ' + FD); c.fillText(msg.text, W - 36, 180); c.globalAlpha = 1; }
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; c.font = `46px ${FD}`; c.fillText(nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`, W - 36, 180); }
-  if (isCombat() && swordActive() && ['play', 'rest', 'ready'].includes(state)) { const n = SWD.perf.length; c.fillStyle = n ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', W - 36, 262); }
-  else if (throwAim() && ['play', 'rest', 'ready'].includes(state)) { const n = throwCount(); c.fillStyle = n ? '#3cf0c6' : '#a49fc8'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', W - 36, 262); }
-  else if (pistolOn() && ['play', 'rest', 'ready'].includes(state)) { c.fillStyle = GUN.ammo ? '#3cf0c6' : '#ff8a3d'; c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', W - 36, 262); }
-  else if (charged) { c.fillStyle = '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0'); c.font = `38px ${FD}`; c.textAlign = 'right'; c.fillText(chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', W - 36, 262); }
-  c.fillStyle = 'rgba(60,240,198,.25)'; c.fillRect(30, H - 92, W - 60, 3);
-  c.font = `500 34px ${FB}`; c.textAlign = 'left'; c.fillStyle = combo >= 5 ? '#ffd166' : '#eeeaff'; c.fillText(settings.exercise === 'hang' ? `Racha ${combo} s` : `Combo ×${combo}`, 36, H - 48);
-  c.textAlign = 'center'; c.fillStyle = '#eeeaff';
+    c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.ceil(settings.rest - stateT)}`, RX, 140, BC.teal, 14);
+    c.fillStyle = BC.ink; c.font = `500 30px ${FB}`; c.fillText(hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s colgado` : `Siguiente oleada: ${waveReps(waveIdx + 1)} reps`, RX, 200);
+  } else if (state === 'mount') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', RX, 150); }
+  else if (state === 'calib') { c.fillStyle = BC.teal; c.font = `48px ${FD}`; c.fillText('CALIBRANDO', RX, 150); }
+  else if (state === 'ready') { c.font = `110px ${FD}`; glowText(c, String(Math.max(1, Math.ceil(3 - stateT))), RX - 20, 165, BC.gold, 20); }
+  else if (state === 'paused') { c.font = `76px ${FD}`; glowText(c, 'PAUSA', RX, 160, BC.gold, 16); }
+  else if (state === 'between') { c.font = `54px ${FD}`; glowText(c, `DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, RX, 150, BC.teal, 14); }
+  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.color; fitFont(c, msg.text, 450, 66, '%px ' + FD); c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
+  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) { c.fillStyle = '#ff8a6a'; const t = nextArcJump ? 'PRÓXIMO: VALLA, ¡SALTA!' : nextArcTilt ? `PRÓXIMO: INCLINADO, VE A LA ${nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA'}` : `PRÓXIMO: BAJA ${Math.round(nextArcDrop * 100)} CM`; fitFont(c, t, 450, 44, '%px ' + FD); c.fillText(t, RX, 150); }
+  let ch = null; const live = ['play', 'rest', 'ready'].includes(state);
+  if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ CARGA ${n}` + (pistolOn() && settings.sword === 'one' ? ` · ▮ ${GUN.ammo}` : '') : '⚔ SIN CARGA', n ? BC.teal : '#ff8a3d']; }
+  else if (throwAim() && live) { const n = throwCount(); ch = [n ? `✋ ${n > 1 ? n + ' RAYOS' : 'RAYO'} PARA LANZAR` : 'HAZ UNA REPETICIÓN', n ? BC.teal : BC.lil]; }
+  else if (pistolOn() && live) ch = [GUN.ammo ? `▮ MUNICIÓN ${GUN.ammo}` : '▯ SIN MUNICIÓN', GUN.ammo ? BC.teal : '#ff8a3d'];
+  else if (charged) ch = [chargePow > 1 ? `● CARGA ×${chargePow}` : '● CARGADO', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
+  if (ch) { c.font = `34px ${FD}`; fitFont(c, ch[0], 440, 34, '%px ' + FD); const w = c.measureText(ch[0]).width + 40; boardPill(c, RX - w + 14, 222, w, 52, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 6, 249); }
+  // debajo: combo, precisión (o lo que toque) y lo que queda
   const mid = bars ? `Caídas ${stats.falls}` : aimManual() || pistolOn() ? `Precisión ${stats.shots ? Math.round(100 * stats.hits / stats.shots) : 0}%` : settings.mode === 'arcs' || settings.mode === 'touch' ? `${settings.mode === 'touch' ? 'Fallos' : 'Golpes recibidos'} ${stats.taken}` : `Perfectas ${stats.perfect}`;
-  c.fillText(mid, W / 2, H - 48);
-  c.textAlign = 'right';
-  c.fillText(hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : settings.mode === 'touch' ? `Objetivos ${touches.filter(x => x.alive && !x.judged).length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`, W - 36, H - 48);
+  const right = hang ? `Mejor racha ${stats.bestCombo} s` : settings.mode === 'arcs' ? `Arcos ${arcs.length + spawnQueue.length}` : settings.mode === 'touch' ? `Objetivos ${touches.filter(x => x.alive && !x.judged).length + spawnQueue.length}` : `${bars ? 'Objetivos' : 'Enemigos'} ${enemies.filter(e => e.alive).length + spawnQueue.length}`;
+  const chips = [[hang ? `Racha ${combo} s` : `Combo ×${combo}`, combo >= 5 ? BC.gold : BC.ink], [mid, BC.ink], [right, BC.ink]], cw = (W - 64 - 2 * 14) / 3;
+  chips.forEach(([t, col], i) => { const x = 32 + i * (cw + 14); boardPill(c, x, 298, cw, 40, 'rgba(255,255,255,0.05)'); c.textAlign = 'center'; c.fillStyle = col; fitFont(c, t, cw - 30, 26, '500 %px ' + FB); c.fillText(t, x + cw / 2, 319); });
+  boardDayCards(c, W, 350, 92);
   board.tex.needsUpdate = true;
 }

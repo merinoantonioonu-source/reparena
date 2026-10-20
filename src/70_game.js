@@ -69,7 +69,7 @@ function gateSolids() {
   for (const g of gates) {
     if (!g.on || !g.g.visible) continue; const r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale;
     const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc });
-    for (const sd of [-1, 1]) { put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); }
+    for (const sd of [-1, 1]) { if (g.nat) { put(sd * 1.7, 0, 0.55); continue; } put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); } // (en el bosque, los pilares de piedra)
   }
   return out;
 }
@@ -1634,7 +1634,7 @@ function exerciseRows(back) {
 }
 function lobbyMenu() {
   endSession();
-  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDirty = true; if (preview) previewBarPose(false);
+  state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
   const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   const rows = [
@@ -1662,35 +1662,42 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
-  if (spConnected() || settings.mode === 'touch' || isCombat()) sub.push({ label: spConnected() ? 'Música  ▸' : 'Ritmo  ▸', onPress: () => musicMenu(lobbyMenu) }); // música (Spotify) y ritmo
+  // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
-  if (viewRows(lobbyMenu).length || rr.length) sub.push({ label: 'Sala y vista  ▸', style: roomBad ? 'primary' : undefined, onPress: () => roomMenu(lobbyMenu) });
-  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Sala y vista»', color: '#ffd166' });
-  sub.push({ label: 'Más ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
+  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
+  sub.push({ label: 'Sonido  ▸', onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
+    { label: 'Ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
   rows.push({ t: 'btns', items: sub });
   if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows);
   m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido
 }
-// Submenús del principal: elegir ejercicio, música, y sala y vista (realidad mixta); «Volver» deja el principal en el mismo sitio
+// Submenús del principal: elegir ejercicio, sonido y música, y entorno y vista; «Volver» deja el principal en el mismo sitio
 function exerciseMenu(back) {
   const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
-function musicMenu(back) {
-  const again = () => musicMenu(back), beat = settings.mode === 'touch' || isCombat(); // el ritmo: al compás o el de Spotify (Toques y Combate)
-  const rows = [{ t: 'title', text: 'MÚSICA' }, ...musicRows(), ...(beat ? tempoRows(again) : []), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+// Todo lo que suena: Spotify, el ritmo (al compás o el de Spotify, en Toques y Combate) y los volúmenes
+function soundMenu(back) {
+  const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
+  const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
+    ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
+    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
-function roomMenu(back) {
-  const again = () => roomMenu(back), rows = [{ t: 'title', text: 'SALA Y VISTA' }, ...viewRows(again), ...roomRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+// Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
+function sceneMenu(back, inGame) {
+  const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
+  const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key })),
+    ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
 let settingsTab = 'partida';
 function settingsMenu(back, tab = settingsTab) {
-  const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
+  const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
-  const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
+  const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
@@ -1722,8 +1729,8 @@ function pauseMenu() {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
-    ...musicRows(), ...viewRows(() => pauseMenu()),
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : []), { label: 'Ajustes', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: 'Sonido  ▸', onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : [])] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
     { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { border: '#ffd166' });
@@ -1732,7 +1739,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
+  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -1792,10 +1799,28 @@ function saveRun(win) {
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
   h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
-  store(HIST_KEY, h.slice(-400));
+  store(HIST_KEY, h.slice(-400)); boardDayRefresh();
 }
 // Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
 const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
+// Lo de hoy para el marcador: lo ya guardado hoy, tu mejor día con este ejercicio (sin contar hoy) y la racha; la
+// ronda en curso se suma en vivo mientras no esté guardada
+const DAYB = { time: 0, kcal: 0, ex: 0, best: 0, streak: 0 };
+function boardDayRefresh() {
+  const h = store(HIST_KEY) || [], now = Date.now(), today = dayKey(now), x = settings.exercise, by = new Map();
+  DAYB.time = DAYB.kcal = DAYB.ex = 0;
+  for (const r of h) {
+    const k = dayKey(r.date);
+    if (k === today) { DAYB.time += r.time || 0; DAYB.kcal += runKcal(r); if (r.ex === x) DAYB.ex += r.reps || 0; }
+    else if (r.ex === x) by.set(k, (by.get(k) || 0) + (r.reps || 0));
+  }
+  DAYB.best = Math.max(0, ...by.values()); DAYB.streak = progress(h, now).streak; boardDirty = true;
+}
+function boardDay() {
+  const L = !runSaved && GAME_STATES.concat('paused').includes(state), hang = settings.exercise === 'hang';
+  return { time: DAYB.time + (L ? stats.time : 0), kcal: DAYB.kcal + (L ? runStatsKcal() : 0), n: DAYB.ex + (L ? Math.floor(hang ? stats.hold : stats.reps) : 0), best: DAYB.best, streak: Math.max(DAYB.streak, L && stats.time > 0 && !DAYB.time ? DAYB.streak + 1 : 0) };
+}
+settingHooks.push(k => { if (k === 'exercise' || k === 'mode' || k === '*') boardDayRefresh(); });
 function progressLine(P = progress()) {
   return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
 }
@@ -1843,7 +1868,8 @@ function gameStep(dt, t) {
   } else if (state === 'ready') { if (stateT >= 3) startWave(0); }
   else if (state === 'between') sessionStep(dt);
   else if (state === 'mount') barMountStep(dt);
-  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') stats.time += dt; if (state === 'play') stats.work += dt; runDetectors(t, dt); }
+  // (el marcador se redibuja cada segundo: lleva el tiempo de hoy)
+  if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') { stats.time += dt; if ((stats.time | 0) !== ((stats.time - dt) | 0)) boardDirty = true; } if (state === 'play') stats.work += dt; runDetectors(t, dt); }
   iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {

@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, boardDay, drawBoard, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -73,7 +73,7 @@ const wLabel = w => (w.label || '').replace(/\s+▸$/, '');
 function exLabels() { const b = RA.activeWidgets().find(w => /^Ejercicio:/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
 function findW(label) {
   let w = RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
-  for (const re of [/^Ejercicio:/, /^Sala y vista/, /^Música/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); } }
+  for (const re of [/^Ejercicio:/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
 function log(...a) { console.log(...a); }
@@ -432,11 +432,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Barras bichos sin reventar (pican)', { ...bars, exercise: 'pullup', barTarget: 'bugs', barWait: 2, lives: 2 }, t => {}, 120, s => s.taken < 2 ? 'los bichos no pican al agotarse el tiempo' : '');
   await runConfig('Barras pompas sin reventar (se escapan)', { ...bars, exercise: 'row', barTarget: 'bubbles', barWait: 2, waves: 1, repsWave: 3 }, (t => { RA.PV.crouch = RA.state === 'play' && t > 25 && (t % 2.6) < 1.3; }), 200, s => s.taken !== 0 ? 'las pompas no deberían hacer daño' : '');
 
+  // ---- marcador: lo de hoy (con la ronda en curso) y lo que falta para el récord de un día con este ejercicio ----
+  { const saved = storage.get('reparena3-history'), now = Date.now(), D = 864e5, mk = (dd, ex, reps, time) => ({ ex, mode: 'combat', reps, perfect: 0, kills: 0, win: true, time, kcal: 5, date: now - dd * D });
+    storage.set('reparena3-history', JSON.stringify([mk(0, 'squat', 20, 300), mk(0, 'pushup', 15, 200), mk(1, 'squat', 30, 400), mk(1, 'squat', 25, 300), mk(3, 'squat', 40, 500)]));
+    RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(1); RA.beginRun(); frame(250);
+    const d = RA.boardDay(), st = RA.stats; RA.drawBoard();
+    log(`board day: today ${Math.round(d.time)} s (saved 500 + run ${Math.round(st.time)}) · squats ${d.n} (saved 20 + run ${st.reps}) · best day ${d.best}`);
+    if (d.best !== 55 || d.n !== 20 + st.reps || Math.abs(d.time - 500 - st.time) > 0.01) errors.push('marcador: no cuenta bien lo de hoy o el récord de un día');
+    RA.exitAll(); frame(1); if (saved) storage.set('reparena3-history', saved); else storage.delete('reparena3-history'); }
   // ---- menús ----
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
   RA.settingsMenu(() => RA.lobbyMenu()); frame(2);
-  for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Sistema']) {
+  for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Menú', 'Tu meta']) {
     press(tab); frame(1);
     const ws = RA.activeWidgets();
     ws.filter(w => w.kind === 'slider').forEach(w => { w.drag(0.7); w.commit(); w.drag(0.0); w.commit(); });
@@ -448,7 +456,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const val = RA.activeWidgets().find(w => w.style === 'value'); val.onPress(); frame(1);
   ['1', '2', ',', '⌫', '5'].forEach(k => findW(k).onPress()); findW('OK').onPress(); frame(1);
   log('keypad result lives =', RA.settings.lives);
-  press('Sistema'); frame(1); press('No'); frame(1); press('Sí'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
+  press('Menú'); frame(1); press('No'); frame(1); press('Sí'); frame(1);
+  { const tabs = RA.activeWidgets().filter(w => w.style === 'tab' || w.style === 'selected').map(w => w.label); log('settings tabs:', tabs.join(', '));
+    if (tabs.some(l => /Sonido|Entorno/.test(l))) errors.push('menú: sonido y entorno deberían tener su submenú, no una pestaña en Ajustes'); }
+  press('Volver'); frame(2);
+  // sonido y entorno, cada uno en su submenú (y sin nada de sonido en Ajustes)
+  press('Sonido'); frame(1); { const ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('sound menu sliders:', ks.join(', '));
+    if (!ks.includes('volume') || !ks.includes('ambient')) errors.push('menú: el submenú de sonido no tiene los volúmenes'); }
+  press('Volver'); frame(1); press('Entorno'); frame(1); press('Columna'); frame(1); RA.activeWidgets().find(w => w.label === 'Auto' && w.style !== 'value').onPress(); frame(1);
+  { const lw = RA.activeWidgets().map(w => w.label), ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('scene menu: scenery', lw.includes('Bosque'), 'sliders', ks.join(', '));
+    if (!lw.includes('Bosque') || !ks.includes('depth')) errors.push('menú: el submenú de entorno no tiene el escenario o la distancia'); }
   press('Volver'); frame(2);
   press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
@@ -476,7 +493,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (let i = 0; i < 4; i++) { findW(RA.activeWidgets().find(w => /^Al compás/.test(w.label)).label).onPress(); frame(1); await sleep(400); }
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
-  press('Combate'); frame(1); press('Voladores'); frame(1); press('Más ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
+  press('Combate'); frame(1); press('Voladores'); frame(1); press('Ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
   log('combat flyers gaze:', RA.settings.foes, RA.settings.aim); if (RA.settings.foes !== 'flyers' || RA.settings.aim !== 'gaze') errors.push('no se eligen voladores con la mirada');
   press('Robots'); frame(1); press('Automática'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
@@ -493,7 +510,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Dominadas'); frame(1); press('Ajustar'); frame(1); RA.activeWidgets().filter(w => w.label === '+').forEach(w => w.onPress()); press('Listo'); frame(1);
   press('Colocar barra'); frame(3); key('keydown', 'Escape'); key('keyup', 'Escape'); frame(2); log('cancel placement → lobby menu', !!RA.menu && RA.activeWidgets().some(w => w.label === 'EMPEZAR'), 'on', RA.PLACE.on);
   if (RA.PLACE.on || !RA.activeWidgets().some(w => w.label === 'EMPEZAR')) errors.push('Esc no cancela la colocación');
-  press('Más ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
+  press('Ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
   press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
   RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Combate'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
   // ---- sesión: tres bloques seguidos, ajustes intactos y resumen ----
@@ -739,7 +756,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
-  RA.startPreview(); frame(2); press('Música'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
+  RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);
   log('after next/vol:', RA.spNowText());
   for (const c of ['PUT /v1/me/player/pause', 'POST /v1/me/player/next', 'PUT /v1/me/player/volume?volume_percent=60']) if (!SPOT.calls.includes(c)) errors.push('Spotify: falta la llamada ' + c);
@@ -775,7 +792,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ritmo de Spotify: la Web API ya no lo da (404 aquí) y se pregunta a Deezer (JSONP): por ISRC no lo sabe, buscando sí
   { const urls = []; global.document.head = { appendChild(sc) { const u = sc.src; urls.push(u); const cb = /callback=([^&]+)/.exec(u)[1]; setTimeout(() => global[cb](u.includes('isrc:') ? { bpm: 0 } : u.includes('/search') ? { data: [{ id: 42 }] } : { id: 42, bpm: 128.4 }), 0); } };
     RA.setSetting('mode', 'touch'); RA.setSetting('exercise', 'squat'); RA.setSetting('bpm', 0); SPOT.playing = true; await RA.spRefresh();
-    RA.startPreview(); frame(2); press('Música'); frame(1); press('Ritmo de Spotify'); await sleep(40); frame(1);
+    RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Ritmo de Spotify'); await sleep(40); frame(1);
     log('spotify tempo via deezer:', RA.settings.bpm, 'BPM · auto', RA.SP.cfg.autoBpm, '· asked', urls.map(u => u.replace(/[?&]output.*/, '').replace('https://api.deezer.com', '')).join(' , '));
     if (RA.settings.bpm !== 128 || !RA.SP.cfg.autoBpm) errors.push('Ritmo de Spotify: no saca el ritmo de la canción (Deezer)');
     SPOT.track = 'Otra canción'; await RA.spRefresh(); await sleep(40); log('next song: tempo asked again', urls.length > 3);
@@ -795,7 +812,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!m.wrist || !g.visible || Math.abs(g.scale.x - 0.46 * 55 / 45) > 0.01 || Math.abs(hd - 0.55) > 0.03 || RA.stand.visible) errors.push('el menú de muñeca no queda a la distancia elegida');
     RA.setSetting('wristDist', 75); frame(60, 16, xrFrame); const hd2 = Math.hypot(RA.menu.group.position.x, RA.menu.group.position.z);
     log('wrist menu at 75 cm:', hd2.toFixed(2)); if (Math.abs(hd2 - 0.75) > 0.03) errors.push('cambiar la distancia del menú de muñeca no lo aleja'); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
-    const w = RA.activeWidgets().find(w => /^Más ajustes/.test(w.label)), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
+    const w = RA.activeWidgets().find(w => /^Ajustes/.test(w.label)), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
     w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new THREE.Vector3(0, 0, 1))).sub(wp).normalize();
     const before = g.position.clone();
     for (const d of [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]) { XRS.tip = wp.clone().addScaledVector(wn, d); frame(2, 16, xrFrame); }
@@ -835,7 +852,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { RA.setSetting('menuWhere', 'stand'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(30, 16, xrFrame); RA.lobbyMenu(); frame(40, 16, xrFrame);
     const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
     const poke = (w, ds) => { for (const d of ds) { XRS.tip = at(w, d); frame(2, 16, xrFrame); if (process.env.DBG) log('  poke', w.label, d, 'need', RA.POKE.need.right, 'menuH', RA.menuH && RA.menuH.toFixed(2)); } };
-    poke(findW('Más ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver');
+    poke(findW('Ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver');
     const tab = RA.activeWidgets().find(w => w.style === 'tab'), before = JSON.stringify(RA.settings);
     await sleep(500); poke(tab, [-0.01, 0.015, -0.01, 0.015, -0.01]); const sameTab = !RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected'), same = JSON.stringify(RA.settings) === before;
     poke(tab, [0.06]); await sleep(500); poke(tab, [0.06, 0.03, 0.015, 0.0, -0.01]); const nowTab = RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected');
@@ -1200,7 +1217,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', roomMode: 'scan', lives: 0, waves: 1, repsWave: 30, walkTime: 8 })) RA.setSetting(k, v);
   XRS.room = TINY; XRS.noHands = true; XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0; XRS.headQ = null;
   await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame); RA.lobbyMenu(); frame(2, 16, xrFrame);
-  { const P = RA.roomPlan(), main = RA.activeWidgets().map(w => w.label); findW('Sala y vista').onPress(); const lw = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); log('tiny room: main menu points to the room', main.includes('Sala y vista  ▸'), '· why', P && P.why, '· offers manual', lw.includes('Colocar a mano'));
+  { const P = RA.roomPlan(), main = RA.activeWidgets().map(w => w.label); findW('Entorno').onPress(); const lw = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); log('tiny room: main menu points to the room', main.includes('Entorno  ▸'), '· why', P && P.why, '· offers manual', lw.includes('Colocar a mano'));
     if (!P || !P.why || !/1,7/.test(P.why) || !lw.includes('Colocar a mano')) errors.push('en una habitación que no cumple los requisitos no se explica el motivo ni se ofrece colocarla a mano'); }
   const lookAt = (x, z) => { const dx = x - (XRS.headX || 0), dz = z - (XRS.headZ || 0), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.atan2(-XRS.headY, Math.hypot(dx, dz)), Math.atan2(-dx, -dz), 0, 'YXZ')); XRS.headQ = { x: q.x, y: q.y, z: q.z, w: q.w }; frame(3, 16, xrFrame); };
   press('Colocar a mano'); frame(2, 16, xrFrame); press('Aquí juego'); frame(2, 16, xrFrame);

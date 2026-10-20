@@ -14,7 +14,10 @@ const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones',
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
+// Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
+const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
+const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
@@ -38,7 +41,6 @@ const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 /* =================== AJUSTES =================== */
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
-  { key: 'bpm', g: 'partida', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
@@ -144,24 +146,25 @@ const SCHEMA = [
   { key: 'dipGap', g: 'barras', cond: () => settings.dipBars !== '1', label: 'Separación entre las paralelas', short: 'Separación', type: 'num', min: 30, max: 100, step: 1, def: 58, unit: 'cm', modes: ['bars'], ex: ['row'] },
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
-  { key: 'depth', g: 'sistema', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
+  { key: 'depth', g: 'entorno', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
   { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se coloca a esta distancia. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
-  { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
-  { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
-  { key: 'scenery', g: 'sistema', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
-  { key: 'goalMin', g: 'sistema', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
-  { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
+  { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
+  { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
+  { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
+  { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
-  { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
-  { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
-  { key: 'roomShow', g: 'sistema', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
-  { key: 'boltLight', g: 'sistema', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
+  { key: 'roomMode', g: 'entorno', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
+  { key: 'roomOcclude', g: 'entorno', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
+  { key: 'roomShow', g: 'entorno', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
+  { key: 'boltLight', g: 'entorno', label: 'Los rayos iluminan', short: 'Luz de rayos', type: 'toggle', def: 1, hint: 'Cada disparo ilumina el entorno y, con sombras, las hace saltar. Quítalo si notas tirones.' },
   { key: 'demo', g: 'sistema', label: 'Caricatura del ejercicio', short: 'Caricatura', type: 'toggle', def: 1, hint: 'Junto al menú y mientras calibras o esperas, un monigote enseña el movimiento correcto y qué pasa al hacerlo.' },
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
-  { key: 'volume', g: 'sistema', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
-  { key: 'ambient', g: 'sistema', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' }
+  { key: 'volume', g: 'sonido', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
+  { key: 'ambient', g: 'sonido', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' },
+  { key: 'bpm', g: 'sonido', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' }
 ];
 const FIELD = {}; SCHEMA.forEach(f => FIELD[f.key] = f);
 const settings = { mode: 'combat', exercise: 'squat' };
@@ -258,16 +261,18 @@ settingHooks.push(k => { if (k === 'goalMin') renderToday(); });
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
 /* =================== FORMULARIO WEB =================== */
-// La página: las opciones comunes (Sistema) aparte; las del modo y el ejercicio, en su sección; y el orden de los
+// La página: las opciones comunes (entorno, menú y tu meta) y el sonido aparte; las del modo y el ejercicio, en su sección; y el orden de los
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
     <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
-  common.innerHTML = group('sistema');
-  host.innerHTML = Object.keys(GROUP_NAMES).filter(g => g !== 'sistema').map(group).join('');
+  const COMMON = ['entorno', 'sistema', 'perfil'];
+  common.innerHTML = COMMON.map(group).join('');
+  $('#soundGroups').innerHTML = group('sonido').replace(/<h3>.*?<\/h3>/, ''); // (la sección ya se titula así)
+  host.innerHTML = Object.keys(GROUP_NAMES).filter(g => !COMMON.includes(g) && g !== 'sonido').map(group).join('');
   const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
-  for (const h of [host, common, sortBox]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
+  for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
     syncForm();
