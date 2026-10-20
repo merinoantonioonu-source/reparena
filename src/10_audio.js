@@ -61,10 +61,13 @@ function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}
   const s = AUD.C.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * rand(0.94, 1.06);
   s.connect(sout(pos, { rev, gain, ref })); s.start(); return true;
 }
+// music: suena Spotify (entonces el sonido ambiente se calla del todo)
+const AUDM = { music: false };
 function applyVolume() {
   if (!AUD.C) return;
   AUD.sfx.gain.value = settings.volume / 100;
-  AUD.amb.gain.value = (settings.ambient / 100) * (arMode && !forestOn() ? 0.35 : 1);
+  const amb = AUDM.music ? 0 : (settings.ambient / 100) * (arMode && !forestOn() ? 0.35 : 1);
+  if (AUD.amb.gain.setTargetAtTime) AUD.amb.gain.setTargetAtTime(amb, AUD.C.currentTime, 0.4); else AUD.amb.gain.value = amb;
 }
 settingHooks.push(k => { if (k === 'volume' || k === 'ambient' || k === '*') applyVolume(); });
 const sndOK = () => AUD.C && AUD.C.state === 'running' && settings.volume > 0;

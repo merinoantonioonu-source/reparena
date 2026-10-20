@@ -14,7 +14,7 @@ const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones',
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
@@ -70,9 +70,18 @@ const SCHEMA = [
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
-  { key: 'crocs', g: 'enemigos', label: 'Hombres-cocodrilo entre los robots', short: 'Cocodrilos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son hombres-cocodrilo: van encorvados a cuatro patas, rugen con las fauces abiertas y, al atacar, se yerguen con los brazos abiertos y se lanzan a morderte. 100 % = solo cocodrilos, y el jefe es un cocodrilo gigante.' },
-  { key: 'neons', g: 'enemigos', label: 'Humanoides de neón entre los robots', short: 'Neón', type: 'num', min: 0, max: 100, step: 5, def: 30, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son humanoides de neón (estilo Pistol Whip): maniquíes facetados con franjas de luz que laten con el ritmo, una porra de energía, que se materializan al salir y estallan en esquirlas. 100 % = solo neón (y el jefe también).' },
-  { key: 'beasts', g: 'enemigos', label: 'Monstruos (Imp y Puglin) entre los robots', short: 'Monstruos', type: 'num', min: 0, max: 100, step: 5, def: 30, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son monstruos animados de Quaternius: Imp, un diablillo, y Puglin, más pequeño y rápido, cada uno con tres colores. Andan, trotan o corren según su velocidad, te provocan, te golpean, se doblan al recibir y caen al morir. Si los modelos no se pueden cargar, salen humanoides de neón. 100 % = solo monstruos (y el jefe, un Imp gigante).' },
+  { key: 'robotsW', g: 'cada', label: 'Robots: cuántos salen', short: 'Robots', type: 'num', min: 0, max: 100, step: 5, def: 15, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, robots metálicos: el pequeño, ágil, de patas de ave, y el grande, con garra y cañón (el jefe, un coloso). Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_robot', g: 'cada', label: 'Robots: rapidez de movimientos', short: 'Rapidez robots', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_robot', g: 'cada', label: 'Robots: forma de moverse', short: 'Movim. robots', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'crocs', g: 'cada', label: 'Hombres-cocodrilo: cuántos salen', short: 'Cocodrilos', type: 'num', min: 0, max: 100, step: 5, def: 25, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, bípedos encorvados a cuatro patas que te muerden la cara. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_croc', g: 'cada', label: 'Hombres-cocodrilo: rapidez de movimientos', short: 'Rapidez cocodrilos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.crocs > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_croc', g: 'cada', label: 'Hombres-cocodrilo: forma de moverse', short: 'Movim. cocodrilos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.crocs > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'neons', g: 'cada', label: 'Humanoides de neón: cuántos salen', short: 'Neón', type: 'num', min: 0, max: 100, step: 5, def: 30, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, maniquíes de luces estilo Pistol Whip con porra de energía. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_neon', g: 'cada', label: 'Humanoides de neón: rapidez de movimientos', short: 'Rapidez neón', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.neons > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_neon', g: 'cada', label: 'Humanoides de neón: forma de moverse', short: 'Movim. neón', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.neons > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'beasts', g: 'cada', label: 'Monstruos (Imp y Puglin): cuántos salen', short: 'Monstruos', type: 'num', min: 0, max: 100, step: 5, def: 30, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, monstruos animados de Quaternius; si no cargan, salen de neón. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): rapidez de movimientos', short: 'Rapidez monstruos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): forma de moverse', short: 'Movim. monstruos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['combat'], cond: () => foesHas('flyers'), hint: 'En flexiones los bichos van a escala, unas 4 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('flyers') },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['combat'], hint: 'Bájalo si el juego va a tirones.' },
@@ -81,6 +90,8 @@ const SCHEMA = [
   { key: 'tchWindow', g: 'toques', label: 'Tiempo para tocarlos', short: 'Para tocar', type: 'num', min: 0.4, max: 3, step: 0.1, def: 1.2, unit: 's', modes: ['touch'], hint: 'Lo que esperan quietos delante de ti antes de pasar de largo.' },
   { key: 'tchGap', g: 'toques', label: 'Separación entre objetivos', short: 'Separación', type: 'num', min: 0.8, max: 6, step: 0.1, def: 2.4, unit: 's', modes: ['touch'], hint: 'Con ritmo (BPM), se redondea a pulsos enteros.' },
   { key: 'tchHands', g: 'toques', label: 'Diamantes para las manos', short: 'Diamantes', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['touch'], noEx: ['combo', 'pushup'], hint: 'Parte de los objetivos que se tocan con la mano (diamantes: azul la izquierda, naranja la derecha). El resto son amebas para la cabeza.' },
+  { key: 'tchPushLo', g: 'toques', label: 'Flexiones: altura mínima de las amebas', short: 'Ameba más baja', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más cerca del suelo que puede llegar una ameba (altura de su centro sobre el suelo). 0 = según la «Bajada en la flexión».' },
+  { key: 'tchPushHi', g: 'toques', label: 'Flexiones: altura máxima de las amebas', short: 'Ameba más alta', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más alto que puede llegar una ameba. Siempre queda algo por debajo de tu cabeza en plancha, para que haya que bajar. 0 = según la «Bajada en la flexión».' },
   { key: 'tchRing', g: 'toques', label: 'Tamaño del hueco de las amebas', short: 'Amebas', type: 'num', min: 8, max: 30, step: 1, def: 15, unit: 'cm', modes: ['touch'], hint: 'Radio del hueco por el que pasa la cabeza (en flexiones, algo menos).' },
   { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch', 'arcs'], cond: () => settings.mode === 'arcs' ? settings.arcJump > 0 : ['jump', 'combo'].includes(settings.exercise) && (settings.exercise !== 'combo' || settings.comboBase === 'stand'), hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie (en Arcos, al pasar la valla).' },
   { key: 'abMin', g: 'toques', label: 'Tronco elevado: mínimo', short: 'Ángulo mín.', type: 'num', min: 10, max: 70, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Ángulo del tronco con el suelo al que llegan los aros más bajos.' },
@@ -112,6 +123,7 @@ const SCHEMA = [
   { key: 'arcTiming', g: 'arcos', label: 'Aparición de los arcos', short: 'Aparición', type: 'choice', opts: [['irregular', 'Irregular'], ['regular', 'Regular']], def: 'irregular', modes: ['arcs'], hint: 'Irregular: unas veces seguidos y otras con más hueco, sin que puedas cogerle el ritmo (la media no cambia).' },
   { key: 'arcTilt', g: 'arcos', label: 'Arcos con la barra inclinada', short: 'Inclinados', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'La barra baja por un lado: apártate hacia el lado alto flexionando esa pierna y estirando la otra (zancada lateral).' },
   { key: 'arcTiltMax', g: 'arcos', label: 'Inclinación máxima de la barra', short: 'Inclinación', type: 'num', min: 5, max: 35, step: 1, def: 18, unit: '°', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Cuanto más inclinada, más hay que apartarse hacia el lado alto.' },
+  { key: 'arcRight', g: 'arcos', label: 'Inclinados: hacia la derecha', short: 'A la derecha', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'De los arcos inclinados, cuántos hay que esquivar apartándose a la derecha (el resto, a la izquierda). Con el 50 %, los dos lados por igual en cada oleada.' },
   { key: 'arcShift', g: 'arcos', label: 'Desplazamiento lateral en los inclinados', short: 'Desplazamiento', type: 'num', min: 15, max: 70, step: 5, def: 40, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Hasta dónde hay que llevar la cabeza hacia el lado alto para pasar con la bajada normal; en el centro hay que bajar más.' },
   { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
@@ -134,8 +146,9 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'goalMin', g: 'sistema', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
-  { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'Por modo'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: todos los ejercicios agrupados por lo que trabajan; al elegir uno de otro modo, el modo cambia solo.' },
+  { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
   { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
   { key: 'roomShow', g: 'sistema', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
@@ -236,6 +249,7 @@ const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
+settingHooks.push(k => { if (k === 'goalMin') renderToday(); });
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
 /* =================== FORMULARIO WEB =================== */
@@ -243,7 +257,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3><div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   common.innerHTML = group('sistema');
   host.innerHTML = Object.keys(GROUP_NAMES).filter(g => g !== 'sistema').map(group).join('');
@@ -296,7 +310,8 @@ function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
   const byBody = settings.exSort === 'body'; sortExCards(byBody);
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = byBody || exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
+  if (byBody && document.querySelectorAll) document.querySelectorAll('.cards .zone').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.classList.contains('zone')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; }); // zonas sin ejercicios de este modo, fuera
   const st = $('#specTitle'); if (st) st.textContent = `4 · Opciones de ${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`;
   const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
   note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza las amebas y con la mano que piden los diamantes que vienen hacia ti; entre un toque y otro, vuelve a la postura de partida.' }[settings.mode] || '';
@@ -316,6 +331,7 @@ function syncForm() {
     }
   }
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
+  if (typeof animNote === 'function') animNote();
   updateSummary();
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
@@ -385,8 +401,63 @@ function progress(h = store(HIST_KEY) || [], now = Date.now()) {
 }
 const fmtDur = s => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round(s % 3600 / 60)} min` : `${Math.round(s / 60)} min`;
 const daysTxt = n => `${n} ${n === 1 ? 'día' : 'días'}`;
+/* ---------- Hoy: lo primero de la página ---------- */
+// Lo de hoy, grande y animado: un anillo que se llena hacia tu meta diaria, cifras que suben hasta su valor, cómo vas
+// frente a ayer y a tu mejor día, tu racha y los últimos 7 días en barras. Para que apetezca volver y superarse
+const WDAY = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], MONTH = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function dayStats(h, now = Date.now()) {
+  const by = new Map(); for (const r of h) { const k = dayKey(r.date); const d = by.get(k) || { time: 0, kcal: 0, reps: 0, perfect: 0, ex: {} }; d.time += r.time || 0; d.kcal += runKcal(r); d.reps += r.reps || 0; d.perfect += r.perfect || 0; d.ex[r.ex] = (d.ex[r.ex] || 0) + (r.reps || 0); by.set(k, d); }
+  const zero = { time: 0, kcal: 0, reps: 0, perfect: 0, ex: {} }, at = k => by.get(k) || zero;
+  const week = []; for (let i = 6; i >= 0; i--) { const t = noonOf(now) - i * DAY_MS; week.push({ k: dayKey(t), d: new Date(t), v: at(dayKey(t)) }); }
+  let best = zero; for (const [k, v] of by) if (k !== dayKey(now) && v.time > best.time) best = v;
+  return { today: at(dayKey(now)), yest: at(dayKey(noonOf(now) - DAY_MS)), best, week };
+}
+const numTxt = (v, dec) => dec ? fmtNum(v, 0.1) : String(Math.round(v));
+function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
+  const host = $('#todayBox'); if (!host) return;
+  const D = dayStats(h, now), P = progress(h, now), T = D.today, goal = settings.goalMin * 60, k = Math.min(1, T.time / goal), d = new Date(now);
+  const R = 52, C = 2 * Math.PI * R, mins = Math.round(T.time / 60);
+  const cmp = (a, b, unit) => !b ? '' : a > b ? `<em class="up">▲ ${Math.round(a - b)} ${unit} más que ayer</em>` : a < b ? `<em class="down">${Math.round(b - a)} ${unit} menos que ayer</em>` : '<em>igual que ayer</em>';
+  const tile = (cls, val, dec, lab, extra = '') => `<div class="tile ${cls}"><b data-to="${val}" data-dec="${dec}">${numTxt(val, dec)}</b><span>${lab}</span>${extra}</div>`;
+  const maxW = Math.max(goal, ...D.week.map(w => w.v.time)) || 1;
+  const exs = Object.entries(T.ex).sort((a, b) => b[1] - a[1]).map(([x, n]) => `<span class="chip">${EX_NAMES[x] || x} · ${n}</span>`).join('');
+  const msg = !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
+    : k >= 1 ? `¡Meta cumplida! ${D.best.time && T.time > D.best.time ? 'Y es tu mejor día. 🏆' : `Tu mejor día: ${fmtDur(D.best.time)}. ¿Lo superas?`}`
+    : `Te ${goal - T.time > 90 ? `faltan ${Math.ceil((goal - T.time) / 60)} min` : 'falta muy poco'} para tu meta de ${settings.goalMin} min.`;
+  host.innerHTML = `
+    <div class="todayHead"><h2>Hoy</h2><span>${WDAY[d.getDay()]} ${d.getDate()} de ${MONTH[d.getMonth()]}</span></div>
+    <div class="todayGrid">
+      <div class="ring${k >= 1 ? ' done' : ''}" role="img" aria-label="${mins} de ${settings.goalMin} minutos de tu meta diaria">
+        <svg viewBox="0 0 120 120"><defs><linearGradient id="ringG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3cf0c6"/><stop offset="1" stop-color="#ff4fa3"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="${R}" class="track"/><circle cx="60" cy="60" r="${R}" class="fill" style="stroke-dasharray:${C};stroke-dashoffset:${C}" data-off="${C * (1 - k)}"/></svg>
+        <div class="ringTxt"><b data-to="${mins}" data-dec="0">${mins}</b><span>de ${settings.goalMin} min</span></div>
+      </div>
+      <div class="tiles">
+        ${tile('t-reps', T.reps, 0, 'repeticiones', cmp(T.reps, D.yest.reps, 'reps'))}
+        ${tile('t-kcal', Math.round(T.kcal), 0, '≈ kcal', cmp(T.kcal, D.yest.kcal, 'kcal'))}
+        ${tile('t-perf', T.perfect, 0, 'perfectas', T.reps ? `<em>${Math.round(100 * T.perfect / T.reps)} % de las reps</em>` : '')}
+        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
+      </div>
+    </div>
+    ${exs ? `<div class="chips">${exs}</div>` : ''}
+    <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
+    <p class="todayMsg">${msg}</p>`;
+  animateToday(host);
+}
+// Las cifras suben desde 0, el anillo se llena y las barras crecen (sin animación si el sistema pide menos movimiento)
+function animateToday(host) {
+  if (!host.querySelectorAll) return;
+  const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches, raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+  const nums = [...host.querySelectorAll('[data-to]')], ring = host.querySelector && host.querySelector('.fill'), bars = [...host.querySelectorAll('[data-h]')];
+  const finish = () => { nums.forEach(n => { n.textContent = numTxt(+n.dataset.to, +n.dataset.dec); }); if (ring) ring.style.strokeDashoffset = ring.dataset.off; bars.forEach(b => { b.style.height = (0.76 * b.dataset.h) + 'px'; }); };
+  if (still || !raf) { finish(); return; }
+  raf(() => raf(() => { if (ring) ring.style.strokeDashoffset = ring.dataset.off; bars.forEach((b, i) => { b.style.transitionDelay = `${i * 60}ms`; b.style.height = (0.76 * b.dataset.h) + 'px'; }); }));
+  const t0 = performance.now(), dur = 1100;
+  const step = t => { const u = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - u, 3); nums.forEach(n => { n.textContent = numTxt(+n.dataset.to * e, +n.dataset.dec); }); if (u < 1) raf(step); else finish(); };
+  raf(step);
+}
 function renderHistory() {
-  const h = store(HIST_KEY) || [], P = progress(h);
+  const h = store(HIST_KEY) || [], P = progress(h); renderToday(h);
   const box = (big, small) => `<div class="stat"><b>${big}</b><span>${small}</span></div>`;
   $('#progBox').innerHTML = h.length ? [
     box(daysTxt(P.streak), P.streak ? (P.trainedToday ? 'seguidos entrenando' : 'seguidos: entrena hoy para no perderla') : 'de racha: empieza hoy'),

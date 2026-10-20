@@ -279,6 +279,7 @@ function makeRoomPlan() { return roomMode() === 'manual' ? manualPlan() : scanPl
 /* ---------- Colocar a mano, en las gafas ---------- */
 // Pasos: sitio de juego → compuertas → trampillas → marcador. Lo que colocas sale donde miras al suelo (o donde apunta
 // tu mano); «Colocar aquí» o pellizcar lo deja. Con la habitación escaneada, compuertas y marcador se pegan a la pared.
+// Las trampillas y el marcador también se pueden poner solos.
 const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null, drag: null, sel: null };
 const rplGood = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplBad = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
@@ -368,22 +369,60 @@ function rplPlace() {
   }
   SND.click(); rplShowPlaced(); roomPlaceMenu();
 }
+// Asistente en cuatro pasos, con el paso en curso arriba; en el mundo, la silueta de lo que colocas y un cartel encima
+// que dice qué hacer (o por qué ahí no se puede)
+const RPL_STEPS = ['spot', 'gates', 'hatches', 'board'], RPL_NAMES = { spot: 'Tu sitio', gates: 'Compuertas', hatches: 'Trampillas', board: 'Marcador' };
+function rplNext() { const i = RPL_STEPS.indexOf(RPL.step); if (i >= RPL_STEPS.length - 1) { endRoomPlace(true); return; } RPL.step = RPL_STEPS[i + 1]; SND.click(); roomPlaceMenu(); }
+// Las trampillas, solas: alrededor de tu sitio, como en la arena (por delante y a los lados)
+function rplAutoHatches() {
+  const S = RPL.spot, c = Math.cos(S.yaw), s = Math.sin(S.yaw);
+  RPL.hatches = hatchPos.map(([x, z]) => ({ x: S.x + x * c + z * s, z: S.z - x * s + z * c, yaw: 0 }));
+  rplShowPlaced(); SND.click(); rplNext();
+}
+// El marcador, solo: delante de la compuerta más centrada, mirándote
+function rplAutoBoard() {
+  const S = RPL.spot, f = { x: -Math.sin(S.yaw), z: -Math.cos(S.yaw) };
+  let g = null, bd = -2; for (const o of RPL.gates) { const dx = o.x - S.x, dz = o.z - S.z, d = Math.hypot(dx, dz) || 1, a = (dx * f.x + dz * f.z) / d; if (a > bd) { bd = a; g = o; } }
+  const p = g ? { x: g.x + (S.x - g.x) * 0.15, z: g.z + (S.z - g.z) * 0.15 } : { x: S.x + f.x * 3, z: S.z + f.z * 3 };
+  RPL.board = { x: p.x, z: p.z, yaw: Math.atan2(S.x - p.x, S.z - p.z), wall: false, ok: true }; rplShowPlaced(); endRoomPlace(true);
+}
 function roomPlaceMenu() {
-  const S = RPL.step, n = { gates: RPL.gates.length, hatches: RPL.hatches.length }, aimTxt = 'Mira al suelo donde lo quieres (o apunta con la mano) y pulsa «Colocar aquí» o pellizca.';
-  const rows = [{ t: 'title', text: 'COLOCAR LA HABITACIÓN' }];
-  if (S === 'spot') rows.push({ t: 'text', text: 'Ponte donde vas a hacer el ejercicio, mirando hacia donde quieres que lleguen los enemigos, y pulsa «Aquí juego».' }, { t: 'btns', items: [{ label: 'Aquí juego', style: 'primary', onPress: rplPlace }], h: 0.08 });
-  else if (S === 'gates') rows.push({ t: 'text', text: `Compuertas (${n.gates} de 3): por donde salen los enemigos. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se pega a ella.' : ''}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.gates.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Más pequeña', onPress: () => { RPL.gs = clamp(RPL.gs - 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Más grande', onPress: () => { RPL.gs = clamp(RPL.gs + 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Siguiente: trampillas', onPress: () => { RPL.step = 'hatches'; roomPlaceMenu(); } }] });
-  else if (S === 'hatches') rows.push({ t: 'text', text: `Trampillas de las arañas (${n.hatches} de 4), para flexiones y planchas: a 1–3,5 m del sitio de juego, en suelo libre. ${aimTxt}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.hatches.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Siguiente: marcador', onPress: () => { RPL.step = 'board'; roomPlaceMenu(); } }] });
-  else rows.push({ t: 'text', text: `Marcador: donde quieras verlo. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se cuelga en ella.' : ''}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
-  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto, apúntale y pellizca (o aprieta el gatillo): síguelo con la mano y suéltalo donde vaya.', color: '#a49fc8' },
-    { t: 'btns', items: [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }, { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }] });
-  rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
+  const S = RPL.step, k = RPL_STEPS.indexOf(S), n = { gates: RPL.gates.length, hatches: RPL.hatches.length };
+  const prog = RPL_STEPS.map((x, i) => (i < k ? '✓ ' : i === k ? '● ' : '○ ') + RPL_NAMES[x]).join('   ');
+  const rows = [{ t: 'title', text: `COLOCAR A MANO · PASO ${k + 1} DE 4` }, { t: 'text', text: prog, color: '#3cf0c6' }];
+  const aim = 'Mira al suelo donde la quieras (o apunta con la mano): verás su silueta verde y un cartel. Pellizca o pulsa «Colocar aquí».';
+  if (S === 'spot') rows.push({ t: 'text', text: 'Así decides dónde está todo en tu habitación. Primero, ponte donde vas a hacer el ejercicio, mirando hacia donde quieres que salgan los enemigos, y pulsa «Aquí juego».' },
+    { t: 'btns', items: [{ label: 'Aquí juego', style: 'primary', onPress: rplPlace }], h: 0.08 });
+  else if (S === 'gates') rows.push({ t: 'text', text: `Compuertas, por donde salen los enemigos: pon de 1 a 3 (llevas ${n.gates}). ${aim}${ROOM.walls.length ? ' Cerca de una pared, se pega a ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.gates.pop(); rplShowPlaced(); roomPlaceMenu(); } }, { label: 'Más pequeña', onPress: () => { RPL.gs = clamp(RPL.gs - 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Más grande', onPress: () => { RPL.gs = clamp(RPL.gs + 0.04, 0.4, 1); rplShowPlaced(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: n.gates ? 'Siguiente: trampillas →' : 'Pon al menos una compuerta', style: n.gates ? 'primary' : undefined, onPress: () => { if (n.gates) rplNext(); else SND.partial(); } }] });
+  else if (S === 'hatches') rows.push({ t: 'text', text: `Trampillas, de donde salen las arañas en flexiones y planchas (llevas ${n.hatches} de 4). Lo fácil: «Ponerlas solas», alrededor de tu sitio. O colócalas tú a 1–3,5 m, en suelo libre.` },
+    { t: 'btns', items: [{ label: 'Ponerlas solas', style: 'primary', onPress: rplAutoHatches }, { label: 'Colocar aquí', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.hatches.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Siguiente: marcador →', style: n.hatches ? 'primary' : undefined, onPress: rplNext }] });
+  else rows.push({ t: 'text', text: `Marcador, el panel con tu puntuación. Lo fácil: «Junto a las compuertas». O colócalo tú donde quieras verlo.${ROOM.walls.length ? ' Cerca de una pared, se cuelga en ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Junto a las compuertas', style: 'primary', onPress: rplAutoBoard }, { label: 'Colocar aquí', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
+  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto: apúntale, pellizca (o aprieta el gatillo) y arrástralo; suéltalo donde vaya.' + (RPL.sel ? ' Con lo último que moviste:' : ''), color: '#a49fc8' },
+    { t: 'btns', items: [...(RPL.sel ? [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }] : []), { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }, { label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
+  else rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
   openMenu(rows);
+}
+// El cartel sobre la silueta: qué es y si se puede dejar ahí (y, si no, por qué)
+const RPL_LAB = { p: makePanel(1.3, 0.3, 768, { depthTest: false }), text: '' }; RPL_LAB.p.mesh.renderOrder = 33; RPL_LAB.p.mesh.visible = false; rplGroup.add(RPL_LAB.p.mesh);
+function rplLabel(text, ok, x, y, z) {
+  const P = RPL_LAB.p, m = P.mesh; m.visible = !!text && !RPL.atMenu; if (!m.visible) return; // mirando al menú, no lo tapa
+  if (text !== RPL_LAB.text) {
+    const c = P.ctx, W = P.W, H = P.H, col = ok ? '#3cf0c6' : '#ff8a3d'; c.clearRect(0, 0, W, H);
+    rr(c, 6, 6, W - 12, H - 12, 34); c.fillStyle = 'rgba(8,10,20,0.85)'; c.fill(); c.lineWidth = 8; c.strokeStyle = col; c.stroke();
+    c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle'; let fs = 64; c.font = `${fs}px ${FD}`;
+    while (fs > 26 && c.measureText(text).width > W - 60) { fs -= 4; c.font = `${fs}px ${FD}`; }
+    c.fillText(text, W / 2, H / 2 + 4); P.tex.needsUpdate = true; RPL_LAB.text = text;
+  }
+  m.position.set(x, y, z); m.lookAt(head.p.x, y, head.p.z);
+}
+function rplWhy(kind, pose) {
+  if (!RPL.aimOk) return 'Mira al suelo donde la quieras';
+  const dp = Math.hypot(pose.x - RPL.spot.x, pose.z - RPL.spot.z), [lo, hi] = kind === 'gate' ? [0.8, 8] : kind === 'hatch' ? [0.9, 3.5] : [0.8, 7];
+  return dp < lo ? `Muy cerca de tu sitio: a más de ${fmtNum(lo)} m` : dp > hi ? `Muy lejos: a menos de ${fmtNum(hi)} m` : '';
 }
 const _rpd = new V3();
 function updateRoomPlace(dt) {
@@ -394,7 +433,7 @@ function updateRoomPlace(dt) {
   if (!RPL.on) return;
   // dónde se apunta: la mano que apunta al suelo o, si no, la mirada; mirando al menú o tocándolo, se queda quieto
   let o = null, d = null;
-  const atMenu = menu && menu.group && fwd().angleTo(_rpd.copy(menu.group.getWorldPosition(new V3())).sub(head.p)) < 0.35;
+  const atMenu = menu && menu.group && fwd().angleTo(_rpd.copy(menu.group.getWorldPosition(new V3())).sub(head.p)) < 0.35; RPL.atMenu = !!atMenu;
   for (const s of ['right', 'left']) { const h = hands[s]; if (h.rayOk && h.rayD.y < -0.15 && !(h.tipOk && menu && menu.group && h.tip.distanceTo(menu.group.getWorldPosition(_rpd)) < 0.3)) { o = h.rayO; d = h.rayD; break; } }
   if (!o && !atMenu) { const f = fwd(); if (f.y < -0.08) { o = head.p; d = f; } }
   if (o) { const t = -o.y / d.y; if (t > 0 && t < 12) { RPL.aim.set(o.x + d.x * t, 0, o.z + d.z * t); RPL.aimOk = true; } }
@@ -402,15 +441,18 @@ function updateRoomPlace(dt) {
   for (const s of ['left', 'right']) {
     const p = hands[s].pinch || hands[s].trig;
     if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) { const r = rplNearest(RPL.aim); if (r) { RPL.drag = Object.assign(r, { side: s }); RPL.sel = r; SND.tick(); } else rplPlace(); }
-    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); }
+    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); roomPlaceMenu(); } // ya se puede girar
     RPL.pinch[s] = p;
   }
   if (!RPL.on) return;
-  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; return; }
+  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; rplLabel('Suelta para dejarla aquí', true, pose.x, 1.2, pose.z); return; }
   const kind = { gates: 'gate', hatches: 'hatch', board: 'board' }[RPL.step];
   for (const k in rplGhost) rplGhost[k].visible = false;
-  if (RPL.step === 'spot') { const g = rplGhost.spot; g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = bodyYaw(); return; }
+  if (RPL.step === 'spot') { const g = rplGhost.spot, y = bodyYaw(); g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = y; rplLabel('Tu sitio · la flecha, hacia los enemigos', true, head.p.x - Math.sin(y) * 1.4, 0.9, head.p.z - Math.cos(y) * 1.4); return; }
   const g = rplGhost[kind], pose = rplPose(kind); g.visible = RPL.aimOk; g.position.set(pose.x, 0, pose.z); g.rotation.y = pose.yaw; g.scale.setScalar(kind === 'gate' ? RPL.gs : 1); setMat(g, pose.ok ? rplGood : rplBad);
+  const why = rplWhy(kind, pose), name = kind === 'gate' ? `Compuerta ${RPL.gates.length + 1}` : kind === 'hatch' ? `Trampilla ${RPL.hatches.length + 1}` : 'Marcador';
+  const ly = kind === 'gate' ? 3.4 * RPL.gs + 0.35 : kind === 'board' ? 2.25 : 0.55, at = RPL.aimOk ? pose : { x: head.p.x + fwdH().x * 2.2, z: head.p.z + fwdH().z * 2.2 };
+  rplLabel(pose.ok ? `${name}: pellizca aquí` : why || 'Aquí no', pose.ok, at.x, RPL.aimOk ? ly : 0.5, at.z);
 }
 
 /* ---------- Cada fotograma: recolocar fuera de la partida si se movió la arena o cambió la habitación ---------- */

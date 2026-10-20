@@ -7,7 +7,7 @@
 const BEAST = { ready: false, failed: false, loading: false, kinds: {} };
 // h: altura del modelo (m); walk/jog/run: a qué velocidad (m/s, a escala 1) avanza cada animación de andar
 const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 } };
-const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot'];
+const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
 // del pie) se quitan: si no, Three.js las aplica al modelo entero y le cambia la orientación
@@ -20,6 +20,13 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
   }
   return new THREE.AnimationClip(clip.name, clip.duration, tracks);
 }
+// Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
+function animStatus() {
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, humanoides de neón, Imp y Puglin' : 'Imp y Puglin'})`;
+  if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
+  return 'Animaciones de Quaternius: cargando…';
+}
+function animNote() { const n = typeof document !== 'undefined' && document.getElementById && document.getElementById('animNote'); if (n) n.textContent = animStatus(); }
 function loadBeasts() {
   if (BEAST.loading || BEAST.ready) return;
   if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { BEAST.failed = true; return; }
@@ -39,8 +46,8 @@ function loadBeasts() {
     BEAST.rigClips = {};
     for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
     BEAST.neonClips = BEAST.rigClips.neon;
-    BEAST.ready = true;
-  }).catch(e => { BEAST.failed = true; console.log('No se pudieron cargar los monstruos:', e && e.message); });
+    BEAST.ready = true; animNote();
+  }).catch(e => { BEAST.failed = true; animNote(); console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
 /* ---------- Las mismas animaciones, en los humanoides de neón y en los robots ---------- */
 // Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
@@ -71,7 +78,7 @@ function bakeRigClips(U, M) {
   const down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4(), I = new Q4();
   for (const clip of U.animations) {
     const act = mx.clipAction(clip); act.play();
-    const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [], prev = {};
+    const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [];
     for (let f = 0; f < n; f++) {
       const t = Math.min(clip.duration, f / 30); act.time = t; mx.update(0); S.updateMatrixWorld(true); times.push(t);
       const W = {}, par = nb => M.parent[nb] ? W[M.parent[nb]] : I;
@@ -80,7 +87,7 @@ function bakeRigClips(U, M) {
       for (const [nb, a, b] of M.foot) { const pw = par(nb); d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
       for (const nb in W) {
         const l = par(nb).clone().invert().multiply(W[nb]);
-        if (prev[nb] && prev[nb].dot(l) < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } prev[nb] = l; // sin saltos de signo
+        if (l.w < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } // siempre con w ≥ 0: las mezclas entre animaciones no se tuercen (la interpolación ya va por el camino corto)
         (Q[nb] = Q[nb] || []).push(l.x, l.y, l.z, l.w);
       }
       if (hip0) { const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, hip0 + pv.y * k, pv.z * k); }

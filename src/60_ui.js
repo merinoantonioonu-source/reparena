@@ -131,6 +131,15 @@ function hideMenu(keepAnchor) {
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+// Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
+const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
+function wrapLines(text, maxPx) {
+  if (!_wrapCtx) _wrapCtx = mkCanvas(8).getContext('2d'); const c = _wrapCtx; c.font = TXT_FONT;
+  if (c.measureText(text).width <= maxPx) return [text];
+  const lines = []; let cur = '';
+  for (const w of String(text).split(' ')) { const t = cur ? cur + ' ' + w : w; if (cur && c.measureText(t).width > maxPx) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur); return lines;
+}
 function openMenu(rows, opts = {}) {
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
@@ -139,7 +148,8 @@ function openMenu(rows, opts = {}) {
   if (recent) menuAnchor = lastAnchor;
   else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
   POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
-  const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
+  const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
+  const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
   const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
@@ -154,7 +164,11 @@ function openMenu(rows, opts = {}) {
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
     if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
-    else if (r.t === 'text') { c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+    else if (r.t === 'text') {
+      c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
+      else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+    }
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined }), x + w / 2, cy); x += w + GAP; });

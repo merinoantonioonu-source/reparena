@@ -69,7 +69,7 @@ async function spRefresh() {
   if (!spConnected()) return;
   SP.lastRef = Date.now();
   try { SP.st = await spApi('GET', '/me/player'); SP.err = ''; } catch (e) { SP.err = spErrText(e); }
-  spMenuSync(); spPage();
+  spMenuSync(); spPage(); spAutoTempo();
 }
 async function spDo(fn) {
   if (SP.busy || !spConnected()) return; SP.busy = true;
@@ -93,6 +93,7 @@ function spPlayerInit() {
     p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
     p.addListener('initialization_error', () => fail('Este navegador no puede reproducir Spotify: sonará en otro reproductor tuyo'));
     p.addListener('playback_error', () => {});
+    p.addListener('player_state_changed', s => { if (s && SP.st && spHereNow()) { SP.st.is_playing = !s.paused; } if (s && s.track_window && s.track_window.current_track && s.track_window.current_track.id !== SP.tempoId) SP.pollT = Math.min(SP.pollT, 0.5); });
     SPP.player = p; p.connect();
   };
   const sc = document.createElement('script'); sc.src = 'https://sdk.scdn.co/spotify-player.js'; sc.async = true;
@@ -162,14 +163,44 @@ function spVol(d) {
   clearTimeout(SP.volTimer);
   SP.volTimer = setTimeout(() => { spApi('PUT', '/me/player/volume?volume_percent=' + SP.vol).catch(e => { SP.err = spErrText(e); spMenuSync(); }); }, 250);
 }
-// Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
-// 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
+// Ritmo de la canción que suena. Spotify dejó de dar el análisis de audio a las apps nuevas (finales de 2024): se le
+// pregunta por si acaso y, si no, a Deezer, que da el tempo de muchísimas canciones (buscándola por su código ISRC o
+// por artista y título). Sin el instante de los pulsos, se cuentan desde el principio de la canción (casi siempre
+// empieza en un pulso); «Encajar el pulso» lo afina. Devuelve null si nadie lo sabe
 async function spTempo() {
   const st = await spApi('GET', '/me/player'), it = st && st.item; if (!it || !it.id) throw new Error('NO_DEVICE');
   const start = performance.now() / 1000 - (st.progress_ms || 0) / 1000;
-  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : null }; } catch (e) { /* sin permiso */ }
-  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: null }; } catch (e) { /* sin permiso */ }
-  return null;
+  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : start, id: it.id }; } catch (e) { /* sin permiso */ }
+  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: start, id: it.id }; } catch (e) { /* sin permiso */ }
+  const bpm = await dzTempo(it); return bpm ? { bpm, beat0: start, id: it.id } : null;
+}
+// Deezer responde sin permisos y por JSONP (su API no deja leerla con fetch desde otra web)
+function jsonp(url, ms = 6000) {
+  return new Promise((res, rej) => {
+    if (typeof document === 'undefined' || !document.createElement) { rej(new Error('NO_DOM')); return; }
+    const cb = '__rajp' + Math.random().toString(36).slice(2), s = document.createElement('script');
+    const done = (v, e) => { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); if (e) rej(e); else res(v); };
+    const t = setTimeout(() => done(null, new Error('TIMEOUT')), ms);
+    window[cb] = v => done(v); s.onerror = () => done(null, new Error('NET'));
+    s.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb; (document.head || document.body).appendChild(s);
+  });
+}
+async function dzTempo(it) {
+  const bpmOf = async id => { const t = await jsonp('https://api.deezer.com/track/' + id); return t && t.bpm > 40 ? t.bpm : 0; };
+  const isrc = it.external_ids && it.external_ids.isrc;
+  if (isrc) try { const b = await bpmOf('isrc:' + encodeURIComponent(isrc)); if (b) return b; } catch (e) { /* no está */ }
+  const artist = it.artists && it.artists[0] ? it.artists[0].name : '';
+  try {
+    const r = await jsonp('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(`artist:"${artist}" track:"${it.name}"`));
+    for (const x of (r && r.data) || []) { const b = await bpmOf(x.id); if (b) return b; }
+  } catch (e) { /* sin conexión */ }
+  return 0;
+}
+// «Ritmo de Spotify» activado: al cambiar de canción, el ritmo cambia solo
+function spAutoTempo() {
+  const it = SP.st && SP.st.item; if (!SP.cfg.autoBpm || !it || !it.id || it.id === SP.tempoId || SP.tempoBusy) return;
+  SP.tempoId = it.id; SP.tempoBusy = true;
+  spotifyTempo().then(m => { if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(m, '#ffd166', 2.5); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); }).finally(() => { SP.tempoBusy = false; });
 }
 function spNowText() {
   if (!spConnected()) return '';
@@ -192,9 +223,12 @@ function musicRows() {
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
+// Con el menú de música abierto, se pregunta a Spotify cada 5 s; si no, cada 8 s (para callar el ambiente mientras
+// suena y para seguir el ritmo de cada canción)
 function spTick(dt) {
-  if (!spConnected() || !menu || menu.music === null) return;
-  SP.pollT -= dt; if (SP.pollT <= 0) { SP.pollT = 5; spRefresh(); }
+  const on = spConnected() && spPlaying(); if (on !== AUDM.music) { AUDM.music = on; applyVolume(); }
+  if (!spConnected()) return;
+  SP.pollT -= dt; if (SP.pollT <= 0) { SP.pollT = menu && menu.music !== null ? 5 : 8; spRefresh(); }
 }
 
 /* ---------- Sección de la página ---------- */

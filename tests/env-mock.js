@@ -31,7 +31,7 @@ const document = {
   fonts: { ready: Promise.resolve() }
 };
 // ---------- Web Audio ----------
-function param(v = 0) { return { value: v, setValueAtTime(x, t) { if (!isFinite(x) || !isFinite(t)) throw new Error('bad setValueAtTime'); this.value = x; return this; }, exponentialRampToValueAtTime(x, t) { if (!(x > 0) || !isFinite(t)) throw new Error('bad exp ramp value ' + x); return this; }, linearRampToValueAtTime(x, t) { if (!isFinite(x) || !isFinite(t)) throw new Error('bad lin ramp'); return this; }, setTargetAtTime(x, t, c) { if (!isFinite(x)) throw new Error('bad target'); return this; } }; }
+function param(v = 0) { return { value: v, setValueAtTime(x, t) { if (!isFinite(x) || !isFinite(t)) throw new Error('bad setValueAtTime'); this.value = x; return this; }, exponentialRampToValueAtTime(x, t) { if (!(x > 0) || !isFinite(t)) throw new Error('bad exp ramp value ' + x); return this; }, linearRampToValueAtTime(x, t) { if (!isFinite(x) || !isFinite(t)) throw new Error('bad lin ramp'); return this; }, setTargetAtTime(x, t, c) { if (!isFinite(x)) throw new Error('bad target'); this.value = x; return this; } }; }
 let audioNodes = 0;
 function node(extra = {}) { audioNodes++; return Object.assign({ connect(d) { if (!d) throw new Error('connect to undefined'); return d; }, disconnect() {} }, extra); }
 class AudioContext {

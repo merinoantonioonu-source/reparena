@@ -34,7 +34,7 @@ global.fetch = async (url, opts = {}) => {
   if (!/^Bearer tok\d+$/.test(opts.headers.Authorization)) return res(401, { error: { status: 401, message: 'The access token expired' } });
   const path = url.slice('https://api.spotify.com/v1'.length);
   if (method === 'PUT' && path === '/me/player') { const b = JSON.parse(opts.body); SPOT.device = b.device_ids[0]; SPOT.playing = !!b.play; return res(204); }
-  if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: SPOT.device || 'phone', name: SPOT.device === 'quest-sdk' ? 'RepArena (Quest)' : 'Móvil', volume_percent: SPOT.vol, supports_volume: true }, item: { name: SPOT.track, artists: [{ name: 'Survivor' }] } });
+  if (method === 'GET' && path === '/me/player') return SPOT.noDevice ? res(204) : res(200, { is_playing: SPOT.playing, device: { id: SPOT.device || 'phone', name: SPOT.device === 'quest-sdk' ? 'RepArena (Quest)' : 'Móvil', volume_percent: SPOT.vol, supports_volume: true }, item: { id: 'id-' + SPOT.track, name: SPOT.track, artists: [{ name: 'Survivor' }], external_ids: { isrc: 'USSM18200001' } } });
   if (method === 'GET' && path === '/me/player/devices') return res(200, { devices: SPOT.noDevice ? [] : [{ id: 'quest', is_active: true }] });
   if (method === 'PUT' && path === '/me/player/pause') { SPOT.playing = false; return res(204); }
   if (method === 'PUT' && path.startsWith('/me/player/play')) { SPOT.playing = true; SPOT.playBody = opts.body ? JSON.parse(opts.body) : null; SPOT.playPath = path; return res(204); }
@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spNowText, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, SHARDS, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, SHARDS, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -213,27 +213,43 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen humanoides de neón, sin errores
   { const kinds = new Set();
-    await runConfig('monstruos sin modelos → neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 0, beasts: 100 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
+    await runConfig('monstruos sin modelos → neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 0, beasts: 100, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
       s => [...kinds].some(k => k !== 'neon' && k !== 'neonboss') ? `sin los modelos deberían salir de neón (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
   // humanoides de neón: salen por las compuertas, se les derriba (estallan en esquirlas) y, si llegan, avisan y golpean
   const neo = { n: 0, boss: false, robot: false, shards: 0, states: new Set(), cols: new Set() };
-  await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100 }, t => {
+  await runConfig('Combate humanoides de neón', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0 }, t => {
     squatSim(2.6)(t); neo.shards = Math.max(neo.shards, RA.SHARDS.live.length);
     RA.enemies.forEach(e => { if (e.kind === 'neon') { neo.n++; neo.cols.add(e.pal.glow); } else if (e.kind === 'neonboss') neo.boss = true; else if (e.type === 'robot') neo.robot = true; });
   }, 420, s => !neo.n ? 'no sale ningún humanoide de neón' : s.kills < 4 ? `a los de neón no se les derriba (${s.kills})` : neo.robot ? 'con 100 % de neón sale algún robot' : !neo.boss ? 'con 100 % de neón el jefe no es de neón' : neo.shards < 20 ? 'los de neón no estallan en esquirlas' : '');
-  await runConfig('neón que llega y golpea', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, walkTime: 4 }, t => {
+  await runConfig('neón que llega y golpea', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0, walkTime: 4 }, t => {
     RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'neon') neo.states.add(e.state); });
   }, 30, s => s.taken < 1 ? 'los de neón no atacan' : !['windup', 'strike', 'knock'].every(k => neo.states.has(k)) ? `al de neón le falta parte del ataque (${[...neo.states]})` : '', true);
   log(`neon: spawned frames ${neo.n} · colors ${neo.cols.size} · max shards ${neo.shards} · boss ${neo.boss}`);
   // hombres-cocodrilo: salen por las compuertas, se les derriba como a los robots y, si los dejas llegar, muerden
   const croc = { n: 0, boss: false, robot: false };
-  await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100 }, t => {
+  await runConfig('Combate hombres-cocodrilo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, neons: 0, beasts: 0, robotsW: 0 }, t => {
     squatSim(2.6)(t); RA.enemies.forEach(e => { if (e.kind === 'lizard') croc.n++; else if (e.kind === 'crocboss') croc.boss = true; else if (e.type === 'robot') croc.robot = true; });
   }, 420, s => !croc.n ? 'no sale ningún hombre-cocodrilo' : s.kills < 4 ? `a los cocodrilos no se les derriba (${s.kills})` : croc.robot ? 'con 100 % de cocodrilos sale algún robot' : !croc.boss ? 'con 100 % de cocodrilos el jefe no es un cocodrilo' : '');
   const bites = { taken: 0, states: new Set() };
-  await runConfig('cocodrilos que llegan y muerden', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, walkTime: 4 }, t => {
+  await runConfig('cocodrilos que llegan y muerden', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 100, neons: 0, beasts: 0, robotsW: 0, walkTime: 4 }, t => {
     RA.PV.crouch = false; RA.enemies.forEach(e => { if (e.kind === 'lizard') bites.states.add(e.state); });
   }, 30, s => s.taken < 1 ? 'los cocodrilos no atacan' : !['windup', 'strike', 'knock'].every(k => bites.states.has(k)) ? `al cocodrilo le falta parte del ataque (${[...bites.states]})` : '', true);
+  // cada enemigo: rapidez y forma de moverse. Más rápidos no llegan antes (lo gastan en zigzag); con esquivas se apartan de golpe
+  { const runMove = async (name, pace, move) => { const R = { arrive: [], vmax: 0, lat: 0, dodges: 0 }, born = new Map(), seen = new Set();
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', crocs: 0, neons: 100, beasts: 0, robotsW: 0, walkTime: 8, maxAlive: 2, pace_neon: pace, move_neon: move }, t => {
+        RA.PV.crouch = false;
+        for (const e of RA.enemies) { if (!e.alive || e.kind !== 'neon') continue; if (!born.has(e)) born.set(e, t); if (e.out) R.vmax = Math.max(R.vmax, e.vel.length()); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
+          if (e.state === 'windup' && !e._arr) { e._arr = 1; R.arrive.push(t - born.get(e)); } }
+      }, 40, s => '', true);
+      R.arrive.sort((a, b) => a - b); R.med = R.arrive[R.arrive.length >> 1] || 0; return R; };
+    if (!process.env.ONLY || /neón|zigzag|esquivas/.test(process.env.ONLY)) {
+    const A = await runMove('neón recto a su ritmo', 100, 'straight'), Z = await runMove('neón en zigzag al 200 %', 200, 'zigzag'), D = await runMove('neón con esquivas', 150, 'dodge');
+    log(`movement: straight 100 % arrives ${A.med.toFixed(1)} s (vmax ${A.vmax.toFixed(2)}) · zigzag 200 % arrives ${Z.med.toFixed(1)} s (vmax ${Z.vmax.toFixed(2)}) · dodges seen ${D.dodges}`);
+    if (!A.med || !Z.med || Math.abs(Z.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: con más rapidez no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${Z.med.toFixed(1)} s)`);
+    if (Z.vmax < A.vmax * 1.5) errors.push(`cada enemigo: al 200 % deberían moverse más deprisa (${A.vmax.toFixed(2)} → ${Z.vmax.toFixed(2)} m/s)`);
+    if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
+    }
+    for (const g of ['robot', 'croc', 'neon', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
   const iwMid = new Set();
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
@@ -270,6 +286,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.setSetting('bpm', 0); }
   // Combate: cualquier enemigo con cualquier puntería
   await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
+  // la mirada baja al agacharse y aún no ha vuelto al subir (cuando se dispara): el rayo va igual al robot que mirabas
+  { let crT = -9; await runConfig('Combate mirada que se mueve en la sentadilla', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); if (RA.PV.crouch) crT = t; const e = RA.enemies.find(x => x.alive); if (e) { RA.camera.lookAt(e.center(new THREE.Vector3())); if (t - crT < 0.5) RA.camera.rotateX(-0.42); } }, 420, s => s.kills < 3 ? 'con la mirada moviéndose no se derriban robots' : s.shots > s.hits * 2.5 || s.taken > 4 ? `con la mirada moviéndose en la sentadilla se falla demasiado (${s.hits}/${s.shots}, golpes recibidos ${s.taken})` : ''); } // los fallos que quedan: disparos sin ningún robot a la vista
   RA.camera.rotation.set(0, 0, 0);
   await runConfig('Combate voladores automática', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'squat', flySpeed: 8 }, squatSim(), 420, s => s.kills < 6 ? 'la puntería automática no derriba voladores' : '');
   const MIX = { robots: 0, flyers: 0 };
@@ -448,13 +466,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
   press('Sentadillas'); frame(1);
-  // menú por zonas del cuerpo: todos los ejercicios, y el modo cambia solo al elegir uno de otro
+  // menú por zonas del cuerpo: solo los ejercicios del modo (Combate), agrupados
   RA.setSetting('exSort', 'body'); RA.lobbyMenu(); frame(1);
-  { const lw = exLabels(), want = ['Remo invertido', 'Saltos', 'Curl barra', 'Sent. + press', 'Abdominales'];
-    press('Remo invertido'); frame(1); const m1 = RA.settings.mode; press('Saltos'); frame(1); const m2 = RA.settings.mode; press('Curl barra'); frame(1); const m3 = RA.settings.mode;
-    log('menú por zonas:', want.every(l => lw.includes(l)), '· remo →', m1, '· saltos →', m2, '· curl con barra →', m3);
-    if (!want.every(l => lw.includes(l))) errors.push('el menú por zonas no muestra todas las zonas y ejercicios');
-    if (m1 !== 'bars' || m2 !== 'touch' || m3 !== 'combat') errors.push('al elegir un ejercicio de otro modo en el menú por zonas no cambia el modo'); }
+  { const lw = exLabels(), want = ['Curl barra', 'Sent. + press', 'Flexiones', 'Sentadillas'], not = ['Remo invertido', 'Saltos', 'Abdominales'];
+    press('Curl barra'); frame(1); const m3 = RA.settings.mode;
+    log('menú por zonas:', want.every(l => lw.includes(l)), '· sin los de otros modos:', !not.some(l => lw.includes(l)), '· curl con barra →', m3);
+    if (!want.every(l => lw.includes(l))) errors.push('el menú por zonas no muestra los ejercicios del modo');
+    if (not.some(l => lw.includes(l))) errors.push('el menú por zonas muestra ejercicios de otros modos');
+    if (m3 !== 'combat') errors.push('el menú por zonas cambió el modo'); }
   RA.setSetting('exSort', 'mode'); press('Sentadillas'); frame(1);
   press('Arcos'); frame(1); const aw = exLabels(); log('Arcos offers only squats:', !aw.includes('Flexiones'), RA.settings.exercise);
   if (aw.includes('Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
@@ -534,6 +553,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (P1.streak !== 3 || P1.best !== 4 || P2.streak !== 2 || P2.trainedToday || P3.streak !== 0 || P0.streak !== 0 || P1.week.days !== 5) errors.push('progreso: la racha de días no se cuenta bien');
     if (Math.abs(k - 67.4) > 0.5 || !(kOld > 30 && kOld < 67.4)) errors.push('progreso: la estimación de calorías no cuadra');
     if (!/Hoy: .*kcal.*racha 1 día/.test(RA.progressLine())) errors.push('progreso: el menú no muestra lo de hoy y la racha');
+    // «Hoy», arriba de la página: lo de hoy, frente a ayer y al mejor día, y los últimos 7 días
+    const DS = RA.dayStats([mk(0, 'squat', 300), mk(0, 'pushup', 240), mk(1, 'squat', 900), mk(4, 'lunge', 1500)], now);
+    log(`today panel: today ${DS.today.reps} reps ${DS.today.time} s ${Object.keys(DS.today.ex).join('+')} · yesterday ${DS.yest.reps} · best day ${DS.best.time} s · week ${DS.week.map(w => Math.round(w.v.time / 60)).join(',')}`);
+    if (DS.today.reps !== 20 || DS.today.time !== 540 || DS.yest.reps !== 10 || DS.best.time !== 1500 || DS.week.length !== 7 || DS.week[6].v.time !== 540 || DS.week[2].v.time !== 1500) errors.push('progreso: el panel de «Hoy» no cuenta bien el día, el de ayer, el mejor o la semana');
   }
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
@@ -753,6 +776,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`spotify lists: ${mine.map(l => l.name).join(', ')} · Play with one → ${one} · with two → ${many.length} tracks from ${new Set(many.map(u => u.split(':')[2].split('-')[0])).size} lists`);
     if (one !== 'spotify:playlist:pl1' || many.length !== 6 || new Set(many.map(u => u.split(':')[2].split('-')[0])).size !== 2) errors.push('Spotify: no pone las listas elegidas');
     RA.SP.cfg.lists = []; }
+  // con Spotify sonando, el sonido ambiente se calla del todo; en pausa vuelve
+  { RA.setSetting('ambient', 60); SPOT.playing = true; await RA.spRefresh(); RA.spTick(0.016); const on = RA.AUD.amb.gain.value;
+    SPOT.playing = false; await RA.spRefresh(); RA.spTick(0.016); const off = RA.AUD.amb.gain.value;
+    log('ambient with Spotify playing', on, '· paused', off); if (on !== 0 || Math.abs(off - 0.6) > 1e-6) errors.push('con Spotify sonando el sonido ambiente debería estar a 0 %'); }
+  // ritmo de Spotify: la Web API ya no lo da (404 aquí) y se pregunta a Deezer (JSONP): por ISRC no lo sabe, buscando sí
+  { const urls = []; global.document.head = { appendChild(sc) { const u = sc.src; urls.push(u); const cb = /callback=([^&]+)/.exec(u)[1]; setTimeout(() => global[cb](u.includes('isrc:') ? { bpm: 0 } : u.includes('/search') ? { data: [{ id: 42 }] } : { id: 42, bpm: 128.4 }), 0); } };
+    RA.setSetting('mode', 'touch'); RA.setSetting('exercise', 'squat'); RA.setSetting('bpm', 0); SPOT.playing = true; await RA.spRefresh();
+    RA.startPreview(); frame(2); press('Música'); frame(1); press('Ritmo de Spotify'); await sleep(40); frame(1);
+    log('spotify tempo via deezer:', RA.settings.bpm, 'BPM · auto', RA.SP.cfg.autoBpm, '· asked', urls.map(u => u.replace(/[?&]output.*/, '').replace('https://api.deezer.com', '')).join(' , '));
+    if (RA.settings.bpm !== 128 || !RA.SP.cfg.autoBpm) errors.push('Ritmo de Spotify: no saca el ritmo de la canción (Deezer)');
+    SPOT.track = 'Otra canción'; await RA.spRefresh(); await sleep(40); log('next song: tempo asked again', urls.length > 3);
+    if (urls.length <= 3) errors.push('Ritmo de Spotify: al cambiar de canción no se busca su ritmo');
+    RA.SP.cfg.autoBpm = false; RA.setSetting('bpm', 0); SPOT.playing = false; delete global.document.head; RA.exitAll(); frame(1); }
   SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(20); log('no device:', RA.spNowText());
   if (!/pon algo a sonar/.test(RA.spNowText())) errors.push('Spotify: sin reproductor no avisa');
   SPOT.noDevice = false; RA.exitAll(); frame(1);
@@ -1005,6 +1041,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       } }
       log(`throw XR (${variant}): real-looking flicks from guard → ${fired} of ${tried}`);
       if (fired < tried - 1) errors.push(`lanzar con la mano (${variant}): las sacudidas desde la guardia no salen siempre (${fired} de ${tried})`); }
+    // coger impulso deprisa (la mano atrás, junto a la oreja) y lanzar enseguida: el impulso no cuenta como lanzamiento y
+    // no debe estropear el lanzamiento de verdad, que va al enemigo al que apunta
+    { let fired = 0, tried = 0, right = 0;
+      for (let r = 0; r < 4; r++) { squat(); for (const side of ['left', 'right']) {
+        for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive) && RA.state !== 'end'; i++) frame(1, 16, xrFrame);
+        const e = RA.enemies.find(x => x.alive); if (!e || RA.state === 'end') continue; tried++;
+        const s0 = RA.stats.shots, p0 = e.pending, h0 = e.hp, g = new THREE.Vector3(side === 'left' ? -0.22 : 0.22, XRS.headY - 0.35, -0.3), ear = new THREE.Vector3(side === 'left' ? -0.3 : 0.3, XRS.headY - 0.1, 0.12);
+        for (let k = 0; k < 6; k++) { XRS.hands[side] = g.clone(); frame(1, 16, xrFrame); }
+        for (let k = 1; k <= 6; k++) { XRS.hands[side] = g.clone().lerp(ear, k / 6); frame(1, 16, xrFrame); } // atrás a 3 m/s
+        frame(2, 16, xrFrame);
+        for (let k = 1; k <= 9; k++) { const d = e.center(new THREE.Vector3()).sub(ear).normalize(); XRS.hands[side] = ear.clone().addScaledVector(d, 0.5 * k / 9); frame(1, 16, xrFrame); }
+        frame(10, 16, xrFrame); XRS.hands = rest(); frame(6, 16, xrFrame);
+        if (RA.stats.shots === s0 + 1) fired++; if (e.pending > p0 || e.hp < h0 || !e.alive) right++;
+      } }
+      log(`throw XR (${variant}): fast wind-up then throw → ${fired} of ${tried} fired once, ${right} at the aimed enemy`);
+      if (fired < tried - 1 || right < tried - 1) errors.push(`lanzar con la mano (${variant}): coger impulso deprisa estropea el lanzamiento (${fired}/${right} de ${tried})`); }
     let k = 0; for (let i = 0; i < 30 && RA.state !== 'end'; i++) { squat(); throwAt(k++ % 2 ? 'left' : 'right'); }
     log(`throw XR (${variant}): charges after two reps ${charged} · pinch shots ${pinchShots} · slow push shots ${slowShots} · left ${one}, right ${two}, a third without a rep ${extra} · hand lost mid-throw ${lostShot} · state ${RA.state} reps ${RA.stats.reps} shots ${RA.stats.shots} hits ${RA.stats.hits}`);
     if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);
@@ -1161,8 +1213,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const lookAt = (x, z) => { const dx = x - (XRS.headX || 0), dz = z - (XRS.headZ || 0), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.atan2(-XRS.headY, Math.hypot(dx, dz)), Math.atan2(-dx, -dz), 0, 'YXZ')); XRS.headQ = { x: q.x, y: q.y, z: q.z, w: q.w }; frame(3, 16, xrFrame); };
   press('Colocar a mano'); frame(2, 16, xrFrame); press('Aquí juego'); frame(2, 16, xrFrame);
   lookAt(0, -1.0); press('Colocar aquí'); lookAt(-1.0, -0.4); press('Colocar aquí'); XRS.headQ = null; frame(2, 16, xrFrame);
-  press('Siguiente: trampillas'); lookAt(0.7, -0.8); press('Colocar aquí'); lookAt(-0.7, -0.8); press('Colocar aquí'); lookAt(0, -0.3); press('Colocar aquí'); XRS.headQ = null; frame(2, 16, xrFrame);
-  press('Siguiente: marcador'); press('Sin marcador propio'); frame(60, 16, xrFrame);
+  press('Siguiente: trampillas →'); lookAt(0.7, -0.8); press('Colocar aquí'); lookAt(-0.7, -0.8); press('Colocar aquí'); lookAt(0, -0.3); press('Colocar aquí'); XRS.headQ = null; frame(2, 16, xrFrame);
+  press('Siguiente: marcador →'); press('Sin marcador propio'); frame(60, 16, xrFrame);
   const MP = RA.roomPlan(), mg = RA.gates.filter(g => g.on).map(g => { RA.arena.updateMatrixWorld(); const p = g.g.getWorldPosition(new THREE.Vector3()), r = g.g.rotation.y + RA.arena.rotation.y; return { x: p.x, z: p.z, nx: Math.sin(r), nz: Math.cos(r) }; });
   const stored = JSON.parse(storage.get('reparena3-roomset') || 'null'), eqS = JSON.parse(storage.get('reparena3-equip') || 'null');
   log('manual room:', RA.settings.roomMode, 'gates', mg.map(g => `(${g.x.toFixed(2)}, ${g.z.toFixed(2)}) n(${g.nx.toFixed(2)}, ${g.nz.toFixed(2)})`).join(' '), '· hatches on', RA.hatches.filter(h => h.on).length, '· stored', stored && stored.gates.length, stored && stored.hatches.length, '· spot saved', !!(eqS && eqS.spot && eqS.spot.set), '· anchor', !!RA.EQ.xr.spot.anchor);
@@ -1188,6 +1240,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`drag in placement: prefilled ${n0} gates · aim at gate ${aim0.x.toFixed(2)},${aim0.z.toFixed(2)} vs ${g0.x.toFixed(2)},${g0.z.toFixed(2)} · grabbed ${grabbed} · moved to ${g1.x.toFixed(2)},${g1.z.toFixed(2)} (wall ${g1.wall}) · saved gates ${st && st.gates.length}`);
     if (n0 !== 2 || !grabbed || Math.hypot(g1.x - g0.x, g1.z - g0.z) < 0.5 || !st || st.gates.length !== 2) errors.push('no se puede ajustar la habitación arrastrando lo colocado');
     XRS.noHands = true; XRS.handsAway = false; }
+  // lo fácil: las trampillas y el marcador, solos; el asistente dice en qué paso vas
+  { RA.exitAll(); frame(2, 16, xrFrame); await RA.startXR(true); await sleep(700); frame(60, 16, xrFrame); RA.lobbyMenu(); frame(2, 16, xrFrame);
+    press('Recolocar'); frame(2, 16, xrFrame);
+    press('Aquí juego'); frame(2, 16, xrFrame); lookAt(0, -1.0); press('Colocar aquí'); XRS.headQ = null; frame(2, 16, xrFrame);
+    press('Siguiente: trampillas →'); press('Ponerlas solas'); frame(2, 16, xrFrame); const nh = RA.RPL.hatches.length; press('Junto a las compuertas'); frame(30, 16, xrFrame);
+    const st = JSON.parse(storage.get('reparena3-roomset') || 'null');
+    log(`easy placement: hatches placed by themselves ${nh} · board saved ${!!(st && st.board)} · gates ${st && st.gates.length}`);
+    if (nh !== 4 || !st || !st.board || st.gates.length !== 1) errors.push('colocar a mano: «Ponerlas solas» y «Junto a las compuertas» no colocan las trampillas y el marcador'); }
   XRS.headY = 1.7; RA.exitAll(); frame(2, 16, xrFrame); XRS.room = null; XRS.noHands = false; RA.setSetting('roomMode', 'scan');
   log('\nERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   log('audio nodes created', E.stats().audioNodes);
