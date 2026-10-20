@@ -213,12 +213,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen robots, sin errores
   { const kinds = new Set();
-    await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 100, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
+    await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 30, zombies: 30, dinos: 40, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
       s => [...kinds].some(k => !['scout', 'heavy', 'titan'].includes(k)) ? `sin los modelos deberían salir robots (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
   // cada enemigo: rapidez de gestos y velocidad al desplazarse, por separado; más rápidos no llegan antes (lo gastan en
   // zigzag o paradas); con esquivas se apartan de golpe
   { const runMove = async (name, pace, spd, move) => { const R = { arrive: [], vmax: 0, dodges: 0, sp: [], ex: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
-      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 0, robotsW: 100, walkTime: 8, maxAlive: 2, pace_robot: pace, spd_robot: spd, move_robot: move }, t => {
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 0, zombies: 0, dinos: 0, robotsW: 100, walkTime: 8, maxAlive: 2, pace_robot: pace, spd_robot: spd, move_robot: move }, t => {
         RA.PV.crouch = false;
         for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot' || e.K.boss) continue; if (!born.has(e)) born.set(e, t);
           if (e.state === 'walk' && !e.charged && e.spd > 0.15) (e.out ? R.sp : R.ex).push(e.spd); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
@@ -238,7 +238,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: más deprisa no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
       if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
-    for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('robotsW', 50); RA.setSetting('beasts', 50); }
+    for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('robotsW', 50); RA.setSetting('beasts', 50); RA.setSetting('zombies', 50); RA.setSetting('dinos', 50); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
   const iwMid = new Set();
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
