@@ -75,6 +75,44 @@ button{font:inherit;cursor:pointer}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
+.today{position:relative;border:1px solid var(--line);border-radius:20px;padding:20px;background:radial-gradient(120% 140% at 0% 0%,rgba(60,240,198,.14),transparent 55%),radial-gradient(120% 140% at 100% 100%,rgba(255,79,163,.16),transparent 55%),var(--panel);overflow:hidden}
+.todayHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.todayHead h2{margin:0;font-size:1.5rem;background:linear-gradient(90deg,var(--teal),var(--gold),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.todayHead span{color:var(--muted);font-size:.9rem}.todayHead span::first-letter{text-transform:uppercase}
+.todayGrid{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.ring{position:relative;width:150px;height:150px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:12}
+.ring .fill{fill:none;stroke:url(#ringG);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.ring.done .fill{filter:drop-shadow(0 0 6px rgba(60,240,198,.8))}
+.ringTxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringTxt b{font-family:var(--display);font-weight:400;font-size:2.4rem;line-height:1;font-variant-numeric:tabular-nums}
+.ringTxt span{color:var(--muted);font-size:.8rem}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{border-radius:14px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);animation:tileIn .5s both}
+.tile:nth-child(2){animation-delay:.08s}.tile:nth-child(3){animation-delay:.16s}.tile:nth-child(4){animation-delay:.24s}
+.tile b{display:block;font-family:var(--display);font-weight:400;font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{font-size:.82rem;color:var(--fg);opacity:.85}
+.tile em{display:block;font-style:normal;font-size:.75rem;color:var(--muted);margin-top:2px}
+.tile em.up{color:var(--teal)}.tile em.down{color:#ff8a3d}
+.t-reps{background:linear-gradient(135deg,rgba(60,240,198,.22),rgba(60,240,198,.05))}.t-reps b{color:var(--teal)}
+.t-kcal{background:linear-gradient(135deg,rgba(255,138,61,.24),rgba(255,138,61,.05))}.t-kcal b{color:#ff9a52}
+.t-perf{background:linear-gradient(135deg,rgba(255,209,102,.22),rgba(255,209,102,.05))}.t-perf b{color:var(--gold)}
+.t-streak{background:linear-gradient(135deg,rgba(255,79,163,.24),rgba(255,79,163,.05))}.t-streak b{color:var(--pink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font-size:.8rem;padding:3px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.week{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:16px;align-items:end}
+.bar{display:flex;flex-direction:column;align-items:center}
+.bar .col{height:96px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.bar i{display:block;width:70%;max-width:34px;max-height:76px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#8a7dff,#4a3fa8);transition:height .9s cubic-bezier(.2,.8,.2,1)}
+.bar.now i{background:linear-gradient(180deg,var(--teal),var(--pink));box-shadow:0 0 12px rgba(60,240,198,.45)}
+.bar span{font-size:.75rem;line-height:22px;color:var(--muted)}.bar.now span{color:var(--fg);font-weight:700}
+.bar small{font-size:.7rem;color:var(--muted);min-height:1em}
+.goalLine{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,209,102,.6);pointer-events:none}
+.todayMsg{margin:12px 0 0;font-weight:500;color:var(--gold)}
+@keyframes tileIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (max-width:560px){.todayGrid{grid-template-columns:1fr;justify-items:center}.tiles{width:100%}}
+@media (prefers-reduced-motion:reduce){.tile{animation:none}.ring .fill,.bar i{transition:none}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
 .stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .stat b{display:block;font-size:1.3rem}
@@ -120,6 +158,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h1>Rep<span>Arena</span></h1>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
   </header>
+
+  <section class="today" id="todayBox" aria-live="polite"></section>
 
   <section class="enter">
     <div class="actions">
@@ -301,12 +341,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Ahí mismo eliges si los arcos salen con ritmo regular o irregular.</li>
       <li><strong>Plancha lateral:</strong> aguanta con la cadera arriba; cada pocos segundos sale un disparo. En cada descanso, cambia de lado.</li>
       <li><strong>Espadas (Ajustes → Espada, con los mandos):</strong> una o dos, metálica o láser. En Combate contra robots cada sentadilla carga la hoja y derribas a los robots con tajos rápidos; si marcan su golpe, pon la hoja en la marca (agachado si es medio o bajo) para pararlo y contraatacar con el doble de daño. En Toques corta los bloques en la dirección de su flecha. Despeja el espacio y ponte la correa de los mandos.</li>
-      <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción, o, con Spotify conectado, elige «Ritmo de Spotify» y el ritmo seguirá a cada canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
+      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Progreso:</strong> al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso, en Ajustes → Sistema), y abajo, en tu historial, la racha de días seguidos entrenando, el tiempo y las calorías de la semana y del total.</li>
+      <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Sistema), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>

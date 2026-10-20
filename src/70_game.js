@@ -115,6 +115,11 @@ class Robot {
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * this.sc, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
+    // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
+    const grp = K.beast ? 'croc' : K.neon ? 'neon' : K.beast3d ? 'beast' : 'robot';
+    this.pace = clamp((settings['pace_' + grp] || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1);
+    this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
+    Object.assign(this, { zigPh: rand(0, TAU), burstT: rand(0, 1.8), dodge: 0, dodgeDir: 0, dodgeT: rand(2, 4), lastHp: spec.hp, roll: false, rollStart: false });
     // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
     const W = walkT(), D = this.pos.distanceTo(this.slot), T = Math.max(2, W / K.speedF - (W >= 10 ? 1.2 : 0));
     this.chargeD = Math.min(3.2, D * 0.4); this.vRun = clamp(2.2 * D / T, 1.0, 3.2) * (K.heavy ? 0.85 : 1);
@@ -200,7 +205,8 @@ class Robot {
     } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
-      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); } }
+      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); }
+      else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; } // parado esperando: en guardia, no en reposo
     mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
     const a = this.acts[want], loco = !!a && want !== 'Idle_Loop' && /_Loop$/.test(want);
     if (a && atkT >= 0) a.time = atkT;
@@ -253,7 +259,11 @@ class Robot {
         if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; this.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
         if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; this.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
-        wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        wantV = (this.charged ? this.vRun * Math.max(1, 0.8 * this.pace) : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        // rapidez: no llegan antes; lo que les sobra lo gastan de lado a lado (zigzag) o en paradas (a rachas y esquivas)
+        let lat = 0; const free = this.out && !this.charged && d > 1.0 && this.pace > 1.02;
+        if (free && this.style === 'zigzag') { const L = Math.sqrt(this.pace * this.pace - 1), half = clamp(1.1 / (L * wantV + 1e-3), 0.45, 1.6); this.zigPh += dt * Math.PI / half; lat = clamp(Math.sin(this.zigPh) * 2.5, -1, 1) * L * wantV; }
+        else if (free && (this.style === 'bursts' || this.style === 'dodge')) { const C = 1.8; this.burstT = (this.burstT + dt) % C; wantV *= this.burstT < C / this.pace ? this.pace : 0; }
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
         // las compuertas son sólidas: rodea sus pilares y los bloques de los lados (al salir del túnel va recto por el hueco)
@@ -268,7 +278,8 @@ class Robot {
         }
         steer.y = 0; const sl = steer.length(); if (sl > 1e-4) steer.divideScalar(sl);
         if (steer.dot(to) < -0.2) steer.addScaledVector(to, 0.8).normalize(); // nunca da media vuelta por esquivar
-        _rs.copy(steer).multiplyScalar(wantV); this.vel.lerp(_rs, Math.min(1, dt * 4)); // con inercia: arranca y frena como un cuerpo pesado
+        _rs.copy(steer).multiplyScalar(wantV); if (lat) { _rs.x += to.z * lat; _rs.z -= to.x * lat; }
+        this.vel.lerp(_rs, Math.min(1, dt * (4 + 2 * (this.pace - 1)))); // con inercia: arranca y frena como un cuerpo pesado (más vivo cuanto más rápido)
         this.pos.addScaledVector(this.vel, dt);
         faceTo = Math.atan2(this.vel.x, this.vel.z);
         // atascado: casi no avanza aunque quiere
@@ -306,6 +317,8 @@ class Robot {
         break;
       }
     }
+    this.dodgeStep(dt, faceP);
+    if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
     if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - dt * 5); this.twist *= Math.max(0, 1 - dt * 4); this.lunge *= Math.max(0, 1 - dt * 4); }
     if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - dt * 3);
     if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
@@ -320,7 +333,7 @@ class Robot {
     }
     // de cara hacia donde va y, al acercarse, cada vez más hacia ti
     const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
-    if (faceTo !== null) { const tgt = this.state === 'walk' ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.state === 'walk' ? 5 : 8)); }
+    if (faceTo !== null) { const tgt = this.state === 'walk' && !this.roll ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.roll ? 14 : this.state === 'walk' ? 5 : 8)); }
     this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
     if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
     const runK = this.spd > this.vWalk * 1.15 ? clamp((this.spd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
@@ -329,6 +342,29 @@ class Robot {
     this.animate(dt, t, this.spd);
     if (this.rig.kind !== 'ripper' && !K.beast && !K.neon && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
+  }
+  // Esquivas: se aparta de golpe hacia un lado (los que tienen las animaciones de la biblioteca y el cuerpo entero, con
+  // una voltereta); de vez en cuando mientras se acerca y, a veces, al recibir un disparo. Nunca contra otro ni contra
+  // una pared ni un pilar
+  dodgeStep(dt, faceP) {
+    const hit = this.hp < this.lastHp; this.lastHp = this.hp;
+    if (this.dodge > 0) {
+      const T = this.roll ? 0.75 : 0.45, k = 1 - this.dodge / T, D = (this.roll ? 1.4 : 0.9) * this.sc, v = D * Math.PI / (2 * T) * Math.sin(Math.PI * clamp(k, 0, 1)); // recorre D metros
+      _rd.set(Math.cos(faceP), 0, -Math.sin(faceP)).multiplyScalar(this.dodgeDir * v * dt); // de lado respecto a ti
+      const nx = this.pos.x + _rd.x, nz = this.pos.z + _rd.z, r = this.radius;
+      const blocked = gateSolids().some(c => Math.hypot(nx - c.x, nz - c.z) < c.r + r) || enemies.some(o => o !== this && o.alive && o.type === 'robot' && Math.hypot(nx - o.pos.x, nz - o.pos.z) < r + o.radius) || roomBlocked(nx, nz, r) || Math.hypot(nx, nz) > arenaDepth() + 1;
+      if (!blocked) { this.pos.x = nx; this.pos.z = nz; } else this.dodge = Math.min(this.dodge, 0.05);
+      this.dodge -= dt; if (this.dodge <= 0) { this.dodge = 0; this.roll = false; this.slotT = 0; }
+      return;
+    }
+    if (this.style !== 'dodge' || this.state !== 'walk' || !this.out || this.charged || state !== 'play') return;
+    this.dodgeT -= dt;
+    if (this.dodgeT <= 0 || (hit && this.hp > 0 && Math.random() < 0.55)) {
+      this.dodgeT = rand(2.5, 4.5) / Math.max(0.7, this.pace);
+      this.roll = !!(this.mx && this.clips && this.clips.Roll && (this.K.neon || this.K.beast3d));
+      this.dodge = this.roll ? 0.75 : 0.45; this.rollStart = true;
+      this.dodgeDir = Math.random() < 0.5 ? -1 : 1; this.dodgeYaw = faceP + this.dodgeDir * Math.PI / 2; // la voltereta, de cara hacia donde va
+    }
   }
   onHit(dmg, perfect, point) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true; }
@@ -449,6 +485,7 @@ class Neon extends Robot {
     if (!this.mat.body.emissive || typeof this.mat.body.emissive.copy !== 'function') this.mat.body.emissive = new THREE.Color(0);
     // con las animaciones de la biblioteca cargadas, se mueven con ellas; si no, con la animación hecha a mano
     if (BEAST.neonClips) { this.clips = BEAST.neonClips; this.mx = new THREE.AnimationMixer(this.inst.root); this.acts = {}; this.cur = null; this.react = 0; this.prevSt = ''; }
+    this.animate(0, 0, 0);
   }
   roar(pos) { SND.neonWarn(pos); }
   // Con animaciones: andar, trotar o correr según la velocidad; amenazar apuntándote; el tajo con la porra (la animación de
@@ -462,12 +499,14 @@ class Neon extends Robot {
       const [t0, t1] = BEAST_PUNCH.Sword_Attack, wind = this.zone ? 1.25 : 0.75;
       atkT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, 0.8, clamp(this.st / 0.5, 0, 1));
       want = 'Sword_Attack'; once = true; fade = 0.1; ts = 0;
-    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    } else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / 0.75; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
+    else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
     else { const v = spd / this.sc;
       if (v > 0.12) { want = v < 2.1 ? 'Walk_Loop' : v < 3.8 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = clamp(v / (want === 'Walk_Loop' ? 1.3 : want === 'Jog_Fwd_Loop' ? 3.0 : 4.8), 0.5, 1.8); }
-      else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } }
+      else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); }
+      else if (this.clips.Sword_Idle) want = 'Sword_Idle'; } // parado esperando: en guardia
     mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
     if (atkT >= 0) this.acts.Sword_Attack.time = atkT;
     this.mx.update(dt);
@@ -476,6 +515,7 @@ class Neon extends Robot {
     this.B.head.quaternion.multiply(_nq.setFromAxisAngle(_up, ly * 0.6)); this.B.hips.rotation.x -= (this.hitT || 0) * 0.6 + (this.stagger || 0) * 0.2;
   }
   animate(dt, t, spd) {
+    if (!this.mat) return; // aún construyéndose (sin colores ni tono): una pose a medias dejaría huesos con NaN, y la animación los arrastraría
     const B = this.B, tn = this.taunt || 0, run = this.run || 0, st = this.state; this.lastU = this.lastU || [0, 0];
     if (spd === true) spd = this.vWalk;
     const amp = clamp(spd / Math.max(0.2, (this.vWalk || 0.5) * 0.7), 0, 1), S = 0.62 * (1 + run * 0.5);
@@ -579,6 +619,7 @@ class Beast extends Robot {
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
     const v = spd / this.sc; // a escala del modelo
     if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
+    else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / 0.75; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop';
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
@@ -586,6 +627,7 @@ class Beast extends Robot {
       want = v < (D.walk + D.jog) / 2 ? 'Walk_Loop' : v < (D.jog + D.run) / 2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop';
       ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), 0.5, 1.8); // los pies no patinan
     } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
+    else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; // o, sin música, en guardia
     this.play(want, fade, once, ts, this.restart); this.restart = false;
     if (punchT >= 0) this.acts[this.atk].time = punchT;
     this.mx.update(dt);
@@ -1035,7 +1077,7 @@ function onRep(opts, side) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
       else gloves[s.key].pulse = 1;
-      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect);
+      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null);
     }
   }
   charged = false; chargePow = 1; chargeOrb.visible = false;
@@ -1496,12 +1538,14 @@ function throwCharge(dmg, perfect) {
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
 }
-// El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados
+// El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados. Cuenta sobre todo hacia qué lado
+// va la mano (en horizontal): la sacudida suele hacer un arco hacia arriba o hacia abajo, y eso no debe cambiar el blanco
+const _ttd = new V3(), _ttv = new V3();
 function throwTarget(o, d) {
-  let best = null, bs = THROW_WIDE * Math.PI / 180;
+  let best = null, bs = THROW_WIDE * Math.PI / 180; _ttd.set(d.x, d.y * 0.4, d.z);
   for (const e of enemies) {
     if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
-    const a = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
+    const a = _ttv.set(v.x, v.y * 0.4, v.z).angleTo(_ttd) - Math.atan(e.radius * 1.3 / dist);
     if (a < bs) { bs = a; best = e; }
   }
   return best;
@@ -1511,10 +1555,15 @@ function throwFire(s, o, d, tg) {
   T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
-// Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí
+// Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí. Llevar
+// la mano atrás para coger impulso no es un lanzamiento: la mano tiene que alejarse de ti (o ir hacia delante), nunca
+// hacia atrás. Si no sale el rayo, el siguiente acelerón (el lanzamiento de verdad) se mide enseguida
 function throwTry(s, o, d) {
-  const T = HTH[s], len = d.length(), tg = len > THROW_D && throwTarget(o, d.normalize());
-  T.burst = false; T.peak = 0; T.cool = 0.2; if (tg) throwFire(s, o.clone(), d.clone(), tg);
+  const T = HTH[s], len = d.length(), fw = d.x * _thf.x + d.z * _thf.z;
+  const away = Math.hypot(T.lastR.x, T.lastR.z) - Math.hypot(T.from.x, T.from.z);
+  const ok = len > THROW_D && fw > -0.05 * len && (away > 0.03 || fw > 0.5 * len), tg = ok && throwTarget(o, d.normalize());
+  T.burst = false; T.peak = 0; if (tg) { T.cool = 0.2; throwFire(s, o.clone(), d.clone(), tg); }
+  T.hist.splice(0, T.hist.length - 1); // el siguiente acelerón se mide desde aquí, no desde antes de coger impulso
 }
 function throwStep(dt, t) {
   const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
@@ -1539,8 +1588,9 @@ function throwStep(dt, t) {
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
     if (!T.burst) {
       if (sp > THROW_V && !T.cool) { // empieza un acelerón: se mide desde la última vez que la mano iba despacio
-        T.burst = true; T.peak = sp; let st = T.hist[0];
-        for (let i = T.hist.length - 1; i >= 0; i--) if (T.hist[i].sp < THROW_SLOW) { st = T.hist[i]; break; }
+        T.burst = true; T.peak = sp; let st = null, mn = T.hist[0]; // si nunca fue despacio, desde donde fue más despacio (el giro tras coger impulso)
+        for (let i = T.hist.length - 1; i >= 0; i--) { if (T.hist[i].sp < THROW_SLOW) { st = T.hist[i]; break; } if (T.hist[i].sp < mn.sp) mn = T.hist[i]; }
+        st = st || mn;
         T.from.copy(st.p);
       }
       continue;
@@ -1552,6 +1602,29 @@ function throwStep(dt, t) {
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
 }
+// Mirada: no se fija el enemigo que cae en el centro en cada instante (al bajar y subir en la sentadilla la cabeza se
+// mueve y la mirada baila), sino al que llevas un momento mirando: cada enemigo suma «atención» mientras cae cerca del
+// centro (más cuanto más centrado) y la va perdiendo en menos de medio segundo; el fijado solo cambia cuando otro le
+// supera con claridad, y el disparo va a él aunque en ese instante la mirada se haya desviado (se suelta si miras lejos
+// de él un par de segundos)
+const GZL = { e: null, att: new Map(), t: 0, d: new V3(0, 0, -1) };
+function gazeLockStep(t, o, d) {
+  const dt = clamp(t - GZL.t, 0, 0.1); GZL.t = t;
+  const cone = Math.max(settings.assist, 5) * Math.PI / 180 * 1.6;
+  for (const [e, a] of GZL.att) { const na = a * Math.exp(-dt / 0.4); if (!e.alive || na < 1e-3) GZL.att.delete(e); else GZL.att.set(e, na); }
+  for (const e of enemies) {
+    if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
+    const ang = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist); if (ang < cone) GZL.att.set(e, (GZL.att.get(e) || 0) + dt * (1 - Math.max(0, ang) / cone));
+  }
+  let best = null, ba = 0; for (const [e, a] of GZL.att) if (a > ba) { ba = a; best = e; }
+  let cur = GZL.e && GZL.e.alive ? GZL.e : null; const ca = cur ? GZL.att.get(cur) || 0 : 0;
+  // mirando lejos del fijado (más de 3 conos) durante 2 s, se suelta; mirar al suelo un momento al bajar no lo suelta
+  if (cur) { const v = cur.center(tmpA).sub(o); GZL.away = v.angleTo(d) > cone * 3 ? (GZL.away || 0) + dt : 0; if (GZL.away > 2) cur = null; }
+  if (!cur) GZL.e = ba > 0.06 ? best : null; else if (best && best !== cur && ba > ca * 1.15 + 0.03) GZL.e = best; else GZL.e = cur;
+  GZL.d.lerp(d, Math.min(1, dt * 10)).normalize(); // el punto de la mirada, sin temblores
+  return GZL.e;
+}
+const gazeLock = () => GZL.e && GZL.e.alive ? GZL.e : null;
 function updateAim(t) {
   // lanzando con la mano no hay láser (el gesto apunta); con espada tampoco ni diana: se corta de cerca
   const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)) && !(swordActive() && !pistolOn());
@@ -1560,11 +1633,11 @@ function updateAim(t) {
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
+    const e = s.key === 'gaze' ? gazeLockStep(t, s.o, s.d) : findLock(s.o, s.d), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
       l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
-    } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(s.d, 3); }
+    } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(GZL.d, 3); }
     if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
     else ring.visible = false;
   }
@@ -1592,7 +1665,7 @@ function gunFire(src) {
   if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
   const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
   if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
-  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
+  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect, src.key === 'gaze' ? gazeLock() : null);
 }
 // Modelo del bláster: el origen es donde la mano agarra el mando; la empuñadura gruesa envuelve el mango del
 // mando y el cuerpo tapa su cabeza, así que en realidad mixta casi no se ve el mando. Apunta por -Z.
@@ -1646,26 +1719,34 @@ function buildWave(i) {
   if (mode === 'arcs') {
     const lo = Math.min(settings.arcMin, settings.arcMax) / 100, hi = Math.max(settings.arcMin, settings.arcMax) / 100;
     for (let n = 0; n < total; n++) {
-      const tilt = Math.random() * 100 < settings.arcTilt ? (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180 : 0;
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
+      const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
+    // los inclinados, repartidos entre los dos lados en la proporción pedida (exacta, no al azar: si no, en una oleada
+    // corta un lado puede salir muchas más veces), y en orden barajado
+    const tl = list.filter(s => s.tilt), nR = Math.round(tl.length * settings.arcRight / 100), sides = tl.map((_, k) => k < nR ? 1 : -1);
+    for (let k = sides.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [sides[k], sides[j]] = [sides[j], sides[k]]; }
+    tl.forEach((s, k) => { s.tilt = sides[k] * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180; });
     return list;
   }
   if (twoShots()) total *= 2;
   let boss = null;
   const F = foes();
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() ? 'titan' : settings.crocs >= 100 ? 'crocboss' : settings.neons >= 100 ? 'neonboss' : settings.beasts >= 100 ? (BEAST.ready ? 'impboss' : 'neonboss') : 'titan') : 'carrier', hp: b }; total -= b; }
-  let k = 0, gnd = 0;
+  // los que vienen andando: cada clase en proporción a «cuántos salen» (Ajustes → Cada enemigo), bien repartidos; si solo
+  // sale una clase, el jefe es de esa clase
+  const GW = isTiny() ? { robot: 1 } : { lizard: settings.crocs, neon: settings.neons, beast: settings.beasts, robot: settings.robotsW };
+  const gsum = Object.values(GW).reduce((a, b) => a + b, 0) || (GW.robot = 1), only = Object.keys(GW).filter(k => GW[k] > 0), acc = {};
+  for (const k in GW) acc[k] = Math.random() * 0.5;
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { lizard: 'crocboss', neon: 'neonboss', beast: BEAST.ready ? 'impboss' : 'neonboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
+  let k = 0;
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
-      // hombres-cocodrilo y humanoides de neón: repartidos entre los de tierra según sus porcentajes (el cocodrilo, primero)
-      const cr = isTiny() ? 0 : settings.crocs / 100, nr = isTiny() ? 0 : Math.min(settings.neons / 100, 1 - cr), br = isTiny() ? 0 : Math.min(settings.beasts / 100, 1 - cr - nr); gnd++;
-      const turn = (r, a) => Math.floor(gnd * r + a) > Math.floor((gnd - 1) * r + a);
-      if (turn(cr, 0.5)) { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
-      else if (turn(nr, 0.25)) { kind = 'neon'; hp = 2 + Math.floor(i / 4); }
-      else if (turn(br, 0.1)) { kind = !BEAST.ready ? 'neon' : Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); } // sin los modelos, de neón
+      let g = 'robot', top = -1; for (const kk in GW) { acc[kk] += GW[kk] / (gsum || 1); if (acc[kk] > top) { top = acc[kk]; g = kk; } } acc[g] -= 1;
+      if (g === 'lizard') { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
+      else if (g === 'neon') { kind = 'neon'; hp = 2 + Math.floor(i / 4); }
+      else if (g === 'beast') { kind = !BEAST.ready ? 'neon' : Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); } // sin los modelos, de neón
       else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
@@ -1724,11 +1805,11 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-// Los ejercicios, de cuatro en cuatro por fila (de tres si son muchos, para que se lean): los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
+// Los ejercicios del modo, de cuatro en cuatro por fila (de tres si son muchos, para que se lean), en lista o por zona del cuerpo
 function exerciseRows(back) {
   const pick = v => { setSetting('exercise', v); back(); }, rows = [];
   const add = (label, list) => { const per = list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
-  if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x]));
+  if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x] && exOk(settings.mode, x)));
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
 }
@@ -1791,6 +1872,7 @@ function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
+  if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });

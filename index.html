@@ -75,6 +75,44 @@ button{font:inherit;cursor:pointer}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
+.today{position:relative;border:1px solid var(--line);border-radius:20px;padding:20px;background:radial-gradient(120% 140% at 0% 0%,rgba(60,240,198,.14),transparent 55%),radial-gradient(120% 140% at 100% 100%,rgba(255,79,163,.16),transparent 55%),var(--panel);overflow:hidden}
+.todayHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.todayHead h2{margin:0;font-size:1.5rem;background:linear-gradient(90deg,var(--teal),var(--gold),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.todayHead span{color:var(--muted);font-size:.9rem}.todayHead span::first-letter{text-transform:uppercase}
+.todayGrid{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.ring{position:relative;width:150px;height:150px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:12}
+.ring .fill{fill:none;stroke:url(#ringG);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.ring.done .fill{filter:drop-shadow(0 0 6px rgba(60,240,198,.8))}
+.ringTxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringTxt b{font-family:var(--display);font-weight:400;font-size:2.4rem;line-height:1;font-variant-numeric:tabular-nums}
+.ringTxt span{color:var(--muted);font-size:.8rem}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{border-radius:14px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);animation:tileIn .5s both}
+.tile:nth-child(2){animation-delay:.08s}.tile:nth-child(3){animation-delay:.16s}.tile:nth-child(4){animation-delay:.24s}
+.tile b{display:block;font-family:var(--display);font-weight:400;font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{font-size:.82rem;color:var(--fg);opacity:.85}
+.tile em{display:block;font-style:normal;font-size:.75rem;color:var(--muted);margin-top:2px}
+.tile em.up{color:var(--teal)}.tile em.down{color:#ff8a3d}
+.t-reps{background:linear-gradient(135deg,rgba(60,240,198,.22),rgba(60,240,198,.05))}.t-reps b{color:var(--teal)}
+.t-kcal{background:linear-gradient(135deg,rgba(255,138,61,.24),rgba(255,138,61,.05))}.t-kcal b{color:#ff9a52}
+.t-perf{background:linear-gradient(135deg,rgba(255,209,102,.22),rgba(255,209,102,.05))}.t-perf b{color:var(--gold)}
+.t-streak{background:linear-gradient(135deg,rgba(255,79,163,.24),rgba(255,79,163,.05))}.t-streak b{color:var(--pink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font-size:.8rem;padding:3px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.week{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:16px;align-items:end}
+.bar{display:flex;flex-direction:column;align-items:center}
+.bar .col{height:96px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.bar i{display:block;width:70%;max-width:34px;max-height:76px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#8a7dff,#4a3fa8);transition:height .9s cubic-bezier(.2,.8,.2,1)}
+.bar.now i{background:linear-gradient(180deg,var(--teal),var(--pink));box-shadow:0 0 12px rgba(60,240,198,.45)}
+.bar span{font-size:.75rem;line-height:22px;color:var(--muted)}.bar.now span{color:var(--fg);font-weight:700}
+.bar small{font-size:.7rem;color:var(--muted);min-height:1em}
+.goalLine{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,209,102,.6);pointer-events:none}
+.todayMsg{margin:12px 0 0;font-weight:500;color:var(--gold)}
+@keyframes tileIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (max-width:560px){.todayGrid{grid-template-columns:1fr;justify-items:center}.tiles{width:100%}}
+@media (prefers-reduced-motion:reduce){.tile{animation:none}.ring .fill,.bar i{transition:none}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
 .stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .stat b{display:block;font-size:1.3rem}
@@ -120,6 +158,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h1>Rep<span>Arena</span></h1>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
   </header>
+
+  <section class="today" id="todayBox" aria-live="polite"></section>
 
   <section class="enter">
     <div class="actions">
@@ -301,12 +341,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Ahí mismo eliges si los arcos salen con ritmo regular o irregular.</li>
       <li><strong>Plancha lateral:</strong> aguanta con la cadera arriba; cada pocos segundos sale un disparo. En cada descanso, cambia de lado.</li>
       <li><strong>Espadas (Ajustes → Espada, con los mandos):</strong> una o dos, metálica o láser. En Combate contra robots cada sentadilla carga la hoja y derribas a los robots con tajos rápidos; si marcan su golpe, pon la hoja en la marca (agachado si es medio o bajo) para pararlo y contraatacar con el doble de daño. En Toques corta los bloques en la dirección de su flecha. Despeja el espacio y ponte la correa de los mandos.</li>
-      <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción, o, con Spotify conectado, elige «Ritmo de Spotify» y el ritmo seguirá a cada canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
-      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b>: el sitio de juego, las compuertas, las trampillas y el marcador, mirando al suelo y pulsando «Colocar aquí» (o pellizcando). Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
+      <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Ajustes → Sistema → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Progreso:</strong> al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso, en Ajustes → Sistema), y abajo, en tu historial, la racha de días seguidos entrenando, el tiempo y las calorías de la semana y del total.</li>
+      <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Sistema), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -349,7 +389,7 @@ const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones',
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Sistema' };
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
@@ -405,9 +445,18 @@ const SCHEMA = [
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
-  { key: 'crocs', g: 'enemigos', label: 'Hombres-cocodrilo entre los robots', short: 'Cocodrilos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son hombres-cocodrilo: van encorvados a cuatro patas, rugen con las fauces abiertas y, al atacar, se yerguen con los brazos abiertos y se lanzan a morderte. 100 % = solo cocodrilos, y el jefe es un cocodrilo gigante.' },
-  { key: 'neons', g: 'enemigos', label: 'Humanoides de neón entre los robots', short: 'Neón', type: 'num', min: 0, max: 100, step: 5, def: 30, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son humanoides de neón (estilo Pistol Whip): maniquíes facetados con franjas de luz que laten con el ritmo, una porra de energía, que se materializan al salir y estallan en esquirlas. 100 % = solo neón (y el jefe también).' },
-  { key: 'beasts', g: 'enemigos', label: 'Monstruos (Imp y Puglin) entre los robots', short: 'Monstruos', type: 'num', min: 0, max: 100, step: 5, def: 30, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'Qué parte de los enemigos que vienen andando son monstruos animados de Quaternius: Imp, un diablillo, y Puglin, más pequeño y rápido, cada uno con tres colores. Andan, trotan o corren según su velocidad, te provocan, te golpean, se doblan al recibir y caen al morir. Si los modelos no se pueden cargar, salen humanoides de neón. 100 % = solo monstruos (y el jefe, un Imp gigante).' },
+  { key: 'robotsW', g: 'cada', label: 'Robots: cuántos salen', short: 'Robots', type: 'num', min: 0, max: 100, step: 5, def: 15, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, robots metálicos: el pequeño, ágil, de patas de ave, y el grande, con garra y cañón (el jefe, un coloso). Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_robot', g: 'cada', label: 'Robots: rapidez de movimientos', short: 'Rapidez robots', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_robot', g: 'cada', label: 'Robots: forma de moverse', short: 'Movim. robots', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'crocs', g: 'cada', label: 'Hombres-cocodrilo: cuántos salen', short: 'Cocodrilos', type: 'num', min: 0, max: 100, step: 5, def: 25, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, bípedos encorvados a cuatro patas que te muerden la cara. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_croc', g: 'cada', label: 'Hombres-cocodrilo: rapidez de movimientos', short: 'Rapidez cocodrilos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.crocs > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_croc', g: 'cada', label: 'Hombres-cocodrilo: forma de moverse', short: 'Movim. cocodrilos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.crocs > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'neons', g: 'cada', label: 'Humanoides de neón: cuántos salen', short: 'Neón', type: 'num', min: 0, max: 100, step: 5, def: 30, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, maniquíes de luces estilo Pistol Whip con porra de energía. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_neon', g: 'cada', label: 'Humanoides de neón: rapidez de movimientos', short: 'Rapidez neón', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.neons > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_neon', g: 'cada', label: 'Humanoides de neón: forma de moverse', short: 'Movim. neón', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.neons > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
+  { key: 'beasts', g: 'cada', label: 'Monstruos (Imp y Puglin): cuántos salen', short: 'Monstruos', type: 'num', min: 0, max: 100, step: 5, def: 30, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, monstruos animados de Quaternius; si no cargan, salen de neón. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
+  { key: 'pace_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): rapidez de movimientos', short: 'Rapidez monstruos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Lo deprisa que se mueven. No cambia cuánto tardan en llegar («Tiempo llegada»): lo que les sobra lo gastan en zigzags, paradas y esquivas.' },
+  { key: 'move_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): forma de moverse', short: 'Movim. monstruos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho a su ritmo. Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (rueda, si puede) cuando le das o cuando le toca.' },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['combat'], cond: () => foesHas('flyers'), hint: 'En flexiones los bichos van a escala, unas 4 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('flyers') },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['combat'], hint: 'Bájalo si el juego va a tirones.' },
@@ -416,6 +465,8 @@ const SCHEMA = [
   { key: 'tchWindow', g: 'toques', label: 'Tiempo para tocarlos', short: 'Para tocar', type: 'num', min: 0.4, max: 3, step: 0.1, def: 1.2, unit: 's', modes: ['touch'], hint: 'Lo que esperan quietos delante de ti antes de pasar de largo.' },
   { key: 'tchGap', g: 'toques', label: 'Separación entre objetivos', short: 'Separación', type: 'num', min: 0.8, max: 6, step: 0.1, def: 2.4, unit: 's', modes: ['touch'], hint: 'Con ritmo (BPM), se redondea a pulsos enteros.' },
   { key: 'tchHands', g: 'toques', label: 'Diamantes para las manos', short: 'Diamantes', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['touch'], noEx: ['combo', 'pushup'], hint: 'Parte de los objetivos que se tocan con la mano (diamantes: azul la izquierda, naranja la derecha). El resto son amebas para la cabeza.' },
+  { key: 'tchPushLo', g: 'toques', label: 'Flexiones: altura mínima de las amebas', short: 'Ameba más baja', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más cerca del suelo que puede llegar una ameba (altura de su centro sobre el suelo). 0 = según la «Bajada en la flexión».' },
+  { key: 'tchPushHi', g: 'toques', label: 'Flexiones: altura máxima de las amebas', short: 'Ameba más alta', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más alto que puede llegar una ameba. Siempre queda algo por debajo de tu cabeza en plancha, para que haya que bajar. 0 = según la «Bajada en la flexión».' },
   { key: 'tchRing', g: 'toques', label: 'Tamaño del hueco de las amebas', short: 'Amebas', type: 'num', min: 8, max: 30, step: 1, def: 15, unit: 'cm', modes: ['touch'], hint: 'Radio del hueco por el que pasa la cabeza (en flexiones, algo menos).' },
   { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch', 'arcs'], cond: () => settings.mode === 'arcs' ? settings.arcJump > 0 : ['jump', 'combo'].includes(settings.exercise) && (settings.exercise !== 'combo' || settings.comboBase === 'stand'), hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie (en Arcos, al pasar la valla).' },
   { key: 'abMin', g: 'toques', label: 'Tronco elevado: mínimo', short: 'Ángulo mín.', type: 'num', min: 10, max: 70, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Ángulo del tronco con el suelo al que llegan los aros más bajos.' },
@@ -447,6 +498,7 @@ const SCHEMA = [
   { key: 'arcTiming', g: 'arcos', label: 'Aparición de los arcos', short: 'Aparición', type: 'choice', opts: [['irregular', 'Irregular'], ['regular', 'Regular']], def: 'irregular', modes: ['arcs'], hint: 'Irregular: unas veces seguidos y otras con más hueco, sin que puedas cogerle el ritmo (la media no cambia).' },
   { key: 'arcTilt', g: 'arcos', label: 'Arcos con la barra inclinada', short: 'Inclinados', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'La barra baja por un lado: apártate hacia el lado alto flexionando esa pierna y estirando la otra (zancada lateral).' },
   { key: 'arcTiltMax', g: 'arcos', label: 'Inclinación máxima de la barra', short: 'Inclinación', type: 'num', min: 5, max: 35, step: 1, def: 18, unit: '°', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Cuanto más inclinada, más hay que apartarse hacia el lado alto.' },
+  { key: 'arcRight', g: 'arcos', label: 'Inclinados: hacia la derecha', short: 'A la derecha', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'De los arcos inclinados, cuántos hay que esquivar apartándose a la derecha (el resto, a la izquierda). Con el 50 %, los dos lados por igual en cada oleada.' },
   { key: 'arcShift', g: 'arcos', label: 'Desplazamiento lateral en los inclinados', short: 'Desplazamiento', type: 'num', min: 15, max: 70, step: 5, def: 40, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Hasta dónde hay que llevar la cabeza hacia el lado alto para pasar con la bajada normal; en el centro hay que bajar más.' },
   { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
@@ -469,8 +521,9 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'goalMin', g: 'sistema', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
-  { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'Por modo'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: todos los ejercicios agrupados por lo que trabajan; al elegir uno de otro modo, el modo cambia solo.' },
+  { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
   { key: 'roomMode', g: 'sistema', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'sistema', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
   { key: 'roomShow', g: 'sistema', label: 'Ver lo escaneado (para comprobarlo)', short: 'Ver escaneo', type: 'toggle', def: 0, cond: () => settings.roomMode !== 'off', hint: 'Pinta las paredes (verde) y los muebles (naranja) tal como los ha leído el juego, para ver si coinciden con los reales.' },
@@ -571,6 +624,7 @@ const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
+settingHooks.push(k => { if (k === 'goalMin') renderToday(); });
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
 /* =================== FORMULARIO WEB =================== */
@@ -578,7 +632,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3><div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   common.innerHTML = group('sistema');
   host.innerHTML = Object.keys(GROUP_NAMES).filter(g => g !== 'sistema').map(group).join('');
@@ -631,7 +685,8 @@ function syncForm() {
   const m = $(`#mode-${settings.mode}`); if (m) m.checked = true;
   const e = $(`#ex-${settings.exercise}`); if (e) e.checked = true;
   const byBody = settings.exSort === 'body'; sortExCards(byBody);
-  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = byBody || exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
+  Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
+  if (byBody && document.querySelectorAll) document.querySelectorAll('.cards .zone').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.classList.contains('zone')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; }); // zonas sin ejercicios de este modo, fuera
   const st = $('#specTitle'); if (st) st.textContent = `4 · Opciones de ${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`;
   const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
   note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza las amebas y con la mano que piden los diamantes que vienen hacia ti; entre un toque y otro, vuelve a la postura de partida.' }[settings.mode] || '';
@@ -651,6 +706,7 @@ function syncForm() {
     }
   }
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
+  if (typeof animNote === 'function') animNote();
   updateSummary();
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
@@ -720,8 +776,63 @@ function progress(h = store(HIST_KEY) || [], now = Date.now()) {
 }
 const fmtDur = s => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round(s % 3600 / 60)} min` : `${Math.round(s / 60)} min`;
 const daysTxt = n => `${n} ${n === 1 ? 'día' : 'días'}`;
+/* ---------- Hoy: lo primero de la página ---------- */
+// Lo de hoy, grande y animado: un anillo que se llena hacia tu meta diaria, cifras que suben hasta su valor, cómo vas
+// frente a ayer y a tu mejor día, tu racha y los últimos 7 días en barras. Para que apetezca volver y superarse
+const WDAY = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], MONTH = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function dayStats(h, now = Date.now()) {
+  const by = new Map(); for (const r of h) { const k = dayKey(r.date); const d = by.get(k) || { time: 0, kcal: 0, reps: 0, perfect: 0, ex: {} }; d.time += r.time || 0; d.kcal += runKcal(r); d.reps += r.reps || 0; d.perfect += r.perfect || 0; d.ex[r.ex] = (d.ex[r.ex] || 0) + (r.reps || 0); by.set(k, d); }
+  const zero = { time: 0, kcal: 0, reps: 0, perfect: 0, ex: {} }, at = k => by.get(k) || zero;
+  const week = []; for (let i = 6; i >= 0; i--) { const t = noonOf(now) - i * DAY_MS; week.push({ k: dayKey(t), d: new Date(t), v: at(dayKey(t)) }); }
+  let best = zero; for (const [k, v] of by) if (k !== dayKey(now) && v.time > best.time) best = v;
+  return { today: at(dayKey(now)), yest: at(dayKey(noonOf(now) - DAY_MS)), best, week };
+}
+const numTxt = (v, dec) => dec ? fmtNum(v, 0.1) : String(Math.round(v));
+function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
+  const host = $('#todayBox'); if (!host) return;
+  const D = dayStats(h, now), P = progress(h, now), T = D.today, goal = settings.goalMin * 60, k = Math.min(1, T.time / goal), d = new Date(now);
+  const R = 52, C = 2 * Math.PI * R, mins = Math.round(T.time / 60);
+  const cmp = (a, b, unit) => !b ? '' : a > b ? `<em class="up">▲ ${Math.round(a - b)} ${unit} más que ayer</em>` : a < b ? `<em class="down">${Math.round(b - a)} ${unit} menos que ayer</em>` : '<em>igual que ayer</em>';
+  const tile = (cls, val, dec, lab, extra = '') => `<div class="tile ${cls}"><b data-to="${val}" data-dec="${dec}">${numTxt(val, dec)}</b><span>${lab}</span>${extra}</div>`;
+  const maxW = Math.max(goal, ...D.week.map(w => w.v.time)) || 1;
+  const exs = Object.entries(T.ex).sort((a, b) => b[1] - a[1]).map(([x, n]) => `<span class="chip">${EX_NAMES[x] || x} · ${n}</span>`).join('');
+  const msg = !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
+    : k >= 1 ? `¡Meta cumplida! ${D.best.time && T.time > D.best.time ? 'Y es tu mejor día. 🏆' : `Tu mejor día: ${fmtDur(D.best.time)}. ¿Lo superas?`}`
+    : `Te ${goal - T.time > 90 ? `faltan ${Math.ceil((goal - T.time) / 60)} min` : 'falta muy poco'} para tu meta de ${settings.goalMin} min.`;
+  host.innerHTML = `
+    <div class="todayHead"><h2>Hoy</h2><span>${WDAY[d.getDay()]} ${d.getDate()} de ${MONTH[d.getMonth()]}</span></div>
+    <div class="todayGrid">
+      <div class="ring${k >= 1 ? ' done' : ''}" role="img" aria-label="${mins} de ${settings.goalMin} minutos de tu meta diaria">
+        <svg viewBox="0 0 120 120"><defs><linearGradient id="ringG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3cf0c6"/><stop offset="1" stop-color="#ff4fa3"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="${R}" class="track"/><circle cx="60" cy="60" r="${R}" class="fill" style="stroke-dasharray:${C};stroke-dashoffset:${C}" data-off="${C * (1 - k)}"/></svg>
+        <div class="ringTxt"><b data-to="${mins}" data-dec="0">${mins}</b><span>de ${settings.goalMin} min</span></div>
+      </div>
+      <div class="tiles">
+        ${tile('t-reps', T.reps, 0, 'repeticiones', cmp(T.reps, D.yest.reps, 'reps'))}
+        ${tile('t-kcal', Math.round(T.kcal), 0, '≈ kcal', cmp(T.kcal, D.yest.kcal, 'kcal'))}
+        ${tile('t-perf', T.perfect, 0, 'perfectas', T.reps ? `<em>${Math.round(100 * T.perfect / T.reps)} % de las reps</em>` : '')}
+        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
+      </div>
+    </div>
+    ${exs ? `<div class="chips">${exs}</div>` : ''}
+    <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
+    <p class="todayMsg">${msg}</p>`;
+  animateToday(host);
+}
+// Las cifras suben desde 0, el anillo se llena y las barras crecen (sin animación si el sistema pide menos movimiento)
+function animateToday(host) {
+  if (!host.querySelectorAll) return;
+  const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches, raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+  const nums = [...host.querySelectorAll('[data-to]')], ring = host.querySelector && host.querySelector('.fill'), bars = [...host.querySelectorAll('[data-h]')];
+  const finish = () => { nums.forEach(n => { n.textContent = numTxt(+n.dataset.to, +n.dataset.dec); }); if (ring) ring.style.strokeDashoffset = ring.dataset.off; bars.forEach(b => { b.style.height = (0.76 * b.dataset.h) + 'px'; }); };
+  if (still || !raf) { finish(); return; }
+  raf(() => raf(() => { if (ring) ring.style.strokeDashoffset = ring.dataset.off; bars.forEach((b, i) => { b.style.transitionDelay = `${i * 60}ms`; b.style.height = (0.76 * b.dataset.h) + 'px'; }); }));
+  const t0 = performance.now(), dur = 1100;
+  const step = t => { const u = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - u, 3); nums.forEach(n => { n.textContent = numTxt(+n.dataset.to * e, +n.dataset.dec); }); if (u < 1) raf(step); else finish(); };
+  raf(step);
+}
 function renderHistory() {
-  const h = store(HIST_KEY) || [], P = progress(h);
+  const h = store(HIST_KEY) || [], P = progress(h); renderToday(h);
   const box = (big, small) => `<div class="stat"><b>${big}</b><span>${small}</span></div>`;
   $('#progBox').innerHTML = h.length ? [
     box(daysTxt(P.streak), P.streak ? (P.trainedToday ? 'seguidos entrenando' : 'seguidos: entrena hoy para no perderla') : 'de racha: empieza hoy'),
@@ -799,10 +910,13 @@ function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}
   const s = AUD.C.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * rand(0.94, 1.06);
   s.connect(sout(pos, { rev, gain, ref })); s.start(); return true;
 }
+// music: suena Spotify (entonces el sonido ambiente se calla del todo)
+const AUDM = { music: false };
 function applyVolume() {
   if (!AUD.C) return;
   AUD.sfx.gain.value = settings.volume / 100;
-  AUD.amb.gain.value = (settings.ambient / 100) * (arMode && !forestOn() ? 0.35 : 1);
+  const amb = AUDM.music ? 0 : (settings.ambient / 100) * (arMode && !forestOn() ? 0.35 : 1);
+  if (AUD.amb.gain.setTargetAtTime) AUD.amb.gain.setTargetAtTime(amb, AUD.C.currentTime, 0.4); else AUD.amb.gain.value = amb;
 }
 settingHooks.push(k => { if (k === 'volume' || k === 'ambient' || k === '*') applyVolume(); });
 const sndOK = () => AUD.C && AUD.C.state === 'running' && settings.volume > 0;
@@ -2742,6 +2856,7 @@ function makeRoomPlan() { return roomMode() === 'manual' ? manualPlan() : scanPl
 /* ---------- Colocar a mano, en las gafas ---------- */
 // Pasos: sitio de juego → compuertas → trampillas → marcador. Lo que colocas sale donde miras al suelo (o donde apunta
 // tu mano); «Colocar aquí» o pellizcar lo deja. Con la habitación escaneada, compuertas y marcador se pegan a la pared.
+// Las trampillas y el marcador también se pueden poner solos.
 const RPL = { on: false, step: 'spot', spot: null, gates: [], hatches: [], board: null, gs: 0.6, aim: new V3(), aimOk: false, pinch: { left: false, right: false }, back: null, drag: null, sel: null };
 const rplGood = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
 const rplBad = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
@@ -2831,22 +2946,60 @@ function rplPlace() {
   }
   SND.click(); rplShowPlaced(); roomPlaceMenu();
 }
+// Asistente en cuatro pasos, con el paso en curso arriba; en el mundo, la silueta de lo que colocas y un cartel encima
+// que dice qué hacer (o por qué ahí no se puede)
+const RPL_STEPS = ['spot', 'gates', 'hatches', 'board'], RPL_NAMES = { spot: 'Tu sitio', gates: 'Compuertas', hatches: 'Trampillas', board: 'Marcador' };
+function rplNext() { const i = RPL_STEPS.indexOf(RPL.step); if (i >= RPL_STEPS.length - 1) { endRoomPlace(true); return; } RPL.step = RPL_STEPS[i + 1]; SND.click(); roomPlaceMenu(); }
+// Las trampillas, solas: alrededor de tu sitio, como en la arena (por delante y a los lados)
+function rplAutoHatches() {
+  const S = RPL.spot, c = Math.cos(S.yaw), s = Math.sin(S.yaw);
+  RPL.hatches = hatchPos.map(([x, z]) => ({ x: S.x + x * c + z * s, z: S.z - x * s + z * c, yaw: 0 }));
+  rplShowPlaced(); SND.click(); rplNext();
+}
+// El marcador, solo: delante de la compuerta más centrada, mirándote
+function rplAutoBoard() {
+  const S = RPL.spot, f = { x: -Math.sin(S.yaw), z: -Math.cos(S.yaw) };
+  let g = null, bd = -2; for (const o of RPL.gates) { const dx = o.x - S.x, dz = o.z - S.z, d = Math.hypot(dx, dz) || 1, a = (dx * f.x + dz * f.z) / d; if (a > bd) { bd = a; g = o; } }
+  const p = g ? { x: g.x + (S.x - g.x) * 0.15, z: g.z + (S.z - g.z) * 0.15 } : { x: S.x + f.x * 3, z: S.z + f.z * 3 };
+  RPL.board = { x: p.x, z: p.z, yaw: Math.atan2(S.x - p.x, S.z - p.z), wall: false, ok: true }; rplShowPlaced(); endRoomPlace(true);
+}
 function roomPlaceMenu() {
-  const S = RPL.step, n = { gates: RPL.gates.length, hatches: RPL.hatches.length }, aimTxt = 'Mira al suelo donde lo quieres (o apunta con la mano) y pulsa «Colocar aquí» o pellizca.';
-  const rows = [{ t: 'title', text: 'COLOCAR LA HABITACIÓN' }];
-  if (S === 'spot') rows.push({ t: 'text', text: 'Ponte donde vas a hacer el ejercicio, mirando hacia donde quieres que lleguen los enemigos, y pulsa «Aquí juego».' }, { t: 'btns', items: [{ label: 'Aquí juego', style: 'primary', onPress: rplPlace }], h: 0.08 });
-  else if (S === 'gates') rows.push({ t: 'text', text: `Compuertas (${n.gates} de 3): por donde salen los enemigos. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se pega a ella.' : ''}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.gates.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Más pequeña', onPress: () => { RPL.gs = clamp(RPL.gs - 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Más grande', onPress: () => { RPL.gs = clamp(RPL.gs + 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Siguiente: trampillas', onPress: () => { RPL.step = 'hatches'; roomPlaceMenu(); } }] });
-  else if (S === 'hatches') rows.push({ t: 'text', text: `Trampillas de las arañas (${n.hatches} de 4), para flexiones y planchas: a 1–3,5 m del sitio de juego, en suelo libre. ${aimTxt}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.hatches.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
-    { t: 'btns', items: [{ label: 'Siguiente: marcador', onPress: () => { RPL.step = 'board'; roomPlaceMenu(); } }] });
-  else rows.push({ t: 'text', text: `Marcador: donde quieras verlo. ${aimTxt}${ROOM.walls.length ? ' Junto a una pared, se cuelga en ella.' : ''}` },
-    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
-  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto, apúntale y pellizca (o aprieta el gatillo): síguelo con la mano y suéltalo donde vaya.', color: '#a49fc8' },
-    { t: 'btns', items: [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }, { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }] });
-  rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
+  const S = RPL.step, k = RPL_STEPS.indexOf(S), n = { gates: RPL.gates.length, hatches: RPL.hatches.length };
+  const prog = RPL_STEPS.map((x, i) => (i < k ? '✓ ' : i === k ? '● ' : '○ ') + RPL_NAMES[x]).join('   ');
+  const rows = [{ t: 'title', text: `COLOCAR A MANO · PASO ${k + 1} DE 4` }, { t: 'text', text: prog, color: '#3cf0c6' }];
+  const aim = 'Mira al suelo donde la quieras (o apunta con la mano): verás su silueta verde y un cartel. Pellizca o pulsa «Colocar aquí».';
+  if (S === 'spot') rows.push({ t: 'text', text: 'Así decides dónde está todo en tu habitación. Primero, ponte donde vas a hacer el ejercicio, mirando hacia donde quieres que salgan los enemigos, y pulsa «Aquí juego».' },
+    { t: 'btns', items: [{ label: 'Aquí juego', style: 'primary', onPress: rplPlace }], h: 0.08 });
+  else if (S === 'gates') rows.push({ t: 'text', text: `Compuertas, por donde salen los enemigos: pon de 1 a 3 (llevas ${n.gates}). ${aim}${ROOM.walls.length ? ' Cerca de una pared, se pega a ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Colocar aquí', style: 'primary', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.gates.pop(); rplShowPlaced(); roomPlaceMenu(); } }, { label: 'Más pequeña', onPress: () => { RPL.gs = clamp(RPL.gs - 0.04, 0.4, 1); rplShowPlaced(); } }, { label: 'Más grande', onPress: () => { RPL.gs = clamp(RPL.gs + 0.04, 0.4, 1); rplShowPlaced(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: n.gates ? 'Siguiente: trampillas →' : 'Pon al menos una compuerta', style: n.gates ? 'primary' : undefined, onPress: () => { if (n.gates) rplNext(); else SND.partial(); } }] });
+  else if (S === 'hatches') rows.push({ t: 'text', text: `Trampillas, de donde salen las arañas en flexiones y planchas (llevas ${n.hatches} de 4). Lo fácil: «Ponerlas solas», alrededor de tu sitio. O colócalas tú a 1–3,5 m, en suelo libre.` },
+    { t: 'btns', items: [{ label: 'Ponerlas solas', style: 'primary', onPress: rplAutoHatches }, { label: 'Colocar aquí', onPress: rplPlace }, { label: 'Deshacer', onPress: () => { RPL.hatches.pop(); rplShowPlaced(); roomPlaceMenu(); } }], h: 0.08 },
+    { t: 'btns', items: [{ label: 'Siguiente: marcador →', style: n.hatches ? 'primary' : undefined, onPress: rplNext }] });
+  else rows.push({ t: 'text', text: `Marcador, el panel con tu puntuación. Lo fácil: «Junto a las compuertas». O colócalo tú donde quieras verlo.${ROOM.walls.length ? ' Cerca de una pared, se cuelga en ella.' : ''}` },
+    { t: 'btns', items: [{ label: 'Junto a las compuertas', style: 'primary', onPress: rplAutoBoard }, { label: 'Colocar aquí', onPress: rplPlace }, { label: 'Sin marcador propio', onPress: () => endRoomPlace(true) }], h: 0.08 });
+  if (S !== 'spot') rows.push({ t: 'text', text: 'Para mover algo ya puesto: apúntale, pellizca (o aprieta el gatillo) y arrástralo; suéltalo donde vaya.' + (RPL.sel ? ' Con lo último que moviste:' : ''), color: '#a49fc8' },
+    { t: 'btns', items: [...(RPL.sel ? [{ label: '⟲ Girar', onPress: () => rplTurn(Math.PI / 12) }, { label: 'Girar ⟳', onPress: () => rplTurn(-Math.PI / 12) }] : []), { label: 'Guardar', style: 'primary', onPress: () => endRoomPlace(true) }, { label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
+  else rows.push({ t: 'btns', items: [{ label: 'Cancelar', style: 'danger', onPress: () => endRoomPlace(false) }] });
   openMenu(rows);
+}
+// El cartel sobre la silueta: qué es y si se puede dejar ahí (y, si no, por qué)
+const RPL_LAB = { p: makePanel(1.3, 0.3, 768, { depthTest: false }), text: '' }; RPL_LAB.p.mesh.renderOrder = 33; RPL_LAB.p.mesh.visible = false; rplGroup.add(RPL_LAB.p.mesh);
+function rplLabel(text, ok, x, y, z) {
+  const P = RPL_LAB.p, m = P.mesh; m.visible = !!text && !RPL.atMenu; if (!m.visible) return; // mirando al menú, no lo tapa
+  if (text !== RPL_LAB.text) {
+    const c = P.ctx, W = P.W, H = P.H, col = ok ? '#3cf0c6' : '#ff8a3d'; c.clearRect(0, 0, W, H);
+    rr(c, 6, 6, W - 12, H - 12, 34); c.fillStyle = 'rgba(8,10,20,0.85)'; c.fill(); c.lineWidth = 8; c.strokeStyle = col; c.stroke();
+    c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle'; let fs = 64; c.font = `${fs}px ${FD}`;
+    while (fs > 26 && c.measureText(text).width > W - 60) { fs -= 4; c.font = `${fs}px ${FD}`; }
+    c.fillText(text, W / 2, H / 2 + 4); P.tex.needsUpdate = true; RPL_LAB.text = text;
+  }
+  m.position.set(x, y, z); m.lookAt(head.p.x, y, head.p.z);
+}
+function rplWhy(kind, pose) {
+  if (!RPL.aimOk) return 'Mira al suelo donde la quieras';
+  const dp = Math.hypot(pose.x - RPL.spot.x, pose.z - RPL.spot.z), [lo, hi] = kind === 'gate' ? [0.8, 8] : kind === 'hatch' ? [0.9, 3.5] : [0.8, 7];
+  return dp < lo ? `Muy cerca de tu sitio: a más de ${fmtNum(lo)} m` : dp > hi ? `Muy lejos: a menos de ${fmtNum(hi)} m` : '';
 }
 const _rpd = new V3();
 function updateRoomPlace(dt) {
@@ -2857,7 +3010,7 @@ function updateRoomPlace(dt) {
   if (!RPL.on) return;
   // dónde se apunta: la mano que apunta al suelo o, si no, la mirada; mirando al menú o tocándolo, se queda quieto
   let o = null, d = null;
-  const atMenu = menu && menu.group && fwd().angleTo(_rpd.copy(menu.group.getWorldPosition(new V3())).sub(head.p)) < 0.35;
+  const atMenu = menu && menu.group && fwd().angleTo(_rpd.copy(menu.group.getWorldPosition(new V3())).sub(head.p)) < 0.35; RPL.atMenu = !!atMenu;
   for (const s of ['right', 'left']) { const h = hands[s]; if (h.rayOk && h.rayD.y < -0.15 && !(h.tipOk && menu && menu.group && h.tip.distanceTo(menu.group.getWorldPosition(_rpd)) < 0.3)) { o = h.rayO; d = h.rayD; break; } }
   if (!o && !atMenu) { const f = fwd(); if (f.y < -0.08) { o = head.p; d = f; } }
   if (o) { const t = -o.y / d.y; if (t > 0 && t < 12) { RPL.aim.set(o.x + d.x * t, 0, o.z + d.z * t); RPL.aimOk = true; } }
@@ -2865,15 +3018,18 @@ function updateRoomPlace(dt) {
   for (const s of ['left', 'right']) {
     const p = hands[s].pinch || hands[s].trig;
     if (p && !RPL.pinch[s] && RPL.step !== 'spot' && RPL.aimOk) { const r = rplNearest(RPL.aim); if (r) { RPL.drag = Object.assign(r, { side: s }); RPL.sel = r; SND.tick(); } else rplPlace(); }
-    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); }
+    if (!p && RPL.pinch[s] && RPL.drag && RPL.drag.side === s) { RPL.drag = null; rplShowPlaced(); SND.click(); roomPlaceMenu(); } // ya se puede girar
     RPL.pinch[s] = p;
   }
   if (!RPL.on) return;
-  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; return; }
+  if (RPL.drag && RPL.aimOk) { const r = RPL.drag, o = rplGet(r), pose = rplPose(r.kind); pose.yaw = pose.wall ? pose.yaw : (o.wall ? pose.yaw : o.yaw); rplSet(r, pose); rplShowPlaced(); for (const k in rplGhost) rplGhost[k].visible = false; rplLabel('Suelta para dejarla aquí', true, pose.x, 1.2, pose.z); return; }
   const kind = { gates: 'gate', hatches: 'hatch', board: 'board' }[RPL.step];
   for (const k in rplGhost) rplGhost[k].visible = false;
-  if (RPL.step === 'spot') { const g = rplGhost.spot; g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = bodyYaw(); return; }
+  if (RPL.step === 'spot') { const g = rplGhost.spot, y = bodyYaw(); g.visible = true; g.position.set(head.p.x, 0, head.p.z); g.rotation.y = y; rplLabel('Tu sitio · la flecha, hacia los enemigos', true, head.p.x - Math.sin(y) * 1.4, 0.9, head.p.z - Math.cos(y) * 1.4); return; }
   const g = rplGhost[kind], pose = rplPose(kind); g.visible = RPL.aimOk; g.position.set(pose.x, 0, pose.z); g.rotation.y = pose.yaw; g.scale.setScalar(kind === 'gate' ? RPL.gs : 1); setMat(g, pose.ok ? rplGood : rplBad);
+  const why = rplWhy(kind, pose), name = kind === 'gate' ? `Compuerta ${RPL.gates.length + 1}` : kind === 'hatch' ? `Trampilla ${RPL.hatches.length + 1}` : 'Marcador';
+  const ly = kind === 'gate' ? 3.4 * RPL.gs + 0.35 : kind === 'board' ? 2.25 : 0.55, at = RPL.aimOk ? pose : { x: head.p.x + fwdH().x * 2.2, z: head.p.z + fwdH().z * 2.2 };
+  rplLabel(pose.ok ? `${name}: pellizca aquí` : why || 'Aquí no', pose.ok, at.x, RPL.aimOk ? ly : 0.5, at.z);
 }
 
 /* ---------- Cada fotograma: recolocar fuera de la partida si se movió la arena o cambió la habitación ---------- */
@@ -3566,7 +3722,7 @@ function buildRigs() {
 const BEAST = { ready: false, failed: false, loading: false, kinds: {} };
 // h: altura del modelo (m); walk/jog/run: a qué velocidad (m/s, a escala 1) avanza cada animación de andar
 const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { h: 0.93, walk: 0.8, jog: 1.9, run: 3.0 } };
-const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot'];
+const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
 // del pie) se quitan: si no, Three.js las aplica al modelo entero y le cambia la orientación
@@ -3579,6 +3735,13 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
   }
   return new THREE.AnimationClip(clip.name, clip.duration, tracks);
 }
+// Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
+function animStatus() {
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, humanoides de neón, Imp y Puglin' : 'Imp y Puglin'})`;
+  if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
+  return 'Animaciones de Quaternius: cargando…';
+}
+function animNote() { const n = typeof document !== 'undefined' && document.getElementById && document.getElementById('animNote'); if (n) n.textContent = animStatus(); }
 function loadBeasts() {
   if (BEAST.loading || BEAST.ready) return;
   if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { BEAST.failed = true; return; }
@@ -3598,8 +3761,8 @@ function loadBeasts() {
     BEAST.rigClips = {};
     for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
     BEAST.neonClips = BEAST.rigClips.neon;
-    BEAST.ready = true;
-  }).catch(e => { BEAST.failed = true; console.log('No se pudieron cargar los monstruos:', e && e.message); });
+    BEAST.ready = true; animNote();
+  }).catch(e => { BEAST.failed = true; animNote(); console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
 /* ---------- Las mismas animaciones, en los humanoides de neón y en los robots ---------- */
 // Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
@@ -3630,7 +3793,7 @@ function bakeRigClips(U, M) {
   const down = new V3(0, -1, 0), fwdZ = new V3(0, 0, 1), d = new V3(), ax = new V3(), sw = new Q4(), I = new Q4();
   for (const clip of U.animations) {
     const act = mx.clipAction(clip); act.play();
-    const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [], prev = {};
+    const n = Math.max(2, Math.ceil(clip.duration * 30) + 1), times = [], Q = {}, hp = [];
     for (let f = 0; f < n; f++) {
       const t = Math.min(clip.duration, f / 30); act.time = t; mx.update(0); S.updateMatrixWorld(true); times.push(t);
       const W = {}, par = nb => M.parent[nb] ? W[M.parent[nb]] : I;
@@ -3639,7 +3802,7 @@ function bakeRigClips(U, M) {
       for (const [nb, a, b] of M.foot) { const pw = par(nb); d.subVectors(pos(b), pos(a)); d.y = Math.min(d.y, 0.3 * d.length()); d.normalize(); ax.copy(fwdZ).applyQuaternion(pw); W[nb] = sw.setFromUnitVectors(ax, d).clone().multiply(pw); }
       for (const nb in W) {
         const l = par(nb).clone().invert().multiply(W[nb]);
-        if (prev[nb] && prev[nb].dot(l) < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } prev[nb] = l; // sin saltos de signo
+        if (l.w < 0) { l.x = -l.x; l.y = -l.y; l.z = -l.z; l.w = -l.w; } // siempre con w ≥ 0: las mezclas entre animaciones no se tuercen (la interpolación ya va por el camino corto)
         (Q[nb] = Q[nb] || []).push(l.x, l.y, l.z, l.w);
       }
       if (hip0) { const pv = pos('pelvis').sub(pel0); hp.push(pv.x * k, hip0 + pv.y * k, pv.z * k); }
@@ -4154,6 +4317,15 @@ function hideMenu(keepAnchor) {
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
 const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+// Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
+const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
+function wrapLines(text, maxPx) {
+  if (!_wrapCtx) _wrapCtx = mkCanvas(8).getContext('2d'); const c = _wrapCtx; c.font = TXT_FONT;
+  if (c.measureText(text).width <= maxPx) return [text];
+  const lines = []; let cur = '';
+  for (const w of String(text).split(' ')) { const t = cur ? cur + ' ' + w : w; if (cur && c.measureText(t).width > maxPx) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur); return lines;
+}
 function openMenu(rows, opts = {}) {
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
@@ -4162,7 +4334,8 @@ function openMenu(rows, opts = {}) {
   if (recent) menuAnchor = lastAnchor;
   else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
   POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
-  const heights = rows.map(r => r.h || ROWH[r.t] || 0.06);
+  const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
+  const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
   const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
@@ -4177,7 +4350,11 @@ function openMenu(rows, opts = {}) {
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
     if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
-    else if (r.t === 'text') { c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+    else if (r.t === 'text') {
+      c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
+      else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+    }
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined }), x + w / 2, cy); x += w + GAP; });
@@ -4982,7 +5159,7 @@ async function spRefresh() {
   if (!spConnected()) return;
   SP.lastRef = Date.now();
   try { SP.st = await spApi('GET', '/me/player'); SP.err = ''; } catch (e) { SP.err = spErrText(e); }
-  spMenuSync(); spPage();
+  spMenuSync(); spPage(); spAutoTempo();
 }
 async function spDo(fn) {
   if (SP.busy || !spConnected()) return; SP.busy = true;
@@ -5006,6 +5183,7 @@ function spPlayerInit() {
     p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
     p.addListener('initialization_error', () => fail('Este navegador no puede reproducir Spotify: sonará en otro reproductor tuyo'));
     p.addListener('playback_error', () => {});
+    p.addListener('player_state_changed', s => { if (s && SP.st && spHereNow()) { SP.st.is_playing = !s.paused; } if (s && s.track_window && s.track_window.current_track && s.track_window.current_track.id !== SP.tempoId) SP.pollT = Math.min(SP.pollT, 0.5); });
     SPP.player = p; p.connect();
   };
   const sc = document.createElement('script'); sc.src = 'https://sdk.scdn.co/spotify-player.js'; sc.async = true;
@@ -5075,14 +5253,44 @@ function spVol(d) {
   clearTimeout(SP.volTimer);
   SP.volTimer = setTimeout(() => { spApi('PUT', '/me/player/volume?volume_percent=' + SP.vol).catch(e => { SP.err = spErrText(e); spMenuSync(); }); }, 250);
 }
-// Ritmo de la canción que suena: Spotify dejó de dar el análisis de audio a las apps nuevas (finales de
-// 2024), así que puede fallar; entonces devuelve null y el ritmo se marca tocando al compás
+// Ritmo de la canción que suena. Spotify dejó de dar el análisis de audio a las apps nuevas (finales de 2024): se le
+// pregunta por si acaso y, si no, a Deezer, que da el tempo de muchísimas canciones (buscándola por su código ISRC o
+// por artista y título). Sin el instante de los pulsos, se cuentan desde el principio de la canción (casi siempre
+// empieza en un pulso); «Encajar el pulso» lo afina. Devuelve null si nadie lo sabe
 async function spTempo() {
   const st = await spApi('GET', '/me/player'), it = st && st.item; if (!it || !it.id) throw new Error('NO_DEVICE');
   const start = performance.now() / 1000 - (st.progress_ms || 0) / 1000;
-  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : null }; } catch (e) { /* sin permiso */ }
-  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: null }; } catch (e) { /* sin permiso */ }
-  return null;
+  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : start, id: it.id }; } catch (e) { /* sin permiso */ }
+  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: start, id: it.id }; } catch (e) { /* sin permiso */ }
+  const bpm = await dzTempo(it); return bpm ? { bpm, beat0: start, id: it.id } : null;
+}
+// Deezer responde sin permisos y por JSONP (su API no deja leerla con fetch desde otra web)
+function jsonp(url, ms = 6000) {
+  return new Promise((res, rej) => {
+    if (typeof document === 'undefined' || !document.createElement) { rej(new Error('NO_DOM')); return; }
+    const cb = '__rajp' + Math.random().toString(36).slice(2), s = document.createElement('script');
+    const done = (v, e) => { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); if (e) rej(e); else res(v); };
+    const t = setTimeout(() => done(null, new Error('TIMEOUT')), ms);
+    window[cb] = v => done(v); s.onerror = () => done(null, new Error('NET'));
+    s.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb; (document.head || document.body).appendChild(s);
+  });
+}
+async function dzTempo(it) {
+  const bpmOf = async id => { const t = await jsonp('https://api.deezer.com/track/' + id); return t && t.bpm > 40 ? t.bpm : 0; };
+  const isrc = it.external_ids && it.external_ids.isrc;
+  if (isrc) try { const b = await bpmOf('isrc:' + encodeURIComponent(isrc)); if (b) return b; } catch (e) { /* no está */ }
+  const artist = it.artists && it.artists[0] ? it.artists[0].name : '';
+  try {
+    const r = await jsonp('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(`artist:"${artist}" track:"${it.name}"`));
+    for (const x of (r && r.data) || []) { const b = await bpmOf(x.id); if (b) return b; }
+  } catch (e) { /* sin conexión */ }
+  return 0;
+}
+// «Ritmo de Spotify» activado: al cambiar de canción, el ritmo cambia solo
+function spAutoTempo() {
+  const it = SP.st && SP.st.item; if (!SP.cfg.autoBpm || !it || !it.id || it.id === SP.tempoId || SP.tempoBusy) return;
+  SP.tempoId = it.id; SP.tempoBusy = true;
+  spotifyTempo().then(m => { if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(m, '#ffd166', 2.5); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); }).finally(() => { SP.tempoBusy = false; });
 }
 function spNowText() {
   if (!spConnected()) return '';
@@ -5105,9 +5313,12 @@ function musicRows() {
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
+// Con el menú de música abierto, se pregunta a Spotify cada 5 s; si no, cada 8 s (para callar el ambiente mientras
+// suena y para seguir el ritmo de cada canción)
 function spTick(dt) {
-  if (!spConnected() || !menu || menu.music === null) return;
-  SP.pollT -= dt; if (SP.pollT <= 0) { SP.pollT = 5; spRefresh(); }
+  const on = spConnected() && spPlaying(); if (on !== AUDM.music) { AUDM.music = on; applyVolume(); }
+  if (!spConnected()) return;
+  SP.pollT -= dt; if (SP.pollT <= 0) { SP.pollT = menu && menu.music !== null ? 5 : 8; spRefresh(); }
 }
 
 /* ---------- Sección de la página ---------- */
@@ -5394,6 +5605,11 @@ class Robot {
     Object.assign(this, { state: 'emerge', st: 0, phase: rand(0, TAU), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.4 * this.sc, hitT: 0, twitchT: rand(2, 5), twitch: 0, twitchYaw: 0, jaw: 0, arm: 0, smokeT: 0, lastCos: [1, 1], gunSpin: 0, flickT: 0, knockFrom: new V3(), knockTo: new V3() });
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
+    // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
+    const grp = K.beast ? 'croc' : K.neon ? 'neon' : K.beast3d ? 'beast' : 'robot';
+    this.pace = clamp((settings['pace_' + grp] || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1);
+    this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
+    Object.assign(this, { zigPh: rand(0, TAU), burstT: rand(0, 1.8), dodge: 0, dodgeDir: 0, dodgeT: rand(2, 4), lastHp: spec.hp, roll: false, rollStart: false });
     // ritmo: acecha andando y, en los últimos metros, carga corriendo; en total tarda lo que pide «Tiempo llegada»
     const W = walkT(), D = this.pos.distanceTo(this.slot), T = Math.max(2, W / K.speedF - (W >= 10 ? 1.2 : 0));
     this.chargeD = Math.min(3.2, D * 0.4); this.vRun = clamp(2.2 * D / T, 1.0, 3.2) * (K.heavy ? 0.85 : 1);
@@ -5479,7 +5695,8 @@ class Robot {
     } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
-      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); } }
+      if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); }
+      else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; } // parado esperando: en guardia, no en reposo
     mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
     const a = this.acts[want], loco = !!a && want !== 'Idle_Loop' && /_Loop$/.test(want);
     if (a && atkT >= 0) a.time = atkT;
@@ -5532,7 +5749,11 @@ class Robot {
         if (!this.taunts && walkT() >= 10 && toPl > 3 && toPl < 7) { this.tauntT -= dt; if (this.tauntT <= 0) { this.taunts++; this.state = 'taunt'; this.st = 0; this.roar(this.center(tmpB), K.boss ? 0.6 : K.heavy ? 0.8 : 1.1); break; } }
         // carga: los últimos metros, corriendo y rugiendo
         if (!this.charged && d < this.chargeD + 0.3) { this.charged = true; this.jaw = 1; this.roar(this.center(tmpB), K.boss ? 0.7 : 1.2); }
-        wantV = (this.charged ? this.vRun : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        wantV = (this.charged ? this.vRun * Math.max(1, 0.8 * this.pace) : this.vWalk) * clamp(d / 0.7, 0.3, 1);
+        // rapidez: no llegan antes; lo que les sobra lo gastan de lado a lado (zigzag) o en paradas (a rachas y esquivas)
+        let lat = 0; const free = this.out && !this.charged && d > 1.0 && this.pace > 1.02;
+        if (free && this.style === 'zigzag') { const L = Math.sqrt(this.pace * this.pace - 1), half = clamp(1.1 / (L * wantV + 1e-3), 0.45, 1.6); this.zigPh += dt * Math.PI / half; lat = clamp(Math.sin(this.zigPh) * 2.5, -1, 1) * L * wantV; }
+        else if (free && (this.style === 'bursts' || this.style === 'dodge')) { const C = 1.8; this.burstT = (this.burstT + dt) % C; wantV *= this.burstT < C / this.pace ? this.pace : 0; }
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
         // las compuertas son sólidas: rodea sus pilares y los bloques de los lados (al salir del túnel va recto por el hueco)
@@ -5547,7 +5768,8 @@ class Robot {
         }
         steer.y = 0; const sl = steer.length(); if (sl > 1e-4) steer.divideScalar(sl);
         if (steer.dot(to) < -0.2) steer.addScaledVector(to, 0.8).normalize(); // nunca da media vuelta por esquivar
-        _rs.copy(steer).multiplyScalar(wantV); this.vel.lerp(_rs, Math.min(1, dt * 4)); // con inercia: arranca y frena como un cuerpo pesado
+        _rs.copy(steer).multiplyScalar(wantV); if (lat) { _rs.x += to.z * lat; _rs.z -= to.x * lat; }
+        this.vel.lerp(_rs, Math.min(1, dt * (4 + 2 * (this.pace - 1)))); // con inercia: arranca y frena como un cuerpo pesado (más vivo cuanto más rápido)
         this.pos.addScaledVector(this.vel, dt);
         faceTo = Math.atan2(this.vel.x, this.vel.z);
         // atascado: casi no avanza aunque quiere
@@ -5585,6 +5807,8 @@ class Robot {
         break;
       }
     }
+    this.dodgeStep(dt, faceP);
+    if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
     if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - dt * 5); this.twist *= Math.max(0, 1 - dt * 4); this.lunge *= Math.max(0, 1 - dt * 4); }
     if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - dt * 3);
     if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
@@ -5599,7 +5823,7 @@ class Robot {
     }
     // de cara hacia donde va y, al acercarse, cada vez más hacia ti
     const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
-    if (faceTo !== null) { const tgt = this.state === 'walk' ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.state === 'walk' ? 5 : 8)); }
+    if (faceTo !== null) { const tgt = this.state === 'walk' && !this.roll ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, dt * (this.roll ? 14 : this.state === 'walk' ? 5 : 8)); }
     this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
     if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
     const runK = this.spd > this.vWalk * 1.15 ? clamp((this.spd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
@@ -5608,6 +5832,29 @@ class Robot {
     this.animate(dt, t, this.spd);
     if (this.rig.kind !== 'ripper' && !K.beast && !K.neon && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
+  }
+  // Esquivas: se aparta de golpe hacia un lado (los que tienen las animaciones de la biblioteca y el cuerpo entero, con
+  // una voltereta); de vez en cuando mientras se acerca y, a veces, al recibir un disparo. Nunca contra otro ni contra
+  // una pared ni un pilar
+  dodgeStep(dt, faceP) {
+    const hit = this.hp < this.lastHp; this.lastHp = this.hp;
+    if (this.dodge > 0) {
+      const T = this.roll ? 0.75 : 0.45, k = 1 - this.dodge / T, D = (this.roll ? 1.4 : 0.9) * this.sc, v = D * Math.PI / (2 * T) * Math.sin(Math.PI * clamp(k, 0, 1)); // recorre D metros
+      _rd.set(Math.cos(faceP), 0, -Math.sin(faceP)).multiplyScalar(this.dodgeDir * v * dt); // de lado respecto a ti
+      const nx = this.pos.x + _rd.x, nz = this.pos.z + _rd.z, r = this.radius;
+      const blocked = gateSolids().some(c => Math.hypot(nx - c.x, nz - c.z) < c.r + r) || enemies.some(o => o !== this && o.alive && o.type === 'robot' && Math.hypot(nx - o.pos.x, nz - o.pos.z) < r + o.radius) || roomBlocked(nx, nz, r) || Math.hypot(nx, nz) > arenaDepth() + 1;
+      if (!blocked) { this.pos.x = nx; this.pos.z = nz; } else this.dodge = Math.min(this.dodge, 0.05);
+      this.dodge -= dt; if (this.dodge <= 0) { this.dodge = 0; this.roll = false; this.slotT = 0; }
+      return;
+    }
+    if (this.style !== 'dodge' || this.state !== 'walk' || !this.out || this.charged || state !== 'play') return;
+    this.dodgeT -= dt;
+    if (this.dodgeT <= 0 || (hit && this.hp > 0 && Math.random() < 0.55)) {
+      this.dodgeT = rand(2.5, 4.5) / Math.max(0.7, this.pace);
+      this.roll = !!(this.mx && this.clips && this.clips.Roll && (this.K.neon || this.K.beast3d));
+      this.dodge = this.roll ? 0.75 : 0.45; this.rollStart = true;
+      this.dodgeDir = Math.random() < 0.5 ? -1 : 1; this.dodgeYaw = faceP + this.dodgeDir * Math.PI / 2; // la voltereta, de cara hacia donde va
+    }
   }
   onHit(dmg, perfect, point) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35; this.restart = true; }
@@ -5728,6 +5975,7 @@ class Neon extends Robot {
     if (!this.mat.body.emissive || typeof this.mat.body.emissive.copy !== 'function') this.mat.body.emissive = new THREE.Color(0);
     // con las animaciones de la biblioteca cargadas, se mueven con ellas; si no, con la animación hecha a mano
     if (BEAST.neonClips) { this.clips = BEAST.neonClips; this.mx = new THREE.AnimationMixer(this.inst.root); this.acts = {}; this.cur = null; this.react = 0; this.prevSt = ''; }
+    this.animate(0, 0, 0);
   }
   roar(pos) { SND.neonWarn(pos); }
   // Con animaciones: andar, trotar o correr según la velocidad; amenazar apuntándote; el tajo con la porra (la animación de
@@ -5741,12 +5989,14 @@ class Neon extends Robot {
       const [t0, t1] = BEAST_PUNCH.Sword_Attack, wind = this.zone ? 1.25 : 0.75;
       atkT = st === 'windup' ? t0 * smooth(clamp(this.st / wind, 0, 1)) : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, 0.8, clamp(this.st / 0.5, 0, 1));
       want = 'Sword_Attack'; once = true; fade = 0.1; ts = 0;
-    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    } else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / 0.75; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
+    else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
     else { const v = spd / this.sc;
       if (v > 0.12) { want = v < 2.1 ? 'Walk_Loop' : v < 3.8 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = clamp(v / (want === 'Walk_Loop' ? 1.3 : want === 'Jog_Fwd_Loop' ? 3.0 : 4.8), 0.5, 1.8); }
-      else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } }
+      else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); }
+      else if (this.clips.Sword_Idle) want = 'Sword_Idle'; } // parado esperando: en guardia
     mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
     if (atkT >= 0) this.acts.Sword_Attack.time = atkT;
     this.mx.update(dt);
@@ -5755,6 +6005,7 @@ class Neon extends Robot {
     this.B.head.quaternion.multiply(_nq.setFromAxisAngle(_up, ly * 0.6)); this.B.hips.rotation.x -= (this.hitT || 0) * 0.6 + (this.stagger || 0) * 0.2;
   }
   animate(dt, t, spd) {
+    if (!this.mat) return; // aún construyéndose (sin colores ni tono): una pose a medias dejaría huesos con NaN, y la animación los arrastraría
     const B = this.B, tn = this.taunt || 0, run = this.run || 0, st = this.state; this.lastU = this.lastU || [0, 0];
     if (spd === true) spd = this.vWalk;
     const amp = clamp(spd / Math.max(0.2, (this.vWalk || 0.5) * 0.7), 0, 1), S = 0.62 * (1 + run * 0.5);
@@ -5858,6 +6109,7 @@ class Beast extends Robot {
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
     const v = spd / this.sc; // a escala del modelo
     if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
+    else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / 0.75; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop';
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
@@ -5865,6 +6117,7 @@ class Beast extends Robot {
       want = v < (D.walk + D.jog) / 2 ? 'Walk_Loop' : v < (D.jog + D.run) / 2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop';
       ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), 0.5, 1.8); // los pies no patinan
     } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
+    else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; // o, sin música, en guardia
     this.play(want, fade, once, ts, this.restart); this.restart = false;
     if (punchT >= 0) this.acts[this.atk].time = punchT;
     this.mx.update(dt);
@@ -6314,7 +6567,7 @@ function onRep(opts, side) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
       else gloves[s.key].pulse = 1;
-      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect);
+      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null);
     }
   }
   charged = false; chargePow = 1; chargeOrb.visible = false;
@@ -6775,12 +7028,14 @@ function throwCharge(dmg, perfect) {
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
 }
-// El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados
+// El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados. Cuenta sobre todo hacia qué lado
+// va la mano (en horizontal): la sacudida suele hacer un arco hacia arriba o hacia abajo, y eso no debe cambiar el blanco
+const _ttd = new V3(), _ttv = new V3();
 function throwTarget(o, d) {
-  let best = null, bs = THROW_WIDE * Math.PI / 180;
+  let best = null, bs = THROW_WIDE * Math.PI / 180; _ttd.set(d.x, d.y * 0.4, d.z);
   for (const e of enemies) {
     if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
-    const a = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist);
+    const a = _ttv.set(v.x, v.y * 0.4, v.z).angleTo(_ttd) - Math.atan(e.radius * 1.3 / dist);
     if (a < bs) { bs = a; best = e; }
   }
   return best;
@@ -6790,10 +7045,15 @@ function throwFire(s, o, d, tg) {
   T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
-// Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí
+// Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí. Llevar
+// la mano atrás para coger impulso no es un lanzamiento: la mano tiene que alejarse de ti (o ir hacia delante), nunca
+// hacia atrás. Si no sale el rayo, el siguiente acelerón (el lanzamiento de verdad) se mide enseguida
 function throwTry(s, o, d) {
-  const T = HTH[s], len = d.length(), tg = len > THROW_D && throwTarget(o, d.normalize());
-  T.burst = false; T.peak = 0; T.cool = 0.2; if (tg) throwFire(s, o.clone(), d.clone(), tg);
+  const T = HTH[s], len = d.length(), fw = d.x * _thf.x + d.z * _thf.z;
+  const away = Math.hypot(T.lastR.x, T.lastR.z) - Math.hypot(T.from.x, T.from.z);
+  const ok = len > THROW_D && fw > -0.05 * len && (away > 0.03 || fw > 0.5 * len), tg = ok && throwTarget(o, d.normalize());
+  T.burst = false; T.peak = 0; if (tg) { T.cool = 0.2; throwFire(s, o.clone(), d.clone(), tg); }
+  T.hist.splice(0, T.hist.length - 1); // el siguiente acelerón se mide desde aquí, no desde antes de coger impulso
 }
 function throwStep(dt, t) {
   const on = throwAim() && ['play', 'rest', 'ready'].includes(state);
@@ -6818,8 +7078,9 @@ function throwStep(dt, t) {
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
     if (!T.burst) {
       if (sp > THROW_V && !T.cool) { // empieza un acelerón: se mide desde la última vez que la mano iba despacio
-        T.burst = true; T.peak = sp; let st = T.hist[0];
-        for (let i = T.hist.length - 1; i >= 0; i--) if (T.hist[i].sp < THROW_SLOW) { st = T.hist[i]; break; }
+        T.burst = true; T.peak = sp; let st = null, mn = T.hist[0]; // si nunca fue despacio, desde donde fue más despacio (el giro tras coger impulso)
+        for (let i = T.hist.length - 1; i >= 0; i--) { if (T.hist[i].sp < THROW_SLOW) { st = T.hist[i]; break; } if (T.hist[i].sp < mn.sp) mn = T.hist[i]; }
+        st = st || mn;
         T.from.copy(st.p);
       }
       continue;
@@ -6831,6 +7092,29 @@ function throwStep(dt, t) {
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
 }
+// Mirada: no se fija el enemigo que cae en el centro en cada instante (al bajar y subir en la sentadilla la cabeza se
+// mueve y la mirada baila), sino al que llevas un momento mirando: cada enemigo suma «atención» mientras cae cerca del
+// centro (más cuanto más centrado) y la va perdiendo en menos de medio segundo; el fijado solo cambia cuando otro le
+// supera con claridad, y el disparo va a él aunque en ese instante la mirada se haya desviado (se suelta si miras lejos
+// de él un par de segundos)
+const GZL = { e: null, att: new Map(), t: 0, d: new V3(0, 0, -1) };
+function gazeLockStep(t, o, d) {
+  const dt = clamp(t - GZL.t, 0, 0.1); GZL.t = t;
+  const cone = Math.max(settings.assist, 5) * Math.PI / 180 * 1.6;
+  for (const [e, a] of GZL.att) { const na = a * Math.exp(-dt / 0.4); if (!e.alive || na < 1e-3) GZL.att.delete(e); else GZL.att.set(e, na); }
+  for (const e of enemies) {
+    if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
+    const ang = v.angleTo(d) - Math.atan(e.radius * 1.3 / dist); if (ang < cone) GZL.att.set(e, (GZL.att.get(e) || 0) + dt * (1 - Math.max(0, ang) / cone));
+  }
+  let best = null, ba = 0; for (const [e, a] of GZL.att) if (a > ba) { ba = a; best = e; }
+  let cur = GZL.e && GZL.e.alive ? GZL.e : null; const ca = cur ? GZL.att.get(cur) || 0 : 0;
+  // mirando lejos del fijado (más de 3 conos) durante 2 s, se suelta; mirar al suelo un momento al bajar no lo suelta
+  if (cur) { const v = cur.center(tmpA).sub(o); GZL.away = v.angleTo(d) > cone * 3 ? (GZL.away || 0) + dt : 0; if (GZL.away > 2) cur = null; }
+  if (!cur) GZL.e = ba > 0.06 ? best : null; else if (best && best !== cur && ba > ca * 1.15 + 0.03) GZL.e = best; else GZL.e = cur;
+  GZL.d.lerp(d, Math.min(1, dt * 10)).normalize(); // el punto de la mirada, sin temblores
+  return GZL.e;
+}
+const gazeLock = () => GZL.e && GZL.e.alive ? GZL.e : null;
 function updateAim(t) {
   // lanzando con la mano no hay láser (el gesto apunta); con espada tampoco ni diana: se corta de cerca
   const show = (aimManual() || pistolOn()) && ['ready', 'play', 'rest'].includes(state) && !(throwAim() && (hands.left.ok || hands.right.ok)) && !(swordActive() && !pistolOn());
@@ -6839,11 +7123,11 @@ function updateAim(t) {
   for (const k of ['left', 'right', 'gaze']) if (!used.has(k)) locks[k].visible = false;
   gazeDot.visible = false;
   for (const s of srcs) {
-    const e = findLock(s.o, s.d), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
+    const e = s.key === 'gaze' ? gazeLockStep(t, s.o, s.d) : findLock(s.o, s.d), ring = locks[s.key], hot = pistolOn() ? GUN.ammo > 0 : charged;
     if (s.key !== 'gaze') {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
       l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
-    } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(s.d, 3); }
+    } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(GZL.d, 3); }
     if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
     else ring.visible = false;
   }
@@ -6871,7 +7155,7 @@ function gunFire(src) {
   if (!GUN.ammo) { SND.partial(); if (GUN.emptyT <= 0) { say('Sin munición: ¡haz una sentadilla!', '#ff8a3d', 1.1); GUN.emptyT = 2; } return; }
   const perfect = GUN.perf.shift(); GUN.ammo = GUN.perf.length; boardDirty = true;
   if (src.key !== 'gaze') { gloves[src.key].pulse = 1; BLASTERS[src.key].kick = 1; }
-  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect);
+  fireBolt(src.key === 'gaze' ? head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2) : src.o.clone(), src.d.clone(), src.key === 'gaze' ? head.p.clone() : null, perfect ? 2 : 1, perfect, src.key === 'gaze' ? gazeLock() : null);
 }
 // Modelo del bláster: el origen es donde la mano agarra el mando; la empuñadura gruesa envuelve el mango del
 // mando y el cuerpo tapa su cabeza, así que en realidad mixta casi no se ve el mando. Apunta por -Z.
@@ -6925,26 +7209,34 @@ function buildWave(i) {
   if (mode === 'arcs') {
     const lo = Math.min(settings.arcMin, settings.arcMax) / 100, hi = Math.max(settings.arcMin, settings.arcMax) / 100;
     for (let n = 0; n < total; n++) {
-      const tilt = Math.random() * 100 < settings.arcTilt ? (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180 : 0;
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
+      const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
+    // los inclinados, repartidos entre los dos lados en la proporción pedida (exacta, no al azar: si no, en una oleada
+    // corta un lado puede salir muchas más veces), y en orden barajado
+    const tl = list.filter(s => s.tilt), nR = Math.round(tl.length * settings.arcRight / 100), sides = tl.map((_, k) => k < nR ? 1 : -1);
+    for (let k = sides.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [sides[k], sides[j]] = [sides[j], sides[k]]; }
+    tl.forEach((s, k) => { s.tilt = sides[k] * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180; });
     return list;
   }
   if (twoShots()) total *= 2;
   let boss = null;
   const F = foes();
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() ? 'titan' : settings.crocs >= 100 ? 'crocboss' : settings.neons >= 100 ? 'neonboss' : settings.beasts >= 100 ? (BEAST.ready ? 'impboss' : 'neonboss') : 'titan') : 'carrier', hp: b }; total -= b; }
-  let k = 0, gnd = 0;
+  // los que vienen andando: cada clase en proporción a «cuántos salen» (Ajustes → Cada enemigo), bien repartidos; si solo
+  // sale una clase, el jefe es de esa clase
+  const GW = isTiny() ? { robot: 1 } : { lizard: settings.crocs, neon: settings.neons, beast: settings.beasts, robot: settings.robotsW };
+  const gsum = Object.values(GW).reduce((a, b) => a + b, 0) || (GW.robot = 1), only = Object.keys(GW).filter(k => GW[k] > 0), acc = {};
+  for (const k in GW) acc[k] = Math.random() * 0.5;
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { lizard: 'crocboss', neon: 'neonboss', beast: BEAST.ready ? 'impboss' : 'neonboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
+  let k = 0;
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
-      // hombres-cocodrilo y humanoides de neón: repartidos entre los de tierra según sus porcentajes (el cocodrilo, primero)
-      const cr = isTiny() ? 0 : settings.crocs / 100, nr = isTiny() ? 0 : Math.min(settings.neons / 100, 1 - cr), br = isTiny() ? 0 : Math.min(settings.beasts / 100, 1 - cr - nr); gnd++;
-      const turn = (r, a) => Math.floor(gnd * r + a) > Math.floor((gnd - 1) * r + a);
-      if (turn(cr, 0.5)) { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
-      else if (turn(nr, 0.25)) { kind = 'neon'; hp = 2 + Math.floor(i / 4); }
-      else if (turn(br, 0.1)) { kind = !BEAST.ready ? 'neon' : Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); } // sin los modelos, de neón
+      let g = 'robot', top = -1; for (const kk in GW) { acc[kk] += GW[kk] / (gsum || 1); if (acc[kk] > top) { top = acc[kk]; g = kk; } } acc[g] -= 1;
+      if (g === 'lizard') { kind = 'lizard'; hp = 2 + Math.floor(i / 3); }
+      else if (g === 'neon') { kind = 'neon'; hp = 2 + Math.floor(i / 4); }
+      else if (g === 'beast') { kind = !BEAST.ready ? 'neon' : Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); } // sin los modelos, de neón
       else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
@@ -7003,11 +7295,11 @@ function summaryText() {
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
   return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
 }
-// Los ejercicios, de cuatro en cuatro por fila (de tres si son muchos, para que se lean): los del modo o, por zona del cuerpo, todos (el modo se ajusta solo)
+// Los ejercicios del modo, de cuatro en cuatro por fila (de tres si son muchos, para que se lean), en lista o por zona del cuerpo
 function exerciseRows(back) {
   const pick = v => { setSetting('exercise', v); back(); }, rows = [];
   const add = (label, list) => { const per = list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
-  if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x]));
+  if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x] && exOk(settings.mode, x)));
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
 }
@@ -7070,6 +7362,7 @@ function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => SCHEMA.some(f => f.g === g && fieldVisible(f)));
   if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
+  if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });
@@ -7830,7 +8123,12 @@ function moveSpec(move) {
     o.r = clamp(r * 0.65, 0.07, 0.13); const ri = o.r * 0.75;
     // en la flexión, a veces algo desplazada hacia un hombro: obliga a cargar el peso en ese brazo
     const px = move === 'push' && Math.random() < 0.6 ? side * rand(0.07, 0.14) : 0;
-    o.pos = move === 'push' ? new V3(px, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
+    // altura sobre el suelo: entre la mínima y la máxima de los ajustes (0: según la bajada en la flexión), y siempre algo
+    // por debajo de tu cabeza en plancha, para que haya que bajar
+    let lo = S - Math.max(ri + 0.05, pd), hi = S - Math.max(ri + 0.03, pd * 0.6);
+    if (settings.tchPushLo) lo = settings.tchPushLo / 100; if (settings.tchPushHi) hi = settings.tchPushHi / 100;
+    const top = S - ri - 0.03; hi = Math.min(Math.max(lo, hi), top); lo = Math.min(lo, hi);
+    o.pos = move === 'push' ? new V3(px, rand(lo, hi), -0.06) : new V3(0, S, -0.06);
     if (move === 'plank') { o.r *= 1.15; o.hold = settings.plankHold; }
   } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
   else if (move === 'cutLow') o.pos = new V3(side * rand(0.1, 0.3), S - sd - 0.3, -0.55);
@@ -8114,17 +8412,19 @@ function tapTempo() {
 }
 async function spotifyTempo() {
   try {
-    const r = await spTempo(); if (!r) return 'Spotify no da el ritmo a las apps nuevas: márcalo tocando al compás';
-    setSetting('bpm', Math.round(r.bpm)); if (r.beat0 != null) TCH.beat0 = r.beat0;
-    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM` + (r.beat0 == null ? ' (toca al compás para encajar el pulso)' : '');
+    const r = await spTempo(); if (!r) return 'No encuentro el ritmo de esta canción: márcalo con «Al compás»';
+    SP.tempoId = r.id; setSetting('bpm', Math.round(r.bpm)); TCH.beat0 = r.beat0; if (typeof BEAT !== 'undefined') BEAT.off = null;
+    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM`;
   } catch (e) { return spErrText(e); }
 }
 function tempoRows(back) {
-  const P = settings.bpm;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
-  const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { tapTempo(); back(); } }];
-  if (spConnected()) items.push({ label: 'Ritmo de Spotify', onPress: () => { spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
-  if (P) items.push({ label: 'Sin ritmo', onPress: () => { setSetting('bpm', 0); back(); } });
+  const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm;
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
+  // con el ritmo de Spotify, un toque al compás solo encaja el pulso (el tempo ya lo da la canción)
+  const items = [auto && P ? { label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } }
+    : { label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  if (spConnected()) items.push({ label: auto ? 'Ritmo de Spotify ✓' : 'Ritmo de Spotify', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
+  if (P) items.push({ label: 'Sin ritmo', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } setSetting('bpm', 0); back(); } });
   rows.push({ t: 'btns', items });
   return rows;
 }

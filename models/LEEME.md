@@ -4,7 +4,7 @@
 | --- | --- |
 | `imp.glb` | **Imp**, el diablillo (Bestiary · Dungeon Monsters Kit, de [Quaternius](https://quaternius.com)): cuerpo y esqueleto, sin texturas. |
 | `puglin.glb` | **Puglin**, del mismo pack. |
-| `anims.glb` | Las animaciones que usa el juego (andar, trotar, correr, puñetazos, recibir golpe, morir, bailar y lanzar un hechizo), sacadas de la **Universal Animation Library** (Quaternius, CC0), hecha para el mismo esqueleto. Solo lleva el esqueleto y esas animaciones (sin los dedos ni la malla). |
+| `anims.glb` | Las animaciones que usa el juego (andar, trotar, correr, puñetazos, tajo de espada, recibir golpe, morir, bailar, lanzar un hechizo, voltereta y guardia), sacadas de la **Universal Animation Library** (Quaternius, CC0), hecha para el mismo esqueleto. Solo lleva el esqueleto y esas animaciones (sin los dedos ni la malla). |
 | `tex/` | Las texturas, reducidas a 1024 px para que carguen deprisa en las Quest: tres colores por monstruo (`*_color1..3.jpg`), relieve (`*_normal`), rugosidad y metal (`*_orm`) y brillo de los ojos (`*_emissive`). |
 
 Cómo se prepararon, por si hay que añadir otro monstruo del mismo tipo (esqueleto de Unreal: `root`, `pelvis`, `spine_01`…):

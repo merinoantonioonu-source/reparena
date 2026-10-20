@@ -104,7 +104,12 @@ function moveSpec(move) {
     o.r = clamp(r * 0.65, 0.07, 0.13); const ri = o.r * 0.75;
     // en la flexión, a veces algo desplazada hacia un hombro: obliga a cargar el peso en ese brazo
     const px = move === 'push' && Math.random() < 0.6 ? side * rand(0.07, 0.14) : 0;
-    o.pos = move === 'push' ? new V3(px, S - rand(Math.max(ri + 0.03, pd * 0.6), Math.max(ri + 0.05, pd)), -0.06) : new V3(0, S, -0.06);
+    // altura sobre el suelo: entre la mínima y la máxima de los ajustes (0: según la bajada en la flexión), y siempre algo
+    // por debajo de tu cabeza en plancha, para que haya que bajar
+    let lo = S - Math.max(ri + 0.05, pd), hi = S - Math.max(ri + 0.03, pd * 0.6);
+    if (settings.tchPushLo) lo = settings.tchPushLo / 100; if (settings.tchPushHi) hi = settings.tchPushHi / 100;
+    const top = S - ri - 0.03; hi = Math.min(Math.max(lo, hi), top); lo = Math.min(lo, hi);
+    o.pos = move === 'push' ? new V3(px, rand(lo, hi), -0.06) : new V3(0, S, -0.06);
     if (move === 'plank') { o.r *= 1.15; o.hold = settings.plankHold; }
   } else if (move === 'tap') o.pos = new V3(side * rand(0.25, 0.35), Math.max(0.12, S - 0.15), -0.2);
   else if (move === 'cutLow') o.pos = new V3(side * rand(0.1, 0.3), S - sd - 0.3, -0.55);
@@ -388,17 +393,19 @@ function tapTempo() {
 }
 async function spotifyTempo() {
   try {
-    const r = await spTempo(); if (!r) return 'Spotify no da el ritmo a las apps nuevas: márcalo tocando al compás';
-    setSetting('bpm', Math.round(r.bpm)); if (r.beat0 != null) TCH.beat0 = r.beat0;
-    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM` + (r.beat0 == null ? ' (toca al compás para encajar el pulso)' : '');
+    const r = await spTempo(); if (!r) return 'No encuentro el ritmo de esta canción: márcalo con «Al compás»';
+    SP.tempoId = r.id; setSetting('bpm', Math.round(r.bpm)); TCH.beat0 = r.beat0; if (typeof BEAT !== 'undefined') BEAT.off = null;
+    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM`;
   } catch (e) { return spErrText(e); }
 }
 function tempoRows(back) {
-  const P = settings.bpm;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música', color: '#ffd166' }];
-  const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { tapTempo(); back(); } }];
-  if (spConnected()) items.push({ label: 'Ritmo de Spotify', onPress: () => { spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
-  if (P) items.push({ label: 'Sin ritmo', onPress: () => { setSetting('bpm', 0); back(); } });
+  const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm;
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
+  // con el ritmo de Spotify, un toque al compás solo encaja el pulso (el tempo ya lo da la canción)
+  const items = [auto && P ? { label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } }
+    : { label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  if (spConnected()) items.push({ label: auto ? 'Ritmo de Spotify ✓' : 'Ritmo de Spotify', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
+  if (P) items.push({ label: 'Sin ritmo', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } setSetting('bpm', 0); back(); } });
   rows.push({ t: 'btns', items });
   return rows;
 }
