@@ -6,6 +6,7 @@ let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnI
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
 const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
 let stats = newStats();
+const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dificultad creciente (ver rampWaveEnd)
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
 // Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
@@ -119,7 +120,7 @@ class Robot {
     robotSlot(this);
     // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
     const grp = K.beast3d === 'zombie' ? 'zombie' : K.beast3d === 'trex' || K.beast3d === 'raptor' ? 'dino' : K.beast3d ? 'beast' : 'robot';
-    this.pace = clamp((settings['pace_' + grp] || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1); // rapidez de sus gestos
+    this.pace = clamp((dv('pace_' + grp) || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1); // rapidez de sus gestos (sube con la dificultad creciente)
     const travel = clamp((settings['spd_' + grp] || 100) / 100, 1, 3); // velocidad al desplazarse (1 = la justa para llegar a tiempo)
     this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
     Object.assign(this, { zigPh: rand(0, TAU), burstT: rand(0, 1.8), dodge: 0, dodgeDir: 0, dodgeT: rand(2, 4), lastHp: spec.hp, roll: false, rollStart: false });
@@ -650,7 +651,7 @@ class Flyer {
     if (push) { const h = pick(liveHatches()); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = dv('flySpeed') / 3.6 * (push ? 0.27 : 1);
     if (!push) { const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
-    Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * settings.erratic / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
+    Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * dv('erratic') / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
     this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
@@ -1534,7 +1535,7 @@ function buildWave(i) {
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
-    const lo = Math.min(settings.arcMin, settings.arcMax) / 100, hi = Math.max(settings.arcMin, settings.arcMax) / 100;
+    const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100;
     for (let n = 0; n < total; n++) {
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
@@ -1739,7 +1740,7 @@ function pauseMenu() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh();
+  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -1776,6 +1777,14 @@ function calibrate() {
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
+// Dificultad creciente: sube un nivel por cada oleada superada con soltura (pocos golpes, fallos o caídas en ella); si te
+// han dado mucho, o la has perdido, la siguiente sigue igual. Se ve al empezar cada oleada, en el marcador y en el resumen
+function rampWaveEnd(ok) {
+  RAMP.up = false; RAMP.note = ''; if (!(settings.ramp > 0)) return;
+  const bad = stats.taken - RAMP.t0 + stats.falls - RAMP.f0, lim = Math.max(2, Math.round(0.2 * (waveTarget || 10)));
+  if (ok && bad <= lim) { RAMP.lvl++; RAMP.up = true; RAMP.note = `Próxima oleada: +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} % de dificultad`; }
+  else RAMP.note = ok ? `Te han dado ${bad} veces: la próxima, igual de difícil` : 'La próxima, igual de difícil';
+}
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
   if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
@@ -1784,8 +1793,9 @@ function startWave(i) {
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
-    spawnInterval = settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto; // con espada, uno detrás de otro
+    spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.5); // con espada, uno detrás de otro; con la dificultad creciente, más seguidos
   }
+  RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
@@ -1836,6 +1846,7 @@ function endRun(win, manual) {
     hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ≈ ${Math.round(runStatsKcal())} kcal · ${score} puntos`,
+    RAMP.lvl && settings.ramp > 0 ? `Dificultad alcanzada: +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} % (${RAMP.lvl} ${RAMP.lvl === 1 ? 'subida' : 'subidas'})` : '',
     streakUp ? `¡${P.streak} días seguidos entrenando!${P.streak >= P.best ? ' Tu mejor racha' : ''}` : progressLine(P),
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
@@ -1880,6 +1891,7 @@ function gameStep(dt, t) {
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
+      rampWaveEnd(!BAR.failed);
       if (BAR.failed) { const last = settings.waves && waveIdx >= settings.waves - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
       else if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
       else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); }
