@@ -1730,7 +1730,7 @@ function pauseMenu() {
   m.rebuild = () => pauseMenu();
 }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);

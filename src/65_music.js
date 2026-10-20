@@ -68,7 +68,8 @@ function spErrText(e) {
 async function spRefresh() {
   if (!spConnected()) return;
   SP.lastRef = Date.now();
-  try { SP.st = await spApi('GET', '/me/player'); SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+  // sin reproductor (204) se mantiene el aviso de abrir Spotify: si no, se borraba medio segundo después de pulsar Play
+  try { SP.st = await spApi('GET', '/me/player'); if (SP.st || SP.err !== spErrText(new Error('NO_DEVICE'))) SP.err = ''; } catch (e) { SP.err = spErrText(e); }
   spMenuSync(); spPage(); spAutoTempo();
 }
 async function spDo(fn) {

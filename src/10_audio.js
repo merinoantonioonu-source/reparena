@@ -41,7 +41,7 @@ function audioInit() {
 /* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
 // Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado. Casi todos los efectos
 // (SND_FILES, más abajo) y los sonidos continuos (LOOP_FILES) se pueden sustituir; sounds/LEEME.md tiene la lista
-const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque'];
+const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque', 'ambiente-naturaleza'];
 AUD.samples = {};
 async function loadSamples() {
   if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
@@ -185,6 +185,11 @@ const SND = {
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
+  // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
+  bird(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
+    for (let i = 0; i < n; i++) { const d = rand(0.05, 0.12); tone(o, { t, f: up ? f0 : f0 * 1.35, to: up ? f0 * 1.4 : f0, d, gain: rand(0.05, 0.09) }); t += d + rand(0.03, 0.09); }
+  },
   hiss(pos, s = 1) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: 0.8, ref: 0.6 });
     noise(o, { type: 'highpass', f: 3200 / s, a: 0.12, d: 0.7, gain: 0.35 }); noise(o, { type: 'bandpass', f: 6500 / Math.sqrt(s), q: 2, a: 0.1, d: 0.6, gain: 0.25 });
@@ -313,7 +318,7 @@ const SND_FILES = {
   hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
-  owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
+  owl: ['buho', 0], bird: ['pajaro', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
@@ -411,9 +416,16 @@ function ambientStart() {
   if (!AUD.C || AMB.nodes) return;
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
-  AMB.kind = forestOn() ? 'forest' : 'arena';
-  const own = AUD.samples[AMB.kind === 'forest' ? 'ambiente-bosque' : 'ambiente-arena'];
+  AMB.kind = ambKind();
+  const own = AUD.samples[{ forest: 'ambiente-bosque', nature: 'ambiente-naturaleza' }[AMB.kind] || 'ambiente-arena'];
   if (own) { const s = C.createBufferSource(); s.buffer = own; s.loop = true; s.connect(out); s.start(); AMB.nodes = { nodes: [s], out }; return; } // ambiente desde archivo
+  if (AMB.kind === 'nature') { // de día: brisa suave entre las hojas que va y viene (los pájaros los pone el bosque)
+    const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 900; wf.Q.value = 0.4;
+    const wg = C.createGain(); wg.gain.value = 0.12; w.connect(wf).connect(wg).connect(out); nodes.push(w);
+    const l1 = C.createOscillator(); l1.frequency.value = 0.07; const lg1 = C.createGain(); lg1.gain.value = 500; l1.connect(lg1).connect(wf.frequency); nodes.push(l1);
+    const l2 = C.createOscillator(); l2.frequency.value = 0.11; const lg2 = C.createGain(); lg2.gain.value = 0.08; l2.connect(lg2).connect(wg.gain); nodes.push(l2);
+    nodes.forEach(n => n.start()); AMB.nodes = { nodes, out }; return;
+  }
   if (AMB.kind === 'forest') { // viento entre las hojas, grillos y un zumbido grave e inquietante
     const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 0.5;
     const wg = C.createGain(); wg.gain.value = 0.2; w.connect(wf).connect(wg).connect(out); nodes.push(w);
@@ -438,7 +450,8 @@ function ambientStart() {
   AMB.nodes = { nodes, out };
 }
 // Al entrar o salir del bosque cambia el ambiente
-function ambientRefresh() { if (AMB.nodes && AMB.kind !== (forestOn() ? 'forest' : 'arena')) { ambientStop(); ambientStart(); } }
+const ambKind = () => forestOn() ? 'forest' : natureOn() ? 'nature' : 'arena';
+function ambientRefresh() { if (AMB.nodes && AMB.kind !== ambKind()) { ambientStop(); ambientStart(); } }
 function ambientStop() {
   if (!AMB.nodes) return; const T = AUD.C.currentTime;
   AMB.nodes.out.gain.setTargetAtTime(0.0001, T, 0.3); AMB.nodes.nodes.forEach(n => n.stop(T + 1.5)); AMB.nodes = null;

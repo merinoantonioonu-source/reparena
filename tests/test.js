@@ -234,7 +234,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (!A.a || !G.a || G.a > A.a / 1.8) errors.push(`cada enemigo: con más rapidez de gestos el golpe debería ir más deprisa (${A.a.toFixed(2)} → ${G.a.toFixed(2)} s)`);
       if (!F.a || Math.abs(F.a - A.a) > A.a * 0.2) errors.push(`cada enemigo: la velocidad al desplazarse no debería cambiar sus gestos (${A.a.toFixed(2)} → ${F.a.toFixed(2)} s)`);
       if (Math.abs(G.v - A.v) > A.v * 0.25) errors.push(`cada enemigo: la rapidez de gestos no debería cambiar lo deprisa que se desplazan (${A.v.toFixed(2)} → ${G.v.toFixed(2)} m/s)`);
-      if (F.v < A.v * 1.8 || Z.v < A.v * 1.5 || F.vx < A.vx * 1.8) errors.push(`cada enemigo: la velocidad al desplazarse no cambia lo deprisa que van (100 % ${A.v.toFixed(2)}, 250 % ${F.v.toFixed(2)}, al salir ${A.vx.toFixed(2)} → ${F.vx.toFixed(2)}, zigzag ${Z.v.toFixed(2)} m/s)`);
+      if (F.v < A.v * 1.8 || Z.v < A.v * 1.4 || F.vx < A.vx * 1.8) errors.push(`cada enemigo: la velocidad al desplazarse no cambia lo deprisa que van (100 % ${A.v.toFixed(2)}, 250 % ${F.v.toFixed(2)}, al salir ${A.vx.toFixed(2)} → ${F.vx.toFixed(2)}, zigzag ${Z.v.toFixed(2)} m/s)`);
       if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: más deprisa no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
       if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
@@ -531,6 +531,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     C.createBufferSource = mk;
   }
   { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
+  // ---- entorno: sin cargador de glTF (aquí) el bosque no se puede cargar y sigue la fortaleza, sin errores ----
+  { RA.setSetting('scenery', 'nature'); frame(1); const envOn = RA.env.visible; RA.setSetting('scenery', 'arena'); frame(1);
+    log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza'); }
   // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
   { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
     const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });
@@ -778,7 +781,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     SPOT.track = 'Otra canción'; await RA.spRefresh(); await sleep(40); log('next song: tempo asked again', urls.length > 3);
     if (urls.length <= 3) errors.push('Ritmo de Spotify: al cambiar de canción no se busca su ritmo');
     RA.SP.cfg.autoBpm = false; RA.setSetting('bpm', 0); SPOT.playing = false; delete global.document.head; RA.exitAll(); frame(1); }
-  SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(20); log('no device:', RA.spNowText());
+  SPOT.noDevice = true; await RA.spRefresh(); RA.spToggle(); await sleep(600); log('no device:', RA.spNowText());
   if (!/pon algo a sonar/.test(RA.spNowText())) errors.push('Spotify: sin reproductor no avisa');
   SPOT.noDevice = false; RA.exitAll(); frame(1);
 

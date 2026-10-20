@@ -525,6 +525,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'sistema', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'sistema', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'scenery', g: 'sistema', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
   { key: 'goalMin', g: 'sistema', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'sistema', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
@@ -894,7 +895,7 @@ function audioInit() {
 /* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
 // Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado. Casi todos los efectos
 // (SND_FILES, más abajo) y los sonidos continuos (LOOP_FILES) se pueden sustituir; sounds/LEEME.md tiene la lista
-const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque'];
+const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque', 'ambiente-naturaleza'];
 AUD.samples = {};
 async function loadSamples() {
   if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
@@ -1038,6 +1039,11 @@ const SND = {
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
+  // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
+  bird(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
+    for (let i = 0; i < n; i++) { const d = rand(0.05, 0.12); tone(o, { t, f: up ? f0 : f0 * 1.35, to: up ? f0 * 1.4 : f0, d, gain: rand(0.05, 0.09) }); t += d + rand(0.03, 0.09); }
+  },
   hiss(pos, s = 1) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.25, gain: 0.8, ref: 0.6 });
     noise(o, { type: 'highpass', f: 3200 / s, a: 0.12, d: 0.7, gain: 0.35 }); noise(o, { type: 'bandpass', f: 6500 / Math.sqrt(s), q: 2, a: 0.1, d: 0.6, gain: 0.25 });
@@ -1166,7 +1172,7 @@ const SND_FILES = {
   hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
-  owl: ['buho', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
+  owl: ['buho', 0], bird: ['pajaro', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
@@ -1264,9 +1270,16 @@ function ambientStart() {
   if (!AUD.C || AMB.nodes) return;
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
-  AMB.kind = forestOn() ? 'forest' : 'arena';
-  const own = AUD.samples[AMB.kind === 'forest' ? 'ambiente-bosque' : 'ambiente-arena'];
+  AMB.kind = ambKind();
+  const own = AUD.samples[{ forest: 'ambiente-bosque', nature: 'ambiente-naturaleza' }[AMB.kind] || 'ambiente-arena'];
   if (own) { const s = C.createBufferSource(); s.buffer = own; s.loop = true; s.connect(out); s.start(); AMB.nodes = { nodes: [s], out }; return; } // ambiente desde archivo
+  if (AMB.kind === 'nature') { // de día: brisa suave entre las hojas que va y viene (los pájaros los pone el bosque)
+    const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 900; wf.Q.value = 0.4;
+    const wg = C.createGain(); wg.gain.value = 0.12; w.connect(wf).connect(wg).connect(out); nodes.push(w);
+    const l1 = C.createOscillator(); l1.frequency.value = 0.07; const lg1 = C.createGain(); lg1.gain.value = 500; l1.connect(lg1).connect(wf.frequency); nodes.push(l1);
+    const l2 = C.createOscillator(); l2.frequency.value = 0.11; const lg2 = C.createGain(); lg2.gain.value = 0.08; l2.connect(lg2).connect(wg.gain); nodes.push(l2);
+    nodes.forEach(n => n.start()); AMB.nodes = { nodes, out }; return;
+  }
   if (AMB.kind === 'forest') { // viento entre las hojas, grillos y un zumbido grave e inquietante
     const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 0.5;
     const wg = C.createGain(); wg.gain.value = 0.2; w.connect(wf).connect(wg).connect(out); nodes.push(w);
@@ -1291,7 +1304,8 @@ function ambientStart() {
   AMB.nodes = { nodes, out };
 }
 // Al entrar o salir del bosque cambia el ambiente
-function ambientRefresh() { if (AMB.nodes && AMB.kind !== (forestOn() ? 'forest' : 'arena')) { ambientStop(); ambientStart(); } }
+const ambKind = () => forestOn() ? 'forest' : natureOn() ? 'nature' : 'arena';
+function ambientRefresh() { if (AMB.nodes && AMB.kind !== ambKind()) { ambientStop(); ambientStart(); } }
 function ambientStop() {
   if (!AMB.nodes) return; const T = AUD.C.currentTime;
   AMB.nodes.out.gain.setTargetAtTime(0.0001, T, 0.3); AMB.nodes.nodes.forEach(n => n.stop(T + 1.5)); AMB.nodes = null;
@@ -1907,6 +1921,7 @@ const board = makePanel(1, 0.445, 1024); board.mesh.material.transparent = false
 const boardRig = new THREE.Group(); arena.add(boardRig);
 const boardFrameMat = M.steel.clone();
 let boardDirty = true;
+const layoutHooks = []; // lo que se recoloca con la arena (el bosque de día)
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
@@ -1984,7 +1999,7 @@ function layoutArena() {
   }
   rig.add(board.mesh);
   if (isBars() && settings.exercise === 'row' && BAR.board) placeRowBoard(false);
-  boardDirty = true;
+  boardDirty = true; layoutHooks.forEach(f => f());
 }
 function applyEnvMode() {
   env.visible = !arMode;
@@ -1993,7 +2008,7 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest();
+  layoutArena(); applyVolume(); applyForest(); applyNature();
 }
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
@@ -2009,7 +2024,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode && !forestOn()) {
+  if (!arMode && !forestOn() && !NAT.group.visible) {
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }
@@ -2187,6 +2202,140 @@ function updateForest(dt, t) {
   FOREST.creakT -= dt; if (FOREST.creakT <= 0) { FOREST.creakT = rand(6, 15); const a = rand(0, TAU); SND.creak(new V3(Math.cos(a) * 6, 4, Math.sin(a) * 6)); }
 }
 settingHooks.push(k => { if (['mode', 'exercise'].includes(k) && (xrActive || preview)) applyEnvMode(); });
+
+
+/* =================== BOSQUE DE DÍA (entorno «Bosque», en VR) =================== */
+// Un claro del bosque a pleno día, con los modelos del Stylized Nature MegaKit (Quaternius, CC0): árboles, pinos, algún
+// árbol seco, arbustos, rocas, hierba, flores, helechos y setas. Rodea la arena sin tapar las compuertas ni el camino de
+// los enemigos. Cada modelo se dibuja con instancias (una pieza por modelo y material), para que vaya fluido en las Quest.
+// models/nature.glb (los modelos juntos, simplificados) y models/tex/nature (sus texturas, reducidas). Se carga la primera
+// vez que hace falta; mientras tanto (o si no se puede cargar), sigue la fortaleza
+const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, pick: Math.random() < 0.5 ? 'arena' : 'nature', built: '', birdT: 3 };
+NAT.group.visible = false; arena.add(NAT.group);
+// material del modelo → [textura, con transparencia (hojas, flores), por las dos caras]
+const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
+  Leaves: ['leaves.png', true], Flowers: ['flowers.png', true], Grass: ['grass.png', false, true], Mushrooms: ['mushrooms.jpg'], Rocks: ['rocks.jpg'] };
+// El entorno que toca: el elegido o, con «Alternar», uno distinto en cada partida
+const sceneryPick = () => settings.scenery === 'mix' ? NAT.pick : settings.scenery;
+function natureOn() { return !arMode && !forestOn() && sceneryPick() === 'nature' && NAT.ready; }
+// Atributos comprimidos (enteros normalizados) → números con decimales, para poder colocar cada pieza en su sitio
+function natFloat(a) {
+  if (!a || (!a.normalized && a.array instanceof Float32Array && !a.isInterleavedBufferAttribute)) return a;
+  const n = a.count, k = a.itemSize, f = new Float32Array(n * k), get = ['getX', 'getY', 'getZ', 'getW'];
+  const div = a.normalized ? ({ Int8Array: 127, Uint8Array: 255, Int16Array: 32767, Uint16Array: 65535 }[(a.array || a.data.array).constructor.name] || 1) : 1;
+  for (let i = 0; i < n; i++) for (let j = 0; j < k; j++) f[i * k + j] = Math.max(-1, a[get[j]](i) / div);
+  return new THREE.BufferAttribute(f, k);
+}
+function natureLoad() {
+  if (NAT.ready || NAT.loading || NAT.failed) return;
+  if (!THREE.GLTFLoader || typeof document === 'undefined') { NAT.failed = true; return; }
+  NAT.loading = true; const T = new THREE.TextureLoader(), mats = {};
+  for (const [n, [f, alpha, both]] of Object.entries(NAT_TEX)) {
+    const t = T.load('models/tex/nature/' + f); t.encoding = THREE.sRGBEncoding; t.flipY = false;
+    mats[n] = new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0, alphaTest: alpha ? 0.5 : 0, side: alpha || both ? THREE.DoubleSide : THREE.FrontSide });
+  }
+  new THREE.GLTFLoader().load('models/nature.glb', g => {
+    g.scene.updateMatrixWorld(true);
+    for (const node of g.scene.children) {
+      const parts = [];
+      node.traverse(o => {
+        if (!o.isMesh) return; const geo = new THREE.BufferGeometry();
+        for (const a of ['position', 'normal', 'uv']) if (o.geometry.attributes[a]) geo.setAttribute(a, natFloat(o.geometry.attributes[a]));
+        if (o.geometry.index) geo.setIndex(o.geometry.index);
+        geo.applyMatrix4(o.matrixWorld); // en metros y con +Y hacia arriba
+        parts.push({ geo, mat: mats[o.material.name] || o.material });
+      });
+      NAT.parts[node.name] = parts;
+    }
+    NAT.ready = true; NAT.loading = false; NAT.built = ''; applyEnvMode();
+  }, undefined, e => { NAT.failed = true; NAT.loading = false; console.log('No se pudo cargar el bosque:', e && e.message); });
+}
+// Cielo de día: azul arriba, claro en el horizonte, nubes blandas que pasan despacio y el resplandor del sol
+const natSkyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
+  vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform float time; varying vec3 vP;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
+    float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
+    void main(){
+      vec3 d = normalize(vP); float h = d.y;
+      vec3 c = mix(vec3(0.78,0.88,0.93), vec3(0.32,0.58,0.88), smoothstep(-0.02, 0.6, h));
+      vec2 uv = d.xz / (max(h, 0.0) + 0.25) * 1.2 + vec2(time*0.006, time*0.002);
+      float cl = smoothstep(0.45, 0.8, fbm(uv)) * smoothstep(0.0, 0.15, h);
+      c = mix(c, vec3(1.0), cl * 0.75);
+      vec3 sun = normalize(vec3(-0.5, 0.62, 0.6)); float s = max(dot(d, sun), 0.0);
+      c += vec3(1.0,0.92,0.75) * (pow(s, 600.0) * 2.0 + pow(s, 12.0) * 0.18);
+      gl_FragColor = vec4(c, 1.0);
+    }`
+});
+const natSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), natSkyMat); natSky.renderOrder = -10; NAT.group.add(natSky);
+// Suelo de hierba: verdes que se mezclan a manchas, con algo de tierra
+const natGround = (() => {
+  const c = mkCanvas(256), x = c.getContext('2d'), R = rng(11);
+  x.fillStyle = '#5f8f3a'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 260; i++) { const r = 6 + R() * 26, X = R() * 256, Y = R() * 256, k = R(); x.fillStyle = k < 0.45 ? 'rgba(78,124,44,0.35)' : k < 0.85 ? 'rgba(120,160,64,0.3)' : 'rgba(120,96,58,0.22)'; for (const [dx, dy] of [[0, 0], [256, 0], [-256, 0], [0, 256], [0, -256]]) { x.beginPath(); x.arc(X + dx, Y + dy, r, 0, TAU); x.fill(); } }
+  for (let i = 0; i < 4000; i++) { x.fillStyle = R() < 0.5 ? 'rgba(40,80,24,0.5)' : 'rgba(150,190,80,0.4)'; x.fillRect(R() * 256, R() * 256, 1, 2 + R() * 3); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(40, 40); t.encoding = THREE.sRGBEncoding; t.anisotropy = MAX_ANISO;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(70, 64), new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = -0.005; m.receiveShadow = true; NAT.group.add(m); return m;
+})();
+const natPlants = new THREE.Group(); NAT.group.add(natPlants);
+// (los modelos del pack vienen a una escala exagerada para lo pequeño: la hierba mide casi 2 m; aquí, a su tamaño)
+// Coloca los modelos alrededor (en la arena: tú en el centro, mirando hacia −Z, las compuertas delante). Lo grande (árboles,
+// arbustos, rocas) nunca delante entre las compuertas y tú, ni cerca de ti; la hierba y las flores, por todas partes menos
+// donde pisas. Siempre igual para una misma distancia de las compuertas
+const pick3 = (R, l) => l[Math.floor(R() * l.length)];
+function natureBuild() {
+  if (!NAT.ready) return;
+  const D = arenaDepth(), key = D.toFixed(2); if (NAT.built === key) return; NAT.built = key;
+  while (natPlants.children.length) natPlants.remove(natPlants.children[0]);
+  const R = rng(23), put = {}, trees = [];
+  const front = (x, z, extra) => Math.abs(Math.atan2(x, -z)) < 0.8 && Math.hypot(x, z) < D + extra; // el abanico de las compuertas
+  const nearGate = (x, z, r) => gates.some(g => g.on && Math.hypot(g.x - x, g.z - z) < r);
+  const add = (n, x, z, s, y = R() * TAU) => { if (NAT.parts[n]) (put[n] = put[n] || []).push(new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, y), new V3(s, s, s))); };
+  const scatter = (count, rMin, rMax, ok, fn) => { for (let i = 0, tries = 0; i < count && tries < count * 30; tries++) { const a = R() * TAU, r = Math.sqrt(rMin * rMin + R() * (rMax * rMax - rMin * rMin)), x = Math.sin(a) * r, z = -Math.cos(a) * r; if (!ok(x, z, r)) continue; fn(x, z, r); i++; } };
+  const big = (x, z, r) => r > 5.5 && !front(x, z, 5) && !nearGate(x, z, 4) && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r);
+  // árboles: los normales más cerca, los pinos más lejos, algún árbol seco
+  scatter(24, 7, 34, big, (x, z, r) => { const k = R(), n = r > 20 && k < 0.7 ? pick3(R, ['Pine_2', 'Pine_4', 'Pine_5']) : k < 0.08 ? pick3(R, ['DeadTree_1', 'DeadTree_2']) : pick3(R, ['CommonTree_3', 'CommonTree_4', 'CommonTree_5']); add(n, x, z, 0.8 + R() * 0.55); trees.push({ x, z, r: 3.2 }); });
+  // y un fondo de bosque detrás de las compuertas (más allá de donde salen los enemigos)
+  scatter(9, D + 6, D + 20, (x, z, r) => !nearGate(x, z, 5) && Math.abs(Math.atan2(x, -z)) < 0.9 && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r), (x, z) => { add(pick3(R, ['Pine_2', 'Pine_4', 'Pine_5', 'CommonTree_3', 'CommonTree_4']), x, z, 0.9 + R() * 0.5); trees.push({ x, z, r: 3.2 }); });
+  scatter(16, 5.5, 14, big, (x, z) => { add(R() < 0.6 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, 0.45 + R() * 0.3); trees.push({ x, z, r: 1.6 }); });
+  scatter(12, 5.5, 20, big, (x, z) => { add(`Rock_Medium_${1 + Math.floor(R() * 3)}`, x, z, 0.3 + R() * 0.45); trees.push({ x, z, r: 1.5 }); });
+  // setas al pie de los árboles cercanos
+  trees.slice(0, 18).forEach(t => { if (R() < 0.55) add('Mushroom_Common', t.x + (R() - 0.5) * 1.8, t.z + (R() - 0.5) * 1.8, 0.3 + R() * 0.25); });
+  // hierba, flores, helechos y tréboles: por todas partes menos donde pisas y delante de las compuertas
+  const small = (x, z, r) => r > 1.7 && !nearGate(x, z, 2.2);
+  scatter(170, 1.7, 15, small, (x, z) => add(['Grass_Common_Short', 'Grass_Common_Short', 'Grass_Common_Tall', 'Grass_Wispy_Short', 'Grass_Wispy_Tall'][Math.floor(R() * 5)], x, z, 0.2 + R() * 0.15));
+  scatter(45, 2.2, 14, small, (x, z) => add('Flower_3_Group', x, z, 0.22 + R() * 0.12));
+  scatter(45, 3, 16, (x, z, r) => small(x, z, r) && !front(x, z, 1), (x, z) => add(['Fern_1', 'Plant_1_Big', 'Plant_7_Big', 'Clover_1'][Math.floor(R() * 4)], x, z, 0.3 + R() * 0.2));
+  for (const n in put) for (const p of NAT.parts[n]) {
+    const m = new THREE.InstancedMesh(p.geo, p.mat, put[n].length); put[n].forEach((M4, i) => m.setMatrixAt(i, M4));
+    m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; natPlants.add(m);
+  }
+}
+// Al entrar en el bosque o salir de él: qué se ve, la luz de día, la niebla clara y el sonido
+function applyNature() {
+  const want = !arMode && !forestOn() && sceneryPick() === 'nature';
+  if (want && !NAT.ready) natureLoad();
+  const on = natureOn(); NAT.group.visible = on;
+  if (!on) return;
+  natureBuild(); env.visible = false;
+  scene.fog = new THREE.FogExp2(0xc4dcea, 0.014); renderer.setClearColor(0xc4dcea, 1);
+  hemi.color.setHex(0xd6ecff); hemi.groundColor.setHex(0x4d6e30); hemi.intensity = 0.95;
+  keyLight.color.setHex(0xfff0d2); keyLight.intensity = 1.5; rimLight.color.setHex(0xa8d4ff); rimLight.intensity = 0.3; renderer.toneMappingExposure = 1.0;
+  applyVolume(); ambientRefresh();
+}
+layoutHooks.push(() => { if (NAT.group.visible) natureBuild(); });
+settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
+// Con «Alternar», cada partida en un sitio distinto
+function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NAT.pick === 'nature' ? 'arena' : 'nature'; applyEnvMode(); }
+// Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles
+function updateNature(dt, t) {
+  if (!NAT.group.visible) return;
+  natSkyMat.uniforms.time.value = t; arena.worldToLocal(natSky.position.copy(head.p)); natSky.position.y = 0; // el cielo, siempre centrado en ti
+  NAT.birdT -= dt; if (NAT.birdT <= 0) { NAT.birdT = rand(2.5, 7); const a = rand(0, TAU), r = rand(8, 18); SND.bird(arena.localToWorld(new V3(Math.sin(a) * r, rand(3, 7), -Math.cos(a) * r))); }
+}
 
 
 /* =================== APARATOS: BARRA DE DOMINADAS Y PARALELAS =================== */
@@ -5002,7 +5151,8 @@ function spErrText(e) {
 async function spRefresh() {
   if (!spConnected()) return;
   SP.lastRef = Date.now();
-  try { SP.st = await spApi('GET', '/me/player'); SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+  // sin reproductor (204) se mantiene el aviso de abrir Spotify: si no, se borraba medio segundo después de pulsar Play
+  try { SP.st = await spApi('GET', '/me/player'); if (SP.st || SP.err !== spErrText(new Error('NO_DEVICE'))) SP.err = ''; } catch (e) { SP.err = spErrText(e); }
   spMenuSync(); spPage(); spAutoTempo();
 }
 async function spDo(fn) {
@@ -7064,7 +7214,7 @@ function pauseMenu() {
   m.rebuild = () => pauseMenu();
 }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1;
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
@@ -8578,7 +8728,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt);
-  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);

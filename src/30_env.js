@@ -171,6 +171,7 @@ const board = makePanel(1, 0.445, 1024); board.mesh.material.transparent = false
 const boardRig = new THREE.Group(); arena.add(boardRig);
 const boardFrameMat = M.steel.clone();
 let boardDirty = true;
+const layoutHooks = []; // lo que se recoloca con la arena (el bosque de día)
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
 function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
@@ -248,7 +249,7 @@ function layoutArena() {
   }
   rig.add(board.mesh);
   if (isBars() && settings.exercise === 'row' && BAR.board) placeRowBoard(false);
-  boardDirty = true;
+  boardDirty = true; layoutHooks.forEach(f => f());
 }
 function applyEnvMode() {
   env.visible = !arMode;
@@ -257,7 +258,7 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest();
+  layoutArena(); applyVolume(); applyForest(); applyNature();
 }
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
@@ -273,7 +274,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode && !forestOn()) {
+  if (!arMode && !forestOn() && !NAT.group.visible) {
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }
