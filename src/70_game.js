@@ -56,23 +56,39 @@ const ROBOT_KIND = {
   zombie: { rig: 'zombie', scale: 1.0, speedF: 0.9, heavy: false, stop: 1.05, stride: 1.0, head: 1.65, beast3d: 'zombie' }, // zombi de Quaternius
   zombieboss: { rig: 'zombie', scale: 1.6, speedF: 0.7, heavy: true, stop: 1.7, stride: 1.0, head: 1.65, beast3d: 'zombie', boss: true },
   // dinosaurios: se paran más lejos (la cabeza les queda muy por delante del cuerpo) y ocupan más sitio
-  trex: { rig: 'trex', scale: 1.0, speedF: 0.9, heavy: true, stop: 2.2, stride: 1.0, head: 1.9, beast3d: 'trex', r: 0.9 },
   raptor: { rig: 'raptor', scale: 1.0, speedF: 1.2, heavy: false, stop: 1.45, stride: 1.0, head: 1.2, beast3d: 'raptor', r: 0.5 },
-  trexboss: { rig: 'trex', scale: 1.35, speedF: 0.7, heavy: true, stop: 2.8, stride: 1.0, head: 1.9, beast3d: 'trex', r: 1.1, boss: true }
+  raptorboss: { rig: 'raptor', scale: 1.7, speedF: 0.8, heavy: true, stop: 2.0, stride: 1.0, head: 1.2, beast3d: 'raptor', r: 0.8, boss: true }
 };
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
 // Con espada hay que esperarlos a tu alcance: vienen directos (como mucho SWORD_WALK s), sin pararse a amenazar
 // Partes sólidas de las compuertas, como círculos en el suelo de la arena: los pilares del marco y los bloques de los lados
-function gateSolids() {
+function gateSolids(doors) {
   const out = [];
   for (const g of gates) {
     if (!g.on || !g.g.visible) continue; const r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale;
-    const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc });
+    const put = (lx, lz, rad) => out.push({ x: g.x + (lx * c + lz * s) * sc, z: g.z + (-lx * s + lz * c) * sc, r: rad * sc, g });
+    if (doors && g.open < 0.35) for (const lx of [-0.95, -0.32, 0.32, 0.95]) put(lx, 0.1, 0.34); // las puertas cerradas, también
     for (const sd of [-1, 1]) { if (g.nat) { put(sd * 1.7, 0, 0.55); continue; } put(sd * 1.5, 0, 0.5); if (g.side.visible) put(sd * 2.2, -0.3, 1.05); } // (en el bosque, los pilares de piedra)
   }
   return out;
+}
+// Todo lo sólido del suelo (se calcula una vez por fotograma): las compuertas (pilares, bloques y, cerradas, sus puertas)
+// y, en el bosque, los troncos, las rocas y los arbustos. Cada uno sabe de qué compuerta es: dentro de su túnel, el que
+// sale no choca con los de la suya
+const SOLIDS = { list: [], t: -1 };
+function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : []); }
+const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
+const GAMEF = { n: 0 };
+// Nadie se mete en algo sólido: si un empujón (de otro, de un disparo, del golpe) lo mete, sale por el lado más corto
+function solidPush(e) {
+  for (const c of solidsNow()) {
+    if (!e.out && c.g === e.gate) continue;
+    const dx = e.pos.x - c.x, dz = e.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + e.radius;
+    if (d >= min) continue; if (d < 1e-4) { e.pos.x += min; continue; }
+    e.pos.x = c.x + dx / d * min; e.pos.z = c.z + dz / d * min;
+  }
 }
 // Ritmo (BPM) en Combate: periodo del pulso y si acaba de sonar uno (cuenta desde el pulso marcado al compás o por Spotify)
 const beatP = () => isCombat() && settings.bpm > 0 ? 60 / settings.bpm : 0;
@@ -119,7 +135,7 @@ class Robot {
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
     // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
-    const grp = K.beast3d === 'zombie' ? 'zombie' : K.beast3d === 'trex' || K.beast3d === 'raptor' ? 'dino' : K.beast3d ? 'beast' : 'robot';
+    const grp = K.beast3d === 'zombie' ? 'zombie' : K.beast3d === 'raptor' ? 'dino' : K.beast3d ? 'beast' : 'robot';
     this.pace = clamp((dv('pace_' + grp) || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1); // rapidez de sus gestos (sube con la dificultad creciente)
     const travel = clamp((settings['spd_' + grp] || 100) / 100, 1, 3); // velocidad al desplazarse (1 = la justa para llegar a tiempo)
     this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
@@ -281,7 +297,7 @@ class Robot {
         // esquiva: se aparta de los robots que tiene cerca y rodea al que se le cruza por delante (nunca va hacia él)
         const steer = _rv.copy(to);
         // las compuertas son sólidas: rodea sus pilares y los bloques de los lados (al salir del túnel va recto por el hueco)
-        if (this.out) for (const c of gateSolids()) { const dx = this.pos.x - c.x, dz = this.pos.z - c.z, dd = Math.hypot(dx, dz) || 1e-3, min = c.r + this.radius; if (dd < min + 0.6) { const k = Math.pow((min + 0.6 - dd) / 0.6, 2) * 2.2; steer.x += dx / dd * k; steer.z += dz / dd * k; } }
+        if (this.out) for (const c of solidsNow()) { const dx = this.pos.x - c.x, dz = this.pos.z - c.z, dd = Math.hypot(dx, dz) || 1e-3, min = c.r + this.radius; if (dd < min + 0.6) { const k = Math.pow((min + 0.6 - dd) / 0.6, 2) * 2.2; steer.x += dx / dd * k; steer.z += dz / dd * k; } }
         for (const o of enemies) {
           if (!this.out) break; // dentro del túnel no se aparta: sale recto
           if (o === this || !o.alive || o.type !== 'robot') continue;
@@ -357,6 +373,7 @@ class Robot {
       if (dd >= min) continue; if (dd < 1e-4) { dx = rand(-1, 1); dz = rand(-1, 1); dd = Math.hypot(dx, dz); }
       const k = (min - Math.min(dd, min)) * 0.5 / dd; this.pos.x += dx * k; this.pos.z += dz * k; o.pos.x -= dx * k; o.pos.z -= dz * k;
     }
+    solidPush(this); // y nunca dentro de una puerta cerrada, un pilar, un tronco o una roca
     // de cara hacia donde va y, al acercarse, cada vez más hacia ti
     const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
     if (faceTo !== null) {
@@ -387,7 +404,7 @@ class Robot {
       const T = this.dodgeDur, k = 1 - this.dodge / T, D = (this.roll ? 1.4 : 0.9) * this.sc, v = D * Math.PI / (2 * T) * Math.sin(Math.PI * clamp(k, 0, 1)); // recorre D metros
       _rd.set(Math.cos(faceP), 0, -Math.sin(faceP)).multiplyScalar(this.dodgeDir * v * dt); // de lado respecto a ti
       const nx = this.pos.x + _rd.x, nz = this.pos.z + _rd.z, r = this.radius;
-      const blocked = gateSolids().some(c => Math.hypot(nx - c.x, nz - c.z) < c.r + r) || enemies.some(o => o !== this && o.alive && o.type === 'robot' && Math.hypot(nx - o.pos.x, nz - o.pos.z) < r + o.radius) || roomBlocked(nx, nz, r) || Math.hypot(nx, nz) > arenaDepth() + 1;
+      const blocked = solidsNow().some(c => (this.out || c.g !== this.gate) && Math.hypot(nx - c.x, nz - c.z) < c.r + r) || enemies.some(o => o !== this && o.alive && o.type === 'robot' && Math.hypot(nx - o.pos.x, nz - o.pos.z) < r + o.radius) || roomBlocked(nx, nz, r) || Math.hypot(nx, nz) > arenaDepth() + 1;
       if (!blocked) { this.pos.x = nx; this.pos.z = nz; } else this.dodge = Math.min(this.dodge, 0.05);
       this.dodge -= dt; if (this.dodge <= 0) { this.dodge = 0; this.roll = false; this.slotT = 0; }
       return;
@@ -440,7 +457,7 @@ class Beast extends Robot {
     const natural = this.D.walk * this.sc * 0.8; if (this.vWalk < natural * 0.75 && this.style !== 'zigzag') this.vMove = Math.max(this.vMove, natural);
     this.animate(0, 0, 0);
   }
-  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, trex: 0.5, raptor: 1.6 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave; el T-Rex, un rugido profundo
+  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, raptor: 1.6 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave
   center(out) { return this.B.chest.getWorldPosition(out); }
   play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
@@ -484,7 +501,7 @@ class Beast extends Robot {
   // al morir cae con su animación (el zombi, que no la tiene, se desploma de espaldas), se hunde en el suelo y desaparece
   kill() {
     if (this.mode === 'dying') return; this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.bar.g.visible = false; this.tint = 1;
-    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6, trex: 0.45, raptor: 1.3 }[this.K.beast3d] || 1.0); SND.squish(c);
+    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6, raptor: 1.3 }[this.K.beast3d] || 1.0); SND.squish(c);
     if (this.clips.Death01) this.play('Death01', 0.1, true, 1, true); else { this.fall = this.inst.model.rotation.x; if (this.acts[this.cur]) this.acts[this.cur].timeScale = 0.3; }
   }
   update(dt, t) {
@@ -501,7 +518,7 @@ class Beast extends Robot {
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
-const SPIDER_KIND = { imp: { s: 1.0 }, puglin: { s: 0.9 }, impboss: { s: 2.4, boss: true }, zombie: { s: 1.0 }, zombieboss: { s: 2.4, boss: true }, trex: { s: 1.4 }, raptor: { s: 1.0 }, trexboss: { s: 2.4, boss: true }, scout: { s: 1.0 }, heavy: { s: 1.4 }, titan: { s: 2.4, boss: true } };
+const SPIDER_KIND = { imp: { s: 1.0 }, puglin: { s: 0.9 }, impboss: { s: 2.4, boss: true }, zombie: { s: 1.0 }, zombieboss: { s: 2.4, boss: true }, raptor: { s: 1.0 }, raptorboss: { s: 2.4, boss: true }, scout: { s: 1.0 }, heavy: { s: 1.4 }, titan: { s: 2.4, boss: true } };
 const _ikD = new V3(), _ikU = new V3(), _ikP = new V3(), _knee = new V3(), _foot = new V3(), _hip = new V3();
 function ikKnee(H, F, L1, L2, ox, oz, out) {
   _ikD.subVectors(F, H); let d = _ikD.length(); if (d < 1e-5) { _ikD.set(0, -1, 0); d = 1e-5; } _ikD.divideScalar(d);
@@ -1599,7 +1616,7 @@ function buildWave(i) {
   const GW = isTiny() ? { robot: 1 } : { beast: settings.beasts, zombie: settings.zombies, dino: settings.dinos, robot: settings.robotsW };
   const gsum = Object.values(GW).reduce((a, b) => a + b, 0) || (GW.robot = 1), only = Object.keys(GW).filter(k => GW[k] > 0), acc = {};
   for (const k in GW) acc[k] = Math.random() * 0.5;
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { beast: 'impboss', zombie: 'zombieboss', dino: 'trexboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
+  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { beast: 'impboss', zombie: 'zombieboss', dino: 'raptorboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
   let k = 0;
   while (total > 0) {
     let kind, hp;
@@ -1607,7 +1624,7 @@ function buildWave(i) {
       let g = 'robot', top = -1; for (const kk in GW) { acc[kk] += GW[kk] / (gsum || 1); if (acc[kk] > top) { top = acc[kk]; g = kk; } } acc[g] -= 1;
       if (g === 'beast') { kind = Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
       else if (g === 'zombie') { kind = 'zombie'; hp = 2 + Math.floor(i / 3); }
-      else if (g === 'dino') { kind = Math.random() < 0.6 ? 'raptor' : 'trex'; hp = kind === 'trex' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } // más velociraptores que T-Rex
+      else if (g === 'dino') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
       else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
     }
     else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
@@ -1896,6 +1913,7 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
   const lines = [
+    !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : '',
     hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
     isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
     `Tiempo ${mm}:${ss} · ≈ ${Math.round(runStatsKcal())} kcal · ${score} puntos`,
@@ -1903,10 +1921,40 @@ function endRun(win, manual) {
     streakUp ? `¡${P.streak} días seguidos entrenando!${P.streak >= P.best ? ' Tu mejor racha' : ''}` : progressLine(P),
     got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
   ];
-  if (win) SND.victory(); else if (!manual) SND.defeat();
-  if (SES.active) { sessionBlockDone(win, manual); return; } // sesión: pasa al siguiente bloque
-  endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean));
+  if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
+  const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean)); // en una sesión, al siguiente bloque
+  if (manual || (win && SES.active)) go(); else showOutcome(win, go); // en una sesión, entre bloques ya hay su pantalla de descanso
 }
+/* ---------- Final de la ronda, con sensación de juego ---------- */
+// Al perder todas las vidas: fundido a negro, «DERROTA» grande delante de ti y, a los 2,6 s, el resumen solo (la escena se
+// queda en penumbra hasta que eliges qué hacer). Al ganar: un velo suave con «¡VICTORIA!» dorado y el resumen al poco
+const OUT = { t: -1, win: false, go: null, done: false };
+OUT.veil = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false }));
+OUT.veil.renderOrder = RO.menu - 2; OUT.veil.visible = false; scene.add(OUT.veil);
+OUT.title = makePanel(1.3, 0.42, 1024, { depthTest: false }); OUT.title.mesh.renderOrder = RO.menu - 1; OUT.title.mesh.visible = false; scene.add(OUT.title.mesh);
+function outcomeDraw(win) {
+  const P = OUT.title, c = P.ctx, W = P.W, H = P.H, t = win ? '¡VICTORIA!' : 'DERROTA', col = win ? '#ffd166' : '#ff3b4e';
+  c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
+  fitFont(c, t, W - 60, 170, '%px ' + FD); c.save(); c.shadowColor = col; c.shadowBlur = 40; c.fillStyle = col; c.fillText(t, W / 2, H * 0.42); c.restore();
+  c.fillStyle = '#eeeaff'; fitFont(c, win ? 'Has superado todas las oleadas' : 'Te han quitado todas las vidas', W - 80, 44, '500 %px ' + FB); c.fillText(win ? 'Has superado todas las oleadas' : 'Te han quitado todas las vidas', W / 2, H * 0.84);
+  P.tex.needsUpdate = true;
+}
+function showOutcome(win, go) {
+  hideMenu(); Object.assign(OUT, { t: 0, win, go, done: false }); outcomeDraw(win);
+  OUT.veil.visible = true; OUT.veil.material.opacity = 0; OUT.title.mesh.material.opacity = 0;
+  OUT.title.mesh.position.copy(head.p).addScaledVector(fwdH(), 1.6); OUT.title.mesh.position.y = head.p.y + 0.05; OUT.title.mesh.lookAt(head.p); // delante de ti
+}
+function updateOutcome(dt) {
+  if (OUT.t < 0) return;
+  if (state !== 'end') { outcomeClear(); return; } // otra ronda, el menú principal o el siguiente bloque: se quita
+  OUT.t += dt; const t = OUT.t, win = OUT.win, delay = win ? 1.8 : 2.6, dark = win ? 0.35 : 0.92, after = win ? 0.25 : 0.6;
+  OUT.veil.position.copy(head.p);
+  OUT.veil.material.opacity = t < delay ? dark * smooth(Math.min(1, t / (win ? 0.4 : 1.0))) : lerp(dark, after, Math.min(1, (t - delay) / 0.6));
+  const m = OUT.title.mesh; m.material.opacity = t < 0.4 ? 0 : t < delay ? Math.min(1, (t - 0.4) / 0.5) : Math.max(0, 1 - (t - delay) / 0.4);
+  m.scale.setScalar(1 + 0.1 * Math.max(0, 1 - Math.max(0, t - 0.4) / 0.6)); m.visible = m.material.opacity > 0.01;
+  if (!OUT.done && t >= delay) { OUT.done = true; const go = OUT.go; OUT.go = null; if (go) go(); }
+}
+function outcomeClear() { OUT.t = -1; OUT.veil.visible = false; OUT.title.mesh.visible = false; }
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
     { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
@@ -1955,7 +2003,7 @@ function gameStep(dt, t) {
     if (stateT >= settings.rest) { if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
-    for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);
+    GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);
     enemies = enemies.filter(e => (e.alive || (e.mode === 'dying' && !e.gone)));
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);

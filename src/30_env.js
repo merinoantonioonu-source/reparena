@@ -97,6 +97,11 @@ safeRing.rotation.x = -Math.PI / 2; safeRing.position.y = 0.006; arena.add(safeR
 const hazardLine = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.16), M.hazard); hazardLine.rotation.x = -Math.PI / 2; hazardLine.position.set(0, 0.005, -1.65); hazardLine.receiveShadow = true; arena.add(hazardLine);
 M.hazard.map.repeat.set(8, 1);
 
+// Por dentro, las compuertas son negras (sin luz ni niebla que las aclare) y dos velos de oscuridad hacen que lo que sale
+// aparezca desde la penumbra: abiertas, no se ve el fondo
+const M_VOID = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
+const M_DARK = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5, depthWrite: false, fog: false, side: THREE.DoubleSide });
+function gateDark(g, w, h) { for (const z of [-0.45, -0.95]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M_DARK); p.position.set(0, h / 2, z); p.renderOrder = 2; g.add(p); } }
 function makeGate() {
   const g = new THREE.Group(), k = new Kit(), ks = new Kit();
   for (const s of [-1, 1]) {
@@ -112,14 +117,12 @@ function makeGate() {
   k.add('paint', G.box(3.5, 0.55, 0.95), C.hazard, 0, 3.42, 0);
   k.add('steel', G.box(3.8, 0.16, 1.05), C.dark, 0, 3.76, 0);
   k.add('steel', G.box(1.0, 0.25, 0.3), C.gun, 0, 3.95, 0.1);
-  // túnel interior
-  k.add('steel', G.box(2.5, 3.1, 0.12), C.black, 0, 1.55, -1.5);
-  for (const s of [-1, 1]) k.add('steel', G.box(0.12, 3.1, 1.5), C.black, s * 1.25, 1.55, -0.75);
-  k.add('steel', G.box(2.5, 0.12, 1.5), C.black, 0, 3.05, -0.75);
-  for (let i = 0; i < 6; i++) k.add('glow', G.box(2.1, 0.03, 0.02), col(0.6, 0.05, 0.02), 0, 0.4 + i * 0.45, -1.42);
-  k.add('halo', G.plane(3.4, 3.4), col(0.55, 0.06, 0.02), 0, 1.5, -1.38);
-  const frame = k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete, glow: M.glow, halo: M.halo }, { cast: true, receive: true });
-  g.add(frame);
+  // túnel interior, negro
+  k.add('void', G.box(2.5, 3.1, 0.12), C.black, 0, 1.55, -1.5);
+  for (const s of [-1, 1]) k.add('void', G.box(0.12, 3.1, 1.5), C.black, s * 1.25, 1.55, -0.75);
+  k.add('void', G.box(2.5, 0.12, 1.5), C.black, 0, 3.05, -0.75); k.add('void', G.box(2.5, 0.02, 1.5), C.black, 0, 0.012, -0.75); // techo y suelo
+  const frame = k.build({ steel: M.steel, paint: M.paint, concrete: M.concrete, glow: M.glow, halo: M.halo, void: M_VOID }, { cast: true, receive: true });
+  g.add(frame); gateDark(frame, 2.4, 3.0);
   const side = ks.build({ concrete: M.concrete }, { cast: true, receive: true }); g.add(side);
   const ramp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.35), M.hazard); ramp.rotation.x = -Math.PI / 2; ramp.position.set(0, 0.006, 0.75); g.add(ramp);
   const doorGeo = new THREE.BoxGeometry(1.26, 3.0, 0.16);

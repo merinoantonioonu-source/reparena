@@ -5,7 +5,7 @@
 // los enemigos. Cada modelo se dibuja con instancias (una pieza por modelo y material), para que vaya fluido en las Quest.
 // models/nature.glb (los modelos juntos, simplificados) y models/tex/nature (sus texturas, reducidas). Se carga la primera
 // vez que hace falta; mientras tanto (o si no se puede cargar), sigue la fortaleza
-const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, pick: Math.random() < 0.5 ? 'arena' : 'nature', built: '', birdT: 3 };
+const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, pick: Math.random() < 0.5 ? 'arena' : 'nature', built: '', birdT: 3 };
 NAT.group.visible = false; arena.add(NAT.group);
 // material del modelo → [textura, con transparencia (hojas, flores), por las dos caras]
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
@@ -51,7 +51,7 @@ function natureLoad() {
   for (const [n, [f, alpha, both]] of Object.entries(NAT_TEX)) {
     const t = T.load('models/tex/nature/' + f); t.encoding = THREE.sRGBEncoding; t.flipY = false;
     mats[n] = new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0, alphaTest: alpha ? 0.5 : 0, side: alpha || both ? THREE.DoubleSide : THREE.FrontSide });
-    if (NAT_WIND[n]) natWind(mats[n], NAT_WIND[n]);
+    mats[n].name = n; if (NAT_WIND[n]) natWind(mats[n], NAT_WIND[n]);
   }
   new THREE.GLTFLoader().load('models/nature.glb', g => {
     g.scene.updateMatrixWorld(true);
@@ -105,6 +105,16 @@ const natPlants = new THREE.Group(); NAT.group.add(natPlants);
 // arbustos, rocas) nunca delante entre las compuertas y tú, ni cerca de ti; la hierba y las flores, por todas partes menos
 // donde pisas. Siempre igual para una misma distancia de las compuertas
 const pick3 = (R, l) => l[Math.floor(R() * l.length)];
+// Lo que ocupa un modelo a ras de suelo (hasta 0,8 m de alto; en los árboles, solo el tronco), en metros a escala 1
+function natFoot(n) {
+  if (NAT.foot[n] !== undefined) return NAT.foot[n];
+  let m = 0; const tree = /Tree|Pine/.test(n);
+  for (const p of NAT.parts[n] || []) {
+    if (tree && !/Bark/.test(p.mat.name || '')) continue; const a = p.geo.attributes.position;
+    for (let i = 0; i < a.count; i++) if (a.getY(i) < 0.8) m = Math.max(m, Math.hypot(a.getX(i), a.getZ(i)));
+  }
+  return (NAT.foot[n] = m * 0.85 || 0.4);
+}
 function natureBuild() {
   if (!NAT.ready) return;
   const D = arenaDepth(), key = D.toFixed(2); if (NAT.built === key) return; NAT.built = key;
@@ -113,14 +123,17 @@ function natureBuild() {
   const front = (x, z, extra) => Math.abs(Math.atan2(x, -z)) < 0.8 && Math.hypot(x, z) < D + extra; // el abanico de las compuertas
   const nearGate = (x, z, r) => gates.some(g => g.on && Math.hypot(g.x - x, g.z - z) < r);
   const add = (n, x, z, s, y = R() * TAU) => { if (NAT.parts[n]) (put[n] = put[n] || []).push(new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, y), new V3(s, s, s))); };
+  // lo que no se puede atravesar (troncos, rocas y arbustos) cerca de donde andan los enemigos: un círculo con lo que
+  // ocupa a ras de suelo
+  NAT.solids = []; const solid = (n, x, z, s) => { if (Math.hypot(x, z) < D + 4 && NAT.parts[n]) NAT.solids.push({ x, z, r: natFoot(n) * s }); };
   const scatter = (count, rMin, rMax, ok, fn) => { for (let i = 0, tries = 0; i < count && tries < count * 30; tries++) { const a = R() * TAU, r = Math.sqrt(rMin * rMin + R() * (rMax * rMax - rMin * rMin)), x = Math.sin(a) * r, z = -Math.cos(a) * r; if (!ok(x, z, r)) continue; fn(x, z, r); i++; } };
   const big = (x, z, r) => r > 5.5 && !front(x, z, 5) && !nearGate(x, z, 4) && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r);
   // árboles: los normales más cerca, los pinos más lejos, algún árbol seco
-  scatter(24, 7, 34, big, (x, z, r) => { const k = R(), n = r > 20 && k < 0.7 ? pick3(R, ['Pine_2', 'Pine_4', 'Pine_5']) : k < 0.08 ? pick3(R, ['DeadTree_1', 'DeadTree_2']) : pick3(R, ['CommonTree_3', 'CommonTree_4', 'CommonTree_5']); add(n, x, z, 0.8 + R() * 0.55); trees.push({ x, z, r: 3.2 }); });
+  scatter(24, 7, 34, big, (x, z, r) => { const k = R(), n = r > 20 && k < 0.7 ? pick3(R, ['Pine_2', 'Pine_4', 'Pine_5']) : k < 0.08 ? pick3(R, ['DeadTree_1', 'DeadTree_2']) : pick3(R, ['CommonTree_3', 'CommonTree_4', 'CommonTree_5']); const s = 0.8 + R() * 0.55; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 3.2 }); });
   // y un fondo de bosque detrás de las compuertas (más allá de donde salen los enemigos)
   scatter(9, D + 6, D + 20, (x, z, r) => !nearGate(x, z, 5) && Math.abs(Math.atan2(x, -z)) < 0.9 && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r), (x, z) => { add(pick3(R, ['Pine_2', 'Pine_4', 'Pine_5', 'CommonTree_3', 'CommonTree_4']), x, z, 0.9 + R() * 0.5); trees.push({ x, z, r: 3.2 }); });
-  scatter(16, 5.5, 14, big, (x, z) => { add(R() < 0.6 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, 0.45 + R() * 0.3); trees.push({ x, z, r: 1.6 }); });
-  scatter(12, 5.5, 20, big, (x, z) => { add(`Rock_Medium_${1 + Math.floor(R() * 3)}`, x, z, 0.3 + R() * 0.45); trees.push({ x, z, r: 1.5 }); });
+  scatter(16, 5.5, 14, big, (x, z) => { const n = R() < 0.6 ? 'Bush_Common' : 'Bush_Common_Flowers', s = 0.45 + R() * 0.3; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 1.6 }); });
+  scatter(12, 5.5, 20, big, (x, z) => { const n = `Rock_Medium_${1 + Math.floor(R() * 3)}`, s = 0.3 + R() * 0.45; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 1.5 }); });
   // setas al pie de los árboles cercanos
   trees.slice(0, 18).forEach(t => { if (R() < 0.55) add('Mushroom_Common', t.x + (R() - 0.5) * 1.8, t.z + (R() - 0.5) * 1.8, 0.3 + R() * 0.25); });
   // hierba, flores, helechos y tréboles: por todas partes menos donde pisas y delante de las compuertas
@@ -149,8 +162,8 @@ layoutHooks.push(() => { if (NAT.group.visible) natureBuild(); });
 
 /* ---------- Compuertas de piedra y madera ---------- */
 // Las compuertas metálicas desentonan en el bosque: aquí cada una es la entrada de una cueva al pie de un montículo de
-// hierba, con pilares de sillares, dintel de dovelas, puertas de tablones con herrajes que se abren hacia dentro y luz
-// cálida al fondo. Se hacen la primera vez que
+// hierba, con pilares de sillares, dintel de dovelas, puertas de tablones con herrajes que se abren hacia dentro y un
+// pasadizo negro. Se hacen la primera vez que
 // hacen falta y se cambian por las de siempre al volver a la fortaleza
 let natGateTpl = null;
 function natGateBuild() {
@@ -199,15 +212,14 @@ function natGateBuild() {
   for (let x = -2.2; x < 2.15;) { const w = Math.min(2.2 - x, 0.7 + R() * 0.5); k.add('stone', G.box(w, 0.3, 1.18), st(), x + w / 2, 3.82, 0.02, 0, 0, (R() - 0.5) * 0.02); x += w; }
   for (let i = 0; i < 9; i++) k.add('moss', G.sph(0.26 + R() * 0.22, 9, 6), MOSS, (R() - 0.5) * 4.1, 3.98, (R() - 0.5) * 0.8, 0, R() * 3, 0, 1, 0.3, 1);
   for (let i = 0; i < 4; i++) { const s = R() < 0.5 ? -1 : 1; k.add('moss', G.sph(0.18 + R() * 0.1, 9, 6), MOSS, s * (1.5 + R() * 0.5), 3.7, 0.5, 0.4, 0, 0, 1, 0.7, 0.35); } // musgo que cae de la cornisa
-  // el pasadizo por dentro, oscuro, con luz de antorcha al fondo
-  k.add('stone', G.box(2.5, 3.1, 0.12), DARK, 0, 1.55, -1.75);
-  for (const s of [-1, 1]) k.add('stone', G.box(0.12, 3.1, 1.8), DARK, s * 1.31, 1.55, -0.85);
-  k.add('stone', G.box(2.6, 0.12, 1.8), DARK, 0, 3.08, -0.85);
-  k.add('halo', G.plane(3.0, 3.0), col(0.5, 0.26, 0.06), 0, 1.4, -1.6);
+  // el pasadizo por dentro, negro (como el de las compuertas metálicas)
+  k.add('void', G.box(2.5, 3.1, 0.12), DARK, 0, 1.55, -1.75);
+  for (const s of [-1, 1]) k.add('void', G.box(0.12, 3.1, 1.8), DARK, s * 1.31, 1.55, -0.85);
+  k.add('void', G.box(2.6, 0.12, 1.8), DARK, 0, 3.08, -0.85); k.add('void', G.box(2.6, 0.02, 1.8), DARK, 0, 0.012, -0.85);
   // montículo de hierba detrás: la cueva se mete en él
   k.add('mound', G.sph(1, 20, 10, TS, 0, TAU, 0, Math.PI / 2), col(1, 1, 1), 0, 0, -5.6, 0, 0, 0, 4.4, 5.4, 3.9);
-  const mats = { stone: M.stone, moss: M.leaf, halo: M.halo, mound: std({ map: grass, roughness: 1, metalness: 0, vertexColors: true }) };
-  return k.build(mats, { cast: true, receive: true });
+  const mats = { stone: M.stone, moss: M.leaf, void: M_VOID, mound: std({ map: grass, roughness: 1, metalness: 0, vertexColors: true }) };
+  const g = k.build(mats, { cast: true, receive: true }); gateDark(g, 2.5, 3.0); return g;
 }
 function natGateStyle(on) {
   if (on && !natGateTpl) natGateTpl = natGateBuild();
