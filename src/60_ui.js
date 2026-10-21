@@ -160,7 +160,7 @@ function openMenu(rows, opts = {}) {
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
   const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
-  const label = (text, cy, color = '#eeeaff') => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
+  const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
     if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
@@ -176,7 +176,9 @@ function openMenu(rows, opts = {}) {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'field') {
-      const f = FIELD[r.key]; label(f.short || f.label, cy);
+      const f = FIELD[r.key], so = r.star ? 0.044 : 0;
+      if (r.star) { const on = () => isFav(f.key), b = addW(new Btn(on() ? '★' : '☆', 0.036, h * 0.7, () => { if (favToggle(f.key)) b.setLabel(on() ? '★' : '☆', on() ? 'value' : 'ghost'); }, { style: on() ? 'value' : 'ghost', font: 0.62 }), X0 + 0.018, cy); } // ★: al menú principal
+      label(f.short || f.label, cy, undefined, so);
       if (f.type === 'num') {
         const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
         const row = { f };

@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, boardDay, drawBoard, RAMP, rampWaveEnd, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -472,6 +472,26 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const lw = RA.activeWidgets().map(w => w.label), ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('scene menu: scenery', lw.includes('Bosque'), 'sliders', ks.join(', '));
     if (!lw.includes('Bosque') || !ks.includes('depth')) errors.push('menú: el submenú de entorno no tiene el escenario o la distancia'); }
   press('Volver'); frame(2);
+  // ★ favoritos al menú principal, restablecer una pestaña, perfiles y la última pestaña recordada
+  { const sl = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key);
+    press('Ajustes'); frame(1); press('Partida'); frame(1); const before = sl().includes('rest');
+    const star = RA.activeWidgets().filter(w => w.label === '☆'); star[star.length - 1].onPress(); frame(1); // el último de la pestaña: descanso
+    press('Volver'); frame(1); const inLobby = sl().includes('rest');
+    press('Sonido'); frame(1); RA.activeWidgets().filter(w => w.label === '☆')[0].onPress(); press('Volver'); frame(1); const vol = sl().includes('volume');
+    RA.setSetting('rest', 45); RA.setSetting('waves', 9); RA.setSetting('volume', 30);
+    press('Ajustes'); frame(1); press('Partida'); frame(1); press('Restablecer Partida'); frame(1); const armed = RA.settings.rest; press('¿Restablecer Partida? Otra vez'); frame(1);
+    log(`favourites: rest in lobby ${!before} → ${inLobby} · volume ${vol} · reset Partida: before confirming rest ${armed}, after rest ${RA.settings.rest} waves ${RA.settings.waves} · other groups kept: volume ${RA.settings.volume}`);
+    if (!inLobby || !vol) errors.push('favoritos: lo marcado con ★ no sale en el menú principal');
+    if (armed !== 45 || RA.settings.rest !== 20 || RA.settings.waves !== 5 || RA.settings.volume !== 30) errors.push('restablecer pestaña: no pide confirmar o toca otros grupos');
+    press('Perfiles'); frame(1); RA.setSetting('lives', 7); press('Guardar: ' + 'Combate · ' + RA.EX_SHORT[RA.settings.exercise]); frame(1);
+    RA.setSetting('lives', 2); RA.setSetting('volume', 90); const prof = RA.profiles(); press(prof[0].name); frame(1);
+    log(`profiles: saved ${prof.length} “${prof[0].name}” · loaded lives ${RA.settings.lives} volume ${RA.settings.volume} · back in ${RA.activeWidgets().some(w => w.label === 'Perfiles  ▸') ? 'Ajustes' : '?'}`);
+    if (prof.length !== 1 || RA.settings.lives !== 7 || RA.settings.volume !== 30) errors.push('perfiles: no se guardan o no se cargan');
+    press('Perfiles'); frame(1); press('Borrar'); frame(1); press('¿Borrar?'); frame(1); const left = RA.profiles().length;
+    press('Volver'); frame(1); press('Menú'); frame(1); press('Volver'); frame(1); press('Ajustes'); frame(1); const tabOn = RA.activeWidgets().find(w => w.style === 'selected' && ['Partida', 'Menú', 'Ejercicio'].includes(w.label));
+    log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
+    if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
+    press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
   press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }

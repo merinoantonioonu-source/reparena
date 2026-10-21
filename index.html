@@ -40,7 +40,15 @@ h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.
 .card:has(input:disabled){opacity:.45;cursor:not-allowed}
 .note{margin:10px 0 0;font-size:.85rem;color:var(--gold)}
 .groups{display:flex;flex-direction:column;gap:26px}
-.group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal)}
+.group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal);display:flex;align-items:center;gap:10px}
+.group h3 .reset{margin-left:auto;font:500 .78rem var(--body,inherit);letter-spacing:0;color:var(--muted,#a49fc8);background:transparent;border:1px solid var(--line);border-radius:8px;padding:3px 9px;cursor:pointer}
+.group h3 .reset:hover{color:var(--fg);border-color:var(--teal)}
+.profiles{margin-top:22px}.profiles h3{margin:0 0 6px;font-size:1rem}
+.profsave{display:flex;gap:8px;flex-wrap:wrap;max-width:520px;align-items:stretch}
+.profiles .status{min-height:1.4em;margin:8px 0 4px}.profsave input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
+.proflist{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-width:640px}
+.profrow{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px}
+.profrow div{flex:1;min-width:0;display:flex;flex-direction:column}.profrow b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profrow span{font-size:.85rem;color:var(--muted,#a49fc8)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px}
 @media (max-width:640px){.grid{grid-template-columns:1fr}}
 .field{min-width:0;display:flex;flex-direction:column;gap:6px}
@@ -315,7 +323,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2 id="specTitle">4 · Opciones del modo y el ejercicio</h2>
     <p class="note">Solo las que sirven para lo que has elegido arriba.</p>
     <div class="groups" id="settingsGroups"></div>
-    <div class="actions"><button class="btn small" id="btnReset">Restablecer ajustes</button></div>
+    <div class="actions"><button class="btn small" id="btnReset">Restablecer todos los ajustes</button></div>
+    <div class="profiles">
+      <h3>Perfiles</h3>
+      <p class="note">Guarda todos tus ajustes (con el modo y el ejercicio) con un nombre, como «Mañana suave» o «Piernas a tope», y cárgalos de un toque, aquí o en el juego (Ajustes ▸ → Perfiles ▸). Hasta 8; si repites un nombre, se sustituye.</p>
+      <div class="profsave"><input id="profName" type="text" maxlength="40" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button class="btn small alt" id="btnProfSave">Guardar ajustes actuales</button></div>
+      <p class="status" id="profStatus" aria-live="polite"></p>
+      <div class="proflist" id="profList"></div>
+    </div>
   </section>
 
 
@@ -644,7 +659,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   const COMMON = ['entorno', 'sistema', 'perfil'];
   common.innerHTML = COMMON.map(group).join('');
@@ -652,6 +667,8 @@ function buildForm() {
   host.innerHTML = Object.keys(GROUP_NAMES).filter(g => !COMMON.includes(g) && g !== 'sonido').map(group).join('');
   const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
   for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
+  // restablecer un grupo
+  for (const h of [host, common]) h.addEventListener('click', ev => { const g = ev.target.dataset && ev.target.dataset.reset; if (g && (typeof confirm !== 'function' || confirm(`¿Devolver «${GROUP_NAMES[g]}» a como venía?`))) resetGroup(g); });
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
     syncForm();
@@ -4427,7 +4444,7 @@ function openMenu(rows, opts = {}) {
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
   const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
-  const label = (text, cy, color = '#eeeaff') => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
+  const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
     if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
@@ -4443,7 +4460,9 @@ function openMenu(rows, opts = {}) {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'field') {
-      const f = FIELD[r.key]; label(f.short || f.label, cy);
+      const f = FIELD[r.key], so = r.star ? 0.044 : 0;
+      if (r.star) { const on = () => isFav(f.key), b = addW(new Btn(on() ? '★' : '☆', 0.036, h * 0.7, () => { if (favToggle(f.key)) b.setLabel(on() ? '★' : '☆', on() ? 'value' : 'ghost'); }, { style: on() ? 'value' : 'ghost', font: 0.62 }), X0 + 0.018, cy); } // ★: al menú principal
+      label(f.short || f.label, cy, undefined, so);
       if (f.type === 'num') {
         const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
         const row = { f };
@@ -5623,6 +5642,90 @@ function sesInitPage() {
   $('#btnSesClear').addEventListener('click', () => { SES.blocks = []; saveSession(); renderSession(); });
   $('#sesRest').addEventListener('change', ev => { SES.rest = clamp(Math.round(+ev.target.value) || 0, 0, 600); saveSession(); renderSession(); });
   renderSession();
+}
+
+
+/* =================== FAVORITOS, PERFILES Y RESTABLECER =================== */
+// Para que el menú no obligue a buscar: los ajustes que más tocas, marcados con ★ en sus submenús, salen en el menú
+// principal; los perfiles guardan todos los ajustes (modo y ejercicio incluidos) con un nombre y se cargan de un toque;
+// y cada pestaña (o grupo de la página) se puede devolver a como venía sin tocar el resto
+const FAV_KEY = 'reparena3-favs', PROF_KEY = 'reparena3-profiles', UI_KEY = 'reparena3-ui', FAV_MAX = 6, PROF_MAX = 8;
+const PREFS = { favs: (store(FAV_KEY) || []).filter(k => FIELD[k]), resetArm: '', delArm: -1 };
+const isFav = k => PREFS.favs.includes(k);
+function favToggle(k) {
+  if (isFav(k)) PREFS.favs = PREFS.favs.filter(x => x !== k);
+  else if (PREFS.favs.length >= FAV_MAX) { say(`Como mucho ${FAV_MAX} favoritos: quita alguno`, '#ffd166', 2); return false; }
+  else PREFS.favs.push(k);
+  store(FAV_KEY, PREFS.favs); return true;
+}
+// los favoritos que valen para lo elegido y que el menú principal no enseña ya
+function favRows(shown, after) {
+  const ks = PREFS.favs.filter(k => fieldVisible(FIELD[k]) && !shown.has(k));
+  return ks.length ? [{ t: 'text', text: '★ Tus favoritos', color: '#ffd166' }, ...ks.map(k => ({ t: 'field', key: k, after: FIELD[k].relayout ? after : undefined }))] : [];
+}
+// Restablecer un grupo de ajustes (una pestaña de las gafas o un grupo de la página)
+function resetGroup(g) {
+  SCHEMA.filter(f => f.g === g).forEach(f => settings[f.key] = f.def);
+  saveSettings(); onSettingChanged('*'); syncForm();
+}
+// La última pestaña de Ajustes, para volver a ella
+const uiPrefs = () => store(UI_KEY) || {};
+function uiSave(k, v) { store(UI_KEY, Object.assign(uiPrefs(), { [k]: v })); }
+
+/* ---------- Perfiles ---------- */
+const profiles = () => (store(PROF_KEY) || []).filter(p => p && p.name && p.s);
+function profSnapshot() { const s = { mode: settings.mode, exercise: settings.exercise }; SCHEMA.forEach(f => s[f.key] = settings[f.key]); return s; }
+const profAuto = () => `${MODE_NAMES[settings.mode]} · ${EX_SHORT[settings.exercise]}`;
+function profSave(name) {
+  name = String(name || '').trim().slice(0, 40) || profAuto();
+  const L = profiles(), i = L.findIndex(p => p.name.toLowerCase() === name.toLowerCase()), p = { name, date: Date.now(), s: profSnapshot() };
+  if (i >= 0) L[i] = p; else { if (L.length >= PROF_MAX) return ''; L.push(p); }
+  store(PROF_KEY, L); renderProfiles(); return name;
+}
+function profLoad(i) {
+  const p = profiles()[i]; if (!p) return false;
+  for (const f of SCHEMA) if (p.s[f.key] !== undefined) settings[f.key] = clampSetting(f, p.s[f.key]);
+  if (MODE_NAMES[p.s.mode]) settings.mode = p.s.mode;
+  if (EX_NAMES[p.s.exercise]) settings.exercise = p.s.exercise;
+  settings.exercise = exFor(settings.mode, settings.exercise);
+  saveSettings(); onSettingChanged('*'); syncForm(); return true;
+}
+function profDelete(i) { const L = profiles(); L.splice(i, 1); store(PROF_KEY, L); renderProfiles(); }
+const profLine = p => `${MODE_NAMES[p.s.mode] || ''} · ${EX_NAMES[p.s.exercise] || ''}`;
+
+// En las gafas (desde Ajustes): cargar, borrar (pulsando dos veces) y guardar lo actual con un nombre automático; en la
+// página se les pone el nombre que quieras
+function profilesMenu(back) {
+  const again = () => profilesMenu(back), L = profiles();
+  const rows = [{ t: 'title', text: 'PERFILES' }, { t: 'text', text: L.length ? 'Carga uno y se ponen todos sus ajustes, con su modo y su ejercicio' : 'Aún no tienes perfiles: guarda tus ajustes de ahora (en la página puedes ponerles nombre)', color: '#a49fc8' }];
+  L.forEach((p, i) => rows.push({ t: 'btns', items: [
+    { label: `${p.name}`, flex: 3, onPress: () => { if (profLoad(i)) { say(`Perfil «${p.name}» cargado`, '#3cf0c6', 1.8); SND.click(); back(); } } },
+    { label: PREFS.delArm === i ? '¿Borrar?' : 'Borrar', flex: 1, style: 'danger', onPress: () => { if (PREFS.delArm === i) { PREFS.delArm = -1; profDelete(i); } else PREFS.delArm = i; again(); } }] }));
+  rows.push({ t: 'btns', items: [
+    ...(L.length < PROF_MAX ? [{ label: `Guardar: ${profAuto()}`, flex: 2, style: 'primary', onPress: () => { const n = profSave(); say(`Guardado como «${n}»`, '#3cf0c6', 1.8); again(); } }] : []),
+    { label: 'Volver', onPress: () => { PREFS.delArm = -1; back(); } }] });
+  const m = openMenu(rows); m.rebuild = again;
+}
+
+// En la página
+function renderProfiles() {
+  const host = $('#profList'); if (!host) return;
+  const L = profiles();
+  host.innerHTML = L.length ? L.map((p, i) => `<div class="profrow"><div><b>${escHTML(p.name)}</b><span>${profLine(p)}</span></div>
+    <button class="btn small alt" data-p="load" data-i="${i}">Cargar</button><button class="btn small" data-p="del" data-i="${i}">Borrar</button></div>`).join('')
+    : '<p class="note">Aún no hay perfiles guardados.</p>';
+}
+const escHTML = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function profInitPage() {
+  const host = $('#profList'), btn = $('#btnProfSave'), inp = $('#profName'); if (!host) return;
+  btn.addEventListener('click', () => { const n = profSave(inp.value); const st = $('#profStatus'); if (st) st.textContent = n ? `Guardado como «${n}».` : `Como mucho ${PROF_MAX} perfiles: borra alguno.`; inp.value = ''; });
+  host.addEventListener('click', ev => {
+    const b = ev.target.closest && ev.target.closest('button[data-p]'); if (!b) return;
+    const i = +b.dataset.i, st = $('#profStatus');
+    if (b.dataset.p === 'load') { const p = profiles()[i]; if (profLoad(i) && st) st.textContent = `Perfil «${p.name}» cargado: ${profLine(p)}.`; }
+    else if (typeof confirm !== 'function' || confirm('¿Borrar este perfil?')) profDelete(i);
+  });
+  renderProfiles();
 }
 
 
@@ -7290,6 +7393,7 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
+  rows.push(...favRows(new Set(rows.filter(r => r.t === 'field').map(r => r.key)), () => lobbyMenu())); // los ★ de los submenús
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
@@ -7310,26 +7414,31 @@ function soundMenu(back) {
   const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
   const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
-    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key })),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key, star: true })),
     ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
-let settingsTab = 'partida';
+let settingsTab = uiPrefs().tab || 'partida'; // se recuerda la última pestaña
 function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldVisible(f)));
-  if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
+  if (!groups.includes(tab)) tab = groups[0]; if (tab !== settingsTab) { settingsTab = tab; uiSave('tab', tab); PREFS.resetArm = ''; }
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
-  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
-  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
-  rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });
+  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y + · ★ lo lleva al menú principal', color: '#a49fc8' });
+  // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
+  const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
+  rows.push({ t: 'btns', items: [
+    ...(inGame ? [] : [{ label: 'Perfiles  ▸', onPress: () => profilesMenu(() => settingsMenu(back, tab)) }]),
+    { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; settingsMenu(back, tab); } },
+    { label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] });
   const m = openMenu(rows); m.rebuild = () => settingsMenu(back, tab);
 }
 function openPause() {
@@ -8970,7 +9079,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foes', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

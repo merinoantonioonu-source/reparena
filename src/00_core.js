@@ -267,7 +267,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]}</h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   const COMMON = ['entorno', 'sistema', 'perfil'];
   common.innerHTML = COMMON.map(group).join('');
@@ -275,6 +275,8 @@ function buildForm() {
   host.innerHTML = Object.keys(GROUP_NAMES).filter(g => !COMMON.includes(g) && g !== 'sonido').map(group).join('');
   const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
   for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
+  // restablecer un grupo
+  for (const h of [host, common]) h.addEventListener('click', ev => { const g = ev.target.dataset && ev.target.dataset.reset; if (g && (typeof confirm !== 'function' || confirm(`¿Devolver «${GROUP_NAMES[g]}» a como venía?`))) resetGroup(g); });
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
     syncForm();
