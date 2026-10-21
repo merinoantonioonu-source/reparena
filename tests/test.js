@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -93,6 +93,7 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = 
     if (RA.state === 'play') sawPlay = true;
     maxEnemies = Math.max(maxEnemies, RA.enemies.length + RA.arcs.length);
   }
+  if (RA.state === 'end') for (let i = 0; i < 260 && !RA.menu; i++) frame(1); // el resumen sale tras el aviso de victoria o derrota
   const s = RA.stats;
   log(`${name}: state=${RA.state} t=${t.toFixed(0)}s reps=${s.reps} perfect=${s.perfect} partial=${s.partial} kills=${s.kills} taken=${s.taken} shots=${s.shots} hits=${s.hits} maxActive=${maxEnemies} particles=${RA.PADD.p.length}/${RA.PNORM.p.length} debris=${RA.debris.length} score=${RA.score}` + (RA.settings.mode === 'bars' ? ` falls=${s.falls} hold=${s.hold.toFixed(0)}s` : ''));
   const ended = RA.state === 'end';
@@ -263,15 +264,31 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { let inSolid = 0, closedPass = 0, frames = 0;
     await runConfig('Robots y compuertas sólidas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', maxAlive: 6, spawnGap: 0.4, walkTime: 8, waves: 2, repsWave: 6 }, t => {
       squatSim(2.6)(t); frames++;
-      const S = RA.gateSolids();
+      const S = RA.envSolids();
       for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot') continue;
-        if (e.out && S.some(c => Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < c.r * 0.8)) inSolid++;
-        const g = e.gate, r = g.g.rotation.y, lx = (e.pos.x - g.x) * Math.cos(r) - (e.pos.z - g.z) * Math.sin(r), lz = (e.pos.x - g.x) * Math.sin(r) + (e.pos.z - g.z) * Math.cos(r);
-        if (Math.abs(lx) < 1.2 * g.scale && Math.abs(lz) < 0.15 * g.scale && g.open < 0.4) closedPass++; }
+        if (S.some(c => (e.out || c.g !== e.gate) && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < c.r * 0.8)) inSolid++;
+        for (const g of RA.gates) { if (!g.on || (g === e.gate && !e.out)) continue; // por ninguna puerta cerrada (ni la suya, ya fuera)
+          const r = g.g.rotation.y, lx = (e.pos.x - g.x) * Math.cos(r) - (e.pos.z - g.z) * Math.sin(r), lz = (e.pos.x - g.x) * Math.sin(r) + (e.pos.z - g.z) * Math.cos(r);
+          if (Math.abs(lx) < 1.2 * g.scale && Math.abs(lz) < 0.15 * g.scale && g.open < 0.4) closedPass++; } }
     }, 420, () => '');
     log(`gates are solid: robot frames inside a pillar or block ${inSolid}, crossing a closed door ${closedPass} (of ${frames} frames)`);
     if (inSolid) errors.push('los robots atraviesan los pilares o los bloques de las compuertas');
     if (closedPass) errors.push('los robots cruzan compuertas cerradas'); }
+  // derrota: al perder la última vida, fundido a negro con «DERROTA» delante y, solo, el resumen con sus botones
+  { for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', lives: 1, waves: 3, repsWave: 30, walkTime: 3, maxAlive: 3, ramp: 0 })) RA.setSetting(k, v);
+    RA.startPreview(); frame(3); press('EMPEZAR'); let i = 0; for (; i < 60 * 60 && RA.state !== 'end'; i++) frame(1);
+    const O = RA.OUT; frame(60); const dark = O.veil.material.opacity, title = O.title.mesh.visible, menuEarly = !!RA.menu;
+    for (let k = 0; k < 120 && !RA.menu; k++) frame(1); const lw = RA.activeWidgets().map(w => w.label), dim = O.veil.material.opacity;
+    const titleRow = RA.menu && RA.menu.rows && RA.menu.rows[0]; frame(40);
+    log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · veil behind it ${dim.toFixed(2)}`);
+    if (RA.state !== 'end' || dark < 0.8 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
+    press('Menú principal'); frame(3); if (O.veil.visible) errors.push('derrota: el fundido no se quita al volver al menú');
+    RA.setSetting('lives', 0); RA.setSetting('ramp', 6); RA.exitAll(); frame(1); }
+  // un empujón que mete a alguien en una puerta cerrada lo deja fuera, por el lado más corto
+  { const door = RA.envSolids().find(c => c.g && c.r < 0.4 * c.g.scale), e = { pos: { x: 0, z: 0 }, radius: 0.4, out: true, gate: null };
+    if (door) { e.pos.x = door.x + 0.05; e.pos.z = door.z; RA.solidPush(e); }
+    const d = door ? Math.hypot(e.pos.x - door.x, e.pos.z - door.z) : 0; log(`push out of a closed door: ${d.toFixed(2)} m from its centre (needs ${door ? (door.r + 0.4).toFixed(2) : '?'})`);
+    if (!door || d < door.r + 0.4 - 1e-6) errors.push('un empujón puede meter a un enemigo en una puerta cerrada'); }
   // ritmo en Combate: los enemigos salen en el pulso
   { let spawnBeats = [], lastN = 0;
     await runConfig('Combate con ritmo (100 BPM)', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'squat', bpm: 100, spawnGap: 0.9 }, t => { squatSim()(t); if (RA.enemies.length > lastN) spawnBeats.push(RA.beatNow() % 1); lastN = RA.enemies.length; }, 420, s => s.kills < 4 ? 'con ritmo no se juega' : '');
@@ -1120,11 +1137,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     for (const mode of ['gaze', 'hand']) {
       RA.setSetting('throwPick', mode); let ok = 0, n = 0;
       for (let r = 0; r < 4; r++) {
-        for (let i = 0; i < 900 && RA.enemies.filter(x => x.alive).length < 2; i++) frame(1, 16, xrFrame);
-        const al = RA.enemies.filter(x => x.alive).sort((a, b) => a.center(new THREE.Vector3()).x - b.center(new THREE.Vector3()).x); if (al.length < 2) break;
-        const A = al[0], B = al[1], pa = A.center(new THREE.Vector3()), pb = B.center(new THREE.Vector3());
+        // dos vecinos (sin nadie entre ellos) sin ningún rayo de antes de camino hacia ellos
+        const pair = () => { const al = RA.enemies.filter(x => x.alive).sort((a, b) => a.center(new THREE.Vector3()).x - b.center(new THREE.Vector3()).x);
+          for (let k = 0; k + 1 < al.length; k++) if (!al[k].pending && !al[k + 1].pending) return [al[k], al[k + 1]]; return null; };
+        for (let i = 0; i < 180 && RA.projs.length; i++) frame(1, 16, xrFrame); // sin rayos de antes en el aire
+        let P2 = null; for (let i = 0; i < 900 && !(P2 = pair()); i++) frame(1, 16, xrFrame); if (!P2) break;
+        const [A, B] = P2, pa = A.center(new THREE.Vector3()), pb = B.center(new THREE.Vector3());
         XRS.headQ = null; squat(); look(pa); frame(40, 16, xrFrame); // mirando al de la izquierda
-        const g = new THREE.Vector3(0.22, XRS.headY - 0.35, -0.3), aim = pa.clone().lerp(pb, 0.62), a0 = A.pending + (A.maxHp - A.hp), b0 = B.pending + (B.maxHp - B.hp);
+        const g = new THREE.Vector3(0.22, XRS.headY - 0.35, -0.3), aim = mode === 'gaze' ? pa.clone().lerp(pb, 0.62) : pb.clone(), a0 = A.pending + (A.maxHp - A.hp), b0 = B.pending + (B.maxHp - B.hp);
         for (let k = 0; k < 6; k++) { XRS.hands.right = g.clone(); frame(1, 16, xrFrame); }
         for (let k = 1; k <= 9; k++) { XRS.hands.right = g.clone().addScaledVector(aim.clone().sub(g).normalize(), 0.45 * k / 9); frame(1, 16, xrFrame); }
         frame(8, 16, xrFrame); XRS.hands = rest(); frame(6, 16, xrFrame); n++;
@@ -1133,7 +1153,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       }
       res[mode] = `${ok}/${n}`; if (!n || ok < n - (mode === 'hand' ? 1 : 0)) errors.push(`lanzar con la mano (${mode === 'gaze' ? 'al que miras' : 'hacia donde lanzas'}): el rayo no va al enemigo que toca (${ok} de ${n})`);
     }
-    log(`throw XR choose target: looking at the left robot and throwing between both → with “al que miras” ${res.gaze} to the one looked at · with “hacia donde lanzas” ${res.hand} to the one the hand points to`);
+    log(`throw XR choose target: looking at the left robot → with “al que miras”, throwing between both, ${res.gaze} to the one looked at · with “hacia donde lanzas”, throwing at the other, ${res.hand} to the one the hand points to`);
     XRS.headQ = null; XRS.hands = null; RA.setSetting('aim', 'auto'); RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Antebrazos en XR: las muñecas giran unos 90° cada una en sentidos contrarios ----

@@ -221,7 +221,7 @@ function openMenu(rows, opts = {}) {
       stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
     }
   }
-  menu = { group, widgets, fieldRows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
+  menu = { group, widgets, fieldRows, rows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
   return menu;
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }

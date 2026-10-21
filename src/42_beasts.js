@@ -14,10 +14,7 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Bite: 'Bite', Dance_Loop: 'Idle' }, atk: ['Bite', 1.0, 2.5], taunt: 'Idle_Loop',
     bones: { chest: 'Spine2', head: 'Head', handR: 'RightHand' } },
   // dinosaurios (Dinosaur Animated Pack, Quaternius, CC0): con sus colores (sin textura) y sus animaciones; a una escala que
-  // cabe por las compuertas (el T-Rex, 2,3 m; el velociraptor, 1,4 m). trim: la animación acaba antes de lo que dura el clip
-  trex: { h: 2.3, walk: 2.0, jog: 3.5, run: 5.0, minTs: 0.6, own: true, keepMats: true, k: 0.175, prefix: 'Armature|TRex_',
-    alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.29, 0.58], taunt: 'Idle_Loop',
-    bones: { chest: 'Torso', head: 'Head', handR: 'Head' } },
+  // cabe por las compuertas (el velociraptor, 1,4 m). trim: la animación acaba antes de lo que dura el clip
   raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.6, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.21, 0.42], taunt: 'Idle_Loop',
     bones: { chest: 'Torso', head: 'Head', handR: 'Head' } } };
@@ -36,7 +33,7 @@ function beastRetarget(clip, ualPelvis, monPelvis, has) {
 }
 // Si las animaciones de Quaternius están cargadas (se ve en Ajustes → Cada enemigo)
 function animStatus() {
-  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, ' : ''}Imp, Puglin, zombi, T-Rex y velociraptor)`;
+  if (BEAST.ready) return `Animaciones de Quaternius: cargadas ✓ (${Object.keys(BEAST.rigClips || {}).length ? 'robots, ' : ''}Imp, Puglin, zombi y velociraptor)`;
   if (BEAST.failed) return 'Animaciones de Quaternius: no se han podido cargar (se mueven con su animación hecha a mano)';
   return 'Animaciones de Quaternius: cargando…';
 }
