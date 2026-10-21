@@ -123,6 +123,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 (async () => {
   await sleep(150);
   log('boot ok; renders so far', RA.renderer.renders);
+  { const simpleDef = RA.settings.menuLevel; RA.setSetting('menuLevel', 'full'); log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
   // ---- Botones táctiles: un toque pulsa un solo botón, y para pulsar otra vez hay que mover el dedo ----
   {
     const hits = [], a = new RA.Btn('A', 0.1, 0.06, () => hits.push('A')), b = new RA.Btn('B', 0.1, 0.06, () => hits.push('B'));
@@ -492,6 +493,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
     if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
     press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
+  // menú sencillo: Ajustes y el principal sin lo de afinar; un toque lo pasa a completo
+  { const keys = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), labels = () => RA.activeWidgets().map(w => w.label);
+    RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = labels().includes('Al que miras');
+    press('Ajustes'); frame(1); press('Partida'); frame(1); const partS = keys(); press('Ver todos los ajustes (menú completo)'); frame(1); const partF = keys();
+    press('Ver solo lo básico (menú sencillo)'); frame(1); press('Volver'); frame(1); RA.setSetting('menuLevel', 'full'); RA.lobbyMenu(); frame(1); const lobbyF = labels().includes('Al que miras');
+    log(`simple menu: Partida ${partS.join(',')} · full ${partF.join(',')} · “el rayo va” in the main menu: simple ${lobbyS}, full ${lobbyF}`);
+    if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF) errors.push('menú sencillo: no esconde lo de afinar, o el completo no lo enseña');
+    RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
   press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
@@ -1016,7 +1025,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ---- Combate con las manos desnudas: la repetición carga UN rayo y se lanza con el gesto (atrás y adelante deprisa) con
   // cualquier mano; igual con las pistolas activadas (sin mandos no se dispara pellizcando) ----
   for (const [variant, pis] of [['puntería con las manos', 0], ['pistolas sin mandos', 1]]) {
-    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: pis ? 'auto' : 'hands', exercise: 'squat', lives: 0, waves: 1, repsWave: 14, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: pis, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
+    for (const [k, v] of Object.entries({ mode: 'combat', foes: 'flyers', aim: pis ? 'auto' : 'hands', throwPick: 'hand', exercise: 'squat', lives: 0, waves: 1, repsWave: 14, repsInc: 0, rest: 0, flySpeed: 5, maxAlive: 3, spawnGap: 1, pistol: pis, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
     const rest = () => ({ left: new THREE.Vector3(-0.25, 1.0, -0.1), right: new THREE.Vector3(0.25, 1.0, -0.1) });
     XRS.controllers = false; XRS.headY = 1.7; XRS.hands = rest(); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
     const throwAt = (side, slow) => {
@@ -1100,6 +1109,32 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }
+  // «al que miras»: con dos robots parados, miras a uno y lanzas hacia el hueco entre los dos (más cerca del otro): el rayo
+  // va al que miras; con «hacia donde lanzas», al del lado de la mano
+  { for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'hands', throwPick: 'gaze', exercise: 'squat', lives: 0, waves: 1, repsWave: 40, repsInc: 0, rest: 0, walkTime: 60, maxAlive: 3, spawnGap: 1, pistol: 0, sword: 'off', squatDepth: 25 })) RA.setSetting(k, v);
+    const rest = () => ({ left: new THREE.Vector3(-0.25, 1.0, -0.1), right: new THREE.Vector3(0.25, 1.0, -0.1) });
+    XRS.controllers = false; XRS.headY = 1.7; XRS.hands = rest(); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
+    const look = p => { const dx = p.x, dy = p.y - XRS.headY, dz = p.z, q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.atan2(dy, Math.hypot(dx, dz)), Math.atan2(-dx, -dz), 0, 'YXZ')); XRS.headQ = { x: q.x, y: q.y, z: q.z, w: q.w }; };
+    const squat = () => { XRS.headY = 1.38; frame(70, 16, xrFrame); XRS.headY = 1.7; frame(30, 16, xrFrame); };
+    const res = {};
+    for (const mode of ['gaze', 'hand']) {
+      RA.setSetting('throwPick', mode); let ok = 0, n = 0;
+      for (let r = 0; r < 4; r++) {
+        for (let i = 0; i < 900 && RA.enemies.filter(x => x.alive).length < 2; i++) frame(1, 16, xrFrame);
+        const al = RA.enemies.filter(x => x.alive).sort((a, b) => a.center(new THREE.Vector3()).x - b.center(new THREE.Vector3()).x); if (al.length < 2) break;
+        const A = al[0], B = al[1], pa = A.center(new THREE.Vector3()), pb = B.center(new THREE.Vector3());
+        XRS.headQ = null; squat(); look(pa); frame(40, 16, xrFrame); // mirando al de la izquierda
+        const g = new THREE.Vector3(0.22, XRS.headY - 0.35, -0.3), aim = pa.clone().lerp(pb, 0.62), a0 = A.pending + (A.maxHp - A.hp), b0 = B.pending + (B.maxHp - B.hp);
+        for (let k = 0; k < 6; k++) { XRS.hands.right = g.clone(); frame(1, 16, xrFrame); }
+        for (let k = 1; k <= 9; k++) { XRS.hands.right = g.clone().addScaledVector(aim.clone().sub(g).normalize(), 0.45 * k / 9); frame(1, 16, xrFrame); }
+        frame(8, 16, xrFrame); XRS.hands = rest(); frame(6, 16, xrFrame); n++;
+        const hitA = A.pending + (A.maxHp - A.hp) > a0 || !A.alive, hitB = B.pending + (B.maxHp - B.hp) > b0 || !B.alive;
+        if (mode === 'gaze' ? hitA && !hitB : hitB && !hitA) ok++;
+      }
+      res[mode] = `${ok}/${n}`; if (!n || ok < n - (mode === 'hand' ? 1 : 0)) errors.push(`lanzar con la mano (${mode === 'gaze' ? 'al que miras' : 'hacia donde lanzas'}): el rayo no va al enemigo que toca (${ok} de ${n})`);
+    }
+    log(`throw XR choose target: looking at the left robot and throwing between both → with “al que miras” ${res.gaze} to the one looked at · with “hacia donde lanzas” ${res.hand} to the one the hand points to`);
+    XRS.headQ = null; XRS.hands = null; RA.setSetting('aim', 'auto'); RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Antebrazos en XR: las muñecas giran unos 90° cada una en sentidos contrarios ----
   for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20 })) RA.setSetting(k, v);

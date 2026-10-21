@@ -112,6 +112,7 @@ const SCHEMA = [
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
   { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots y monstruos que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
   { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
+  { key: 'throwPick', g: 'enemigos', label: 'Lanzando con las manos, el rayo va', short: 'El rayo va', type: 'choice', opts: [['gaze', 'Al que miras'], ['hand', 'Hacia donde lanzas']], def: 'gaze', modes: ['combat'], cond: () => !pistolOn() && settings.aim === 'hands' && !aimForced(), hint: 'Al que miras (recomendado): mira al enemigo y lanza hacia él; el gesto dispara y la mirada elige a cuál (sale un aro sobre él). Hacia donde lanzas: solo cuenta la dirección de la mano, que las gafas miden con menos precisión; con enemigos juntos puede irse a otro.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
 
   // Espadas (con los mandos): en Combate contra robots, cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques,
@@ -147,6 +148,7 @@ const SCHEMA = [
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'entorno', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
+  { key: 'menuLevel', g: 'sistema', label: 'Menú', type: 'choice', opts: [['simple', 'Sencillo'], ['full', 'Completo']], def: 'simple', relayout: true, hint: 'Sencillo: en los menús y aquí solo salen los ajustes básicos (y tus favoritos con ★). Completo: todos, también los de afinar.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: gira la muñeca izquierda hacia la cara y pulsa con el índice derecho. Atril: fijo delante de ti.' },
   { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se coloca a esta distancia. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
@@ -215,6 +217,14 @@ function setSetting(key, v) {
   saveSettings();
   onSettingChanged(key);
 }
+// Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
+const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foes', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol', 'robotsW', 'beasts', 'zombies', 'dinos',
+  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
+  'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
+const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
+const isBasic = f => f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
+// Lo que se enseña en los menús y en la página: lo que vale para lo elegido y, con el menú sencillo, lo básico
+const fieldShown = f => fieldVisible(f) && (settings.menuLevel !== 'simple' || isBasic(f));
 function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
@@ -275,7 +285,8 @@ function buildForm() {
   host.innerHTML = Object.keys(GROUP_NAMES).filter(g => !COMMON.includes(g) && g !== 'sonido').map(group).join('');
   const sortField = common.querySelector && common.querySelector('[data-field="exSort"]'); if (sortField && sortBox.appendChild) sortBox.appendChild(sortField);
   for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
-  // restablecer un grupo
+  // menú sencillo o completo, y restablecer un grupo
+  const ln = $('#levelNote'); if (ln) ln.addEventListener('click', ev => { const v = ev.target.dataset && ev.target.dataset.level; if (v) { setSetting('menuLevel', v); syncForm(); } });
   for (const h of [host, common]) h.addEventListener('click', ev => { const g = ev.target.dataset && ev.target.dataset.reset; if (g && (typeof confirm !== 'function' || confirm(`¿Devolver «${GROUP_NAMES[g]}» a como venía?`))) resetGroup(g); });
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
@@ -326,12 +337,14 @@ function syncForm() {
   const byBody = settings.exSort === 'body'; sortExCards(byBody);
   Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
   if (byBody && document.querySelectorAll) document.querySelectorAll('.cards .zone').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.classList.contains('zone')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; }); // zonas sin ejercicios de este modo, fuera
+  const ln = $('#levelNote'), simple = settings.menuLevel === 'simple';
+  if (ln) ln.innerHTML = `${simple ? 'Menú sencillo: solo lo básico.' : 'Menú completo: todos los ajustes.'} <button type="button" class="btn small" data-level="${simple ? 'full' : 'simple'}">${simple ? 'Ver todos los ajustes' : 'Ver solo lo básico'}</button>`;
   const st = $('#specTitle'); if (st) st.textContent = `4 · Opciones de ${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`;
   const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
   note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza las amebas y con la mano que piden los diamantes que vienen hacia ti; entre un toque y otro, vuelve a la postura de partida.' }[settings.mode] || '';
   for (const f of SCHEMA) {
     const wrap = document.querySelector(`[data-field="${f.key}"]`);
-    if (wrap) wrap.hidden = !fieldVisible(f);
+    if (wrap) wrap.hidden = !fieldShown(f);
     if (f.type === 'num') {
       const a = $(`#f-${f.key}`), b = $(`#f-${f.key}-r`);
       if (a) a.value = settings[f.key]; if (b) b.value = settings[f.key];
@@ -344,7 +357,7 @@ function syncForm() {
       els.forEach(el => { el.checked = String(el.value) === String(settings[f.key]); });
     }
   }
-  document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldVisible(f)); });
+  document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldShown(f)); });
   if (typeof animNote === 'function') animNote();
   updateSummary();
 }

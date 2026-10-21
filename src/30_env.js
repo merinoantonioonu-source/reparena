@@ -222,7 +222,8 @@ function layoutArena() {
     rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
     board.mesh.position.set(0, 0, 0); board.mesh.rotation.set(0, 0, 0); board.mesh.scale.setScalar(0.9);
   } else if (boardMode() === 'gate') {
-    const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.05 * gs + H / 2 + 0.2;
+    // por encima de la baliza de la compuerta (hasta 4,3 m): desde los ojos, también en cuclillas, no la tapa nada
+    const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.75 * gs + H / 2;
     rig.position.set(0, 0, -D - 0.35);
     for (const s of [-1, 1]) k.add('steel', G.box(0.2, yc + H / 2, 0.2), C.dark, s * (W / 2 + 0.18), (yc + H / 2) / 2, -0.15);
     const tilt = Math.atan((yc - 1.6) / D) * 0.8;

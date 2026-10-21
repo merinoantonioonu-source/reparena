@@ -15,10 +15,10 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
     bones: { chest: 'Spine2', head: 'Head', handR: 'RightHand' } },
   // dinosaurios (Dinosaur Animated Pack, Quaternius, CC0): con sus colores (sin textura) y sus animaciones; a una escala que
   // cabe por las compuertas (el T-Rex, 2,3 m; el velociraptor, 1,4 m). trim: la animación acaba antes de lo que dura el clip
-  trex: { h: 2.3, walk: 2.0, jog: 3.5, run: 5.0, minTs: 0.35, own: true, keepMats: true, k: 0.175, prefix: 'Armature|TRex_',
+  trex: { h: 2.3, walk: 2.0, jog: 3.5, run: 5.0, minTs: 0.6, own: true, keepMats: true, k: 0.175, prefix: 'Armature|TRex_',
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.29, 0.58], taunt: 'Idle_Loop',
     bones: { chest: 'Torso', head: 'Head', handR: 'Head' } },
-  raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.35, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
+  raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.6, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.21, 0.42], taunt: 'Idle_Loop',
     bones: { chest: 'Torso', head: 'Head', handR: 'Head' } } };
 const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
