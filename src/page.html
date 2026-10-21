@@ -40,7 +40,15 @@ h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.
 .card:has(input:disabled){opacity:.45;cursor:not-allowed}
 .note{margin:10px 0 0;font-size:.85rem;color:var(--gold)}
 .groups{display:flex;flex-direction:column;gap:26px}
-.group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal)}
+.group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal);display:flex;align-items:center;gap:10px}
+.group h3 .reset{margin-left:auto;font:500 .78rem var(--body,inherit);letter-spacing:0;color:var(--muted,#a49fc8);background:transparent;border:1px solid var(--line);border-radius:8px;padding:3px 9px;cursor:pointer}
+.group h3 .reset:hover{color:var(--fg);border-color:var(--teal)}
+.profiles{margin-top:22px}.profiles h3{margin:0 0 6px;font-size:1rem}
+.profsave{display:flex;gap:8px;flex-wrap:wrap;max-width:520px;align-items:stretch}
+.profiles .status{min-height:1.4em;margin:8px 0 4px}.profsave input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
+.proflist{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-width:640px}
+.profrow{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px}
+.profrow div{flex:1;min-width:0;display:flex;flex-direction:column}.profrow b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profrow span{font-size:.85rem;color:var(--muted,#a49fc8)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px}
 @media (max-width:640px){.grid{grid-template-columns:1fr}}
 .field{min-width:0;display:flex;flex-direction:column;gap:6px}
@@ -315,7 +323,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2 id="specTitle">4 · Opciones del modo y el ejercicio</h2>
     <p class="note">Solo las que sirven para lo que has elegido arriba.</p>
     <div class="groups" id="settingsGroups"></div>
-    <div class="actions"><button class="btn small" id="btnReset">Restablecer ajustes</button></div>
+    <div class="actions"><button class="btn small" id="btnReset">Restablecer todos los ajustes</button></div>
+    <div class="profiles">
+      <h3>Perfiles</h3>
+      <p class="note">Guarda todos tus ajustes (con el modo y el ejercicio) con un nombre, como «Mañana suave» o «Piernas a tope», y cárgalos de un toque, aquí o en el juego (Ajustes ▸ → Perfiles ▸). Hasta 8; si repites un nombre, se sustituye.</p>
+      <div class="profsave"><input id="profName" type="text" maxlength="40" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button class="btn small alt" id="btnProfSave">Guardar ajustes actuales</button></div>
+      <p class="status" id="profStatus" aria-live="polite"></p>
+      <div class="proflist" id="profList"></div>
+    </div>
   </section>
 
 

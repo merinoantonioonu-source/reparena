@@ -1663,6 +1663,7 @@ function lobbyMenu() {
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
+  rows.push(...favRows(new Set(rows.filter(r => r.t === 'field').map(r => r.key)), () => lobbyMenu())); // los ★ de los submenús
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
@@ -1683,26 +1684,31 @@ function soundMenu(back) {
   const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
   const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
-    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key })),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key, star: true })),
     ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
-let settingsTab = 'partida';
+let settingsTab = uiPrefs().tab || 'partida'; // se recuerda la última pestaña
 function settingsMenu(back, tab = settingsTab) {
   const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldVisible(f)));
-  if (!groups.includes(tab)) tab = groups[0]; settingsTab = tab;
+  if (!groups.includes(tab)) tab = groups[0]; if (tab !== settingsTab) { settingsTab = tab; uiSave('tab', tab); PREFS.resetArm = ''; }
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
-  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
-  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
-  rows.push({ t: 'btns', items: [{ label: 'Volver', style: 'primary', onPress: () => back() }] });
+  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y + · ★ lo lleva al menú principal', color: '#a49fc8' });
+  // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
+  const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
+  rows.push({ t: 'btns', items: [
+    ...(inGame ? [] : [{ label: 'Perfiles  ▸', onPress: () => profilesMenu(() => settingsMenu(back, tab)) }]),
+    { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; settingsMenu(back, tab); } },
+    { label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] });
   const m = openMenu(rows); m.rebuild = () => settingsMenu(back, tab);
 }
 function openPause() {
