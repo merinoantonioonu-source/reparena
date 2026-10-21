@@ -21,6 +21,29 @@ function natFloat(a) {
   for (let i = 0; i < n; i++) for (let j = 0; j < k; j++) f[i * k + j] = Math.max(-1, a[get[j]](i) / div);
   return new THREE.BufferAttribute(f, k);
 }
+// Viento: árboles, arbustos, hierba y flores se mecen en la tarjeta gráfica, más arriba que abajo (el pie no se mueve),
+// con rachas suaves, cada planta a su ritmo según dónde está, y las hojas tiemblan. [balanceo, exponente de la altura, temblor]
+const NAT_WIND = { Bark_NormalTree: [0.012, 1.4, 0], Bark_DeadTree: [0.008, 1.4, 0], Leaves_NormalTree: [0.012, 1.4, 0.025], Leaves_Pine: [0.01, 1.4, 0.015],
+  Leaves_TwistedTree: [0.05, 1.2, 0.02], Leaves: [0.06, 1.2, 0.02], Flowers: [0.2, 1.0, 0.01], Grass: [0.2, 1.0, 0] };
+const natWindT = { value: 0 };
+function natWind(mat, [amp, expo, flut]) {
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, { windT: natWindT, windAmp: { value: amp }, windExp: { value: expo }, windFlut: { value: flut } });
+    sh.vertexShader = 'uniform float windT, windAmp, windExp, windFlut;\n' + sh.vertexShader.replace('#include <project_vertex>', `
+      vec4 mvPosition = vec4(transformed, 1.0);
+      vec3 wBase = vec3(0.0);
+      #ifdef USE_INSTANCING
+        mvPosition = instanceMatrix * mvPosition; wBase = instanceMatrix[3].xyz;
+      #endif
+      float wH = max(mvPosition.y - wBase.y, 0.0), wPh = windT * 1.3 + dot(wBase.xz, vec2(0.31, 0.23));
+      float wGust = 0.65 + 0.35 * sin(windT * 0.23) * sin(windT * 0.41 + 1.3);
+      float wSw = (sin(wPh) * 0.7 + sin(wPh * 2.27 + 1.7) * 0.3) * wGust * windAmp * pow(wH, windExp);
+      mvPosition.xz += vec2(0.8, 0.6) * (wSw + windAmp * pow(wH, windExp) * 0.6 * wGust);
+      mvPosition.xyz += normalize(vec3(1.0, 0.6, 0.8)) * sin(windT * 9.0 + dot(mvPosition.xyz, vec3(3.1, 2.3, 2.9))) * windFlut * min(wH, 2.0) * wGust;
+      mvPosition = modelViewMatrix * mvPosition;
+      gl_Position = projectionMatrix * mvPosition;`);
+  };
+}
 function natureLoad() {
   if (NAT.ready || NAT.loading || NAT.failed) return;
   if (!THREE.GLTFLoader || typeof document === 'undefined') { NAT.failed = true; return; }
@@ -28,6 +51,7 @@ function natureLoad() {
   for (const [n, [f, alpha, both]] of Object.entries(NAT_TEX)) {
     const t = T.load('models/tex/nature/' + f); t.encoding = THREE.sRGBEncoding; t.flipY = false;
     mats[n] = new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0, alphaTest: alpha ? 0.5 : 0, side: alpha || both ? THREE.DoubleSide : THREE.FrontSide });
+    if (NAT_WIND[n]) natWind(mats[n], NAT_WIND[n]);
   }
   new THREE.GLTFLoader().load('models/nature.glb', g => {
     g.scene.updateMatrixWorld(true);
@@ -202,6 +226,6 @@ function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NA
 // Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles
 function updateNature(dt, t) {
   if (!NAT.group.visible) return;
-  natSkyMat.uniforms.time.value = t; arena.worldToLocal(natSky.position.copy(head.p)); natSky.position.y = 0; // el cielo, siempre centrado en ti
+  natSkyMat.uniforms.time.value = t; natWindT.value = t; arena.worldToLocal(natSky.position.copy(head.p)); natSky.position.y = 0; // el cielo, siempre centrado en ti
   NAT.birdT -= dt; if (NAT.birdT <= 0) { NAT.birdT = rand(2.5, 7); const a = rand(0, TAU), r = rand(8, 18); SND.bird(arena.localToWorld(new V3(Math.sin(a) * r, rand(3, 7), -Math.cos(a) * r))); }
 }

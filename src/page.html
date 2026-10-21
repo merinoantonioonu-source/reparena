@@ -43,6 +43,7 @@ h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.
 .group h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:.92rem;letter-spacing:.06em;color:var(--teal);display:flex;align-items:center;gap:10px}
 .group h3 .reset{margin-left:auto;font:500 .78rem var(--body,inherit);letter-spacing:0;color:var(--muted,#a49fc8);background:transparent;border:1px solid var(--line);border-radius:8px;padding:3px 9px;cursor:pointer}
 .group h3 .reset:hover{color:var(--fg);border-color:var(--teal)}
+.levelnote{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.9rem;color:var(--muted)}
 .profiles{margin-top:22px}.profiles h3{margin:0 0 6px;font-size:1rem}
 .profsave{display:flex;gap:8px;flex-wrap:wrap;max-width:520px;align-items:stretch}
 .profiles .status{min-height:1.4em;margin:8px 0 4px}.profsave input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
@@ -322,6 +323,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <section>
     <h2 id="specTitle">4 · Opciones del modo y el ejercicio</h2>
     <p class="note">Solo las que sirven para lo que has elegido arriba.</p>
+    <p class="levelnote" id="levelNote"></p>
     <div class="groups" id="settingsGroups"></div>
     <div class="actions"><button class="btn small" id="btnReset">Restablecer todos los ajustes</button></div>
     <div class="profiles">

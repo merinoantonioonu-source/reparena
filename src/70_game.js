@@ -292,10 +292,22 @@ class Robot {
         }
         steer.y = 0; const sl = steer.length(); if (sl > 1e-4) steer.divideScalar(sl);
         if (steer.dot(to) < -0.2) steer.addScaledVector(to, 0.8).normalize(); // nunca da media vuelta por esquivar
-        _rs.copy(steer).multiplyScalar(wantV); if (lat) { _rs.x += to.z * lat; _rs.z -= to.x * lat; }
+        wantV *= 1 - Math.min(0.85, this.stagger); // al recibir un disparo, se frena
+        _rs.copy(steer).multiplyScalar(wantV);
+        // un cuerpo no anda de lado: avanza hacia donde mira (con algo de paso lateral) y gira hacia donde quiere ir; si es
+        // hacia atrás o muy de lado, casi se para mientras gira. El vaivén del zigzag va aparte (y el cuerpo lo sigue)
+        let hdg = null;
+        if (this.out && !this.roll && _rs.lengthSq() > 0.01) {
+          const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), along = _rs.x * fx + _rs.z * fz;
+          _rs.set(fx * Math.max(0, along) + (_rs.x - fx * along) * 0.3, 0, fz * Math.max(0, along) + (_rs.z - fz * along) * 0.3);
+        }
+        if (lat) { _rs.x += to.z * lat; _rs.z -= to.x * lat; }
+        if (this.out && !this.roll && wantV > 0.15) hdg = Math.atan2(steer.x * wantV + to.z * lat, steer.z * wantV - to.x * lat);
         this.vel.lerp(_rs, Math.min(1, dt * (3 + 3 * this.vMove / this.vWalk))); // con inercia: arranca y frena como un cuerpo pesado (más vivo cuanto más rápido)
         this.pos.addScaledVector(this.vel, dt);
-        faceTo = Math.atan2(this.vel.x, this.vel.z);
+        // de cara hacia donde va, pero solo si va de verdad: casi parado, una velocidad diminuta no le hace girar sobre sí
+        // mismo (de cerca, te mira)
+        faceTo = hdg !== null && wantV > 0.15 ? hdg : Math.hypot(this.vel.x, this.vel.z) > 0.2 ? Math.atan2(this.vel.x, this.vel.z) : toPl < 4 ? faceP : null;
         // atascado: casi no avanza aunque quiere
         this.stuckT = this.vel.length() < wantV * 0.25 ? this.stuckT + dt : 0;
         break;
@@ -347,13 +359,22 @@ class Robot {
     }
     // de cara hacia donde va y, al acercarse, cada vez más hacia ti
     const near = smooth(clamp((3.2 - toPl) / 2, 0, 1));
-    if (faceTo !== null) { const tgt = this.state === 'walk' && !this.roll ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 : faceTo; this.yaw += wrapAng(tgt - this.yaw) * Math.min(1, gd * (this.roll ? 14 : this.state === 'walk' ? 5 : 8)); }
+    if (faceTo !== null) {
+      const walk = this.state === 'walk' && !this.roll, tgt = walk ? faceTo + wrapAng(faceP - faceTo) * near * 0.85 * clamp(1 - Math.hypot(this.vel.x, this.vel.z) / Math.max(0.3, this.vWalk), 0, 1) : faceTo;
+      let dy = wrapAng(tgt - this.yaw) * Math.min(1, gd * (this.roll ? 10 : walk ? 6 : 8));
+      if (walk) { const lim = gd * 2.6 / (0.6 + (K.r || 0.4)); dy = clamp(dy, -lim, lim); } // gira como un cuerpo con peso: los grandes, más despacio
+      this.yaw += dy;
+    }
     this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
     if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
-    const runK = this.spd > this.vWalk * 1.15 ? clamp((this.spd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
+    // para la animación: la marcha hacia delante, suavizada (sin los empujones de los que tiene al lado ni el tambaleo), para
+    // que los pies no patinen ni el paso tiemble
+    const locoV = this.state === 'walk' && !(this.dodge > 0) ? Math.max(0, this.vel.x * Math.sin(this.yaw) + this.vel.z * Math.cos(this.yaw)) : this.spd;
+    this.aspd = (this.aspd || 0) + (locoV - (this.aspd || 0)) * Math.min(1, dt * 6);
+    const runK = this.aspd > this.vWalk * 1.15 ? clamp((this.aspd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
     this.run += (runK - this.run) * Math.min(1, dt * 4);
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
-    this.animate(dt, this.gt, this.spd); // su propio reloj, al ritmo de sus gestos
+    this.animate(dt, this.gt, this.aspd); // su propio reloj, al ritmo de sus gestos
     if (this.rig.kind !== 'ripper' && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
@@ -414,6 +435,9 @@ class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
     this.mx = new THREE.AnimationMixer(this.inst.model); this.clips = BEAST.kinds[this.K.beast3d].clips; this.acts = {}; this.cur = null; this.react = 0; this.tint = 0; this.prevSt = '';
+    // si para llegar a tiempo tendría que andar mucho más despacio que su paso natural (a cámara lenta), acecha: anda a
+    // su paso y se para de vez en cuando (llega igual)
+    const natural = this.D.walk * this.sc * 0.8; if (this.vWalk < natural * 0.75 && this.style !== 'zigzag') this.vMove = Math.max(this.vMove, natural);
     this.animate(0, 0, 0);
   }
   roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, trex: 0.5, raptor: 1.6 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave; el T-Rex, un rugido profundo
@@ -438,8 +462,9 @@ class Beast extends Robot {
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = D.taunt || (K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop');
     else if (st === 'emerge' || st === 'knock') want = 'Idle_Loop';
-    else if (v > 0.12) {
-      want = v < (D.walk + D.jog) / 2 ? 'Walk_Loop' : v < (D.jog + D.run) / 2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop';
+    else if (v > Math.max(0.16, D.walk * (D.minTs || 0.5) * 0.8) * (/Walk|Jog|Sprint/.test(this.cur || '') ? 0.6 : 1)) { // (con margen: no salta de andar a trotar y vuelta; casi parado, en reposo: sin pasos que patinan)
+      const h = this.cur, m1 = (D.walk + D.jog) / 2 * (h === 'Jog_Fwd_Loop' || h === 'Sprint_Loop' ? 0.88 : 1.12), m2 = (D.jog + D.run) / 2 * (h === 'Sprint_Loop' ? 0.88 : 1.12);
+      want = v < m1 ? 'Walk_Loop' : v < m2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; fade = 0.3;
       ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), D.minTs || 0.5, D.maxTs || 1.8); // los pies no patinan
     } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
     else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; // o, sin música, en guardia
@@ -1368,6 +1393,15 @@ function throwTarget(o, d) {
   }
   return best;
 }
+// Con «al que miras», el gesto dispara y la mirada elige: el enemigo que llevas un momento mirando, si la sacudida va más o
+// menos hacia él (hasta THROW_WIDE grados, como cualquier blanco); si no miras a ninguno, el de la dirección de la mano
+const throwByGaze = () => settings.throwPick !== 'hand' && !pistolOn();
+function throwPickTarget(o, d) {
+  const byHand = throwTarget(o, d); if (!byHand || !throwByGaze()) return byHand;
+  const g = gazeLock(); if (!g) return byHand;
+  const v = g.center(tmpA).sub(o); _ttv.set(v.x, v.y * 0.4, v.z); _ttd.set(d.x, d.y * 0.4, d.z);
+  return _ttv.angleTo(_ttd) - Math.atan(g.radius * 1.3 / Math.max(0.05, v.length())) < THROW_WIDE * Math.PI / 180 ? g : byHand;
+}
 function throwFire(s, o, d, tg) {
   const T = HTH[s], c = T.c; if (!c) return;
   T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
@@ -1379,7 +1413,10 @@ function throwFire(s, o, d, tg) {
 function throwTry(s, o, d) {
   const T = HTH[s], len = d.length(), fw = d.x * _thf.x + d.z * _thf.z;
   const away = Math.hypot(T.lastR.x, T.lastR.z) - Math.hypot(T.from.x, T.from.z);
-  const ok = len > THROW_D && fw > -0.05 * len && (away > 0.03 || fw > 0.5 * len), tg = ok && throwTarget(o, d.normalize());
+  // la dirección: la del recorrido entero, pero sobre todo la del último tramo (al soltar), que es la que lleva el rayo
+  const t1 = T.hist.length ? T.hist[T.hist.length - 1] : null, t0 = t1 && T.hist.slice().reverse().find(x => t1.t - x.t >= 0.09);
+  if (t0 && _thv.subVectors(t1.p, t0.p).length() > 0.04) d.normalize().multiplyScalar(0.4).addScaledVector(_thv.normalize(), 0.6);
+  const ok = len > THROW_D && fw > -0.05 * len && (away > 0.03 || fw > 0.5 * len), tg = ok && throwPickTarget(o, d.normalize());
   T.burst = false; T.peak = 0; if (tg) { T.cool = 0.2; throwFire(s, o.clone(), d.clone(), tg); }
   T.hist.splice(0, T.hist.length - 1); // el siguiente acelerón se mide desde aquí, no desde antes de coger impulso
 }
@@ -1416,6 +1453,12 @@ function throwStep(dt, t) {
     T.peak = Math.max(T.peak, sp);
     // frenó de golpe, o ya recorrió bastante: si la sacudida va hacia un enemigo, sale el rayo; si no, la carga se queda
     if (sp < T.peak * THROW_STOP || _thd.subVectors(_thr, T.from).length() > THROW_LONG) throwTry(s, h.wrist, _thd.subVectors(_thr, T.from));
+  }
+  // al que miras: se sigue a quién miras y un aro lo marca (teal si tienes carga)
+  if (on && throwByGaze() && !(swordActive() && !pistolOn())) { // (con espada no hay diana)
+    const e = gazeLockStep(t, head.p, fwd()), ring = locks.gaze;
+    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(throwCount() ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
+    else ring.visible = false;
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
@@ -1646,7 +1689,7 @@ function lobbyMenu() {
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, onPress: () => exerciseMenu(lobbyMenu) }] },
-    ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : [])] : []),
+    ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : []), ...(fieldVisible(FIELD.throwPick) ? [{ t: 'field', key: 'throwPick' }] : [])] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
@@ -1658,11 +1701,13 @@ function lobbyMenu() {
   if (settings.mode === 'touch') {
     if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
     else rows.push({ t: 'field', key: 'tchHands' });
-    rows.push(...tempoRows(() => lobbyMenu()));
+    if (settings.menuLevel !== 'simple') rows.push(...tempoRows(() => lobbyMenu())); // (en el sencillo, el ritmo está en Sonido)
   }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
+  // menú sencillo: fuera lo de afinar (sigue en Ajustes con el menú completo, o con ★ aquí)
+  if (settings.menuLevel === 'simple') for (let i = rows.length - 1; i >= 0; i--) if (rows[i].t === 'field' && !fieldShown(FIELD[rows[i].key])) rows.splice(i, 1);
   rows.push(...favRows(new Set(rows.filter(r => r.t === 'field').map(r => r.key)), () => lobbyMenu())); // los ★ de los submenús
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
@@ -1691,17 +1736,19 @@ function soundMenu(back) {
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
   const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
-    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldVisible(f)).map(f => ({ t: 'field', key: f.key, star: true })),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true })),
     ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = again;
 }
 let settingsTab = uiPrefs().tab || 'partida'; // se recuerda la última pestaña
 function settingsMenu(back, tab = settingsTab) {
-  const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldVisible(f)));
+  const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldShown(f)));
   if (!groups.includes(tab)) tab = groups[0]; if (tab !== settingsTab) { settingsTab = tab; uiSave('tab', tab); PREFS.resetArm = ''; }
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
-  SCHEMA.filter(f => f.g === tab && fieldVisible(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  const simple = settings.menuLevel === 'simple'; // menú sencillo o completo, a un toque
+  rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo básico (menú sencillo)', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] });
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y + · ★ lo lleva al menú principal', color: '#a49fc8' });
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
