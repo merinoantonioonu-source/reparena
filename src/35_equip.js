@@ -182,21 +182,62 @@ function layoutPool() {
   POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });
 }
 settingHooks.push(k => { if (k === 'exercise' || k === 'mode') layoutPool(); });
+// Tentáculo animado (del Pirate Kit): mide unos 15,5 de alto y ataca hacia +Z. Si no carga (o en las pruebas), los hechos a mano
+const TENT = { st: '', scene: null, clips: {}, hits: 0 }, TENT_K = 0.062;
+function tentLoad() {
+  if (TENT.st) return;
+  if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { TENT.st = 'failed'; return; }
+  TENT.st = 'loading';
+  new THREE.GLTFLoader().load('models/tentaculo.glb', g => {
+    for (const c of g.animations) TENT.clips[c.name.replace('Tentacle_', '')] = c;
+    g.scene.traverse(m => { if (m.isMesh) { m.frustumCulled = false; if (m.material) m.material.roughness = 0.4; } }); // se doblan mucho fuera de su caja; húmedos
+    TENT.scene = g.scene; TENT.st = 'ready';
+  }, undefined, e => { TENT.st = 'failed'; console.log('No se pudo cargar el tentáculo:', e && e.message); });
+}
 function ensureTentacles() {
-  if (POOL.tents.length || !RIGS.tentacle) return;
+  if (POOL.tents.length) return;
+  tentLoad(); if (TENT.st === 'loading') return; // enseguida salen los animados
   for (let i = 0; i < 5; i++) {
-    const inst = RIGS.tentacle.instance({ main: M.tentacleSkin, glow: M.glowSkin });
-    pool.add(inst.root);
-    POOL.tents.push({ inst, root: inst.root, B: inst.list, a: (i + 0.3) / 5 * TAU, ph: rand(0, TAU), lunge: 0, lungeV: 0, s: rand(0.8, 1.15) });
+    const T = { a: (i + 0.3) / 5 * TAU, ph: rand(0, TAU), lunge: 0, lungeV: 0, s: rand(0.8, 1.15) };
+    if (TENT.st === 'ready') {
+      const root = THREE.SkeletonUtils.clone(TENT.scene), mixer = new THREE.AnimationMixer(root), idle = mixer.clipAction(TENT.clips.Idle);
+      Object.assign(T, { mdl: true, root, mixer, idle, hit: null, hitT: 0, hitDur: 0, k: 0, ts: rand(0.8, 1.2) });
+      idle.time = rand(0, TENT.clips.Idle.duration); idle.play();
+    } else {
+      const inst = RIGS.tentacle && RIGS.tentacle.instance({ main: M.tentacleSkin, glow: M.glowSkin }); if (!inst) return;
+      Object.assign(T, { inst, root: inst.root, B: inst.list });
+    }
+    pool.add(T.root); POOL.tents.push(T);
   }
   layoutPool();
 }
+// El animado se lanza: Poke (pinchazo), Attack (latigazo) o Attack2 (barrido, al caer)
+function tentHit(T, n, ts = 1) {
+  if (T.hit) T.hit.stop();
+  const A = T.mixer.clipAction(TENT.clips[n]); A.reset(); A.setLoop(THREE.LoopOnce, 1); A.clampWhenFinished = true; A.timeScale = ts; A.fadeIn(0.12).play();
+  T.idle.fadeOut(0.12); T.hit = A; T.hitT = 0; T.hitDur = TENT.clips[n].duration; TENT.hits++;
+}
+function tentUpdate(T, dt, feet, ex) {
+  if (T.hit) { T.hitT += dt * T.hit.timeScale; if (T.hitT >= T.hitDur - 0.15) { T.hit.fadeOut(0.2); T.idle.enabled = true; T.idle.fadeIn(0.2).play(); T.hit = null; } }
+  T.k += ((T.hit ? 1 : 0) - T.k) * Math.min(1, dt * 8); const k = smooth(T.k);
+  T.idle.timeScale = T.ts * (1 + 2.2 * ex);
+  // al lanzarse, hacia tus pies y lo bastante largo para llegar (la punta avanza unas 8 veces la escala)
+  const P = T.root.position, dx = feet.x - P.x, dz = feet.z - P.z, rest = Math.atan2(-P.x, -P.z), base = TENT_K * T.s;
+  T.root.rotation.y = rest + wrapAng(Math.atan2(dx, dz) - rest) * k;
+  T.root.scale.setScalar(lerp(base, clamp(Math.hypot(dx, dz) / 8, base, base * 1.6), k));
+  T.mixer.update(dt);
+}
 const _pt2 = new V3();
 // Algo que pasa en el charco: un tentáculo se lanza a por tus pies, o todos te agarran si caes
-function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15)); } }
+function poolLunge() {
+  const T = pick(POOL.tents); if (!T || T.lungeV !== 0 || T.hit) return;
+  if (T.mdl) tentHit(T, pick(['Poke', 'Attack'])); else T.lungeV = 1;
+  SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15));
+}
 function poolGrab(at) {
-  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
-  POOL.tents.forEach(T => { T.lungeV = 1; });
+  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato
+  fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
+  POOL.tents.forEach(T => { if (T.mdl) tentHit(T, 'Attack2', rand(1, 1.3)); else T.lungeV = 1; });
 }
 function updatePool(dt, t) {
   const show = isBars() && eqKind() === 'door' && state !== 'idle' && !vortexOn(); // el charco solo bajo la barra de dominadas (o el remolino, colgado)
@@ -218,6 +259,7 @@ function updatePool(dt, t) {
   // tentáculos: ondulación, embestida hacia los pies y agarrón
   const feet = eqLocal(e, head.p, _pt2);
   for (const T of POOL.tents) {
+    if (T.mdl) { tentUpdate(T, dt, feet, ex); continue; }
     if (T.lungeV) { T.lunge += dt * 3.2 * T.lungeV; if (T.lunge >= 1) { T.lunge = 1; T.lungeV = -0.5; } else if (T.lunge <= 0) { T.lunge = 0; T.lungeV = 0; } }
     const k = smooth(Math.max(T.lunge, POOL.grabT > 0 ? Math.min(1, POOL.grabT) : 0)), n = T.B.length;
     const dx = feet.x - T.root.position.x, dz = feet.z - T.root.position.z, reach = Math.hypot(dx, dz);
