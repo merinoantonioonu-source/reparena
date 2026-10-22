@@ -16,7 +16,7 @@ const perfNow = () => performance.now() / 1000;
 const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Movimientos de cada ejercicio: los de la cabeza (amebas) y los de las manos (diamantes)
 const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
-const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side']; // side: abdominal lateral (diamante por un costado)
 // Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
 // bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
 const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
@@ -58,10 +58,10 @@ const amebaGeo = new THREE.TorusGeometry(1, 0.2, 18, 72);
 const WATER_VS = `uniform float uTime; uniform float uAmp; uniform float uPulse; uniform float uBurst;
 varying vec3 vN; varying vec3 vV; varying vec2 vUV;
 vec3 ringPos(float u, float v) {
-  float t = uTime;
-  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + uAmp * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
+  float t = uTime * (0.7 + 0.35 * uAmp), aR = min(uAmp, 1.2); // más agitada, más deprisa; el hueco apenas cambia (es lo que hay que acertar)
+  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + aR * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
   float r = 0.2 * (1.0 - uBurst * 0.8) * (1.0 + uAmp * (0.32 * sin(4.0 * u - 2.1 * t) + 0.16 * sin(7.0 * u + 2.9 * t + v * 2.0) + 0.06 * sin(13.0 * u + 5.0 * v - 6.0 * t)));
-  float z = uAmp * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
+  float z = uAmp * 1.6 * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
   vec2 c = vec2(cos(u), sin(u));
   return vec3(c * (R + r * cos(v)), z + r * sin(v));
 }
@@ -119,6 +119,8 @@ function moveSpec(move) {
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
     const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
     if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
+    // abdominal lateral: junto a la cadera, a ras de suelo y bien abierto hacia un lado; se llega inclinando el tronco
+    else if (move === 'side') o.pos = new V3(side * rand(0.36, 0.46), clamp(S - 0.02, 0.08, 0.25) + rand(0, 0.06), -R - rand(0.1, 0.3));
     else {
       const th = rand(settings.abMin, Math.max(settings.abMin, settings.abMax)) * Math.PI / 180;
       const ph = move === 'twist' ? side * rand(0.5, 1) * settings.abTwist * Math.PI / 180 : 0;
@@ -134,7 +136,8 @@ function moveSpec(move) {
     if (settings.sword !== 'two') o.hand = settings.swordHand;
   }
   const far = isFloor() ? 3.5 : D;
-  o.from = isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
+  o.from = move === 'side' ? new V3(side * 2.4, o.pos.y + 0.25, o.pos.z - 0.5) // por el costado
+    : isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
   return o;
 }
 
@@ -155,7 +158,7 @@ function sampleHands(dt) {
     if (!A.armed) {
       // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
       const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
-      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : true;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : true;
       if (back) A.armed = true;
     }
   }
@@ -181,13 +184,13 @@ class TouchTarget {
     const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
     this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
     if (this.part === 'head') {
-      this.mat = waterRingMat(col);
+      this.mat = waterRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
       this.ring = new THREE.Mesh(amebaGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
       this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
-      this.root.quaternion.setFromUnitVectors(_tz, this.n);
+      this.root.quaternion.setFromUnitVectors(_tz, this.n); this.q0 = this.root.quaternion.clone();
     } else if (this.part === 'cut') { // bloque metálico con aristas que brillan y una flecha: corta en su dirección
       this.mat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
       this.box = new THREE.Mesh(cutGeo, this.mat); this.box.castShadow = true; this.root.add(this.box);
@@ -241,19 +244,29 @@ class TouchTarget {
     if (TCH.headArm.armed || this.hold) return true;
     touchHint('Vuelve a la posición de partida'); return false;
   }
+  // la ameba no viene quieta: serpentea de lado a lado y sube y baja mientras se acerca (cada vez menos, para poder
+  // acertarla al llegar: k, lo recorrido), se bambolea inclinándose y, esperando, sigue flotando un poco
+  sway(k, t) {
+    if (!this.ring) return;
+    const a = 0.34 * (1 - smooth(k)) * (isFloor() ? 0.6 : 1) + Math.min(0.025, this.r * 0.2), tt = t * 1.15 + this.ph; // (cerca del suelo el hueco es pequeño: menos)
+    _tv.set(Math.sin(tt * 2.1) * a, Math.sin(tt * 2.9 + 1.3) * a * 0.55, 0).applyQuaternion(this.q0); this.root.position.add(_tv);
+    this.root.position.y = Math.max(0.08, this.root.position.y);
+    _tq.setFromAxisAngle(_tu.set(Math.sin(tt * 1.3), Math.cos(tt * 1.7), 0).normalize(), 0.05 + 0.25 * (1 - k)); this.root.quaternion.copy(this.q0).multiply(_tq);
+  }
   update(dt, t) {
     const c = TCH.clock, play = state === 'play' || state === 'rest';
     if (this.mode === 'approach') {
       const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
-      this.root.position.lerpVectors(this.from, this.pos, e);
+      this.root.position.lerpVectors(this.from, this.pos, e); this.sway(k, t);
       // también vale tocarlo mientras viaja, si atinas
       if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
     } else if (this.mode === 'wait') {
-      this.root.position.copy(this.pos);
+      this.root.position.copy(this.pos); this.sway(1, t);
       if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (c > this.arriveAt + this.win) this.miss();
-    } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro
+    } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro (quieta, en su sitio)
+      this.root.position.copy(this.pos);
       if (this.touching()) { this.outT = 0; this.held += dt; } else this.outT += dt;
       if (this.held >= this.hold) this.hit();
       else if (this.outT > 0.6) this.miss();
@@ -269,12 +282,13 @@ class TouchTarget {
       if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; } else this.mat.opacity = Math.max(0, f) * 0.9;
       if (f <= 0) { this.dispose(); return; }
     }
+    if (this.ring && this.mode !== 'approach' && this.mode !== 'wait') this.root.quaternion.copy(this.q0);
     this.prevPos.copy(this.root.position);
     // ondula como el agua; con ritmo, late en cada pulso
     const P = tchPeriod(), ph_ = P ? ((((perfNow() - TCH.beat0) / P) % 1) + 1) % 1 : 1, pulse = P ? Math.exp(-ph_ * 6) : 0;
     if (this.ring) {
       const near = this.mode === 'wait' || this.mode === 'hold', U = this.mat.uniforms;
-      U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 1.4 : 1) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
+      U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
       if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
     } else if (this.box) {
@@ -340,7 +354,11 @@ function buildTouchWave(i) {
     const mv = comboMoves();
     for (let k = 0; k < n; k++) { let m = settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv); if (swordSet() && (m === 'punch' || m === 'reach')) m = pick(CUT_MOVES); list.push({ move: m, hp: 1 }); }
   } else {
-    const [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
+    let [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
+    if (settings.exercise === 'abs') { // los elegidos (Movimientos): si solo hay de un tipo, todos de ese tipo
+      const sel = String(settings.absMoves).split(','); head = head.filter(m => sel.includes(m)); hand = ['knee', 'side'].filter(m => sel.includes(m));
+      if (!head.length) head = hand; if (!hand.length) hand = head;
+    }
     const hm = swordSet() && SWORD_CUTS[settings.exercise] ? SWORD_CUTS[settings.exercise] : hand;
     for (let k = 0; k < n; k++) list.push({ move: hm.length && Math.random() * 100 < settings.tchHands ? pick(hm) : pick(head), hp: 1 });
   }

@@ -18,6 +18,22 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
   raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.6, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.21, 0.42], taunt: 'Idle_Loop',
     bones: { chest: 'Torso', head: 'Head', handR: 'Head' } } };
+// Los que se cargan solo si se eligen (Ajustes → Enemigos), cada uno por su cuenta: los zombis verde y gordo (Ultimate
+// Platformer Pack) y los monstruitos (Cute Animated Monsters), de Quaternius (CC0), con sus animaciones y su textura dentro
+// del .glb (ownTex). file: el archivo en models/; k: su escala (para que mida h metros)
+const ZOMBIE2 = { own: true, ownTex: true, lazy: true, walk: 0.6, jog: 1.6, run: 2.4, maxTs: 2.2, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
+  alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Punch: 'Punch', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Idle_Attack' }, atk: ['Punch', 0.25, 0.45],
+  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArm.R' } };
+Object.assign(BEAST_DEF, { zgreen: { ...ZOMBIE2, file: 'zombie_basic', h: 1.36, k: 1 }, zchubby: { ...ZOMBIE2, file: 'zombie_chubby', h: 1.64, k: 1 } });
+// Los monstruitos andan dando saltitos (sus animaciones son en el sitio: más deprisa cuanto más corren) y muerden lanzándose
+const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.2, minTs: 0.7, maxTs: 2.4, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
+  alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Walk', Sprint_Loop: 'Walk', Bite: 'Bite_Front', Death01: 'Death', Hit: 'HitRecieve', Dance_Loop: 'Jump', Fly: 'Flying' }, atk: ['Bite', 0.12, 0.28],
+  bones: { chest: 'Body', head: 'Head', handR: 'Head' } };
+// [archivo, alto del modelo, metros que mide al andar]; los de las trampillas y los voladores, a su tamaño en su clase
+[['demon', 1.62, 1.15], ['greendemon', 1.62, 1.15], ['cyclops', 1.67, 1.25], ['yeti', 1.67, 1.3], ['skull', 1.55, 1.0], ['alien', 2.06, 1.2], ['alientall', 2.11, 1.35],
+  ['crab', 1.57, 0.18], ['mushroom', 2.07, 0.2], ['bee', 1.9, 0.5], ['bat', 1.75, 0.45], ['cthulhu', 1.56, 0.55], ['dragon', 1.65, 0.5]].forEach(([k, nat, h]) => {
+  BEAST_DEF[k] = { ...CUTE, file: 'monstruitos/' + ({ alientall: 'alien_tall', dragon: 'yellowdragon' }[k] || k), h, k: h / nat };
+});
 const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
@@ -45,12 +61,13 @@ function loadBeasts() {
   const L = new THREE.GLTFLoader(), T = new THREE.TextureLoader();
   const get = f => new Promise((res, rej) => L.load(`models/${f}.glb`, res, undefined, rej));
   const tex = (f, srgb) => { const t = T.load(`models/tex/${f}.jpg`); t.flipY = false; if (srgb) t.encoding = THREE.sRGBEncoding; return t; };
-  Promise.all([get('anims'), ...Object.keys(BEAST_DEF).map(get)]).then(([U, ...models]) => {
+  const core = Object.keys(BEAST_DEF).filter(k => !BEAST_DEF[k].lazy);
+  Promise.all([get('anims'), ...core.map(get)]).then(([U, ...models]) => {
     const up = U.scene.getObjectByName('pelvis').position.z;
-    Object.keys(BEAST_DEF).forEach((k, i) => {
+    core.forEach((k, i) => {
       const D = BEAST_DEF[k];
       if (D.own) { // sus propias animaciones, con los nombres de la biblioteca; sus colores, de una paleta pequeña (sin suavizar)
-        const clips = {}; for (const a in D.alias) { let c = models[i].animations.find(x => x.name === D.prefix + D.alias[a]); if (!c) continue; if (D.trim && D.trim[D.alias[a]]) { c = c.clone(); c.duration = D.trim[D.alias[a]]; } clips[a] = c; }
+        const clips = ownClips(D, models[i].animations);
         let map = null; if (!D.keepMats) { map = T.load(`models/tex/${k}.png`); map.flipY = false; map.encoding = THREE.sRGBEncoding; map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestFilter; map.generateMipmaps = false; }
         BEAST.kinds[k] = { scene: models[i].scene, clips, map }; return;
       }
@@ -62,9 +79,34 @@ function loadBeasts() {
     });
     BEAST.rigClips = {};
     for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
-    BEAST.ready = true; animNote();
+    BEAST.ready = true; animNote(); foesPreload();
   }).catch(e => { BEAST.failed = true; animNote(); console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
+// Sus propias animaciones, con los nombres de la biblioteca (alias)
+function ownClips(D, anims) {
+  const clips = {}; for (const a in D.alias) { let c = anims.find(x => x.name === D.prefix + D.alias[a]); if (!c) continue; if (D.trim && D.trim[D.alias[a]]) { c = c.clone(); c.duration = D.trim[D.alias[a]]; } clips[a] = c; }
+  return clips;
+}
+// Un monstruo de los que se cargan al elegirlos: cada uno por su cuenta (si uno falla, los demás siguen; en su lugar salen
+// robots, arañas o drones)
+const BEAST_LOAD = {};
+function beastLoad(k) {
+  const D = BEAST_DEF[k]; if (!D || !D.lazy || BEAST.kinds[k] || BEAST_LOAD[k]) return;
+  if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { BEAST_LOAD[k] = 'failed'; return; }
+  BEAST_LOAD[k] = 'loading';
+  new THREE.GLTFLoader().load(`models/${D.file}.glb`, g => {
+    let map = null; g.scene.traverse(m => { if (m.isMesh && !map && m.material && m.material.map) map = m.material.map; });
+    BEAST.kinds[k] = { scene: g.scene, clips: ownClips(D, g.animations), map }; BEAST_LOAD[k] = 'ready';
+  }, undefined, e => { BEAST_LOAD[k] = 'failed'; console.log('No se pudo cargar ' + k + ':', e && e.message); });
+}
+const beastReady = k => !!BEAST.kinds[k] && (BEAST_DEF[k].lazy || BEAST.ready);
+// Los elegidos en Ajustes → Enemigos, que se vayan cargando ya
+const FOE_BEAST = { hcrab: 'crab', hmushroom: 'mushroom', hskull: 'skull', crab: 'crab', mushroom: 'mushroom' };
+function foesPreload() {
+  const ks = new Set([...foeList('foesGate'), ...foeList('foesHatch'), ...foeList('foesFly')].map(k => FOE_BEAST[k] || k));
+  ks.forEach(k => { if (BEAST_DEF[k] && BEAST_DEF[k].lazy) beastLoad(k); });
+}
+settingHooks.push(k => { if (['foesGate', 'foesHatch', 'foesFly', '*'].includes(k)) foesPreload(); });
 /* ---------- Las mismas animaciones, en los robots ---------- */
 // Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
 // reproduce cada animación en el esqueleto de la biblioteca y, fotograma a fotograma, cada brazo y cada pierna del
@@ -124,7 +166,7 @@ function beastRig(kind) {
       model.traverse(m => { if (!m.isMesh) return; const one = x => { const c = new THREE.MeshStandardMaterial({ color: x.color, roughness: 0.8, metalness: 0, skinning: true, flatShading: true }); mats.push(c); base.push(x.color.clone()); return c; }; m.material = Array.isArray(m.material) ? m.material.map(one) : one(m.material); m.castShadow = true; m.frustumCulled = false; });
       const tc = new THREE.Color(); mat = { color: { setRGB: (r, g, b) => mats.forEach((m, i) => m.color.copy(base[i]).multiply(tc.setRGB(r, g, b))) }, emissiveIntensity: 1, dispose: () => mats.forEach(m => m.dispose()) };
     } else {
-      mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true })
+      mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
       model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
     }

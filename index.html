@@ -407,7 +407,16 @@ const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones',
 const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
-const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } };
+const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
+// Enemigos que se pueden elegir, en tres grupos: los que andan y salen de las compuertas, los que salen de las trampillas
+// (en las flexiones y las planchas sobre una mano, en el suelo) y los voladores. Cada uno es [clave, nombre]
+const FOE_GATE = [['robot', 'Robots'], ['imp', 'Diablillo'], ['puglin', 'Puglin'], ['zombie', 'Zombi'], ['zgreen', 'Zombi verde'], ['zchubby', 'Zombi gordo'], ['raptor', 'Velociraptor'],
+  ['demon', 'Demonio'], ['greendemon', 'Demonio verde'], ['cyclops', 'Cíclope'], ['yeti', 'Yeti'], ['skull', 'Calavera'], ['alien', 'Alien'], ['alientall', 'Alien alto']];
+const FOE_HATCH = [['spider', 'Arañas'], ['crab', 'Cangrejo'], ['mushroom', 'Seta'], ['skull', 'Calavera']];
+const FOE_FLY = [['drone', 'Drones'], ['hornet', 'Avispones'], ['bee', 'Abeja'], ['bat', 'Murciélago'], ['cthulhu', 'Cthulhu'], ['dragon', 'Dragón (jefe)']];
+const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall']; // los monstruitos (Cute Animated Monsters)
+// Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
+const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
 // Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
 const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', espada: 'Espada', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
 const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
@@ -466,22 +475,21 @@ const SCHEMA = [
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
-  { key: 'robotsW', g: 'cada', label: 'Robots: cuántos salen', short: 'Robots', type: 'num', min: 0, max: 100, step: 5, def: 50, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, robots metálicos: el pequeño, ágil, de patas de ave, y el grande, con garra y cañón (el jefe, un coloso). Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
-  { key: 'pace_robot', g: 'cada', label: 'Robots: rapidez de gestos', short: 'Gestos robots', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
-  { key: 'spd_robot', g: 'cada', label: 'Robots: velocidad al desplazarse', short: 'Velocidad robots', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
-  { key: 'move_robot', g: 'cada', label: 'Robots: forma de moverse', short: 'Movim. robots', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.robotsW > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
-  { key: 'beasts', g: 'cada', label: 'Monstruos (Imp y Puglin): cuántos salen', short: 'Monstruos', type: 'num', min: 0, max: 100, step: 5, def: 50, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, monstruos animados de Quaternius; si no cargan, salen robots. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
-  { key: 'pace_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): rapidez de gestos', short: 'Gestos monstruos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
-  { key: 'spd_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): velocidad al desplazarse', short: 'Velocidad monstruos', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
-  { key: 'move_beast', g: 'cada', label: 'Monstruos (Imp y Puglin): forma de moverse', short: 'Movim. monstruos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.beasts > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
-  { key: 'zombies', g: 'cada', label: 'Zombis: cuántos salen', short: 'Zombis', type: 'num', min: 0, max: 100, step: 5, def: 50, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, zombis de Quaternius: se tambalean con los brazos por delante, corren en la carga final y te muerden; al morir se desploman de espaldas. Si no cargan, salen robots. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
-  { key: 'pace_zombie', g: 'cada', label: 'Zombis: rapidez de gestos', short: 'Gestos zombis', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.zombies > 0, hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
-  { key: 'spd_zombie', g: 'cada', label: 'Zombis: velocidad al desplazarse', short: 'Velocidad zombis', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.zombies > 0, hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
-  { key: 'move_zombie', g: 'cada', label: 'Zombis: forma de moverse', short: 'Movim. zombis', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.zombies > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
-  { key: 'dinos', g: 'cada', label: 'Velociraptores: cuántos salen', short: 'Velociraptores', type: 'num', min: 0, max: 100, step: 5, def: 50, zero: 'No salen', modes: ['combat'], cond: () => foesHas('robots') && !isTiny(), hint: 'De los que vienen andando, velociraptores de Quaternius (1,4 m, ágiles). Echan la cabeza atrás y se lanzan a morderte; al morir caen de lado con su animación. Si no cargan, salen robots. Cuenta en proporción a los demás (con 30 y 15, salen el doble de los primeros). 0 = no salen.' },
-  { key: 'pace_dino', g: 'cada', label: 'Velociraptores: rapidez de gestos', short: 'Gestos raptores', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.dinos > 0, hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
-  { key: 'spd_dino', g: 'cada', label: 'Velociraptores: velocidad al desplazarse', short: 'Velocidad raptores', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.dinos > 0, hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
-  { key: 'move_dino', g: 'cada', label: 'Velociraptores: forma de moverse', short: 'Movim. raptores', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag,bursts', modes: ['combat'], cond: () => foesHas('robots') && !isTiny() && settings.dinos > 0, hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_robot', g: 'cada', label: 'Robots: rapidez de gestos', short: 'Gestos robots', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('robot'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_robot', g: 'cada', label: 'Robots: velocidad al desplazarse', short: 'Velocidad robots', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('robot'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_robot', g: 'cada', label: 'Robots: forma de moverse', short: 'Movim. robots', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foeOn('robot'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_beast', g: 'cada', label: 'Diablillo y Puglin: rapidez de gestos', short: 'Gestos diablillo', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_beast', g: 'cada', label: 'Diablillo y Puglin: velocidad al desplazarse', short: 'Velocidad diablillo', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_beast', g: 'cada', label: 'Diablillo y Puglin: forma de moverse', short: 'Movim. diablillo', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_zombie', g: 'cada', label: 'Zombis: rapidez de gestos', short: 'Gestos zombis', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_zombie', g: 'cada', label: 'Zombis: velocidad al desplazarse', short: 'Velocidad zombis', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_zombie', g: 'cada', label: 'Zombis: forma de moverse', short: 'Movim. zombis', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_dino', g: 'cada', label: 'Velociraptores: rapidez de gestos', short: 'Gestos raptores', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('raptor'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_dino', g: 'cada', label: 'Velociraptores: velocidad al desplazarse', short: 'Velocidad raptores', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('raptor'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_dino', g: 'cada', label: 'Velociraptores: forma de moverse', short: 'Movim. raptores', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag,bursts', modes: ['combat'], cond: () => foeOn('raptor'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_cute', g: 'cada', label: 'Monstruitos: rapidez de gestos', short: 'Gestos monstruitos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_cute', g: 'cada', label: 'Monstruitos: velocidad al desplazarse', short: 'Velocidad monstruitos', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_cute', g: 'cada', label: 'Monstruitos: forma de moverse', short: 'Movim. monstruitos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag,bursts', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['combat'], cond: () => foesHas('flyers'), hint: 'En flexiones los bichos van a escala, unas 4 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('flyers') },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['combat'], hint: 'Bájalo si el juego va a tirones.' },
@@ -496,15 +504,18 @@ const SCHEMA = [
   { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch', 'arcs'], cond: () => settings.mode === 'arcs' ? settings.arcJump > 0 : ['jump', 'combo'].includes(settings.exercise) && (settings.exercise !== 'combo' || settings.comboBase === 'stand'), hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie (en Arcos, al pasar la valla).' },
   { key: 'abMin', g: 'toques', label: 'Tronco elevado: mínimo', short: 'Ángulo mín.', type: 'num', min: 10, max: 70, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Ángulo del tronco con el suelo al que llegan los aros más bajos.' },
   { key: 'abMax', g: 'toques', label: 'Tronco elevado: máximo', short: 'Ángulo máx.', type: 'num', min: 20, max: 85, step: 5, def: 55, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: '90° sería sentarse del todo.' },
+  { key: 'absMoves', g: 'toques', label: 'Movimientos (abdominales)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['side', 'Lateral'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['abs'], hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Lateral: diamantes que llegan por los lados, a ras de suelo junto a la cadera; con los hombros despegados, inclina el tronco hacia ese lado y tócalo con esa mano (como tocarse los talones) · Rodillas: diamante junto a las rodillas. Solo Lateral: todo son abdominales laterales.' },
   { key: 'abTwist', g: 'toques', label: 'Giro del tronco (oblicuos)', short: 'Giro', type: 'num', min: 0, max: 45, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Cuánto se desvían hacia los lados algunos aros.' },
   { key: 'comboBase', g: 'toques', label: 'Postura del combinado', short: 'Postura', type: 'choice', opts: [['stand', 'De pie'], ['floor', 'Plancha'], ['abs', 'Boca arriba']], def: 'stand', modes: ['touch'], ex: ['combo'], relayout: true, hint: 'Los movimientos del combinado se hacen todos en esta postura.' },
   { key: 'comboStand', g: 'toques', label: 'Movimientos (de pie)', short: 'Movimientos', type: 'multi', opts: [['squat', 'Sentadilla'], ['lunge', 'Zancada'], ['jump', 'Salto'], ['punch', 'Puñetazo'], ['reach', 'Estirarse']], def: 'squat,jump', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'stand', hint: 'Sentadilla: ameba baja · Zancada: ameba baja un paso por delante · Salto: ameba alta · Puñetazo: diamante delante · Estirarse: diamante arriba.' },
   { key: 'comboFloor', g: 'toques', label: 'Movimientos (plancha)', short: 'Movimientos', type: 'multi', opts: [['push', 'Flexión'], ['plank', 'Plancha'], ['tap', 'Toque']], def: 'push,plank', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Flexión: ameba baja · Plancha: ameba en la que hay que aguantar · Toque: diamante para una mano.' },
-  { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Rodillas: diamante junto a las rodillas.' },
+  { key: 'comboAbs', g: 'toques', label: 'Movimientos (boca arriba)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['side', 'Lateral'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'abs', hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Lateral: diamante que llega por un lado, junto a la cadera (inclina el tronco hacia ese lado) · Rodillas: diamante junto a las rodillas.' },
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'foes', g: 'enemigos', label: 'Enemigos', type: 'choice', opts: [['robots', 'Robots'], ['flyers', 'Voladores'], ['mix', 'Mezcla']], def: 'robots', modes: ['combat'], relayout: true, hint: 'Robots y monstruos que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones que vuelan, o los dos a la vez. La plancha con un brazo siempre trae arañas y el superman, voladores.' },
+  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman'), relayout: true, hint: 'Los que vienen andando desde las compuertas. Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase.' },
+  { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny(), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
+  { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm(), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
   { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'throwPick', g: 'enemigos', label: 'Lanzando con las manos, el rayo va', short: 'El rayo va', type: 'choice', opts: [['gaze', 'Al que miras'], ['hand', 'Hacia donde lanzas']], def: 'gaze', modes: ['combat'], cond: () => !pistolOn() && settings.aim === 'hands' && !aimForced(), hint: 'Al que miras (recomendado): mira al enemigo y lanza hacia él; el gesto dispara y la mirada elige a cuál (sale un aro sobre él). Hacia donde lanzas: solo cuenta la dirección de la mano, que las gafas miden con menos precisión; con enemigos juntos puede irse a otro.' },
   { key: 'assist', g: 'enemigos', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
@@ -570,7 +581,7 @@ const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
 function clampSetting(f, v) {
-  if (f.type === 'multi') { const on = String(v || '').split(','), out = f.opts.map(o => o[0]).filter(k => on.includes(k)); return out.length ? out.join(',') : f.def; }
+  if (f.type === 'multi') { const on = String(v || '').split(','), out = f.opts.map(o => o[0]).filter(k => on.includes(k)); return out.length ? out.join(',') : f.empty ? '' : f.def; }
   if (f.type === 'choice') return f.opts.some(o => o[0] === v) ? v : f.def;
   if (f.type === 'toggle') return v ? 1 : 0;
   v = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : +v;
@@ -590,7 +601,12 @@ function fmtVal(f, v = settings[f.key]) {
   const s = store(STORE_KEY) || {};
   for (const f of SCHEMA) if (s[f.key] !== undefined) settings[f.key] = clampSetting(f, s[f.key]);
   if (MODE_NAMES[s.mode]) settings.mode = s.mode;
-  else if (LEGACY_MODES[s.mode]) { settings.mode = 'combat'; if (s.foes === undefined) Object.assign(settings, LEGACY_MODES[s.mode], s.mode === 'flyers' && ['hands', 'gaze'].includes(s.aim) ? { aim: s.aim } : {}); }
+  else if (LEGACY_MODES[s.mode]) { settings.mode = 'combat'; if (s.foes === undefined) { const { foes: c, ...rest } = LEGACY_MODES[s.mode]; Object.assign(settings, rest, s.foesGate === undefined ? foeCatPatch(c) : {}, s.mode === 'flyers' && ['hands', 'gaze'].includes(s.aim) ? { aim: s.aim } : {}); } }
+  // antes se elegía «robots, voladores o mezcla» y cuántos de cada clase de los que andan: ahora, cada enemigo
+  if (s.foesGate === undefined && s.foes !== undefined) {
+    const off = { robotsW: ['robot'], beasts: ['imp', 'puglin'], zombies: ['zombie'], dinos: ['raptor'] }, gate = foeList('foesGate').filter(k => !Object.keys(off).some(w => s[w] === 0 && off[w].includes(k)));
+    settings.foesGate = gate.length ? gate.join(',') : FIELD.foesGate.def; Object.assign(settings, foeCatPatch(s.foes));
+  }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
@@ -604,7 +620,8 @@ function fmtVal(f, v = settings[f.key]) {
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
 function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
 function setSetting(key, v) {
-  if (key === 'mode' && LEGACY_MODES[v]) { Object.assign(settings, LEGACY_MODES[v]); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
+  if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
+  if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
   const f = FIELD[key];
   settings[key] = f ? clampSetting(f, v) : v;
   // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
@@ -614,7 +631,7 @@ function setSetting(key, v) {
   onSettingChanged(key);
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foes', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol', 'robotsW', 'beasts', 'zombies', 'dinos',
+const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -639,7 +656,22 @@ const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'pl
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
 const isCombat = () => settings.mode === 'combat';
 // Enemigos de la partida: la plancha con un brazo trae siempre arañas y el superman, voladores bajos
-const foes = () => oneArm() ? 'robots' : settings.exercise === 'superman' ? 'flyers' : settings.foes;
+// Los elegidos de cada grupo (foeList), si alguno de ellos sale en esta partida (foeOn) y, de ahí, el reparto: solo por
+// tierra, solo voladores o mezcla
+function foeList(k) { return String(settings[k] || '').split(',').filter(Boolean); } // (función: se usa ya al cargar los ajustes)
+const groundList = () => { const l = foeList(isTiny() ? 'foesHatch' : 'foesGate'); return l.length || !oneArm() ? l : ['spider']; };
+const flyList = () => { const l = foeList('foesFly'); return l.length || settings.exercise !== 'superman' ? l : ['drone', 'hornet']; };
+const foes = () => { if (oneArm()) return 'robots'; if (settings.exercise === 'superman') return 'flyers'; const g = groundList().length, f = flyList().length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
+const foeOn = (...ks) => isCombat() && !isTiny() && foesHas('robots') && ks.some(k => groundList().includes(k));
+// El atajo (robots, voladores o mezcla) → los ajustes de cada grupo: deja vacío lo que no sale y, si lo que sí sale está
+// vacío, vuelve a lo de siempre
+function foeCatPatch(v) {
+  const o = {}, keep = k => foeList(k).length ? settings[k] : FIELD[k].def;
+  if (v === 'flyers') Object.assign(o, { foesGate: '', foesHatch: '', foesFly: keep('foesFly') });
+  else if (v === 'robots') Object.assign(o, { foesGate: keep('foesGate'), foesHatch: keep('foesHatch'), foesFly: '' });
+  else if (v === 'mix') Object.assign(o, { foesGate: keep('foesGate'), foesHatch: keep('foesHatch'), foesFly: keep('foesFly') });
+  return o;
+}
 const foesHas = k => isCombat() && (foes() === k || foes() === 'mix');
 // Puntería: automática (cada repetición dispara sola al más cercano) o la tuya, con las manos o la mirada. En la plancha
 // con un brazo (cada brazo dispara a su lado) y en el superman (tumbado no se apunta) siempre es automática
@@ -719,7 +751,8 @@ function onFormInput(ev) {
   } else if (f.type === 'multi') {
     const on = [...document.querySelectorAll(`input[name="f-${key}"]:checked`)].map(x => x.value);
     settings[key] = clampSetting(f, on.join(',')); saveSettings(); onSettingChanged(key);
-    if (!on.length) syncForm(); // no se puede dejar vacío
+    if (!on.length && !f.empty) syncForm(); // no se puede dejar vacío (salvo los que sí)
+    if (f.relayout) syncForm();
   } else {
     const v = f.type === 'toggle' ? +el.value : el.value;
     settings[key] = clampSetting(f, v); saveSettings(); onSettingChanged(key);
@@ -1100,7 +1133,7 @@ const SND = {
     const n = 5 + Math.floor(Math.random() * 7); let t = 0;
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
   },
-  squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
+  squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3, 'squish'); }, // (su siseo, siempre el sintetizado)
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
   bolt(pos, L = 0) {
     if (!sndOK()) return;
@@ -1164,7 +1197,7 @@ const SND = {
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
     for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
-  whoosh(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
+  whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
   thunder(dist = 1) {
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
@@ -1208,27 +1241,39 @@ const SND = {
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
 
-// Efectos que se pueden sustituir por un archivo: nombre del archivo, posición del argumento con el sitio del sonido y,
-// en las espadas, el del «es láser» (entonces se busca antes <nombre>-laser). rayo, impacto, tentáculos, caída al foso y
-// pompa tienen su propio manejo (con variantes de tono) dentro de cada efecto
+// Cada enemigo con su propia voz: el rugido de los que andan, el siseo (arañas o avispas) y el ataque al lanzarse. El último
+// argumento del efecto dice quién es; sin su archivo suena el sintetizado (con el tono de ese enemigo), no el de otro
+const VOICE_FILES = {
+  roar: { robot: 'rugido-robot', imp: 'rugido-diablillo', puglin: 'rugido-puglin', zombie: 'rugido-zombi', raptor: 'rugido-velociraptor', zgreen: 'rugido-zombi-verde', zchubby: 'rugido-zombi-gordo',
+    demon: 'voz-demonio', greendemon: 'voz-demonio-verde', cyclops: 'voz-ciclope', yeti: 'voz-yeti', skull: 'voz-calavera', alien: 'voz-alien', alientall: 'voz-alien-alto',
+    bee: 'voz-abeja', bat: 'voz-murcielago', cthulhu: 'voz-cthulhu', dragon: 'voz-dragon' },
+  hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa', crab: 'voz-cangrejo', mushroom: 'voz-seta', skull: 'voz-calavera' },
+  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa' }
+};
+// Efectos que se pueden sustituir por un archivo: nombre del archivo (o, en los de VOICE_FILES, la posición del argumento
+// que dice qué enemigo es), posición del argumento con el sitio del sonido y, en las espadas, el del «es láser» (entonces
+// se busca antes <nombre>-laser). rayo, impacto, tentáculos, caída al foso y pompa tienen su propio manejo (con variantes
+// de tono) dentro de cada efecto
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
-  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
-  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
-  whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: [{ who: 2, def: 'robot' }, 0],
+  hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
   const out = [...OWN_FILES, ...LOOP_FILES];
-  for (const [f, , li] of Object.values(SND_FILES)) { out.push(f); if (li != null) out.push(f + '-laser'); }
+  for (const [f, , li] of Object.values(SND_FILES)) { if (typeof f === 'string') out.push(f); if (li != null) out.push(f + '-laser'); }
+  for (const k in VOICE_FILES) out.push(...Object.values(VOICE_FILES[k]));
   return out;
 }
-for (const [k, [file, pi, li]] of Object.entries(SND_FILES)) {
+for (const [k, [F, pi, li]] of Object.entries(SND_FILES)) {
   const synth = SND[k];
   SND[k] = function (...a) {
+    const file = typeof F === 'string' ? F : VOICE_FILES[k][a[F.who] || F.def]; // (quien no está en la lista: el sintetizado)
     const pos = pi != null ? a[pi] || null : null, name = li != null && a[li] && AUD.samples[file + '-laser'] ? file + '-laser' : file;
     if (AUD.samples[name] && playSample(name, pos, { rev: pos ? 0.3 : 0.1 })) return;
     return synth.apply(this, a);
@@ -3858,6 +3903,7 @@ function updateGloves(dt) {
 /* ---------- Construcción inicial ---------- */
 function buildRigs() {
   RIGS.scout = buildRipper(); RIGS.heavy = buildDestroyer(false); RIGS.titan = buildDestroyer(true); RIGS.imp = beastRig('imp'); RIGS.puglin = beastRig('puglin'); RIGS.zombie = beastRig('zombie'); RIGS.raptor = beastRig('raptor');
+  for (const k in BEAST_DEF) if (BEAST_DEF[k].lazy) RIGS[k] = beastRig(k); // los que se cargan al elegirlos (zombis nuevos y monstruitos)
   RIGS.tentacle = buildTentacle(); RIGS.spider = buildSpider(); RIGS.drone = buildDrone('drone'); RIGS.bomber = buildDrone('bomber'); RIGS.carrier = buildDrone('carrier'); RIGS.stinger = buildStinger();
   initSpiderLegs();
   // chatarra decorativa: restos de robots tirados por el suelo (solo VR)
@@ -3888,6 +3934,22 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
   raptor: { h: 1.4, walk: 1.3, jog: 2.8, run: 4.3, minTs: 0.6, own: true, keepMats: true, k: 0.3, prefix: 'Armature|Velociraptor_', trim: { Walk: 1.21 },
     alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Attack: 'Attack', Death01: 'Death', Dance_Loop: 'Idle' }, atk: ['Attack', 0.21, 0.42], taunt: 'Idle_Loop',
     bones: { chest: 'Torso', head: 'Head', handR: 'Head' } } };
+// Los que se cargan solo si se eligen (Ajustes → Enemigos), cada uno por su cuenta: los zombis verde y gordo (Ultimate
+// Platformer Pack) y los monstruitos (Cute Animated Monsters), de Quaternius (CC0), con sus animaciones y su textura dentro
+// del .glb (ownTex). file: el archivo en models/; k: su escala (para que mida h metros)
+const ZOMBIE2 = { own: true, ownTex: true, lazy: true, walk: 0.6, jog: 1.6, run: 2.4, maxTs: 2.2, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
+  alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Punch: 'Punch', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Idle_Attack' }, atk: ['Punch', 0.25, 0.45],
+  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArm.R' } };
+Object.assign(BEAST_DEF, { zgreen: { ...ZOMBIE2, file: 'zombie_basic', h: 1.36, k: 1 }, zchubby: { ...ZOMBIE2, file: 'zombie_chubby', h: 1.64, k: 1 } });
+// Los monstruitos andan dando saltitos (sus animaciones son en el sitio: más deprisa cuanto más corren) y muerden lanzándose
+const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.2, minTs: 0.7, maxTs: 2.4, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
+  alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Walk', Sprint_Loop: 'Walk', Bite: 'Bite_Front', Death01: 'Death', Hit: 'HitRecieve', Dance_Loop: 'Jump', Fly: 'Flying' }, atk: ['Bite', 0.12, 0.28],
+  bones: { chest: 'Body', head: 'Head', handR: 'Head' } };
+// [archivo, alto del modelo, metros que mide al andar]; los de las trampillas y los voladores, a su tamaño en su clase
+[['demon', 1.62, 1.15], ['greendemon', 1.62, 1.15], ['cyclops', 1.67, 1.25], ['yeti', 1.67, 1.3], ['skull', 1.55, 1.0], ['alien', 2.06, 1.2], ['alientall', 2.11, 1.35],
+  ['crab', 1.57, 0.18], ['mushroom', 2.07, 0.2], ['bee', 1.9, 0.5], ['bat', 1.75, 0.45], ['cthulhu', 1.56, 0.55], ['dragon', 1.65, 0.5]].forEach(([k, nat, h]) => {
+  BEAST_DEF[k] = { ...CUTE, file: 'monstruitos/' + ({ alientall: 'alien_tall', dragon: 'yellowdragon' }[k] || k), h, k: h / nat };
+});
 const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
@@ -3915,12 +3977,13 @@ function loadBeasts() {
   const L = new THREE.GLTFLoader(), T = new THREE.TextureLoader();
   const get = f => new Promise((res, rej) => L.load(`models/${f}.glb`, res, undefined, rej));
   const tex = (f, srgb) => { const t = T.load(`models/tex/${f}.jpg`); t.flipY = false; if (srgb) t.encoding = THREE.sRGBEncoding; return t; };
-  Promise.all([get('anims'), ...Object.keys(BEAST_DEF).map(get)]).then(([U, ...models]) => {
+  const core = Object.keys(BEAST_DEF).filter(k => !BEAST_DEF[k].lazy);
+  Promise.all([get('anims'), ...core.map(get)]).then(([U, ...models]) => {
     const up = U.scene.getObjectByName('pelvis').position.z;
-    Object.keys(BEAST_DEF).forEach((k, i) => {
+    core.forEach((k, i) => {
       const D = BEAST_DEF[k];
       if (D.own) { // sus propias animaciones, con los nombres de la biblioteca; sus colores, de una paleta pequeña (sin suavizar)
-        const clips = {}; for (const a in D.alias) { let c = models[i].animations.find(x => x.name === D.prefix + D.alias[a]); if (!c) continue; if (D.trim && D.trim[D.alias[a]]) { c = c.clone(); c.duration = D.trim[D.alias[a]]; } clips[a] = c; }
+        const clips = ownClips(D, models[i].animations);
         let map = null; if (!D.keepMats) { map = T.load(`models/tex/${k}.png`); map.flipY = false; map.encoding = THREE.sRGBEncoding; map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestFilter; map.generateMipmaps = false; }
         BEAST.kinds[k] = { scene: models[i].scene, clips, map }; return;
       }
@@ -3932,9 +3995,34 @@ function loadBeasts() {
     });
     BEAST.rigClips = {};
     for (const r in RIG_MAPS) try { BEAST.rigClips[r] = bakeRigClips(U, RIG_MAPS[r]); } catch (e) { console.log('Animaciones de ' + r + ':', e && e.message); }
-    BEAST.ready = true; animNote();
+    BEAST.ready = true; animNote(); foesPreload();
   }).catch(e => { BEAST.failed = true; animNote(); console.log('No se pudieron cargar los monstruos:', e && e.message); });
 }
+// Sus propias animaciones, con los nombres de la biblioteca (alias)
+function ownClips(D, anims) {
+  const clips = {}; for (const a in D.alias) { let c = anims.find(x => x.name === D.prefix + D.alias[a]); if (!c) continue; if (D.trim && D.trim[D.alias[a]]) { c = c.clone(); c.duration = D.trim[D.alias[a]]; } clips[a] = c; }
+  return clips;
+}
+// Un monstruo de los que se cargan al elegirlos: cada uno por su cuenta (si uno falla, los demás siguen; en su lugar salen
+// robots, arañas o drones)
+const BEAST_LOAD = {};
+function beastLoad(k) {
+  const D = BEAST_DEF[k]; if (!D || !D.lazy || BEAST.kinds[k] || BEAST_LOAD[k]) return;
+  if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { BEAST_LOAD[k] = 'failed'; return; }
+  BEAST_LOAD[k] = 'loading';
+  new THREE.GLTFLoader().load(`models/${D.file}.glb`, g => {
+    let map = null; g.scene.traverse(m => { if (m.isMesh && !map && m.material && m.material.map) map = m.material.map; });
+    BEAST.kinds[k] = { scene: g.scene, clips: ownClips(D, g.animations), map }; BEAST_LOAD[k] = 'ready';
+  }, undefined, e => { BEAST_LOAD[k] = 'failed'; console.log('No se pudo cargar ' + k + ':', e && e.message); });
+}
+const beastReady = k => !!BEAST.kinds[k] && (BEAST_DEF[k].lazy || BEAST.ready);
+// Los elegidos en Ajustes → Enemigos, que se vayan cargando ya
+const FOE_BEAST = { hcrab: 'crab', hmushroom: 'mushroom', hskull: 'skull', crab: 'crab', mushroom: 'mushroom' };
+function foesPreload() {
+  const ks = new Set([...foeList('foesGate'), ...foeList('foesHatch'), ...foeList('foesFly')].map(k => FOE_BEAST[k] || k));
+  ks.forEach(k => { if (BEAST_DEF[k] && BEAST_DEF[k].lazy) beastLoad(k); });
+}
+settingHooks.push(k => { if (['foesGate', 'foesHatch', 'foesFly', '*'].includes(k)) foesPreload(); });
 /* ---------- Las mismas animaciones, en los robots ---------- */
 // Sus esqueletos son otros (huesos sin giro de reposo, que apuntan hacia abajo), así que no se copian las rotaciones: se
 // reproduce cada animación en el esqueleto de la biblioteca y, fotograma a fotograma, cada brazo y cada pierna del
@@ -3994,7 +4082,7 @@ function beastRig(kind) {
       model.traverse(m => { if (!m.isMesh) return; const one = x => { const c = new THREE.MeshStandardMaterial({ color: x.color, roughness: 0.8, metalness: 0, skinning: true, flatShading: true }); mats.push(c); base.push(x.color.clone()); return c; }; m.material = Array.isArray(m.material) ? m.material.map(one) : one(m.material); m.castShadow = true; m.frustumCulled = false; });
       const tc = new THREE.Color(); mat = { color: { setRGB: (r, g, b) => mats.forEach((m, i) => m.color.copy(base[i]).multiply(tc.setRGB(r, g, b))) }, emissiveIntensity: 1, dispose: () => mats.forEach(m => m.dispose()) };
     } else {
-      mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true })
+      mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
       model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
     }
@@ -4470,7 +4558,7 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
-const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
 function wrapLines(text, maxPx) {
@@ -4488,6 +4576,8 @@ function openMenu(rows, opts = {}) {
   if (recent) menuAnchor = lastAnchor;
   else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
   POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
+  // las selecciones con muchas opciones (Enemigos) van en rejilla: f.grid por fila
+  rows.forEach(r => { const f = r.t === 'field' && FIELD[r.key]; if (f && f.grid && !r.h) r.h = Math.ceil(f.opts.length / f.grid) * (GRID_H + GAP) - GAP; });
   const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
   const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
@@ -4518,7 +4608,7 @@ function openMenu(rows, opts = {}) {
     } else if (r.t === 'field') {
       const f = FIELD[r.key], so = r.star ? 0.044 : 0;
       if (r.star) { const on = () => isFav(f.key), b = addW(new Btn(on() ? '★' : '☆', 0.036, h * 0.7, () => { if (favToggle(f.key)) b.setLabel(on() ? '★' : '☆', on() ? 'value' : 'ghost'); }, { style: on() ? 'value' : 'ghost', font: 0.62 }), X0 + 0.018, cy); } // ★: al menú principal
-      label(f.short || f.label, cy, undefined, so);
+      label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so);
       if (f.type === 'num') {
         const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
         const row = { f };
@@ -4528,13 +4618,14 @@ function openMenu(rows, opts = {}) {
         row.plus = addW(new Btn('+', bw, h, () => commit(settings[f.key] + f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
         row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
         fieldRows.push(row);
-      } else if (f.type === 'multi') { // varios a la vez (al menos uno)
-        const n = f.opts.length, w = (CW - LABW - GAP * (n - 1)) / n, row = { f, btns: [] }; let x = X0 + LABW;
+      } else if (f.type === 'multi') { // varios a la vez (al menos uno, salvo los que pueden quedarse vacíos); con f.grid, en rejilla
+        const n = f.opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h, row = { f, btns: [] };
         const on = () => String(settings[f.key]).split(',');
-        f.opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => {
-          const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length) return;
+        f.opts.forEach(([v, lab], i) => { const c = i % cols, rr_ = Math.floor(i / cols), x = X0 + LABW + c * (w + GAP), y = f.grid ? cy + h / 2 - bh / 2 - rr_ * (bh + GAP) : cy;
+          row.btns.push(addW(new Btn(lab, w, bh, () => {
+          const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length && !f.empty) return;
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
-        }, { style: on().includes(v) ? 'selected' : 'normal', font: 0.34 }), x + w / 2, cy)); x += w + GAP; });
+        }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
       } else {
         const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
         const row = { f, btns: [] };
@@ -5588,7 +5679,7 @@ function spListsPage() {
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
-const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foes', 'aim'];
+const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
 (function loadSession() {
@@ -5599,10 +5690,15 @@ const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.m
   if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
 })();
 // En Combate el bloque guarda sus enemigos (y, si venía de Enjambre o Asalto, su puntería)
-function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: clampSetting(FIELD.foes, b.foes || settings.foes) }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
+// (foes: por tierra, voladores o mezcla, sobre los enemigos elegidos en Ajustes → Enemigos; por defecto, lo que haya ahí)
+const foeCat = v => FOE_CATS.some(o => o[0] === v) ? v : null;
+const foeCatNow = () => { const g = foeList('foesGate').length || foeList('foesHatch').length, f = foeList('foesFly').length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
+function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: foeCat(b.foes) || foeCatNow() }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
+// Lo que el bloque cambia en los ajustes mientras se juega
+function blockSettings(b) { const { foes: c, ...o } = blockExtra(b); return c ? Object.assign(o, foeCatPatch(c)) : o; }
 function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${b.foes ? ` (${fmtVal(FIELD.foes, b.foes).toLowerCase()})` : ''}`; }
+function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes); return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
@@ -5615,7 +5711,7 @@ function sessionMinutes() {
 function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockExtra(b));
+  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b));
   onSettingChanged('mode'); onSettingChanged('exercise');
 }
 function startSession() {
@@ -5682,7 +5778,7 @@ function renderSession() {
   host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
-    ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FIELD.foes.opts, b.foes)}</select>` : ''}
+    ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
     <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
@@ -5696,7 +5792,7 @@ function sesInitPage() {
     const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
     const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
     if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); delete b.foes; delete b.aim; Object.assign(b, blockExtra(b)); }
-    else if (f === 'foes') b.foes = clampSetting(FIELD.foes, ev.target.value);
+    else if (f === 'foes') b.foes = foeCat(ev.target.value) || 'robots';
     else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
     saveSession(); renderSession();
@@ -5755,6 +5851,7 @@ function profSave(name) {
 function profLoad(i) {
   const p = profiles()[i]; if (!p) return false;
   for (const f of SCHEMA) if (p.s[f.key] !== undefined) settings[f.key] = clampSetting(f, p.s[f.key]);
+  if (p.s.foesGate === undefined && p.s.foes) Object.assign(settings, foeCatPatch(p.s.foes)); // perfiles de antes: robots, voladores o mezcla
   if (MODE_NAMES[p.s.mode]) settings.mode = p.s.mode;
   if (EX_NAMES[p.s.exercise]) settings.exercise = p.s.exercise;
   settings.exercise = exFor(settings.mode, settings.exercise);
@@ -5859,6 +5956,12 @@ const ROBOT_KIND = {
   raptor: { rig: 'raptor', scale: 1.0, speedF: 1.2, heavy: false, stop: 1.45, stride: 1.0, head: 1.2, beast3d: 'raptor', r: 0.5 },
   raptorboss: { rig: 'raptor', scale: 1.7, speedF: 0.8, heavy: true, stop: 2.0, stride: 1.0, head: 1.2, beast3d: 'raptor', r: 0.8, boss: true }
 };
+// Los zombis nuevos y los monstruitos que andan, cada uno con su jefe (el mismo, más grande y más lento). grp: su clase en
+// Ajustes → Cada enemigo
+for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute'])]) {
+  ROBOT_KIND[k] = { rig: k, scale: 1.0, speedF: grp === 'zombie' ? 0.9 : 1.0, heavy: false, stop: 1.1, stride: 1.0, head, beast3d: k, grp };
+  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true };
+}
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
 const ROW_GAP = 1.1, SLOT_ARC = 1.3;
@@ -5906,12 +6009,13 @@ function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
   let best = null, bestC = Infinity;
-  // en tu habitación, ni en un mueble ni detrás de una pared; si así no queda ningún puesto (escaneo raro), sin mirarla
-  for (const room of [true, false]) for (let row = 0; row < 3 && !best; row++) {
+  // en tu habitación, ni en un mueble ni detrás de una pared; con la habitación llena, antes cerca del puesto de otro (ya se
+  // apartan al andar) que en un mueble; si ni así queda ninguno (escaneo raro), sin mirarla
+  for (const [room, apart] of [[true, true], ...(roomPlan() ? [[true, false]] : []), [false, true]]) for (let row = 0; row < 3 && !best; row++) {
     const R = robotStop(r.K) + row * ROW_GAP;
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
       _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
-      if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
+      if (apart && others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
       if (room && roomBlocked(_rs.x, _rs.z, r.radius)) continue;
       const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
@@ -5935,7 +6039,7 @@ class Robot {
     Object.assign(this, { slot: new V3(), slotOk: false, row: 0, vel: new V3(), spd: 0, run: 0, twist: 0, taunt: 0, tauntT: rand(3, 6), taunts: 0, stagger: 0, slotT: 0, stuckT: 0, charged: false, lunge: 0, breath: rand(0, TAU) });
     robotSlot(this);
     // rapidez y forma de moverse de su clase (Ajustes → Cada enemigo): cada uno elige una de las marcadas
-    const grp = K.beast3d === 'zombie' ? 'zombie' : K.beast3d === 'raptor' ? 'dino' : K.beast3d ? 'beast' : 'robot';
+    const grp = K.grp || (K.beast3d === 'zombie' ? 'zombie' : K.beast3d === 'raptor' ? 'dino' : K.beast3d ? 'beast' : 'robot');
     this.pace = clamp((dv('pace_' + grp) || 100) / 100, 0.5, 2.5) * (K.boss ? 0.85 : 1); // rapidez de sus gestos (sube con la dificultad creciente)
     const travel = clamp((settings['spd_' + grp] || 100) / 100, 1, 3); // velocidad al desplazarse (1 = la justa para llegar a tiempo)
     this.style = pick(String(settings['move_' + grp] || 'straight').split(','));
@@ -6248,6 +6352,8 @@ function mxPlay(o, n, fade = 0.2, once = false, ts = 1, restart = false) {
   o.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
   for (const k in o.acts) { const b = o.acts[k]; if (b !== a && b.isScheduled()) { b.timeScale = 1; b.fadeOut(fade); } }
 }
+// Tono del rugido sintetizado de cada monstruo (sin su archivo de sonido): más agudo cuanto más pequeño
+const BEAST_PITCH = { puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
@@ -6257,7 +6363,7 @@ class Beast extends Robot {
     const natural = this.D.walk * this.sc * 0.8; if (this.vWalk < natural * 0.75 && this.style !== 'zigzag') this.vMove = Math.max(this.vMove, natural);
     this.animate(0, 0, 0);
   }
-  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, raptor: 1.6 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave
+  roar(pos) { SND.roar(pos, BEAST_PITCH[this.K.beast3d] || 1.4, this.K.beast3d); } // el zombi, un gruñido grave; cada uno con su archivo
   center(out) { return this.B.chest.getWorldPosition(out); }
   play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
@@ -6295,13 +6401,14 @@ class Beast extends Robot {
   onHit(dmg, perfect, point) {
     this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
     if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
+    else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
     fx.sparks(point, 10, [0.9, 0.15, 0.1], 2.2, 0.04); fx.glow(point, [1, 0.5, 0.3], 0.35, 0.08); SND.squish(point);
     if (this.hp <= 0) this.kill(); else if (Math.random() < 0.3) this.roar(this.center(tmpB));
   }
   // al morir cae con su animación (el zombi, que no la tiene, se desploma de espaldas), se hunde en el suelo y desaparece
   kill() {
     if (this.mode === 'dying') return; this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.bar.g.visible = false; this.tint = 1;
-    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6, raptor: 1.3 }[this.K.beast3d] || 1.0); SND.squish(c);
+    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, (BEAST_PITCH[this.K.beast3d] || 1.4) * 0.8, this.K.beast3d); SND.squish(c);
     if (this.clips.Death01) this.play('Death01', 0.1, true, 1, true); else { this.fall = this.inst.model.rotation.x; if (this.acts[this.cur]) this.acts[this.cur].timeScale = 0.3; }
   }
   update(dt, t) {
@@ -6329,10 +6436,8 @@ function ikKnee(H, F, L1, L2, ox, oz, out) {
 }
 class Spider {
   constructor(spec, hatch) {
-    const K = SPIDER_KIND[spec.kind]; this.type = 'spider'; this.kind = spec.kind; this.s = K.s; this.boss = !!K.boss;
-    this.glowMat = M.glowSkin.clone(); // ojos propios: cada araña se enciende según su rabia
-    this.inst = RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: this.glowMat }); this.root = this.inst.root; this.B = this.inst.bones;
-    this.eyeGlow = glowSprite(0xff2208, 0.05, 0); this.eyeGlow.position.set(0, 0.015, 0.05); this.B.body.add(this.eyeGlow);
+    const K = SPIDER_KIND[spec.kind] || HATCH_KIND[spec.kind]; this.type = 'spider'; this.kind = spec.kind; this.s = K.s; this.boss = !!K.boss; this.HK = K;
+    this.makeBody();
     this.root.scale.setScalar(this.s); arena.add(this.root);
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
@@ -6341,11 +6446,16 @@ class Spider {
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
     Object.assign(this, { threatT: rand(1.2, 2.5), close: 0, rage: 0, hopFrom: new V3(), hopTo: new V3(), hopped: false, startD: Math.max(0.1, this.pos.distanceTo(this.target)) });
-    this.legs = SPIDER_LEGS.map(d => ({ d, foot: new V3(), from: new V3(), to: new V3(), t: 1, dur: 0.08, hipW: new V3() }));
+    this.legs = this.legless ? [] : SPIDER_LEGS.map(d => ({ d, foot: new V3(), from: new V3(), to: new V3(), t: 1, dur: 0.08, hipW: new V3() }));
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw; this.root.updateMatrixWorld(true);
     this.legs.forEach(L => { this.idealFoot(L, _foot); L.foot.copy(_foot); });
-    this.bar = makeHpBar(this.root, 0.17, 0.14); if (this.boss) setHpBar(this.bar, 1);
-    SND.hiss(this.center(tmpA), this.s);
+    this.bar = makeHpBar(this.root, this.legless ? 0.27 : 0.17, 0.14); if (this.boss) setHpBar(this.bar, 1);
+    SND.hiss(this.center(tmpA), this.s, this.voice);
+  }
+  makeBody() {
+    this.glowMat = M.glowSkin.clone(); // ojos propios: cada araña se enciende según su rabia
+    this.inst = RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: this.glowMat }); this.root = this.inst.root; this.B = this.inst.bones;
+    this.eyeGlow = glowSprite(0xff2208, 0.05, 0); this.eyeGlow.position.set(0, 0.015, 0.05); this.B.body.add(this.eyeGlow);
   }
   center(out) { this.B.body.getWorldPosition(out); return out; }
   idealFoot(L, out) {
@@ -6368,10 +6478,10 @@ class Spider {
         this.runT -= dt;
         if (this.runT <= 0) { this.run = !this.run; this.runT = this.run ? rand(0.3, 0.9) : rand(0.15, 0.8); if (this.run && Math.random() < 0.4) SND.skitter(this.center(tmpA), s); }
         if (this.run) { moveTo = this.target; speed = this.avg / 0.55 * rand(0.9, 1.2); }
-        if (this.pos.distanceTo(this.target) < 0.02 && state === 'play') { this.mode = 'rear'; this.st = 0; SND.hiss(this.center(tmpA), s); break; }
+        if (this.pos.distanceTo(this.target) < 0.02 && state === 'play') { this.mode = 'rear'; this.st = 0; SND.hiss(this.center(tmpA), s, this.voice); break; }
         // amenaza mientras se acerca: más a menudo cuanto más cerca está
         this.threatT -= dt * (1 + this.close * 2.5);
-        if (this.threatT <= 0 && !this.run && state === 'play' && this.pos.distanceTo(this.target) > 0.05) { this.mode = 'threat'; this.st = 0; this.hopped = false; SND.hiss(this.center(tmpA), s * 0.9); }
+        if (this.threatT <= 0 && !this.run && state === 'play' && this.pos.distanceTo(this.target) > 0.05) { this.mode = 'threat'; this.st = 0; this.hopped = false; SND.hiss(this.center(tmpA), s * 0.9, this.voice); }
         break;
       case 'threat': { // se alza enseñando los colmillos, da un amago hacia ti y vuelve a correr
         const k = this.st;
@@ -6385,11 +6495,11 @@ class Spider {
       }
       case 'rear':
         this.rear = Math.min(1, this.st / 0.45); this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 8);
-        if (this.st > 0.55) { this.mode = 'lunge'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(lerp(this.pos.x, HL.x, 0.75), 0, lerp(this.pos.z, HL.z, 0.75)); SND.whoosh(this.center(tmpA)); }
+        if (this.st > 0.55) { this.mode = 'lunge'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(lerp(this.pos.x, HL.x, 0.75), 0, lerp(this.pos.z, HL.z, 0.75)); SND.whoosh(this.center(tmpA), 'spider'); }
         break;
       case 'lunge': {
         const k = Math.min(1, this.st / 0.22); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, k); this.pos.y = Math.sin(k * Math.PI) * 0.12 + k * Math.max(0, HL.y - 0.25) * 0.7;
-        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28); }
+        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8, this.voice); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28); }
         break;
       }
       case 'recoil': {
@@ -6409,7 +6519,13 @@ class Spider {
     }
     for (const o of enemies) if (o !== this && o.alive && o.type === 'spider') { const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, dd = dx * dx + dz * dz, min = (this.radius + o.radius) * 1.1; if (dd < min * min && dd > 1e-6) { const k = (min - Math.sqrt(dd)) * 0.5 / Math.sqrt(dd); this.pos.x += dx * k; this.pos.z += dz * k; } }
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
-    // cuerpo: respiración, colmillos, pedipalpos
+    this.pose(dt, t);
+    this.root.updateMatrixWorld(true);
+    this.updateLegs(dt);
+    if (this.bar.g.visible) this.bar.g.lookAt(head.p);
+  }
+  // el aspecto: respiración, colmillos, pedipalpos y ojos que se encienden
+  pose(dt, t) {
     const B = this.B, moving = this.vel.lengthSq() > 0;
     this.pitch += ((-this.rear * 0.7) - this.pitch) * Math.min(1, dt * 10);
     B.body.rotation.x = this.pitch + (moving ? Math.sin(t * 30) * 0.03 : 0);
@@ -6425,11 +6541,9 @@ class Spider {
     B.fangL.rotation.x = -fang; B.fangR.rotation.x = -fang; B.fangL.rotation.z = fang * 0.3; B.fangR.rotation.z = -fang * 0.3;
     B.palpL.rotation.x = Math.sin(t * 7.1) * 0.3 - this.rear * 0.8; B.palpR.rotation.x = Math.sin(t * 6.3 + 1) * 0.3 - this.rear * 0.8;
     if (this.mode === 'dying') { B.body.rotation.z = Math.min(1, this.st * 2) * 0.4; }
-    this.root.updateMatrixWorld(true);
-    this.updateLegs(dt);
-    if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   updateLegs(dt) {
+    if (!this.legs.length) return;
     const stepping = [0, 0]; for (const L of this.legs) if (L.t < 1) stepping[L.d.group]++;
     const air = this.mode === 'lunge' || (this.mode === 'recoil' && this.pos.y > 0.01) || this.mode === 'emerge' && this.st < 0.3;
     for (const L of this.legs) {
@@ -6473,13 +6587,50 @@ class Spider {
   dispose() { arena.remove(this.root); this.inst.skel.dispose(); this.glowMat.dispose(); this.eyeGlow.material.dispose(); }
 }
 
+/* ---------- Monstruitos de las trampillas ---------- */
+// Cangrejo, seta y calavera (Cute Animated Monsters): salen de las trampillas y se mueven como las arañas (corretean,
+// amenazan dando un saltito y saltan a morderte), con su modelo y sus animaciones; unos 20 cm (el jefe, 2,4 veces más)
+const HATCH_KIND = { hcrab: { s: 1.0, beast: 'crab' }, hmushroom: { s: 1.0, beast: 'mushroom' }, hskull: { s: 1.0, beast: 'skull' } };
+for (const k of Object.keys(HATCH_KIND)) HATCH_KIND[k + 'boss'] = { ...HATCH_KIND[k], s: 2.4, boss: true };
+class HatchBeast extends Spider {
+  makeBody() {
+    const D = BEAST_DEF[this.HK.beast], B = BEAST.kinds[this.HK.beast], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
+    this.mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
+    model.traverse(m => { if (m.isMesh) { m.material = this.mat; m.castShadow = true; m.frustumCulled = false; } });
+    model.scale.setScalar(0.2 * D.k / D.h); root.add(model); // (D.k es para su tamaño andando, de D.h metros)
+    Object.assign(this, { model, root, legless: true, voice: this.HK.beast, inst: { root, skel: { dispose() {} } }, B: { body: model }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null, tint: 0 });
+  }
+  center(out) { return this.root.localToWorld(out.set(0, 0.1, 0)); }
+  pose(dt, t) {
+    this.close = clamp(1 - this.pos.distanceTo(this.target) / this.startD, 0, 1);
+    const m = this.mode, moving = this.vel.lengthSq() > 0;
+    const want = m === 'dying' ? 'Death01' : m === 'lunge' ? 'Bite' : m === 'threat' ? 'Dance_Loop' : moving || m === 'emerge' ? 'Walk_Loop' : 'Idle_Loop';
+    mxPlay(this, want, 0.1, want === 'Death01' || want === 'Bite', want === 'Walk_Loop' ? 1.7 : want === 'Bite' ? 2.2 : 1); this.mx.update(dt);
+    this.pitch += ((-this.rear * 0.5) - this.pitch) * Math.min(1, dt * 10); this.model.rotation.x = this.pitch;
+    this.tint = Math.max(0, this.tint - dt * 4); this.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); // al recibir, se tiñe de rojo
+  }
+  onHit(dmg, perfect, point) { this.tint = 1; super.onHit(dmg, perfect, point); }
+  dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); }
+}
+
 /* =================== BICHOS VOLADORES =================== */
 const FLYER_KIND = {
   drone: { rig: 'drone', speed: 1.0, erratic: 1.0, scale: 1.0, kamikaze: true },
   hornet: { rig: 'stinger', speed: 1.45, erratic: 1.6, scale: 1.5 },
   bomber: { rig: 'bomber', speed: 0.75, erratic: 0.6, scale: 1.25, kamikaze: true },
-  carrier: { rig: 'carrier', speed: 0.5, erratic: 0.35, scale: 2.1, kamikaze: true, boss: true }
+  carrier: { rig: 'carrier', speed: 0.5, erratic: 0.35, scale: 2.1, kamikaze: true, boss: true },
+  // monstruitos que vuelan (con su modelo y sus animaciones): pican o muerden como el avispón; el dragón, jefe
+  bee: { beast: 'bee', speed: 1.35, erratic: 1.4, scale: 1.0 }, bat: { beast: 'bat', speed: 1.5, erratic: 1.9, scale: 1.0 },
+  cthulhu: { beast: 'cthulhu', speed: 0.85, erratic: 0.7, scale: 1.1 }, dragon: { beast: 'dragon', speed: 0.5, erratic: 0.35, scale: 2.0, boss: true }
 };
+// Un ejemplar de un monstruito volador: una copia del modelo, con su textura, su esqueleto y su mezclador de animaciones
+function beastFlyer(kind) {
+  const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
+  model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
+  model.scale.setScalar(D.k); root.add(model);
+  return { root, model, mat, bones: { body: model }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
+}
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
 const lowFly = () => settings.exercise === 'superman' || settings.exercise === 'splank';
@@ -6487,14 +6638,14 @@ const lowFlyY = () => clamp(settings.exercise === 'splank' ? DET.sp.ref + 0.03 :
 class Flyer {
   constructor(spec) {
     const K = FLYER_KIND[spec.kind], push = isTiny(), low = lowFly(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
-    this.inst = RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
+    this.inst = K.beast ? beastFlyer(K.beast) : RIGS[K.rig].instance(spec.kind === 'hornet' ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
     this.scale = K.scale * (push ? 0.42 : 1); this.root.scale.setScalar(this.scale); arena.add(this.root);
     let start;
     if (push) { const h = pick(liveHatches()); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = dv('flySpeed') / 3.6 * (push ? 0.27 : 1);
     if (!push) { const g = this.gate = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * dv('erratic') / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
-    this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
+    this.bar = makeHpBar(this.root, K.beast ? 0.34 : spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
   }
@@ -6510,7 +6661,7 @@ class Flyer {
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
-        if (!this.windT) { this.windT = 1e-3; SND.hiss(this.center(tmpC), 0.8); } // el avispón carga antes de picar (y te da un momento para dispararle)
+        if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
       }
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
@@ -6546,6 +6697,8 @@ class Flyer {
       flapStinger(B, this.t); B.body.rotation.z = this.bank * (1 - ch);
       poseStinger(B, this.root, this.t, this.ph1, 0.5 + 0.5 * ch + Math.sin(this.t * 4) * 0.05, ch);
       B.head.rotation.y = Math.sin(this.t * 1.3) * 0.2 * (1 - ch);
+    } else if (this.inst.mx) { // monstruito: vuela batiendo las alas y, al lanzarse, muerde
+      const I = this.inst, bite = this.windT > 0.3; mxPlay(I, bite ? 'Bite' : 'Fly', 0.12, bite, bite ? 1.4 : 1); I.mx.update(dt);
     } else {
       for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); }
       if (B.cam) B.cam.rotation.x = Math.sin(this.t * 0.7) * 0.2;
@@ -6562,12 +6715,13 @@ class Flyer {
   }
   kill() {
     this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1;
+    if (this.inst.mx) { fx.ichor(c, big ? 30 : 18, (big ? 2.2 : 1.4) * s); fx.glow(c, [1, 0.7, 0.4], (big ? 0.8 : 0.4) * s, 0.12); SND.squish(c); if (big) { fx.explosion(c, 1.2 * s, true); SND.explosion(c, true); } this.dispose(); return; } // (sin chatarra)
     if (this.kind === 'hornet') { fx.ichor(c, 18, 1.5 * s); fx.glow(c, [1, 0.8, 0.3], 0.4 * s, 0.1); SND.squish(c); }
     else { fx.explosion(c, (big ? 1.4 : 0.55) * s, big); SND.explosion(c, big); }
     rigDebris(this.inst, c, (big ? 3 : 2) * s, this.kind === 'hornet' ? 0 : 0.5, this.kind === 'hornet' ? { main: M.robotStaticWasp } : { main: M.carbonStatic });
     this.dispose();
   }
-  dispose() { arena.remove(this.root); this.inst.skel.dispose(); if (this.buzz) { this.buzz.stop(); this.buzz = null; } }
+  dispose() { arena.remove(this.root); this.inst.skel.dispose(); if (this.inst.mx) { this.inst.mx.stopAllAction(); this.inst.mat.dispose(); } if (this.buzz) { this.buzz.stop(); this.buzz = null; } }
 }
 // Los voladores salen por el hueco de la compuerta: dentro del túnel y bajo el dintel no suben por encima del techo ni se
 // meten en las paredes; al salir, el límite se abre poco a poco (sin saltos). Ya fuera, no vuelven a meterse por delante
@@ -6634,13 +6788,13 @@ class Arc {
     if (this.jump) {
       const need = settings.jumpHeight / 100;
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
-      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp); registerRep(perfect, false);
+      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false);
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
       return;
     }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
-    SND.whoosh(hp);
+    SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
     registerRep(perfect, false);
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);
@@ -6717,7 +6871,7 @@ function updateProjectiles(dt) {
 }
 function onKilled(e) {
   stats.kills++;
-  const pts = { titan: 1500, carrier: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, scout: 300, drone: 250, bubble: 200 }[e.kind] || 300;
+  const pts = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300);
   score += pts; popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0)));
   if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
@@ -7432,24 +7586,32 @@ function buildWave(i) {
   }
   if (twoShots()) total *= 2;
   let boss = null;
-  const F = foes();
-  // los que vienen andando: cada clase en proporción a «cuántos salen» (Ajustes → Cada enemigo), bien repartidos; si solo
-  // sale una clase, el jefe es de esa clase
-  const GW = isTiny() ? { robot: 1 } : { beast: settings.beasts, zombie: settings.zombies, dino: settings.dinos, robot: settings.robotsW };
-  const gsum = Object.values(GW).reduce((a, b) => a + b, 0) || (GW.robot = 1), only = Object.keys(GW).filter(k => GW[k] > 0), acc = {};
-  for (const k in GW) acc[k] = Math.random() * 0.5;
-  if (isBossWave(i)) { const b = Math.max(4, Math.round(total * 0.3)); boss = { kind: F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0) ? (isTiny() || only.length !== 1 ? 'titan' : { beast: 'impboss', zombie: 'zombieboss', dino: 'raptorboss', robot: 'titan' }[only[0]]) : 'carrier', hp: b }; total -= b; }
+  const F = foes(), tiny = isTiny();
+  // los de tierra (de las compuertas o, en el suelo, de las trampillas) y los voladores: repartidos entre los elegidos (en
+  // Ajustes → Enemigos), bien mezclados; los drones, el doble que cada uno de los demás voladores (como antes, uno de cada
+  // tres, avispones). Si solo sale una clase de tierra, el jefe es de esa clase
+  const G = groundList().length ? groundList() : [tiny ? 'spider' : 'robot'], FL = flyList().filter(k => k !== 'dragon');
+  const FK = FL.length ? FL : ['drone', 'hornet'], W = k => k === 'drone' ? 2 : 1;
+  const deal = ks => { const acc = {}, sum = ks.reduce((a, k) => a + W(k), 0); ks.forEach(k => acc[k] = Math.random() * 0.5); return () => { let g = ks[0], top = -Infinity; for (const k of ks) { acc[k] += W(k) / sum; if (acc[k] > top) { top = acc[k]; g = k; } } acc[g] -= 1; return g; }; };
+  const nextG = deal(G), nextF = deal(FK);
+  if (isBossWave(i)) {
+    const b = Math.max(4, Math.round(total * 0.3)), ground = F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0);
+    const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
+    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
+    boss = { kind, hp: b }; total -= b;
+  }
   let k = 0;
   while (total > 0) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
-      let g = 'robot', top = -1; for (const kk in GW) { acc[kk] += GW[kk] / (gsum || 1); if (acc[kk] > top) { top = acc[kk]; g = kk; } } acc[g] -= 1;
-      if (g === 'beast') { kind = Math.random() < 0.6 ? 'imp' : 'puglin'; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
-      else if (g === 'zombie') { kind = 'zombie'; hp = 2 + Math.floor(i / 3); }
-      else if (g === 'dino') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
-      else { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+      const g = nextG();
+      if (tiny) { if (g === 'spider') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
+      else if (g === 'imp' || g === 'puglin') { kind = g; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
+      else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
+      else if (g === 'robot') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' ? 3 : 2) + Math.floor(i / 3); } // zombis y monstruitos
     }
-    else { kind = k % 3 === 1 ? 'hornet' : (i >= 2 && k % 5 === 4) ? 'bomber' : 'drone'; hp = kind === 'bomber' ? 2 : 1; } // avispas desde la primera oleada, una de cada tres
+    else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
   }
   if (boss) list.push(boss);
@@ -7471,11 +7633,15 @@ function spawnFromQueue() {
   }
   let e;
   if (isBars()) e = new HeadTarget(spec);
-  else if (ROBOT_KIND[spec.kind] && isTiny()) e = new Spider(spec, oneArm() ? sideHatch(stats.spawned++ % 2 === 0) : pick(liveHatches()));
+  else if ((ROBOT_KIND[spec.kind] || HATCH_KIND[spec.kind]) && isTiny()) {
+    const H = HATCH_KIND[spec.kind], hatch = oneArm() ? sideHatch(stats.spawned++ % 2 === 0) : pick(liveHatches());
+    if (H && !beastReady(H.beast)) spec.kind = H.boss ? 'titan' : 'scout'; // sin su modelo (cargando o sin conexión), una araña
+    e = HATCH_KIND[spec.kind] ? new HatchBeast(spec, hatch) : new Spider(spec, hatch);
+  }
   else if (ROBOT_KIND[spec.kind]) {
-    if (ROBOT_KIND[spec.kind].beast3d && !BEAST.ready) spec.kind = ROBOT_KIND[spec.kind].boss ? 'titan' : 'scout'; // sin los modelos (aún cargando o sin conexión), robots
+    if (ROBOT_KIND[spec.kind].beast3d && !beastReady(ROBOT_KIND[spec.kind].beast3d)) spec.kind = ROBOT_KIND[spec.kind].boss ? 'titan' : 'scout'; // sin los modelos (aún cargando o sin conexión), robots
     const g = ROBOT_KIND[spec.kind].boss ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = ROBOT_KIND[spec.kind].beast3d ? new Beast(spec, g) : new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
-  else e = new Flyer(spec);
+  else { const K = FLYER_KIND[spec.kind]; if (K && K.beast && !beastReady(K.beast)) spec.kind = K.boss ? 'carrier' : 'hornet'; e = new Flyer(spec); }
   enemies.push(e);
 }
 // Hueco hasta el siguiente arco (en múltiplos del intervalo medio): regular, o irregular sin patrón que se
@@ -7515,6 +7681,22 @@ function exerciseRows(back) {
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
 }
+// Qué enemigos salen, en pocas palabras (para el botón del menú principal)
+function foesSummary() {
+  const n = (k, src) => foeList(k).map(v => src.find(o => o[0] === v)).filter(Boolean).map(o => o[1]);
+  if (oneArm()) return 'de las trampillas'; if (settings.exercise === 'superman') return 'voladores';
+  const g = n(isTiny() ? 'foesHatch' : 'foesGate', isTiny() ? FOE_HATCH : FOE_GATE), f = n('foesFly', FOE_FLY), all = [...g, ...f];
+  return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : `${all.length} clases`;
+}
+// Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
+function foesMenu(back) {
+  const rows = [{ t: 'title', text: 'ENEMIGOS' },
+    { t: 'text', text: 'Marca los que quieres. Los de las compuertas salen de pie; los de las trampillas, en flexiones y planchas sobre una mano.' },
+    { t: 'field', key: 'foesGate', after: () => foesMenu(back) }, { t: 'field', key: 'foesHatch', after: () => foesMenu(back) }, { t: 'field', key: 'foesFly', after: () => foesMenu(back) },
+    { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') },
+    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = () => foesMenu(back);
+}
 function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
@@ -7528,7 +7710,7 @@ function lobbyMenu() {
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, onPress: () => exerciseMenu(lobbyMenu) }] },
-    ...(isCombat() ? [{ t: 'field', key: 'foes', after: () => lobbyMenu() }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : []), ...(fieldVisible(FIELD.throwPick) ? [{ t: 'field', key: 'throwPick' }] : [])] : []),
+    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, onPress: () => foesMenu(lobbyMenu) }] }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : []), ...(fieldVisible(FIELD.throwPick) ? [{ t: 'field', key: 'throwPick' }] : [])] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
@@ -8080,7 +8262,7 @@ class HeadTarget {
       const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + dv('barArrive'));
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
       this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
-      if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9);
+      if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9, 'wasp');
     }
     this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
@@ -8110,7 +8292,7 @@ class HeadTarget {
       if (this.t < W) { const k = smooth(this.t / W); this.ch = k; this.curl = Math.max(this.curl, 0.85); this.pos.copy(this.from).addScaledVector(back, k); }
       else {
         const k = Math.min(1, (this.t - W) / 0.3); this.ch = 1; this.curl = 1; this.pos.copy(this.from).add(back).lerp(aim, smooth(k));
-        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5, 'wasp'); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
       }
     } else if (this.mode === 'flee') {
       const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2); this.ch = Math.max(0, 1 - this.t * 3);
@@ -8155,7 +8337,7 @@ class HeadTarget {
     // amago: carga (se echa un poco atrás con el aguijón y la cabeza cargados), se lanza hacia ti y vuelve
     if (wait && play && !idx) {
       this.feintT -= dt * (1 + Math.min(2, this.waitT / 4));
-      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
+      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9, 'wasp'); }
       if (this.feintOn) {
         const was = this.feint; this.feint += dt / 1.0;
         if (was < 0.45 && this.feint >= 0.45) SND.whoosh(this.center(_bw));
@@ -8201,7 +8383,7 @@ class HeadTarget {
   timeout() {
     spawnQueue.push({ kind: this.kind, hp: this.hp }); this.hp = 0; combo = 0; this.t = 0; boardDirty = true;
     if (this.bubble) { this.mode = 'leave'; say('Se escapó', '#ff8a3d', 1.0); SND.miss(); }
-    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); if (this.K.wasp) SND.hiss(this.center(tmpB), 0.7); }
+    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); if (this.K.wasp) SND.hiss(this.center(tmpB), 0.7, 'wasp'); }
   }
   dispose() {
     arena.remove(this.root);
@@ -8336,7 +8518,7 @@ const perfNow = () => performance.now() / 1000;
 const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Movimientos de cada ejercicio: los de la cabeza (amebas) y los de las manos (diamantes)
 const TCH_MOVES = { squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
-const HAND_MOVES = ['punch', 'reach', 'tap', 'knee'];
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side']; // side: abdominal lateral (diamante por un costado)
 // Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
 // bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
 const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
@@ -8378,10 +8560,10 @@ const amebaGeo = new THREE.TorusGeometry(1, 0.2, 18, 72);
 const WATER_VS = `uniform float uTime; uniform float uAmp; uniform float uPulse; uniform float uBurst;
 varying vec3 vN; varying vec3 vV; varying vec2 vUV;
 vec3 ringPos(float u, float v) {
-  float t = uTime;
-  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + uAmp * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
+  float t = uTime * (0.7 + 0.35 * uAmp), aR = min(uAmp, 1.2); // más agitada, más deprisa; el hueco apenas cambia (es lo que hay que acertar)
+  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + aR * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
   float r = 0.2 * (1.0 - uBurst * 0.8) * (1.0 + uAmp * (0.32 * sin(4.0 * u - 2.1 * t) + 0.16 * sin(7.0 * u + 2.9 * t + v * 2.0) + 0.06 * sin(13.0 * u + 5.0 * v - 6.0 * t)));
-  float z = uAmp * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
+  float z = uAmp * 1.6 * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
   vec2 c = vec2(cos(u), sin(u));
   return vec3(c * (R + r * cos(v)), z + r * sin(v));
 }
@@ -8439,6 +8621,8 @@ function moveSpec(move) {
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
     const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
     if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
+    // abdominal lateral: junto a la cadera, a ras de suelo y bien abierto hacia un lado; se llega inclinando el tronco
+    else if (move === 'side') o.pos = new V3(side * rand(0.36, 0.46), clamp(S - 0.02, 0.08, 0.25) + rand(0, 0.06), -R - rand(0.1, 0.3));
     else {
       const th = rand(settings.abMin, Math.max(settings.abMin, settings.abMax)) * Math.PI / 180;
       const ph = move === 'twist' ? side * rand(0.5, 1) * settings.abTwist * Math.PI / 180 : 0;
@@ -8454,7 +8638,8 @@ function moveSpec(move) {
     if (settings.sword !== 'two') o.hand = settings.swordHand;
   }
   const far = isFloor() ? 3.5 : D;
-  o.from = isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
+  o.from = move === 'side' ? new V3(side * 2.4, o.pos.y + 0.25, o.pos.z - 0.5) // por el costado
+    : isSupine() ? new V3(o.pos.x * 1.5, o.pos.y + 0.6, -3.5) : new V3(o.pos.x * 1.6, isFloor() ? Math.max(0.12, o.pos.y) : o.pos.y, -far);
   return o;
 }
 
@@ -8475,7 +8660,7 @@ function sampleHands(dt) {
     if (!A.armed) {
       // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
       const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
-      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : true;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : true;
       if (back) A.armed = true;
     }
   }
@@ -8501,13 +8686,13 @@ class TouchTarget {
     const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
     this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
     if (this.part === 'head') {
-      this.mat = waterRingMat(col);
+      this.mat = waterRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
       this.ring = new THREE.Mesh(amebaGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
       this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
-      this.root.quaternion.setFromUnitVectors(_tz, this.n);
+      this.root.quaternion.setFromUnitVectors(_tz, this.n); this.q0 = this.root.quaternion.clone();
     } else if (this.part === 'cut') { // bloque metálico con aristas que brillan y una flecha: corta en su dirección
       this.mat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
       this.box = new THREE.Mesh(cutGeo, this.mat); this.box.castShadow = true; this.root.add(this.box);
@@ -8561,19 +8746,29 @@ class TouchTarget {
     if (TCH.headArm.armed || this.hold) return true;
     touchHint('Vuelve a la posición de partida'); return false;
   }
+  // la ameba no viene quieta: serpentea de lado a lado y sube y baja mientras se acerca (cada vez menos, para poder
+  // acertarla al llegar: k, lo recorrido), se bambolea inclinándose y, esperando, sigue flotando un poco
+  sway(k, t) {
+    if (!this.ring) return;
+    const a = 0.34 * (1 - smooth(k)) * (isFloor() ? 0.6 : 1) + Math.min(0.025, this.r * 0.2), tt = t * 1.15 + this.ph; // (cerca del suelo el hueco es pequeño: menos)
+    _tv.set(Math.sin(tt * 2.1) * a, Math.sin(tt * 2.9 + 1.3) * a * 0.55, 0).applyQuaternion(this.q0); this.root.position.add(_tv);
+    this.root.position.y = Math.max(0.08, this.root.position.y);
+    _tq.setFromAxisAngle(_tu.set(Math.sin(tt * 1.3), Math.cos(tt * 1.7), 0).normalize(), 0.05 + 0.25 * (1 - k)); this.root.quaternion.copy(this.q0).multiply(_tq);
+  }
   update(dt, t) {
     const c = TCH.clock, play = state === 'play' || state === 'rest';
     if (this.mode === 'approach') {
       const k = clamp((c - this.spawnT) / Math.max(0.1, this.arriveAt - this.spawnT), 0, 1), e = 1 - Math.pow(1 - k, 3);
-      this.root.position.lerpVectors(this.from, this.pos, e);
+      this.root.position.lerpVectors(this.from, this.pos, e); this.sway(k, t);
       // también vale tocarlo mientras viaja, si atinas
       if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (k >= 1) { this.mode = 'wait'; if (tchPeriod()) SND.tick(); }
     } else if (this.mode === 'wait') {
-      this.root.position.copy(this.pos);
+      this.root.position.copy(this.pos); this.sway(1, t);
       if (play && this.touching() && this.ready()) { if (this.hold) { this.mode = 'hold'; SND.charge(); } else this.hit(); }
       else if (c > this.arriveAt + this.win) this.miss();
-    } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro
+    } else if (this.mode === 'hold') { // plancha: aguanta la cabeza dentro (quieta, en su sitio)
+      this.root.position.copy(this.pos);
       if (this.touching()) { this.outT = 0; this.held += dt; } else this.outT += dt;
       if (this.held >= this.hold) this.hit();
       else if (this.outT > 0.6) this.miss();
@@ -8589,12 +8784,13 @@ class TouchTarget {
       if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; } else this.mat.opacity = Math.max(0, f) * 0.9;
       if (f <= 0) { this.dispose(); return; }
     }
+    if (this.ring && this.mode !== 'approach' && this.mode !== 'wait') this.root.quaternion.copy(this.q0);
     this.prevPos.copy(this.root.position);
     // ondula como el agua; con ritmo, late en cada pulso
     const P = tchPeriod(), ph_ = P ? ((((perfNow() - TCH.beat0) / P) % 1) + 1) % 1 : 1, pulse = P ? Math.exp(-ph_ * 6) : 0;
     if (this.ring) {
       const near = this.mode === 'wait' || this.mode === 'hold', U = this.mat.uniforms;
-      U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 1.4 : 1) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
+      U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
       if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
     } else if (this.box) {
@@ -8660,7 +8856,11 @@ function buildTouchWave(i) {
     const mv = comboMoves();
     for (let k = 0; k < n; k++) { let m = settings.comboOrder === 'seq' ? mv[(TCH.seq++) % mv.length] : pick(mv); if (swordSet() && (m === 'punch' || m === 'reach')) m = pick(CUT_MOVES); list.push({ move: m, hp: 1 }); }
   } else {
-    const [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
+    let [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
+    if (settings.exercise === 'abs') { // los elegidos (Movimientos): si solo hay de un tipo, todos de ese tipo
+      const sel = String(settings.absMoves).split(','); head = head.filter(m => sel.includes(m)); hand = ['knee', 'side'].filter(m => sel.includes(m));
+      if (!head.length) head = hand; if (!hand.length) hand = head;
+    }
     const hm = swordSet() && SWORD_CUTS[settings.exercise] ? SWORD_CUTS[settings.exercise] : hand;
     for (let k = 0; k < n; k++) list.push({ move: hm.length && Math.random() * 100 < settings.tchHands ? pick(hm) : pick(head), hp: 1 });
   }
@@ -9275,7 +9475,7 @@ async function checkXR() {
   $('#btnAR').disabled = !arOk; $('#btnVR').disabled = !vrOk && !arOk;
   if (!arOk && !vrOk) st.textContent = 'Este dispositivo no admite sesiones inmersivas. Usa la prueba en el ordenador o abre la página en las Quest 3.';
 }
-settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foes', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
+settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
 buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); demoPage();

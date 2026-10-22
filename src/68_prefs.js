@@ -39,6 +39,7 @@ function profSave(name) {
 function profLoad(i) {
   const p = profiles()[i]; if (!p) return false;
   for (const f of SCHEMA) if (p.s[f.key] !== undefined) settings[f.key] = clampSetting(f, p.s[f.key]);
+  if (p.s.foesGate === undefined && p.s.foes) Object.assign(settings, foeCatPatch(p.s.foes)); // perfiles de antes: robots, voladores o mezcla
   if (MODE_NAMES[p.s.mode]) settings.mode = p.s.mode;
   if (EX_NAMES[p.s.exercise]) settings.exercise = p.s.exercise;
   settings.exercise = exFor(settings.mode, settings.exercise);

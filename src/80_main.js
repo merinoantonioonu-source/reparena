@@ -283,7 +283,7 @@ async function checkXR() {
   $('#btnAR').disabled = !arOk; $('#btnVR').disabled = !vrOk && !arOk;
   if (!arOk && !vrOk) st.textContent = 'Este dispositivo no admite sesiones inmersivas. Usa la prueba en el ordenador o abre la página en las Quest 3.';
 }
-settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foes', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
+settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
 buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); demoPage();

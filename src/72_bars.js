@@ -224,7 +224,7 @@ class HeadTarget {
       const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + dv('barArrive'));
       this.pos.set(g.x - 0.6 * Math.sin(r), 1.5 * g.scale, g.z - 0.6 * Math.cos(r));
       this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos)));
-      if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9);
+      if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9, 'wasp');
     }
     this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
@@ -254,7 +254,7 @@ class HeadTarget {
       if (this.t < W) { const k = smooth(this.t / W); this.ch = k; this.curl = Math.max(this.curl, 0.85); this.pos.copy(this.from).addScaledVector(back, k); }
       else {
         const k = Math.min(1, (this.t - W) / 0.3); this.ch = 1; this.curl = 1; this.pos.copy(this.from).add(back).lerp(aim, smooth(k));
-        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
+        if (k >= 1) { const c = this.center(new V3()); hurtPlayer(this); say('¡Te ha picado!', '#ff3b5c', 1.2); SND.hiss(c, 0.5, 'wasp'); fx.ichor(c, 6, 0.6); fx.glow(c, [0.4, 1, 0.3], 0.25, 0.15); this.mode = 'flee'; this.t = 0; this.from.copy(this.pos); }
       }
     } else if (this.mode === 'flee') {
       const k = Math.min(1, this.t / 1.2); this.curl = Math.max(0, 1 - this.t * 2); this.ch = Math.max(0, 1 - this.t * 3);
@@ -299,7 +299,7 @@ class HeadTarget {
     // amago: carga (se echa un poco atrás con el aguijón y la cabeza cargados), se lanza hacia ti y vuelve
     if (wait && play && !idx) {
       this.feintT -= dt * (1 + Math.min(2, this.waitT / 4));
-      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9); }
+      if (!this.feintOn && this.feintT <= 0 && BAR.det !== 'rising' && dist > 0.4) { this.feintOn = true; this.feint = 0; if (Math.random() < 0.6) SND.hiss(this.center(_bw), this.K.boss ? 0.6 : 0.9, 'wasp'); }
       if (this.feintOn) {
         const was = this.feint; this.feint += dt / 1.0;
         if (was < 0.45 && this.feint >= 0.45) SND.whoosh(this.center(_bw));
@@ -345,7 +345,7 @@ class HeadTarget {
   timeout() {
     spawnQueue.push({ kind: this.kind, hp: this.hp }); this.hp = 0; combo = 0; this.t = 0; boardDirty = true;
     if (this.bubble) { this.mode = 'leave'; say('Se escapó', '#ff8a3d', 1.0); SND.miss(); }
-    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); if (this.K.wasp) SND.hiss(this.center(tmpB), 0.7); }
+    else { this.mode = 'attack'; this.from.copy(this.pos); SND.whoosh(this.center(tmpB)); if (this.K.wasp) SND.hiss(this.center(tmpB), 0.7, 'wasp'); }
   }
   dispose() {
     arena.remove(this.root);
