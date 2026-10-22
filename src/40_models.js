@@ -442,7 +442,8 @@ const gloveMat = std({ map: SURF.steel.map, normalMap: SURF.steel.normal, roughn
 const gloveJointMat = std({ color: 0x1a1b20, roughness: 0.75, metalness: 0.2 });
 function makeGlove(side) {
   const tipMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
-  const inst = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; m.castShadow = true; if (m.instanceMatrix.setUsage) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); return m; };
+  // (las manos se pintan después del negro del final de la ronda, OUT.black: así se ven para pulsar el resumen)
+  const inst = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; m.castShadow = true; m.renderOrder = 51; if (m.instanceMatrix.setUsage) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); return m; };
   const g = { side, tipMat, seg: inst(gloveGeo.seg, gloveMat, G_SEGS.length), joint: inst(gloveGeo.joint, gloveJointMat, G_JOINTS.length), tip: inst(gloveGeo.tip, tipMat, 5), guard: inst(gloveGeo.guard, gloveMat, 4), pulse: 0 };
   const k = new Kit();
   k.add('steel', G.box(0.078, 0.014, 0.078, 0.2), C.gun, 0, 0.013, -0.046);
@@ -454,7 +455,7 @@ function makeGlove(side) {
   const palm = k.build({ steel: gloveMat }, { cast: true });
   const core = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.005, 6), tipMat); core.position.set(0, 0.0215, -0.042); palm.add(core);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.003, 4, 20), tipMat); ring.position.z = 0.012; palm.add(ring);
-  palm.visible = false; scene.add(palm); g.palm = palm;
+  palm.traverse(o => o.renderOrder = 51); palm.visible = false; scene.add(palm); g.palm = palm;
   // con los mandos se ve el mando (como el de las Quest 3: empuñadura, cabeza con joystick y botones, y gatillo), no una
   // mano sin dedos. El origen es el del agarre: la empuñadura baja por +Y/+Z y la cabeza queda delante, por −Z
   const pk = new Kit(), sx = side === 'left' ? -1 : 1;
@@ -467,7 +468,7 @@ function makeGlove(side) {
   pk.add('plastic', G.box(0.008, 0.022, 0.03, 0.2), C.black, -sx * 0.017, -0.012, 0.012); // botón de agarre
   const padMat = std({ vertexColors: true, roughness: 0.5, metalness: 0.05 }), faceMat = std({ vertexColors: true, roughness: 0.2, metalness: 0.1 });
   const pad = pk.build({ plastic: padMat, face: faceMat, btn: std({ vertexColors: true, roughness: 0.4, metalness: 0.6 }) }, { cast: true });
-  pad.visible = false; scene.add(pad); g.pad = pad;
+  pad.traverse(o => o.renderOrder = 51); pad.visible = false; scene.add(pad); g.pad = pad;
   return g;
 }
 const gloves = { left: makeGlove('left'), right: makeGlove('right') };

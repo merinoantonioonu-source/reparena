@@ -128,7 +128,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.thrUp > 0; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, PV.crouch ? 0.28 : up ? (PV.chopSame ? 0.28 : -0.28) : 0); h.wrist.y = PV.crouch ? calibRef * 0.5 : up ? camera.position.y + 0.05 : camera.position.y - 0.4;
   }
-  if ((settings.exercise === 'press' || settings.exercise === 'press2') && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.22); h.wrist.y += PV.press; }
+  // (PV.lostAbove: como en las gafas, la mano se pierde de vista al pasar esa altura sobre los ojos)
+  if ((settings.exercise === 'press' || settings.exercise === 'press2') && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = !(PV.lostAbove != null && PV.press > PV.lostAbove); h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.22); h.wrist.y += PV.press; }
   // plancha con un brazo: las dos manos apoyadas junto a la cabeza; Q y E levantan la izquierda y la derecha
   if (oneArm() && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);

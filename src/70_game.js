@@ -692,7 +692,7 @@ class Flyer {
     let start;
     if (push) { const h = pick(liveHatches()); h.openT = 1.6; start = new V3(h.x, 0.05, h.z); }
     const sp = dv('flySpeed') / 3.6 * (push ? 0.27 : 1);
-    if (!push) { const g = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
+    if (!push) { const g = this.gate = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * dv('erratic') / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
     this.bar = makeHpBar(this.root, spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
@@ -735,6 +735,7 @@ class Flyer {
       const k = w < 0.45 ? -0.1 * s * smooth(w / 0.45) : -0.1 * s + (Math.max(0, d - 0.12 * s) + 0.1 * s) * smooth(Math.min(1, (w - 0.45) / 0.25));
       if (d > 1e-3) this.pos.addScaledVector(to, k / d);
     }
+    if (this.gate) gateKeep(this);
     this.root.position.copy(this.pos);
     const look = arena.worldToLocal(tmpA.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpA.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
     const lat = ((this.pos.x - this.last.x) * right.x + (this.pos.z - this.last.z) * right.z) / Math.max(dt, 1e-3);
@@ -767,6 +768,19 @@ class Flyer {
     this.dispose();
   }
   dispose() { arena.remove(this.root); this.inst.skel.dispose(); if (this.buzz) { this.buzz.stop(); this.buzz = null; } }
+}
+// Los voladores salen por el hueco de la compuerta: dentro del túnel y bajo el dintel no suben por encima del techo ni se
+// meten en las paredes; al salir, el límite se abre poco a poco (sin saltos). Ya fuera, no vuelven a meterse por delante
+function gateKeep(f) {
+  const g = f.gate, r = g.g.rotation.y, c = Math.cos(r), s = Math.sin(r), sc = g.scale || 1, p = f.pos, rad = f.radius / sc;
+  const dx = p.x - g.x, dz = p.z - g.z; let x = (dx * c - dz * s) / sc, z = (dx * s + dz * c) / sc, y = p.y / sc;
+  if (!f.gateOut) {
+    if (z > 3) f.gateOut = true;
+    const open = Math.max(0, z - 0.55) * 1.5, top = 2.9 - rad * 1.25 + open, side = Math.max(0, 1.17 - rad + open);
+    y = Math.min(y, top); x = clamp(x, -side, side); z = Math.max(z, -1.35 + rad);
+  } else if (Math.abs(x) < 2.3 + rad && y < 4.3 && z < 0.55 + rad && z > -1.5) z = 0.55 + rad;
+  else return;
+  p.set(g.x + (x * c + z * s) * sc, y * sc, g.z + (-x * s + z * c) * sc);
 }
 M.carbonStatic = std({ map: SURF.carbon.map, normalMap: SURF.carbon.normal, roughnessMap: SURF.carbon.orm, metalnessMap: SURF.carbon.orm, metalness: 1, roughness: 1, vertexColors: true });
 M.robotStaticWasp = std({ vertexColors: true, normalMap: SURF.chitin.normal, roughness: 0.42, metalness: 0.05, side: THREE.DoubleSide });
@@ -931,7 +945,7 @@ function onRep(opts, side) {
     const sup = settings.exercise === 'superman', origin = sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
-  } else if (!throwCharge(dmg, opts.perfect)) { // apuntando con las manos: carga las manos y se lanza con el gesto
+  } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
     if (throwAim()) { fireOrb(head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
     for (const s of aimSources()) {
       let o = s.o.clone();
@@ -963,7 +977,7 @@ const DET = {
   su: { state: 'down', ref: 0.2, t0: 0, awayT: 0, sec: 0, warnT: 0, peak: 0, lift: 0, armT: 0, stillT: 0, lo: 0.2 },
   lu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, leg: 0 },
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
-  pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0 } },
+  pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false } },
   pair: { side: null, t: 0, perfect: false, fast: false },
   tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
@@ -1014,26 +1028,33 @@ function armsBack() {
   return false;
 }
 // Un brazo de curl o de press: devuelve { top, perfect, fast } al completar la subida, { msg } si se quedó a medias
-// y nada mientras tanto. En el press, por encima de la cabeza las manos suelen salirse de la vista de las cámaras:
-// si se pierde una mano que ya subía bien, cuenta igual
+// y nada mientras tanto. En el press, por encima de la cabeza (y con la mancuerna tapándola) las cámaras pierden la mano
+// a menudo: si se pierde una mano que ya subía bien (casi a la mitad del recorrido, o deprisa y ya a la altura de la
+// cara), cuenta igual; y si vuelve a verse ya arriba, también. Arriba se queda arriba aunque se pierda un rato: al volver
+// a verla bajando, la bajada no cuenta como otra subida a medias
 function armStep(kind, side, t, dt) {
   const press = kind === 'press', h = hands[side], d = (press ? DET.pr : DET.curl)[side], pt = settings.perfectTime;
   const range = (press ? settings.pressRange : settings.curlRange) / 100;
   if (!h.ok) {
     d.lost += dt;
     if (press) {
-      if (d.state === 'rising' && d.lost > 0.15 && d.max - d.bottom >= range * 0.6) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
-      if (d.lost > 1.5 && d.state !== 'rising') d.state = 'down';
+      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.45 || (d.vy > 0.35 && d.max > -0.1))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
     } else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
-  d.lost = 0;
   const r = h.wrist.y - head.p.y;
+  if (press) {
+    if (d.lost > 0.12 && d.state === 'rising') d.lostUp = true; // subía y se perdió: al volver a verla basta con el 80 % del recorrido
+    if (d.lost > 0) d.vy = 0;
+    else if (d.prevR !== undefined && dt > 0) d.vy += ((r - d.prevR) / dt - d.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
+    d.prevR = r;
+  }
+  d.lost = 0;
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
-  if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; if (press) onCharge(); } }
+  if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; d.lostUp = false; if (press) onCharge(); } }
   else if (d.state === 'rising') {
     d.max = Math.max(d.max, r);
-    if (r - d.bottom >= range) { const dur = t - d.t0; d.state = 'top'; return { top: true, perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }; }
+    if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) { const dur = t - d.t0; d.state = 'top'; return { top: true, perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }; }
     if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
   } else if (r < d.bottom + 0.08) d.state = 'down';
   return null;
@@ -1239,7 +1260,8 @@ function runDetectors(t, dt) {
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
     const req = dv('squatDepth') / 100;
-    vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!' });
+    // como en las flexiones, cuanto más aguantas abajo, más carga el disparo (×2, ×3, ×4)
+    vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!', power: !pistolOn() && !swordActive() });
   } else if (settings.exercise === 'lunge') {
     // zancada: como la sentadilla, con su propia bajada; después de cada una toca la otra pierna
     const d = DET.lu, req = dv('lungeDepth') / 100, before = stats.reps;
@@ -1392,9 +1414,9 @@ const _thr = new V3(), _thv = new V3(), _thf = new V3(), _thd = new V3();
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
 function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH.idle = 0; HTH.taught = false; }
 // La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
-function throwCharge(dmg, perfect) {
+function throwCharge(dmg, perfect, pow = 1) {
   if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
-  for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg, perfect: perfect || !!(T.c && T.c.perfect) }; }
+  for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg: Math.max(dmg, T.c ? T.c.dmg : 0), perfect: perfect || !!(T.c && T.c.perfect), pow: Math.max(pow, T.c ? T.c.pow : 1) }; }
   if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
 }
@@ -1443,7 +1465,7 @@ function throwStep(dt, t) {
   for (const s of ['left', 'right']) {
     const T = HTH[s], h = hands[s], orb = HTH.orbs[s];
     orb.visible = on && h.ok && !!T.c;
-    if (orb.visible) { const sc = 0.075 * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(BOLT_COL[T.c.perfect ? 1 : 0]); }
+    if (orb.visible) { const sc = 0.075 * (1 + 0.2 * (T.c.pow - 1)) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(T.c.pow > 1 ? POW_COL[T.c.pow - 1] : BOLT_COL[T.c.perfect ? 1 : 0]); } // la carga de la sentadilla aguantada, por su color
     if (!on) { T.have = false; T.burst = false; continue; }
     if (!h.ok) { // perdida en plena sacudida: sale el rayo en la dirección que llevaba la mano, si va hacia un enemigo
       T.lost += dt;
@@ -1863,7 +1885,7 @@ function startWave(i) {
   else {
     const avgHp = spawnQueue.reduce((a, e) => a + e.hp, 0) / Math.max(1, spawnQueue.length);
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
-    spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.5); // con espada, uno detrás de otro; con la dificultad creciente, más seguidos
+    spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.35); // con espada, uno detrás de otro; con la dificultad creciente, algo más seguidos
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
@@ -1923,14 +1945,21 @@ function endRun(win, manual) {
   ];
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean)); // en una sesión, al siguiente bloque
-  if (manual || (win && SES.active)) go(); else showOutcome(win, go); // en una sesión, entre bloques ya hay su pantalla de descanso
+  if (SES.active && (manual || win)) go(); else showOutcome(win, go, manual); // en una sesión, entre bloques ya hay su pantalla de descanso
 }
 /* ---------- Final de la ronda, con sensación de juego ---------- */
-// Al perder todas las vidas: fundido a negro, «DERROTA» grande delante de ti y, a los 2,6 s, el resumen solo (la escena se
-// queda en penumbra hasta que eliges qué hacer). Al ganar: un velo suave con «¡VICTORIA!» dorado y el resumen al poco
-const OUT = { t: -1, win: false, go: null, done: false };
+// Al terminar (al perder todas las vidas, al ganar o al terminarla tú) todo funde a negro, del todo y para siempre: el
+// negro se queda hasta que eliges qué hacer y solo se ve el resumen (y tus manos, para pulsarlo). Al perder, «DERROTA»
+// grande delante de ti y, a los 2,6 s, el resumen; al ganar, «¡VICTORIA!» dorado y el resumen al poco; al terminarla
+// tú, el resumen enseguida
+const OUT = { t: -1, win: false, manual: false, go: null, done: false };
 OUT.veil = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false }));
 OUT.veil.renderOrder = RO.menu - 2; OUT.veil.visible = false; scene.add(OUT.veil);
+// Ya en negro, una esfera opaca alrededor de la cabeza que se pinta encima de todo lo opaco y deja su profundidad: lo
+// transparente que quede más lejos (halos, partículas, el marcador) no se ve, y el menú y las manos (que se pintan
+// después) quedan dentro. Su radio sigue al menú
+OUT.black = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, depthFunc: THREE.AlwaysDepth, side: THREE.BackSide, fog: false }));
+OUT.black.renderOrder = 50; OUT.black.frustumCulled = false; OUT.black.visible = false; scene.add(OUT.black);
 OUT.title = makePanel(1.3, 0.42, 1024, { depthTest: false }); OUT.title.mesh.renderOrder = RO.menu - 1; OUT.title.mesh.visible = false; scene.add(OUT.title.mesh);
 function outcomeDraw(win) {
   const P = OUT.title, c = P.ctx, W = P.W, H = P.H, t = win ? '¡VICTORIA!' : 'DERROTA', col = win ? '#ffd166' : '#ff3b4e';
@@ -1939,22 +1968,26 @@ function outcomeDraw(win) {
   c.fillStyle = '#eeeaff'; fitFont(c, win ? 'Has superado todas las oleadas' : 'Te han quitado todas las vidas', W - 80, 44, '500 %px ' + FB); c.fillText(win ? 'Has superado todas las oleadas' : 'Te han quitado todas las vidas', W / 2, H * 0.84);
   P.tex.needsUpdate = true;
 }
-function showOutcome(win, go) {
-  hideMenu(); Object.assign(OUT, { t: 0, win, go, done: false }); outcomeDraw(win);
-  OUT.veil.visible = true; OUT.veil.material.opacity = 0; OUT.title.mesh.material.opacity = 0;
+function showOutcome(win, go, manual = false) {
+  hideMenu(); Object.assign(OUT, { t: 0, win, manual, go, done: false, cleared: false }); if (!manual) outcomeDraw(win);
+  toastP.mesh.visible = false; WARN.p.mesh.visible = false; hurtT = 0; // ningún aviso encima del negro
+  OUT.veil.visible = true; OUT.veil.material.opacity = 0; OUT.black.visible = false; OUT.title.mesh.material.opacity = 0; OUT.title.mesh.visible = false;
   OUT.title.mesh.position.copy(head.p).addScaledVector(fwdH(), 1.6); OUT.title.mesh.position.y = head.p.y + 0.05; OUT.title.mesh.lookAt(head.p); // delante de ti
 }
+const OUT_FADE = { win: 0.8, lose: 1.0, manual: 0.35 }, OUT_DELAY = { win: 1.8, lose: 2.6, manual: 0.35 }, _ob = new V3();
 function updateOutcome(dt) {
   if (OUT.t < 0) return;
   if (state !== 'end') { outcomeClear(); return; } // otra ronda, el menú principal o el siguiente bloque: se quita
-  OUT.t += dt; const t = OUT.t, win = OUT.win, delay = win ? 1.8 : 2.6, dark = win ? 0.35 : 0.92, after = win ? 0.25 : 0.6;
-  OUT.veil.position.copy(head.p);
-  OUT.veil.material.opacity = t < delay ? dark * smooth(Math.min(1, t / (win ? 0.4 : 1.0))) : lerp(dark, after, Math.min(1, (t - delay) / 0.6));
-  const m = OUT.title.mesh; m.material.opacity = t < 0.4 ? 0 : t < delay ? Math.min(1, (t - 0.4) / 0.5) : Math.max(0, 1 - (t - delay) / 0.4);
+  OUT.t += dt; const t = OUT.t, k = OUT.manual ? 'manual' : OUT.win ? 'win' : 'lose', delay = OUT_DELAY[k];
+  const a = smooth(Math.min(1, t / OUT_FADE[k])), black = a >= 1;
+  if (black && !OUT.cleared) { OUT.cleared = true; resetWorld(); } // a oscuras ya no queda nada de la partida
+  OUT.veil.position.copy(head.p); OUT.veil.material.opacity = a; OUT.veil.visible = !black; OUT.black.visible = black;
+  if (black) { let R = 0.9; if (menu && menu.group) R = Math.max(R, menu.group.getWorldPosition(_ob).distanceTo(head.p) + 0.6); OUT.black.position.copy(head.p); OUT.black.scale.setScalar(R); }
+  const m = OUT.title.mesh; m.material.opacity = OUT.manual || t < 0.4 ? 0 : t < delay ? Math.min(1, (t - 0.4) / 0.5) : Math.max(0, 1 - (t - delay) / 0.4);
   m.scale.setScalar(1 + 0.1 * Math.max(0, 1 - Math.max(0, t - 0.4) / 0.6)); m.visible = m.material.opacity > 0.01;
   if (!OUT.done && t >= delay) { OUT.done = true; const go = OUT.go; OUT.go = null; if (go) go(); }
 }
-function outcomeClear() { OUT.t = -1; OUT.veil.visible = false; OUT.title.mesh.visible = false; }
+function outcomeClear() { OUT.t = -1; OUT.cleared = false; OUT.veil.visible = false; OUT.black.visible = false; OUT.title.mesh.visible = false; }
 function endMenu(title, lines) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
     { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];

@@ -381,14 +381,15 @@ function onWatch() {
 }
 
 /* =================== PANELES DE VISTA =================== */
-const center = makePanel(0.5, 0.2, 1024, { depthTest: false }); scene.add(center.mesh); center.mesh.visible = false;
-const toastP = makePanel(0.34, 0.06, 768, { depthTest: false }); scene.add(toastP.mesh); toastP.mesh.visible = false;
+// Los avisos, grandes para leerlos bien: el del centro (0,5 × 0,2 m de lienzo) se ve a 1,5 veces su tamaño
+const CENTER_SC = 1.5, center = makePanel(0.5, 0.2, 1024, { depthTest: false }); center.mesh.scale.setScalar(CENTER_SC); scene.add(center.mesh); center.mesh.visible = false;
+const toastP = makePanel(0.62, 0.1, 1024, { depthTest: false }); scene.add(toastP.mesh); toastP.mesh.visible = false;
 let toastT = 0;
 function showToast(text, color, dur) {
   if (!GAME_STATES.includes(state) || !settings.toasts) return;
   const c = toastP.ctx, W = toastP.W, H = toastP.H; c.clearRect(0, 0, W, H);
   rr(c, 4, 4, W - 8, H - 8, H / 2 - 4); c.fillStyle = 'rgba(14,10,28,0.72)'; c.fill();
-  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, text, W - 60, 72, '%px ' + FD); c.fillText(text, W / 2, H / 2 + 3);
+  c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, text, W - 70, 104, '%px ' + FD); c.fillText(text, W / 2, H / 2 + 4);
   toastP.tex.needsUpdate = true; toastT = dur; toastP.mesh.visible = true;
 }
 const hurtMat = new THREE.MeshBasicMaterial({ map: texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 18, 64, 64, 64); g.addColorStop(0, 'rgba(255,0,30,0)'); g.addColorStop(1, 'rgba(255,0,30,1)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return c; })()), transparent: true, opacity: 0, depthTest: false, depthWrite: false, toneMapped: false });
@@ -419,8 +420,9 @@ function panelHides(obj, w, h, always, n) {
   return false;
 }
 // Avisos pegados a la vista: si en su sitio tapan algo, se van a otro hueco (arriba o a un lado); si no hay ninguno libre, se aclaran
-const HUD = { toast: { slots: [[0, -0.36], [0, 0.34], [-0.42, -0.22], [0.42, -0.22]], z: -1.1, w: 0.34, h: 0.06, slot: 0, off: new V3(0, -0.36, -1.1), fade: 1 },
-  center: { slots: [[0, -0.08], [0, 0.34], [0, -0.42]], z: -1.0, w: 0.5, h: 0.2, slot: 0, off: new V3(0, -0.08, -1.0), fade: 1 }, board: 1 };
+// (dónde salen; luego se quedan quietos en el mundo: ver lazyAt)
+const HUD = { toast: { slots: [[0, -0.4], [0, 0.4], [-0.5, -0.24], [0.5, -0.24]], z: -1.2, w: 0.62, h: 0.1, slot: 0, off: new V3(0, -0.4, -1.2), fade: 1 },
+  center: { slots: [[0, -0.08], [0, 0.42], [0, -0.5]], z: -1.1, w: 0.5 * CENTER_SC, h: 0.2 * CENTER_SC, slot: 0, off: new V3(0, -0.08, -1.1), fade: 1 }, board: 1 };
 function hudSlot(P, slots, n, dt) {
   const free = i => { headLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(head.q); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
   let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
@@ -429,6 +431,24 @@ function hudSlot(P, slots, n, dt) {
   P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
   return headLocal(P.off, new V3());
+}
+// Los avisos no siguen la mirada (así no hay quien los lea): salen delante de ti y se quedan quietos en el mundo. Solo se
+// recolocan, deslizándose, si dejan de verse un rato (miras más de LAZY.ang a otro lado o te mueves LAZY.move) o si
+// tapan algo que viene hacia ti
+const LAZY = { ang: 50 * Math.PI / 180, t: 0.8, move: 0.6 }, _lz = new V3();
+const mkLazy = () => ({ init: false, at: new V3(), q: new Q4(), home: new V3(), away: 0, go: false, vis: 1 });
+function lazyAt(L, want, wantQ, dt, ang = LAZY.ang) {
+  if (!L.init) { Object.assign(L, { init: true, away: 0, go: false, vis: 1 }); L.at.copy(want); L.q.copy(wantQ); L.home.copy(head.p); return L; }
+  const off = head.p.distanceTo(L.home) > LAZY.move || _lz.subVectors(L.at, head.p).angleTo(fwd()) > ang;
+  L.away = off ? L.away + dt : 0; if (L.away > LAZY.t) L.go = true;
+  if (L.go) { const k = 1 - Math.exp(-dt * 7); L.at.lerp(want, k); L.q.slerp(wantQ, k); if (L.at.distanceTo(want) < 0.03) { L.go = false; L.away = 0; L.home.copy(head.p); } }
+  return L;
+}
+const LZ = { center: mkLazy(), toast: mkLazy(), warn: mkLazy() };
+// Un aviso quieto que tapa lo que viene se aclara enseguida y se va a un hueco libre
+function lazyClear(L, mesh, w, h, n, dt) {
+  const hides = n > 0 && panelHides(mesh, w, h, true, n); if (hides) L.go = true;
+  L.vis += ((hides ? 0.15 : 1) - L.vis) * Math.min(1, dt * 12); return L.vis;
 }
 /* ---------- Avisos grandes impresos en el suelo ---------- */
 // Lo que estás haciendo mal (a medias, suelta la cadera, te soltaste…) se escribe en grande en el suelo, delante,
@@ -461,23 +481,24 @@ function updateWarn(dt) {
     const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
     s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
   }
-  const k = WARN.init ? 1 - Math.exp(-dt * 3) : 1; WARN.init = true;
-  WARN.at.lerp(_wf, k); m.position.copy(WARN.at); m.quaternion.slerp(WARN.q, k); m.scale.setScalar(s);
+  if (!WARN.init) { LZ.warn.init = false; WARN.init = true; WARN.s = s; } // cada aviso nuevo sale delante; luego se queda quieto
+  const L = lazyAt(LZ.warn, _wf, WARN.q, dt, 65 * Math.PI / 180); if (L.go) WARN.s += (s - WARN.s) * Math.min(1, dt * 7);
+  m.position.copy(L.at); m.quaternion.copy(L.q); m.scale.setScalar(WARN.s);
   m.material.opacity = Math.min(1, WARN.t / 0.5, (WARN_SECS - WARN.t) / 0.15 + 0.2);
 }
 function updateViewPanels(dt) {
   updateWarn(dt);
-  const k = 1 - Math.exp(-dt * 4), n = GAME_STATES.includes(state) ? collectThreats() : 0;
+  const n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
-    const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.2]] : C.slots; // con el atril abierto, por encima para no taparlo
-    const tgt = hudSlot(C, slots, n, dt);
-    if (!center.mesh.userData.init) { center.mesh.position.copy(tgt); center.mesh.quaternion.copy(head.q); center.mesh.userData.init = true; }
-    center.mesh.position.lerp(tgt, k); center.mesh.quaternion.slerp(head.q, k); center.mesh.material.opacity = C.fade;
-  } else center.mesh.userData.init = false;
+    const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
+    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), head.q, dt);
+    center.mesh.position.copy(L.at); center.mesh.quaternion.copy(L.q); center.mesh.material.opacity = C.fade * lazyClear(L, center.mesh, 0.5, 0.2, n, dt);
+  } else LZ.center.init = false;
   if (toastP.mesh.visible) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
-    toastP.mesh.position.copy(hudSlot(HUD.toast, HUD.toast.slots, n, dt)); toastP.mesh.quaternion.copy(head.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade;
-  }
+    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), head.q, dt);
+    toastP.mesh.position.copy(L.at); toastP.mesh.quaternion.copy(L.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade * lazyClear(L, toastP.mesh, toastP.w, toastP.h, n, dt);
+  } else LZ.toast.init = false;
   // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
   if (hurtT > 0) { hurtT -= dt; hurtMat.opacity = Math.max(0, hurtT) * 1.3; headLocal(_hl.set(0, 0, -0.3), hurtPlane.position); hurtPlane.quaternion.copy(head.q); hurtPlane.visible = true; }
   else hurtPlane.visible = false;

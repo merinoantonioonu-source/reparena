@@ -107,7 +107,7 @@ async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = 
 const PAN = { behind: 0, streak: 0, worst: 0, toast: 0, boardFade: false };
 const watchPanels = sim => t => {
   const n = RA.collectThreats();
-  const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, 0.34, 0.06, true, n);
+  const b = RA.board.mesh.parent && RA.panelHides(RA.board.mesh, 1, 0.445, false, n), bt = RA.toastP.mesh.visible && RA.panelHides(RA.toastP.mesh, RA.toastP.w, RA.toastP.h, true, n);
   if (b) PAN.behind++; if (bt) PAN.toast++;
   const bad = bt && RA.toastP.mesh.material.opacity > 0.5; // el marcador se ve siempre (opaco): solo cuentan los avisos
   if (b && RA.board.mesh.material.opacity < 1) PAN.boardFade = true;
@@ -124,6 +124,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 (async () => {
   await sleep(150);
   log('boot ok; renders so far', RA.renderer.renders);
+  // la dificultad creciente sube poco a poco: un 4 % por oleada por defecto (quien tenía el 6 % de antes pasa al 4 %)
+  log(`ramp by default ${RA.settings.ramp} % (version ${RA.settings.rampV})`); if (RA.settings.ramp !== 4) errors.push('la dificultad creciente debería subir un 4 % por oleada por defecto');
   { const simpleDef = RA.settings.menuLevel; RA.setSetting('menuLevel', 'full'); log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
   // ---- Botones táctiles: un toque pulsa un solo botón, y para pulsar otra vez hay que mover el dedo ----
   {
@@ -176,6 +178,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.twistScale = 0.55;
   await runConfig('Antebrazos con giros cortos', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, waves: 1, walkTime: 30 }, squatSim(1.6), 25, s => s.reps ? 'giros cortos no deberían disparar' : !s.partial ? 'debería avisar de que hay que girar más' : '', true);
   RA.PV.twistScale = 1; RA.PV.crouch = false;
+  // sentadillas en combate: aguantar abajo carga el disparo (×2, ×3, ×4), como en las flexiones
+  for (const aim of ['auto', 'hands']) { let maxPow = 1;
+    await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]); }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
+    log(`  squat held low (${aim}): charge up to ×${maxPow}`); }
+  // press de hombro: las cámaras pierden la mano en cuanto pasa por encima de los ojos (subiendo deprisa): cuenta igual
+  await runConfig('Combate press de hombro, la mano se pierde arriba', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press', waves: 2, repsWave: 6 }, t => { squatSim(1.8)(t); RA.PV.lostAbove = 0; }, 200, s => s.reps < 10 ? `el press no cuenta si la mano se pierde arriba (${s.reps} reps)` : s.partial > 1 ? 'el press da medias de más al perder la mano arriba' : '');
+  RA.PV.lostAbove = null;
   await runConfig('Enjambre+press de hombro', { ...base, mode: 'flyers', exercise: 'press', flySpeed: 8 }, squatSim(1.8));
   await runConfig('Asalto+plancha lateral', { ...base, mode: 'walkers', exercise: 'splank', splHold: 2, walkTime: 14 }, () => { RA.PV.crouch = false; }, 420, s => s.partial ? 'aguantando quieto no debería cortarse' : '');
   await runConfig('Enjambre+plancha lateral', { ...base, mode: 'flyers', exercise: 'splank', splHold: 2, flySpeed: 8 }, () => { RA.PV.crouch = false; }, 420);
@@ -208,7 +217,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const w = Object.keys(seen).map(Number).sort((a, b) => a - b), last = seen[w[w.length - 1]], first = seen[0];
       log(`  ramp ${ramp} %: ` + w.map(i => `oleada ${i + 1} (nivel ${seen[i][4]}): llegan en ${seen[i][0].toFixed(2)} s, bajada ${seen[i][1].toFixed(1)} cm, ${seen[i][2]} a la vez, gestos ${Math.round(seen[i][3])} %`).join(' · '));
       if (w.length < 4) return 'no se juegan las cuatro oleadas';
-      if (ramp && !(last[4] === 3 && Math.abs(last[0] - 8 / 1.3) < 0.01 && Math.abs(last[1] - 26 * 1.12) < 0.01 && last[2] === 7 && Math.abs(last[3] - RA.settings.pace_robot * 1.15) < 0.01 && first[0] === 8 && first[1] === 26)) return 'la dificultad creciente no sube como debe';
+      if (ramp && !(last[4] === 3 && Math.abs(last[0] - 8 / 1.3) < 0.01 && Math.abs(last[1] - 26 * 1.12) < 0.01 && last[2] === 6 && Math.abs(last[3] - RA.settings.pace_robot * 1.15) < 0.01 && first[0] === 8 && first[1] === 26)) return 'la dificultad creciente no sube como debe';
       if (!ramp && (last[0] !== 8 || last[1] !== 26 || last[2] !== 5)) return 'sin dificultad creciente algo cambia';
       return '';
     });
@@ -274,15 +283,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`gates are solid: robot frames inside a pillar or block ${inSolid}, crossing a closed door ${closedPass} (of ${frames} frames)`);
     if (inSolid) errors.push('los robots atraviesan los pilares o los bloques de las compuertas');
     if (closedPass) errors.push('los robots cruzan compuertas cerradas'); }
+  // los voladores salen por el hueco de la compuerta: nunca atraviesan su techo ni sus paredes
+  { let through = 0, frames = 0, inside = 0, hiY = 0;
+    await runConfig('Voladores y techo de las compuertas', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'squat', maxAlive: 6, spawnGap: 0.4, flySpeed: 6, waves: 2, repsWave: 6 }, t => {
+      squatSim(2.6)(t); frames++;
+      for (const e of RA.enemies) { if (!e.alive || e.type !== 'flyer') continue;
+        const g = RA.gates.filter(g => g.on).reduce((a, b) => Math.hypot(b.x - e.pos.x, b.z - e.pos.z) < Math.hypot(a.x - e.pos.x, a.z - e.pos.z) ? b : a), r = g.g.rotation.y, sc = g.scale, lx = ((e.pos.x - g.x) * Math.cos(r) - (e.pos.z - g.z) * Math.sin(r)) / sc, lz = ((e.pos.x - g.x) * Math.sin(r) + (e.pos.z - g.z) * Math.cos(r)) / sc;
+        if (lz < 0.5 && lz > -1.6 && Math.abs(lx) < 2) { inside++; hiY = Math.max(hiY, (e.pos.y + e.radius) / sc); if (e.pos.y + e.radius > 2.99 * sc || Math.abs(lx) + e.radius / sc > 1.19) through++; } }
+    }, 420, () => '');
+    log(`flyers leave through the gap: frames inside a gate ${inside} (highest top ${hiY.toFixed(2)} m, ceiling 2.99) · through the ceiling or walls ${through} (of ${frames} frames)`);
+    if (!inside) errors.push('voladores: la prueba no vio ninguno saliendo de una compuerta');
+    if (through) errors.push('los voladores atraviesan el techo o las paredes de las compuertas'); }
   // derrota: al perder la última vida, fundido a negro con «DERROTA» delante y, solo, el resumen con sus botones
   { for (const [k, v] of Object.entries({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', lives: 1, waves: 3, repsWave: 30, walkTime: 3, maxAlive: 3, ramp: 0 })) RA.setSetting(k, v);
     RA.startPreview(); frame(3); press('EMPEZAR'); let i = 0; for (; i < 60 * 60 && RA.state !== 'end'; i++) frame(1);
     const O = RA.OUT; frame(60); const dark = O.veil.material.opacity, title = O.title.mesh.visible, menuEarly = !!RA.menu;
-    for (let k = 0; k < 120 && !RA.menu; k++) frame(1); const lw = RA.activeWidgets().map(w => w.label), dim = O.veil.material.opacity;
+    for (let k = 0; k < 120 && !RA.menu; k++) frame(1); const lw = RA.activeWidgets().map(w => w.label);
     const titleRow = RA.menu && RA.menu.rows && RA.menu.rows[0]; frame(40);
-    log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · veil behind it ${dim.toFixed(2)}`);
-    if (RA.state !== 'end' || dark < 0.8 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
-    press('Menú principal'); frame(3); if (O.veil.visible) errors.push('derrota: el fundido no se quita al volver al menú');
+    const mp = RA.menu && RA.menu.group.getWorldPosition(new THREE.Vector3()), R = O.black.scale.x, menuIn = !!mp && mp.distanceTo(O.black.position) < R - 0.3, solid = O.black.visible && !O.black.material.transparent && O.black.material.opacity === 1;
+    log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · behind it solid black ${solid} (radius ${R.toFixed(2)}, menu inside ${menuIn}) · enemies left ${RA.enemies.length}`);
+    if (RA.state !== 'end' || dark < 0.99 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
+    if (!solid || !menuIn || RA.enemies.length) errors.push('derrota: el negro no es total y definitivo detrás del resumen');
+    press('Menú principal'); frame(3); if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
+    // terminarla tú: también a negro, y el resumen enseguida
+    RA.setSetting('lives', 3); RA.startPreview(); frame(3); press('EMPEZAR'); for (let k = 0; k < 600 && RA.state !== 'play'; k++) frame(1);
+    RA.endRun(false, true); frame(10); const early = !!RA.menu; frame(20); const mBlack = O.black.visible, mMenu = !!RA.menu && RA.activeWidgets().some(w => w.label === 'Otra ronda');
+    log(`manual end: menu after 10 frames ${early} · after 30: black ${mBlack}, summary ${mMenu}`);
+    if (early || !mBlack || !mMenu) errors.push('al terminar la ronda tú, no funde a negro con el resumen');
+    press('Menú principal'); frame(3);
     RA.setSetting('lives', 0); RA.setSetting('ramp', 6); RA.exitAll(); frame(1); }
   // un empujón que mete a alguien en una puerta cerrada lo deja fuera, por el lado más corto
   { const door = RA.envSolids().find(c => c.g && c.r < 0.4 * c.g.scale), e = { pos: { x: 0, z: 0 }, radius: 0.4, out: true, gate: null };
@@ -621,7 +649,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (hist1 - hist0 !== 3) errors.push('el historial no recibe los bloques de la sesión');
   RA.SES.blocks = []; press('Menú principal'); frame(2);
   // ---- los menús que se suceden salen en el mismo sitio (cuelgan del mismo borde de arriba), al alcance de la mano ----
-  { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2); RA.beginRun(); frame(10); RA.endRun(true, true); frame(2);
+  { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2); RA.beginRun(); frame(10); RA.endRun(true, true); frame(30); // (tras el fundido a negro)
     const top = menuTop;
     const t1 = top(), h1 = RA.menu.H, dist = Math.hypot(t1.x - RA.head.p.x, t1.z - RA.head.p.z); press('Menú principal'); frame(2); const t2 = top(), h2 = RA.menu.H;
     log(`menus in place: summary H ${h1.toFixed(2)} → main menu H ${h2.toFixed(2)} · top edge moved ${(t1.distanceTo(t2) * 100).toFixed(1)} cm · top edge ${(dist * 100).toFixed(0)} cm away`);
@@ -631,7 +659,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // pausa durante partida
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.lobbyMenu(); frame(1); press('EMPEZAR'); frame(120);
   RA.openPause(); frame(2); press('Ajustes'); frame(1); press('Volver'); frame(1); press('Continuar'); frame(10);
-  RA.openPause(); frame(2); press('Terminar ronda'); frame(2); press('Otra ronda'); frame(30); log('mode after menu tests', RA.settings.mode);
+  RA.openPause(); frame(2); press('Terminar ronda'); frame(30); press('Otra ronda'); frame(30); log('mode after menu tests', RA.settings.mode);
   // desktop pointer path on a slider: emulate raycast by setting userData sizes
   RA.exitAll(); frame(1);
 
