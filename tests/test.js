@@ -363,11 +363,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
-  for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['flexiones (aros)', 'pushup', {}],
+  for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
-    const parts = new Set();
-    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => parts.add(x.part + ':' + x.move)); }), 200,
-      panelCheck(name, s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : ''));
+    const parts = new Set(); let fromSide = true;
+    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => { parts.add(x.part + ':' + x.move); if (x.move === 'side' && Math.abs(x.from.x) < 2) fromSide = false; }); }), 200,
+      panelCheck(name, s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : extra.absMoves === 'side' && ([...parts].join() !== 'hand:side' || !fromSide) ? `los abdominales laterales no traen solo diamantes por los lados (${[...parts]})` : ''));
     log('   movimientos:', [...parts].join(' '));
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
@@ -382,10 +382,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (x && ready) { const w = x.center(new THREE.Vector3()); if (x.part === 'head') { RA.camera.position.set(w.x, w.y, w.z); RA.PV.y = w.y; } else { RA.PV.handAt = w; RA.PV.handSide = x.hand; } if (x.arriveAt - RA.TCH.clock > 1) midway.add(x); }
     else RA.PV.handAt = null;
   }, 120, s => s.reps < 4 ? `tocando a mitad de camino solo cuenta ${s.reps}` : midway.size < 4 ? 'no se tocaron a mitad de camino' : '');
+  // la ameba se mueve mucho mientras llega (serpentea y sube y baja) y casi nada esperando delante de ti
+  { let far = 0, near = 0;
+    await runConfig('Toques ameba que se mueve', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 3, lives: 0, tchArrive: 3, tchGap: 3, tchHands: 0 }, () => {
+      for (const x of RA.touches) { if (!x.alive || !x.ring) continue; const p = x.root.position, d = Math.hypot(p.x - (x.mode === 'wait' ? x.pos.x : p.x), p.y - (x.mode === 'wait' ? x.pos.y : p.y));
+        if (x.mode === 'approach') { const k = (p.z - x.from.z) / (x.pos.z - x.from.z), lx = x.from.x + (x.pos.x - x.from.x) * k; far = Math.max(far, Math.abs(p.x - lx)); }
+        else if (x.mode === 'wait') near = Math.max(near, d); }
+    }, 60, () => '', true);
+    log(`ameba sway: off its path while coming ${(far * 100).toFixed(0)} cm · waiting ${(near * 100).toFixed(1)} cm`);
+    if (far < 0.15 || near > 0.04) errors.push('Toques: la ameba no se mueve lo bastante al llegar, o se mueve demasiado esperando'); }
   // sin volver a la postura de partida, solo cuenta el primero: la cabeza se queda abajo y va de ameba en ameba
   await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
-    const x = RA.touches.find(o => o.alive && !o.judged), w = x ? x.center(new THREE.Vector3()) : home.clone().add(new THREE.Vector3(0, -0.2, 0));
+    const x = RA.touches.find(o => o.alive && !o.judged), w = x ? RA.arena.localToWorld(x.pos.clone()) : home.clone().add(new THREE.Vector3(0, -0.2, 0)); // (adonde llega, sin su bamboleo)
     RA.camera.position.set(w.x, Math.min(w.y, home.y - 0.15), w.z); RA.PV.y = RA.camera.position.y;
   }, 60, s => s.reps !== 1 ? `con la cabeza abajo todo el rato cuentan ${s.reps} amebas (debería ser 1)` : s.taken < 3 ? 'las amebas no tocadas no cuentan como fallo' : '');
   // diamantes: solo vale la mano que piden, y entre uno y otro esa mano tiene que volver
@@ -1046,7 +1055,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   XRS.ctrl = null; XRS.controllers = false; RA.setSetting('sword', 'off');
 
   // ---- Toques en XR: abdominales boca arriba; el entorno mira hacia los pies y la cabeza alcanza los aros ----
-  for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'abs', lives: 0, waves: 1, repsWave: 5, tchHands: 0, tchArrive: 2, tchGap: 2.5, tchWindow: 1.5 })) RA.setSetting(k, v);
+  for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'abs', absMoves: 'crunch,twist,knee', lives: 0, waves: 1, repsWave: 5, tchHands: 0, tchArrive: 2, tchGap: 2.5, tchWindow: 1.5 })) RA.setSetting(k, v);
   XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
   RA.beginRun(); XRS.headX = 0.5; XRS.headZ = -0.2; XRS.headY = 0.2;
   XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.3, Math.PI / 2, 0, 'YXZ')); // boca arriba, pies hacia -X
