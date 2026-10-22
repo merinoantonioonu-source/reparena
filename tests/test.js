@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -258,6 +258,49 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (onlyFly !== 'flyers' || wave.some(k => k !== 'bee') || none !== 'robots' || wave0.some(k => !['scout', 'heavy'].includes(k))) errors.push('enemigos: sin los de tierra deberían salir solo voladores, y sin ninguno, robots');
     for (const k of NEW) delete RA.BEAST.kinds[k];
     RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesHatch', 'spider'); RA.setSetting('foesFly', 'drone,hornet'); }
+  // un disparo cargado ×3 o ×4 derriba (sale despedido hacia atrás y se levanta); a los jefes, no
+  { let downs = 0, moved = 0, bossDown = false; const seen = new Map(), P0 = new THREE.Vector3(0, 1.4, -2);
+    await runConfig('derribo con disparos cargados', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'robot', waves: 2, repsWave: 12, walkTime: 6, maxAlive: 3 }, t => {
+      RA.PV.crouch = (t % 4.6) < 1.2;
+      for (const e of RA.enemies) if (e.type === 'robot' && e.alive && e.out && e.state !== 'down' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, P0, 4); } // como un disparo ×4 que no lo mata
+      for (const e of RA.enemies) { if (e.type !== 'robot') continue; if (e.state === 'down') { if (e.K.boss) bossDown = true; if (!seen.has(e)) { seen.set(e, { x: e.pos.x, z: e.pos.z }); downs++; } else { const a = seen.get(e); moved = Math.max(moved, Math.hypot(e.pos.x - a.x, e.pos.z - a.z)); } } else seen.delete(e); }
+    }, 420, s => '');
+    log(`knockdown: ${downs} robots knocked down, pushed back up to ${moved.toFixed(2)} m · a boss knocked down ${bossDown}`);
+    if (downs < 1 || moved < 0.8 || bossDown) errors.push('derribo: un disparo cargado ×3 o ×4 debería derribar y echar atrás (a los jefes, no)'); }
+  // el diablillo (con un modelo de mentira): golpes variados (gancho, tajos…), cada uno con su marca de parada; derribado
+  // cae de espaldas y se levanta con sus animaciones; y el lanzador te tira piedras: te dan si no te mueves, se esquivan
+  // apartándote y se paran con la mano
+  { const g = new THREE.Group(); for (const n of ['spine_03', 'Head', 'hand_r', 'pelvis']) { const b = new THREE.Group(); b.name = n; g.add(b); } g.children[2].position.set(0.2, 1.2, 0.3); g.add(new THREE.Mesh());
+    const clips = {}; for (const n of RA.BEAST_CLIPS) clips[n] = { name: n, duration: { Hit_Knockback: 0.83, LayToIdle: 1.53, Sword_Regular_C: 2, OverhandThrow: 1.33 }[n] || 0.6, tracks: [] };
+    const wasReady = RA.BEAST.ready; RA.BEAST.ready = true; RA.BEAST.kinds.imp = { scene: g, clips, maps: [null, null, null], normal: null, orm: null, emissive: null };
+    const atks = new Set(), downClips = new Set();
+    await runConfig('diablillo: golpes variados y derribo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'imp', waves: 2, repsWave: 16, walkTime: 5, maxAlive: 3, lives: 0 }, t => {
+      RA.PV.crouch = (t % 4.6) < 0.9; // sin cargar: que lleguen a golpear
+      for (const e of RA.enemies) { if (e.constructor.name !== 'Beast') continue; if (t > 30 && e.alive && e.out && e.state === 'walk' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, e.center(new THREE.Vector3()), 4); } if (e.state === 'windup' && e.atk) atks.add(e.atk); if (e.state === 'down') downClips.add(e.cur); }
+    }, 420, s => '', true);
+    const zones = ['Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Punch_Jab'].map(a => { const r = { atk: a, pos: new THREE.Vector3(0, 0, -2) }; RA.blockStart(r); const P = RA.blockPoint(r, new THREE.Vector3()); return `${a}:${r.zone}/${r.zoneSide}@${P.x.toFixed(2)}`; });
+    log(`imp attacks: ${[...atks].join(',')} · knocked down playing ${[...downClips].join(',')} · block marks ${zones.join(' ')}`);
+    if (atks.size < 3) errors.push(`diablillo: los golpes no varían (${[...atks]})`);
+    if (!downClips.has('Hit_Knockback') || !downClips.has('LayToIdle')) errors.push('diablillo derribado: debería caer (Hit_Knockback) y levantarse (LayToIdle)');
+    const side = z => +z.split('@')[1]; if (!(zones[0].includes(':mid/-1') && zones[1].includes(':low/-1') && zones[2].includes(':mid/1') && zones[3].includes(':high/0') && side(zones[0]) < side(zones[4]) - 0.2 && side(zones[2]) > side(zones[4]) + 0.2)) errors.push('espada: la marca de parada no sigue la altura y el lado de cada golpe');
+    // el lanzador
+    const runThrow = async (name, react) => { const R = { thrown: 0, hit: 0, other: 0 }, fly = new Map();
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'thrower', waves: 1, repsWave: 30, walkTime: 4, maxAlive: 2, lives: 0 }, t => {
+        RA.PV.crouch = false; const h = RA.hands.right; RA.PV.handAt = null; react(null, h);
+        for (const r of RA.ROCKS) { if (!fly.has(r)) { fly.set(r, 'fly'); R.thrown++; } if (r.mode === 'fly') react(r, h); else if (fly.get(r) === 'fly') { fly.set(r, 'done'); R.other++; } }
+        for (const [r, m] of fly) if (!RA.ROCKS.includes(r)) { if (m === 'fly') R.hit++; fly.delete(r); }
+      }, 50, s => { R.taken = s.taken; return ''; }, true); return R; };
+    const home = RA.camera.position.clone();
+    const still = await runThrow('lanzador: quieto, te dan', () => {});
+    const dodge = await runThrow('lanzador: apartándote, las esquivas', r => { if (!r) RA.camera.position.x = home.x; else if (r.t > r.T - 0.45) RA.camera.position.x = RA.arena.localToWorld(r.to.clone()).x + 0.7; }); // a punto de llegar una: un paso al lado de donde iba
+    RA.camera.position.x = home.x;
+    const parry = await runThrow('lanzador: parándolas con la mano', r => { if (r && r.t > r.T * 0.6) RA.PV.handAt = RA.arena.localToWorld(r.to.clone()); }); // la mano, donde llega
+    RA.PV.handAt = null;
+    log(`thrower: still → thrown ${still.thrown}, hit ${still.hit} (taken ${still.taken}) · dodging → thrown ${dodge.thrown}, dodged ${dodge.other}, hit ${dodge.hit} · parrying → thrown ${parry.thrown}, parried ${parry.other}, hit ${parry.hit}`);
+    if (still.hit < 2 || still.other || !still.taken) errors.push('lanzador: quieto, las piedras deberían darte'); // (las que siguen en el aire al acabar no cuentan)
+    if (dodge.thrown < 2 || dodge.hit > 0 || dodge.other < 2) errors.push('lanzador: apartándote, las piedras deberían fallar');
+    if (parry.thrown < 2 || parry.hit > 0 || parry.other < 2) errors.push('lanzador: con la mano en su camino, las piedras deberían pararse');
+    delete RA.BEAST.kinds.imp; RA.BEAST.ready = wasReady; RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
   // cada enemigo: rapidez de gestos y velocidad al desplazarse, por separado; más rápidos no llegan antes (lo gastan en
   // zigzag o paradas); con esquivas se apartan de golpe
   { const runMove = async (name, pace, spd, move) => { const R = { arrive: [], vmax: 0, dodges: 0, sp: [], ex: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();

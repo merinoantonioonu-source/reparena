@@ -199,16 +199,19 @@ function swordStrike(S, e, p, dmg, counter) {
 const BLOCK_Z = { high: { dy: -0.02, crouch: 0, col: 0xffd166, txt: 'ALTO' }, mid: { dy: -0.42, crouch: 0.5, col: 0xff8a3d, txt: 'MEDIO: ¡agáchate!' }, low: { dy: -0.7, crouch: 0.85, col: 0xff3b5c, txt: 'BAJO: ¡agáchate más!' } };
 const blockOn = () => isCombat() && swordActive() && !!settings.swordBlock;
 const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.strokeStyle = '#fff'; x.lineWidth = 10; x.beginPath(); x.arc(64, 64, 48, 0, TAU); x.stroke(); x.lineWidth = 6; x.beginPath(); x.moveTo(24, 64); x.lineTo(104, 64); x.stroke(); return c; })());
+// La marca sale de dónde llega su golpe (ATK_ZONE: los puñetazos, a la cara; el gancho y los tajos, de lado o desde
+// abajo); sin un golpe conocido, al azar
 function blockStart(r) {
-  r.zone = pick(['high', 'mid', 'mid', 'low']); r.blocked = false;
+  const z = r.atk && ATK_ZONE[r.atk]; r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
   if (!r.zoneSpr) { r.zoneSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: blockTex, transparent: true, depthWrite: false, toneMapped: false })); r.zoneSpr.renderOrder = 22; scene.add(r.zoneSpr); }
   r.zoneSpr.material.color.setHex(BLOCK_Z[r.zone].col); r.zoneSpr.visible = true;
-  say('Golpe ' + BLOCK_Z[r.zone].txt, '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
+  say('Golpe ' + BLOCK_Z[r.zone].txt + (r.zoneSide ? (r.zoneSide < 0 ? ' · por tu izquierda' : ' · por tu derecha') : ''), '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
 }
 // Dónde para el golpe: entre tú y el robot, a la altura marcada (respecto a tu altura de pie)
+// (y, si el golpe viene de lado, 30 cm hacia ese lado: su derecha la ves a tu izquierda)
 function blockPoint(r, out) {
-  const dx = r.pos.x - HL.x, dz = r.pos.z - HL.z, d = Math.hypot(dx, dz) || 1;
-  return arena.localToWorld(out.set(HL.x + dx / d * 0.5, calibRef + BLOCK_Z[r.zone].dy, HL.z + dz / d * 0.5));
+  const dx = r.pos.x - HL.x, dz = r.pos.z - HL.z, d = Math.hypot(dx, dz) || 1, sd = (r.zoneSide || 0) * 0.3; // su izquierda: (−dz, dx) desde ti hacia él
+  return arena.localToWorld(out.set(HL.x + dx / d * 0.5 - dz / d * sd, calibRef + BLOCK_Z[r.zone].dy, HL.z + dz / d * 0.5 + dx / d * sd));
 }
 // Durante la preparación y el golpe: ¿hay una hoja en la marca y la postura es la pedida?
 function blockStep(r, t) {

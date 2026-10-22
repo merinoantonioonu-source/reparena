@@ -34,7 +34,9 @@ const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.
   ['crab', 1.57, 0.18], ['mushroom', 2.07, 0.2], ['bee', 1.9, 0.5], ['bat', 1.75, 0.45], ['cthulhu', 1.56, 0.55], ['dragon', 1.65, 0.5]].forEach(([k, nat, h]) => {
   BEAST_DEF[k] = { ...CUTE, file: 'monstruitos/' + ({ alientall: 'alien_tall', dragon: 'yellowdragon' }[k] || k), h, k: h / nat };
 });
-const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
+const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle',
+  // de la Universal Animation Library 2 (mismo esqueleto): derribado y levantarse, gancho, tres tajos y lanzar
+  'Hit_Knockback', 'LayToIdle', 'Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'OverhandThrow'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
 // del pie) se quitan: si no, Three.js las aplica al modelo entero y le cambia la orientación

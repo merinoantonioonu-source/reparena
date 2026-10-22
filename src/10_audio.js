@@ -315,7 +315,7 @@ const VOICE_FILES = {
     demon: 'voz-demonio', greendemon: 'voz-demonio-verde', cyclops: 'voz-ciclope', yeti: 'voz-yeti', skull: 'voz-calavera', alien: 'voz-alien', alientall: 'voz-alien-alto',
     bee: 'voz-abeja', bat: 'voz-murcielago', cthulhu: 'voz-cthulhu', dragon: 'voz-dragon' },
   hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa', crab: 'voz-cangrejo', mushroom: 'voz-seta', skull: 'voz-calavera' },
-  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa' }
+  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa', throw: 'lanzamiento' }
 };
 // Efectos que se pueden sustituir por un archivo: nombre del archivo (o, en los de VOICE_FILES, la posición del argumento
 // que dice qué enemigo es), posición del argumento con el sitio del sonido y, en las espadas, el del «es láser» (entonces
