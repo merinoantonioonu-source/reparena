@@ -253,6 +253,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       t => { squatSim(2.6)(t); RA.enemies.forEach(e => pseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
     log(`pirates: ${[...pseen].join(',')}`);
     if (!['skeleton', 'captain', 'sharky', 'mako', 'captainboss'].every(k => pseen.has(k + ':Beast'))) errors.push('piratas: no salen el esqueleto, el capitán, los tiburones y el capitán de jefe');
+    // los que tienen piernas solo se desplazan andando: nada de deslizarse quietos (al golpear, al retroceder, al llegar a su
+    // puesto o empujados por otro); retroceder tras el golpe es andar de espaldas
+    { const L = { frames: 0, moving: 0, glide: 0, ex: [], back: 0, prev: new Map() };
+      await runConfig('piernas: solo se desplazan andando', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'robot,zgreen,skeleton', foesFly: '', waves: 2, repsWave: 30, maxAlive: 4, walkTime: 6 }, t => {
+        RA.PV.crouch = t > 30 && (t % 3) < 1.4; // primero dejan que lleguen y golpeen; luego, a derribarlos (disparos y tambaleos)
+        for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot') continue; const p = L.prev.get(e); L.prev.set(e, e.pos.clone()); if (!p) continue;
+          const v = Math.hypot(e.pos.x - p.x, e.pos.z - p.z) / 0.033; L.frames++; if (e.backing) L.back++;
+          if (v < 0.15 || e.state === 'down' || e.dodge > 0 || e.state === 'emerge') continue; L.moving++;
+          const legs = Math.abs(e.aspd) > 0.09 && (!e.D || /Walk|Jog|Sprint|Roll/.test(e.cur || ''));
+          if (!legs) { L.glide++; if (L.ex.length < 4) L.ex.push(`${e.kind} ${e.state} ${v.toFixed(2)} m/s anim ${(e.aspd || 0).toFixed(2)} ${e.cur || ''}`); } }
+      }, 70, s => '', true);
+      log(`legs: ${L.moving} moving frames of ${L.frames}, gliding ${L.glide} ${L.ex.join(' · ')} · walking backwards ${L.back}`);
+      if (L.glide > L.moving * 0.01) errors.push(`piernas: hay enemigos que se desplazan sin mover las piernas (${L.glide} de ${L.moving}: ${L.ex[0]})`);
+      if (!L.back) errors.push('piernas: tras el golpe deberían retroceder andando de espaldas'); }
     const hseen = new Set();
     await runConfig('enemigos de las trampillas: cangrejo, seta y calavera', { ...base, mode: 'combat', aim: 'auto', exercise: 'pushup', foesHatch: 'crab,mushroom,skull', foesFly: '', waves: 2, repsWave: 10, walkTime: 6 },
       t => { squatSim(2.4)(t); RA.enemies.forEach(e => hseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 4 ? `pocos derribados (${s.kills})` : '');
