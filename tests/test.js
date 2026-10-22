@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -236,7 +236,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // flexiones, cangrejos, setas y calaveras de las trampillas
   { const fakeKind = k => { const D = RA.BEAST_DEF[k], g = new THREE.Group(); for (const n of ['Body', 'Head', 'Torso', 'LowerArm.R']) { const b = new THREE.Group(); b.name = n; g.add(b); } g.add(new THREE.Mesh());
       const clips = {}; for (const a in D.alias) clips[a] = { name: D.alias[a], duration: 0.5, tracks: [] }; return { scene: g, clips, map: null }; };
-    const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon'];
+    const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon', 'skeleton', 'captain', 'sharky', 'mako'];
     for (const k of NEW) RA.BEAST.kinds[k] = fakeKind(k);
     const seen = new Set(), cls = new Set();
     await runConfig('enemigos elegidos: zombis, monstruitos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'zgreen,zchubby,demon,yeti,alientall', foesFly: 'bee,bat,cthulhu,dragon', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6, flySpeed: 6 },
@@ -244,6 +244,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const want = ['zgreen', 'zchubby', 'demon', 'yeti', 'alientall', 'bee', 'bat', 'cthulhu', 'dragon'], miss = want.filter(k => k !== 'dragon' && !seen.has(k) && !seen.has(k + 'boss')), extra = [...seen].filter(k => !want.some(w => k === w || k === w + 'boss'));
     log(`chosen enemies: seen ${[...seen].join(',')} · classes ${[...cls].join(',')} · missing ${miss.join(',') || 'none'} · not chosen ${extra.join(',') || 'none'}`);
     if (miss.length || extra.length) errors.push(`enemigos elegidos: no salen justo los marcados (faltan ${miss}, sobran ${extra})`);
+    // los piratas: esqueleto, capitán y tiburones; con el capitán marcado, el jefe es él
+    const pseen = new Set();
+    await runConfig('enemigos elegidos: piratas', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'skeleton,captain,sharky,mako', foesFly: '', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6 },
+      t => { squatSim(2.6)(t); RA.enemies.forEach(e => pseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+    log(`pirates: ${[...pseen].join(',')}`);
+    if (!['skeleton', 'captain', 'sharky', 'mako', 'captainboss'].every(k => pseen.has(k + ':Beast'))) errors.push('piratas: no salen el esqueleto, el capitán, los tiburones y el capitán de jefe');
     const hseen = new Set();
     await runConfig('enemigos de las trampillas: cangrejo, seta y calavera', { ...base, mode: 'combat', aim: 'auto', exercise: 'pushup', foesHatch: 'crab,mushroom,skull', foesFly: '', waves: 2, repsWave: 10, walkTime: 6 },
       t => { squatSim(2.4)(t); RA.enemies.forEach(e => hseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 4 ? `pocos derribados (${s.kills})` : '');
@@ -258,6 +264,49 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (onlyFly !== 'flyers' || wave.some(k => k !== 'bee') || none !== 'robots' || wave0.some(k => !['scout', 'heavy'].includes(k))) errors.push('enemigos: sin los de tierra deberían salir solo voladores, y sin ninguno, robots');
     for (const k of NEW) delete RA.BEAST.kinds[k];
     RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesHatch', 'spider'); RA.setSetting('foesFly', 'drone,hornet'); }
+  // un disparo cargado ×3 o ×4 derriba (sale despedido hacia atrás y se levanta); a los jefes, no
+  { let downs = 0, moved = 0, bossDown = false; const seen = new Map(), P0 = new THREE.Vector3(0, 1.4, -2);
+    await runConfig('derribo con disparos cargados', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'robot', waves: 2, repsWave: 12, walkTime: 6, maxAlive: 3 }, t => {
+      RA.PV.crouch = (t % 4.6) < 1.2;
+      for (const e of RA.enemies) if (e.type === 'robot' && e.alive && e.out && e.state !== 'down' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, P0, 4); } // como un disparo ×4 que no lo mata
+      for (const e of RA.enemies) { if (e.type !== 'robot') continue; if (e.state === 'down') { if (e.K.boss) bossDown = true; if (!seen.has(e)) { seen.set(e, { x: e.pos.x, z: e.pos.z }); downs++; } else { const a = seen.get(e); moved = Math.max(moved, Math.hypot(e.pos.x - a.x, e.pos.z - a.z)); } } else seen.delete(e); }
+    }, 420, s => '');
+    log(`knockdown: ${downs} robots knocked down, pushed back up to ${moved.toFixed(2)} m · a boss knocked down ${bossDown}`);
+    if (downs < 1 || moved < 0.8 || bossDown) errors.push('derribo: un disparo cargado ×3 o ×4 debería derribar y echar atrás (a los jefes, no)'); }
+  // el diablillo (con un modelo de mentira): golpes variados (gancho, tajos…), cada uno con su marca de parada; derribado
+  // cae de espaldas y se levanta con sus animaciones; y el lanzador te tira piedras: te dan si no te mueves, se esquivan
+  // apartándote y se paran con la mano
+  { const g = new THREE.Group(); for (const n of ['spine_03', 'Head', 'hand_r', 'pelvis']) { const b = new THREE.Group(); b.name = n; g.add(b); } g.children[2].position.set(0.2, 1.2, 0.3); g.add(new THREE.Mesh());
+    const clips = {}; for (const n of RA.BEAST_CLIPS) clips[n] = { name: n, duration: { Hit_Knockback: 0.83, LayToIdle: 1.53, Sword_Regular_C: 2, OverhandThrow: 1.33 }[n] || 0.6, tracks: [] };
+    const wasReady = RA.BEAST.ready; RA.BEAST.ready = true; RA.BEAST.kinds.imp = { scene: g, clips, maps: [null, null, null], normal: null, orm: null, emissive: null };
+    const atks = new Set(), downClips = new Set();
+    await runConfig('diablillo: golpes variados y derribo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'imp', waves: 2, repsWave: 16, walkTime: 5, maxAlive: 3, lives: 0 }, t => {
+      RA.PV.crouch = (t % 4.6) < 0.9; // sin cargar: que lleguen a golpear
+      for (const e of RA.enemies) { if (e.constructor.name !== 'Beast') continue; if (t > 30 && e.alive && e.out && e.state === 'walk' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, e.center(new THREE.Vector3()), 4); } if (e.state === 'windup' && e.atk) atks.add(e.atk); if (e.state === 'down') downClips.add(e.cur); }
+    }, 420, s => '', true);
+    const zones = ['Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Punch_Jab'].map(a => { const r = { atk: a, pos: new THREE.Vector3(0, 0, -2) }; RA.blockStart(r); const P = RA.blockPoint(r, new THREE.Vector3()); return `${a}:${r.zone}/${r.zoneSide}@${P.x.toFixed(2)}`; });
+    log(`imp attacks: ${[...atks].join(',')} · knocked down playing ${[...downClips].join(',')} · block marks ${zones.join(' ')}`);
+    if (atks.size < 3) errors.push(`diablillo: los golpes no varían (${[...atks]})`);
+    if (!downClips.has('Hit_Knockback') || !downClips.has('LayToIdle')) errors.push('diablillo derribado: debería caer (Hit_Knockback) y levantarse (LayToIdle)');
+    const side = z => +z.split('@')[1]; if (!(zones[0].includes(':mid/-1') && zones[1].includes(':low/-1') && zones[2].includes(':mid/1') && zones[3].includes(':high/0') && side(zones[0]) < side(zones[4]) - 0.2 && side(zones[2]) > side(zones[4]) + 0.2)) errors.push('espada: la marca de parada no sigue la altura y el lado de cada golpe');
+    // el lanzador
+    const runThrow = async (name, react) => { const R = { thrown: 0, hit: 0, other: 0 }, fly = new Map();
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'thrower', waves: 1, repsWave: 30, walkTime: 4, maxAlive: 2, lives: 0 }, t => {
+        RA.PV.crouch = false; const h = RA.hands.right; RA.PV.handAt = null; react(null, h);
+        for (const r of RA.ROCKS) { if (!fly.has(r)) { fly.set(r, 'fly'); R.thrown++; } if (r.mode === 'fly') react(r, h); else if (fly.get(r) === 'fly') { fly.set(r, 'done'); R.other++; } }
+        for (const [r, m] of fly) if (!RA.ROCKS.includes(r)) { if (m === 'fly') R.hit++; fly.delete(r); }
+      }, 50, s => { R.taken = s.taken; return ''; }, true); return R; };
+    const home = RA.camera.position.clone();
+    const still = await runThrow('lanzador: quieto, te dan', () => {});
+    const dodge = await runThrow('lanzador: apartándote, las esquivas', r => { if (!r) RA.camera.position.x = home.x; else if (r.t > r.T - 0.45) RA.camera.position.x = RA.arena.localToWorld(r.to.clone()).x + 0.7; }); // a punto de llegar una: un paso al lado de donde iba
+    RA.camera.position.x = home.x;
+    const parry = await runThrow('lanzador: parándolas con la mano', r => { if (r && r.t > r.T * 0.6) RA.PV.handAt = RA.arena.localToWorld(r.to.clone()); }); // la mano, donde llega
+    RA.PV.handAt = null;
+    log(`thrower: still → thrown ${still.thrown}, hit ${still.hit} (taken ${still.taken}) · dodging → thrown ${dodge.thrown}, dodged ${dodge.other}, hit ${dodge.hit} · parrying → thrown ${parry.thrown}, parried ${parry.other}, hit ${parry.hit}`);
+    if (still.hit < 2 || still.other || !still.taken) errors.push('lanzador: quieto, las piedras deberían darte'); // (las que siguen en el aire al acabar no cuentan)
+    if (dodge.thrown < 2 || dodge.hit > 0 || dodge.other < 2) errors.push('lanzador: apartándote, las piedras deberían fallar');
+    if (parry.thrown < 2 || parry.hit > 0 || parry.other < 2) errors.push('lanzador: con la mano en su camino, las piedras deberían pararse');
+    delete RA.BEAST.kinds.imp; RA.BEAST.ready = wasReady; RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
   // cada enemigo: rapidez de gestos y velocidad al desplazarse, por separado; más rápidos no llegan antes (lo gastan en
   // zigzag o paradas); con esquivas se apartan de golpe
   { const runMove = async (name, pace, spd, move) => { const R = { arrive: [], vmax: 0, dodges: 0, sp: [], ex: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
@@ -516,6 +565,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }), 120, s => { log(`   soltándose: caídas ${s.falls}, vidas ${RA.lives}, aguantado ${VF.holdAtFail.toFixed(1)} s de 10 en la oleada ${VF.failedWave + 1}, oleadas jugadas ${[...VF.waves].map(w => w + 1)}`);
     return s.falls !== 1 ? 'la caída no se detecta' : RA.lives !== 2 ? 'te engulle sin quitar una vida' : !VF.waves.has(1) || s.hold > 16 ? 'la oleada no termina al engullirte' : ''; });
   await runConfig('Barras+colgado caída (derrota)', { ...bars, exercise: 'hang', lives: 1, hangTime: 30 }, fallOnce(6, t => {}), 120, s => s.falls !== 1 ? 'la caída no se detecta' : '');
+  // tentáculos animados (con un modelo de mentira): se lanzan hacia los pies, más largos, y al caer barren todos
+  { const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a)), clip = (name, duration) => ({ name, duration, tracks: [] }), g = new THREE.Group(); g.add(new THREE.Mesh());
+    const resetTents = () => { RA.POOL.tents.forEach(T => RA.pool.remove(T.root)); RA.POOL.tents.length = 0; };
+    resetTents(); Object.assign(RA.TENT, { st: 'ready', scene: g, clips: { Idle: clip('Tentacle_Idle', 3.3), Attack: clip('Tentacle_Attack', 0.9), Attack2: clip('Tentacle_Attack2', 1), Poke: clip('Tentacle_Poke', 1.3) }, hits: 0 });
+    const TT = { mdl: 0, aim: 9, grow: 0 };
+    await runConfig('Barras+colgado tentáculos animados', { ...bars, exercise: 'hang', hangPit: 'pool', lives: 3, hangTime: 20 }, fallOnce(12, t => {
+      for (const T of RA.POOL.tents) { if (!T.mdl) continue; TT.mdl = Math.max(TT.mdl, RA.POOL.tents.filter(x => x.mdl).length);
+        if (T.k > 0.95) { RA.pool.updateMatrixWorld(); const f = RA.pool.worldToLocal(RA.head.p.clone()), P = T.root.position; TT.aim = Math.min(TT.aim, Math.abs(wrapA(Math.atan2(f.x - P.x, f.z - P.z) - T.root.rotation.y))); TT.grow = Math.max(TT.grow, T.root.scale.x / (0.062 * T.s)); } }
+    }), 120, s => { log(`   tentáculos animados: ${TT.mdl} · lanzamientos ${RA.TENT.hits} · desvío hacia los pies ${TT.aim.toFixed(2)} rad · crecen ×${TT.grow.toFixed(2)}`);
+      return TT.mdl !== 5 ? 'no salen los 5 tentáculos animados' : RA.TENT.hits < 7 ? 'los tentáculos animados no se lanzan (ni barren al caer)' : TT.aim > 0.15 ? 'el tentáculo no apunta a los pies' : TT.grow < 1.2 ? 'el tentáculo no se estira para llegar' : ''; });
+    resetTents(); RA.TENT.st = 'failed'; }
   await runConfig('Barras bichos sin reventar (pican)', { ...bars, exercise: 'pullup', barTarget: 'bugs', barWait: 2, lives: 2 }, t => {}, 120, s => s.taken < 2 ? 'los bichos no pican al agotarse el tiempo' : '');
   await runConfig('Barras pompas sin reventar (se escapan)', { ...bars, exercise: 'row', barTarget: 'bubbles', barWait: 2, waves: 1, repsWave: 3 }, (t => { RA.PV.crouch = RA.state === 'play' && t > 25 && (t % 2.6) < 1.3; }), 200, s => s.taken !== 0 ? 'las pompas no deberían hacer daño' : '');
 
@@ -677,7 +737,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
   // ---- entorno: sin cargador de glTF (aquí) el bosque no se puede cargar y sigue la fortaleza, sin errores ----
   { RA.setSetting('scenery', 'nature'); frame(1); const envOn = RA.env.visible; RA.setSetting('scenery', 'arena'); frame(1);
-    log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza'); }
+    log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza');
+    RA.setSetting('scenery', 'island'); frame(1); const islEnv = RA.env.visible, islGrp = RA.ISL.group.visible; RA.setSetting('scenery', 'mix'); const picks = [];
+    for (let i = 0; i < 3; i++) { RA.sceneryNewRun(); picks.push(RA.NAT.pick); } RA.setSetting('scenery', 'arena'); frame(1);
+    log('scenery island without loader: fortress visible', islEnv, '· island shown', islGrp, '· alternating', picks.join(' → '));
+    if (!islEnv || islGrp) errors.push('entorno: si la isla no se puede cargar debería verse la fortaleza');
+    if (new Set(picks).size !== 3) errors.push('entorno: «Alternar» debería pasar por la fortaleza, el bosque y la isla'); }
   // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
   { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
     const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });

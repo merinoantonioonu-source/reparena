@@ -195,7 +195,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn();
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn();
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && !forestOn();
@@ -262,7 +262,7 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest(); applyNature();
+  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland();
 }
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
@@ -278,7 +278,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode && !forestOn() && !NAT.group.visible) {
+  if (!arMode && !forestOn() && !NAT.group.visible && !ISL.group.visible) {
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }

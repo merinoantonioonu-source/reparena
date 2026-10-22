@@ -53,6 +53,7 @@ const ROBOT_KIND = {
   imp: { rig: 'imp', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.2, stride: 1.4, head: 1.5, beast3d: 'imp' }, // monstruos de archivo (Quaternius)
   puglin: { rig: 'puglin', scale: 1.15, speedF: 1.25, heavy: false, stop: 1.0, stride: 1.0, head: 0.95, beast3d: 'puglin' },
   impboss: { rig: 'imp', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.4, head: 1.5, beast3d: 'imp', boss: true },
+  impthrow: { rig: 'imp', scale: 0.95, speedF: 1.0, heavy: false, stop: 4.2, stride: 1.4, head: 1.5, beast3d: 'imp', grp: 'beast', thrower: true }, // el lanzador: un diablillo que se queda lejos y te tira piedras
   zombie: { rig: 'zombie', scale: 1.0, speedF: 0.9, heavy: false, stop: 1.05, stride: 1.0, head: 1.65, beast3d: 'zombie' }, // zombi de Quaternius
   zombieboss: { rig: 'zombie', scale: 1.6, speedF: 0.7, heavy: true, stop: 1.7, stride: 1.0, head: 1.65, beast3d: 'zombie', boss: true },
   // dinosaurios: se paran más lejos (la cabeza les queda muy por delante del cuerpo) y ocupan más sitio
@@ -61,9 +62,9 @@ const ROBOT_KIND = {
 };
 // Los zombis nuevos y los monstruitos que andan, cada uno con su jefe (el mismo, más grande y más lento). grp: su clase en
 // Ajustes → Cada enemigo
-for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute'])]) {
+for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute']), ...PIRATE_GATE.map(c => [c, c === 'captain' ? 1.7 : 1.4, 'pirate'])]) {
   ROBOT_KIND[k] = { rig: k, scale: 1.0, speedF: grp === 'zombie' ? 0.9 : 1.0, heavy: false, stop: 1.1, stride: 1.0, head, beast3d: k, grp };
-  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true };
+  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: k === 'captain' ? 1.45 : 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true }; // (el capitán ya es alto: que quepa por la compuerta)
 }
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
@@ -84,7 +85,7 @@ function gateSolids(doors) {
 // y, en el bosque, los troncos, las rocas y los arbustos. Cada uno sabe de qué compuerta es: dentro de su túnel, el que
 // sale no choca con los de la suya
 const SOLIDS = { list: [], t: -1 };
-function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : []); }
+function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : []); }
 const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
 const GAMEF = { n: 0 };
 // Nadie se mete en algo sólido: si un empujón (de otro, de un disparo, del golpe) lo mete, sale por el lado más corto
@@ -107,7 +108,7 @@ function beatStep(dt) {
 }
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
-const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
+const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop; // (el lanzador, siempre lejos)
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
@@ -224,7 +225,7 @@ class Robot {
   // amenazar señalándote; el golpe (llevado a mano para que caiga justo al golpear): el pequeño, un zarpazo; el grande,
   // un directo con la garra (el cañón sigue apuntándote); encogerse al recibir
   animMx(dt, t, spd) {
-    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = isR ? 'Sword_Attack' : 'Punch_Jab';
+    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = this.atk && this.clips[this.atk] ? this.atk : isR ? 'Sword_Attack' : 'Punch_Jab';
     if (st === 'windup' && this.prevSt !== 'windup') { this.restart = true; this.react = 0; }
     this.prevSt = st;
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2, atkT = -1, w = 0;
@@ -233,7 +234,8 @@ class Robot {
       w = st === 'windup' ? smooth(clamp(this.st / wind, 0, 1)) : 0;
       atkT = st === 'windup' ? t0 * w : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, t1 + 0.35, clamp(this.st / 0.5, 0, 1));
       want = atk; once = true; fade = st === 'windup' ? 0.3 : 0.1; ts = 0;
-    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    } else if (st === 'down' && this.downAnim) { want = this.st < this.clips.Hit_Knockback.duration ? 'Hit_Knockback' : 'LayToIdle'; once = true; fade = 0.08; }
+    else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
       if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); }
@@ -286,7 +288,7 @@ class Robot {
         const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); if (!K.beast3d) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && !(this.throwCD > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; this.atk = pickAttack(this); if (blockOn() && !K.thrower) blockStart(this); if (!K.beast3d) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
         to.normalize();
@@ -344,7 +346,12 @@ class Robot {
         break;
       }
       case 'strike': { // zancada hacia ti con el golpe
-        faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, gd * 18)); this.lunge = Math.min(1, this.st / 0.15);
+        faceTo = faceP;
+        if (K.thrower) { // el lanzador no se acerca: suelta la piedra y espera a la siguiente
+          if (!this.thrownNow) { this.thrownNow = true; throwRock(this); }
+          if (this.st > 0.35) { this.state = 'walk'; this.st = 0; this.thrownNow = false; this.throwCD = rand(3.5, 5.5) / Math.sqrt(Math.max(0.7, this.pace)); } // una cada 3–5 s
+          break;
+        } this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, gd * 18)); this.lunge = Math.min(1, this.st / 0.15);
         const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
         this.pos.copy(this.knockFrom).addScaledVector(back, -(swordSet() ? 0.15 : 0.35) * smooth(this.lunge));
         if (this.zone) blockStep(this, t);
@@ -359,6 +366,11 @@ class Robot {
         }
         break;
       }
+      case 'down': { // derribado por un disparo muy cargado: sale despedido hacia atrás, cae de espaldas y se levanta
+        const k = smooth(Math.min(1, this.st / 0.35)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); faceTo = faceP; this.lunge = 0; this.arm = 0;
+        if (this.st > this.downT) { this.state = 'walk'; this.st = 0; this.charged = false; this.chargeD = 1.6; this.vel.set(0, 0, 0); }
+        break;
+      }
       case 'knock': {
         const k = smooth(Math.min(1, this.st / 0.7)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); this.arm = lerp(-1, 0, k); this.hitT = Math.max(this.hitT, (1 - k) * 0.6);
         this.lunge = 1 - k; faceTo = faceP;
@@ -368,6 +380,7 @@ class Robot {
     }
     this.dodgeStep(dt, faceP);
     if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
+    if (this.throwCD > 0) this.throwCD -= dt;
     if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - gd * 5); this.twist *= Math.max(0, 1 - gd * 4); this.lunge *= Math.max(0, 1 - gd * 4); }
     if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - gd * 3);
     if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
@@ -390,7 +403,7 @@ class Robot {
       this.yaw += dy;
     }
     this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
-    if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
+    if (this.state === 'strike' || this.state === 'knock' || this.state === 'down') this.spd = 0; // la zancada y el retroceso no son pasos
     // para la animación: la marcha hacia delante, suavizada (sin los empujones de los que tiene al lado ni el tambaleo), para
     // que los pies no patinen ni el paso tiemble
     const locoV = this.state === 'walk' && !(this.dodge > 0) ? Math.max(0, this.vel.x * Math.sin(this.yaw) + this.vel.z * Math.cos(this.yaw)) : this.spd;
@@ -425,8 +438,19 @@ class Robot {
       this.dodgeDir = Math.random() < 0.5 ? -1 : 1; this.dodgeYaw = faceP + this.dodgeDir * Math.PI / 2; // la voltereta, de cara hacia donde va
     }
   }
-  onHit(dmg, perfect, point) {
+  // Un disparo cargado ×3 o ×4 lo derriba (a los jefes no: solo se tambalean)
+  knockDown() {
+    if (this.state === 'down' || this.K.boss || this.state === 'emerge' || !this.out) return false;
+    if (this.zone) { blockCancel(this); this.zone = null; }
+    const c = this.clips || {}, anim = c.Hit_Knockback && c.LayToIdle && (this.D ? !this.D.own : this.mxLegs);
+    const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
+    Object.assign(this, { state: 'down', st: 0, atk: null, react: 0, restart: true, downAnim: anim, downT: anim ? c.Hit_Knockback.duration + c.LayToIdle.duration : 1.0 });
+    this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
+    this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; }
+    if (pow >= 3 && this.hp > dmg) this.knockDown();
     this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
@@ -445,18 +469,30 @@ const _nq = new Q4();
 // Se comportan como los robots (puestos, compuertas, bloqueos); el cuerpo lo mueven sus animaciones: andar, trotar o
 // correr según la velocidad (y al ritmo de lo que avanzan), provocarte (el Imp lanza un hechizo, el Puglin baila), un
 // puñetazo que llega justo al golpear, encogerse al recibir y caer al morir; esperando su turno con música, bailan al compás
-const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22], Sword_Attack: [0.33, 0.5] };
+const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22], Sword_Attack: [0.33, 0.5], Melee_Hook: [0.2, 0.3], Sword_Regular_A: [0.18, 0.26], Sword_Regular_B: [0.18, 0.26], Sword_Regular_C: [0.58, 0.7], OverhandThrow: [0.25, 0.35] };
+// Dónde llega cada golpe, para pararlo con la espada: a qué altura y por qué lado (−1: por su derecha, que tú ves a tu
+// izquierda; 1: por su izquierda). Medido en las animaciones: los puñetazos, a la cara; el gancho, de lado al cuerpo; el
+// tajo A sube desde abajo, el B cruza a media altura y el C cae de arriba (sus primeros giros, un amago)
+const ATK_ZONE = { Punch_Cross: ['high', 0], Punch_Jab: ['high', 0], Sword_Attack: ['mid', 0], Melee_Hook: ['mid', -1], Sword_Regular_A: ['low', -1], Sword_Regular_B: ['mid', 1], Sword_Regular_C: ['high', 0] };
+// El golpe de cada uno, variado entre los que tiene (los jefes, más a menudo el tajo que cae de arriba)
+function pickAttack(e) {
+  if (e.K.thrower) return 'OverhandThrow';
+  if (e.D && e.D.atk) return e.D.atk[0]; // los que traen sus animaciones: el suyo
+  const pool = e.D ? ['Punch_Cross', 'Punch_Jab', 'Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', ...(e.K.boss ? ['Sword_Regular_C', 'Sword_Regular_C'] : [])]
+    : !e.mx ? [] : e.mxLegs ? ['Punch_Jab'] : ['Sword_Attack', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C']; // el grande golpea con la garra; el pequeño, tajos
+  const ok = pool.filter(n => e.clips && e.clips[n]); return ok.length ? pick(ok) : null;
+}
 // Animaciones de archivo (monstruos y humanoides de neón): la acción de cada animación, y ponerla apagando todas las demás
 // (si quedara alguna sonando, se mezclarían las posturas; también las paradas, como el golpe que se lleva a mano)
 function mxAct(o, n) { let a = o.acts[n]; if (!a) { const c = o.clips[n]; if (!c) return null; a = o.acts[n] = o.mx.clipAction(c); } return a; }
-const MX_GESTURE = new Set(['Idle_Loop', 'Sword_Idle', 'Spell_Simple_Shoot', 'Hit_Chest', 'Hit_Head']); // al ritmo de sus gestos (andar va con lo que avanza)
+const MX_GESTURE = new Set(['Idle_Loop', 'Sword_Idle', 'Spell_Simple_Shoot', 'Hit_Chest', 'Hit_Head', 'Hit_Knockback', 'LayToIdle']); // al ritmo de sus gestos (andar va con lo que avanza)
 function mxPlay(o, n, fade = 0.2, once = false, ts = 1, restart = false) {
   const a = mxAct(o, n); if (!a) return; a.timeScale = MX_GESTURE.has(n) ? ts * (o.pace || 1) : ts; if (o.cur === n && !restart) return;
   o.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
   for (const k in o.acts) { const b = o.acts[k]; if (b !== a && b.isScheduled()) { b.timeScale = 1; b.fadeOut(fade); } }
 }
 // Tono del rugido sintetizado de cada monstruo (sin su archivo de sonido): más agudo cuanto más pequeño
-const BEAST_PITCH = { puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
+const BEAST_PITCH = { skeleton: 1.3, captain: 0.8, sharky: 1.0, mako: 1.1, puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
@@ -472,7 +508,7 @@ class Beast extends Robot {
   animate(dt, t, spd) {
     if (!this.mx) return;
     const K = this.K, D = this.D, st = this.state; if (spd === true) spd = this.vWalk;
-    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = D.atk ? D.atk[0] : Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
+    if (st === 'windup' && this.prevSt !== 'windup') { if (!this.atk || !this.clips[this.atk]) this.atk = D.atk ? D.atk[0] : Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
     this.prevSt = st;
     // el puñetazo, llevado a mano: recoge el brazo durante la preparación, lo estira justo en el golpe, lo mantiene un
     // instante mientras retrocede y lo recoge (BEAST_PUNCH: cuándo empieza a salir y cuándo está del todo estirado)
@@ -484,6 +520,8 @@ class Beast extends Robot {
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
     const v = spd / this.sc; // a escala del modelo
     if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
+    else if (st === 'down' && this.downAnim) { want = this.st < this.clips.Hit_Knockback.duration ? 'Hit_Knockback' : 'LayToIdle'; once = true; fade = 0.08; } // cae de espaldas y se levanta
+    else if (st === 'down') { want = D.hit && this.clips[D.hit] ? D.hit : 'Idle_Loop'; once = true; fade = 0.06; }
     else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / this.dodgeDur; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = D.taunt || (K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop');
@@ -501,9 +539,11 @@ class Beast extends Robot {
     this.tint = Math.max(0, this.tint - dt * 4); const m = this.inst.mat; m.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); m.emissiveIntensity = 1 + this.tint * 3;
     this.inst.model.rotation.x = -(this.hitT || 0) * 0.6 - (this.stagger || 0) * 0.15;
   }
-  onHit(dmg, perfect, point) {
+  onHit(dmg, perfect, point, pow = 1) {
+    const down = pow >= 3 && this.hp > dmg && this.knockDown();
     this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
-    if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
+    if (down && this.downAnim) { /* ya cae con su animación */ }
+    else if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
     else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
     fx.sparks(point, 10, [0.9, 0.15, 0.1], 2.2, 0.04); fx.glow(point, [1, 0.5, 0.3], 0.35, 0.08); SND.squish(point);
     if (this.hp <= 0) this.kill(); else if (Math.random() < 0.3) this.roar(this.center(tmpB));
@@ -524,7 +564,7 @@ class Beast extends Robot {
     if (this.st > 2.3) this.root.position.y -= dt * 0.45 * this.sc; // se hunde
     if (this.st > 3.8 && !this.gone) { this.gone = true; this.dispose(); }
   }
-  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); }
+  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); if (this.inst.mat.still) this.inst.mat.still.dispose(); }
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
@@ -689,6 +729,53 @@ class Spider {
   }
   dispose() { arena.remove(this.root); this.inst.skel.dispose(); this.glowMat.dispose(); this.eyeGlow.material.dispose(); }
 }
+
+/* ---------- Las piedras del lanzador ---------- */
+// El lanzador se queda lejos y, cada pocos segundos, te tira una piedra en parábola: llega a donde estaba tu cabeza al
+// soltarla. Apártate (¡Esquivada!) o párala con una mano o con la hoja de la espada (¡Parada!); si te da, te golpea
+const ROCKS = [], ROCK_HIT = 0.28, ROCK_PARRY = 0.17;
+const rockGeo = new THREE.DodecahedronGeometry(0.085, 0), rockMat = std({ color: 0x8c7b66, roughness: 0.92, metalness: 0, flatShading: true });
+const _rk = new V3(), _rk2 = new V3(), _rkw = new V3();
+function throwRock(e) {
+  const from = arena.worldToLocal((e.B.handR || e.B.head || e.root).getWorldPosition(new V3())), to = HL.clone(), d = from.distanceTo(to), T = clamp(d / 4.5, 0.85, 1.4);
+  const m = new THREE.Mesh(rockGeo, rockMat); m.castShadow = true; m.position.copy(from); arena.add(m);
+  ROCKS.push({ m, from, to, T, t: 0, h: 0.6 * T * T, mode: 'fly', vel: new V3(), spin: new V3(rand(-9, 9), rand(-9, 9), rand(-9, 9)), src: e });
+  SND.whoosh(arena.localToWorld(from.clone()), 'throw');
+  if (!stats.rocks) say('¡Te lanza piedras! Apártate o párala con la mano', '#ff8a3d', 2.2); stats.rocks = (stats.rocks || 0) + 1;
+}
+const rockAt = (r, t, out) => { const k = clamp(t / r.T, 0, 1); out.lerpVectors(r.from, r.to, k); out.y += Math.sin(Math.PI * k) * r.h; return out; };
+// ¿Una mano (dedos, nudillos o muñeca) o la hoja de una espada toca la piedra? (en coordenadas del mundo)
+function rockParry(w) {
+  for (const s of ['left', 'right']) {
+    if (swordIn(s)) { const S = SWD.s[s]; for (let i = 1; i < BLADE_N; i++) if (S.cur[i].distanceTo(w) < ROCK_PARRY) return { side: s, sword: true }; }
+    const h = hands[s]; if (!h.ok) continue;
+    if (h.wrist.distanceTo(w) < ROCK_PARRY || (h.tipOk && h.tip.distanceTo(w) < ROCK_PARRY)) return { side: s };
+    if (h.isHand) for (const j of [4, 9, 14, 19, 24]) if (h.J[j] && h.J[j].ok && h.J[j].p.distanceTo(w) < ROCK_PARRY) return { side: s };
+  }
+  return null;
+}
+function updateRocks(dt) {
+  for (let i = ROCKS.length - 1; i >= 0; i--) {
+    const r = ROCKS[i]; r.t += dt; r.m.rotation.x += r.spin.x * dt; r.m.rotation.y += r.spin.y * dt; r.m.rotation.z += r.spin.z * dt;
+    if (r.mode === 'fly') {
+      const prev = _rk2.copy(r.m.position), p = rockAt(r, r.t, _rk); r.m.position.copy(p); r.vel.subVectors(p, prev).divideScalar(Math.max(dt, 1e-3));
+      const w = arena.localToWorld(_rkw.copy(p)), par = state === 'play' || state === 'rest' ? rockParry(w) : null;
+      if (par) { // parada: sale rebotada hacia donde vino
+        r.mode = 'fall'; r.vel.multiplyScalar(-0.45).add(_rk2.set(rand(-1, 1), 2.2, 0)); score += 100; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true;
+        if (par.sword) SND.swordBlock(w, settings.swordKind === 'laser'); else SND.metalHit(w, false);
+        fx.sparks(w, 16, [1, 0.8, 0.5], 2.4, 0.04); haptic(par.side, 0.8, 50); say('¡Parada!', '#3cf0c6', 0.8, false); continue;
+      }
+      if (r.t >= r.T) { // llega: ¿sigues ahí?
+        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
+        r.mode = 'fall'; if (state === 'play') { score += 50; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true; say('¡Esquivada!', '#3cf0c6', 0.8, false); }
+      }
+    } else { // parada o esquivada: cae y desaparece
+      r.vel.y -= 9.8 * dt; r.m.position.addScaledVector(r.vel, dt);
+      if (r.m.position.y < 0.05 || r.t > r.T + 2.5) { arena.remove(r.m); ROCKS.splice(i, 1); }
+    }
+  }
+}
+function rocksClear() { for (const r of ROCKS) arena.remove(r.m); ROCKS.length = 0; }
 
 /* ---------- Monstruitos de las trampillas ---------- */
 // Cangrejo, seta y calavera (Cute Animated Monsters): salen de las trampillas y se mueven como las arañas (corretean,
@@ -937,12 +1024,12 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 // Apuntando tú: el rayo sale hacia donde apuntas y se engancha al enemigo fijado
-function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
+function fireBolt(origin, dir, lockFrom, dmg, perfect, forced, pow = 1) {
   const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
-  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.09, origin.distanceTo(to) / 30), kind: 'bolt', col });
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: Math.max(0.09, origin.distanceTo(to) / 30), kind: 'bolt', col });
   SND.bolt(origin, L); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
@@ -958,10 +1045,10 @@ function updateProjectiles(dt) {
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
-        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone()); if (!target.alive) onKilled(target);
+        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); if (!target.alive) onKilled(target);
         if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
           const R = isTiny() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isTiny() ? 0.35 : 1, 0.15); SND.zap(p.to);
-          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone()); if (!o.alive) onKilled(o); }
+          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone(), p.pow); if (!o.alive) onKilled(o); } // (la onda también derriba a los que aguantan)
         }
         if (p.kind === 'bolt' && p.perfect) {
           const R = isTiny() ? 0.45 : 1.6; fx.electric(p.to, 16);
@@ -1008,7 +1095,7 @@ function onRep(opts, side) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
       else gloves[s.key].pulse = 1;
-      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null);
+      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null, pow);
     }
   }
   charged = false; chargePow = 1; chargeOrb.visible = false;
@@ -1500,7 +1587,7 @@ function throwPickTarget(o, d) {
 }
 function throwFire(s, o, d, tg) {
   const T = HTH[s], c = T.c; if (!c) return;
-  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
+  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg, c.pow || 1);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
 // Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí. Llevar
@@ -1699,8 +1786,8 @@ function buildWave(i) {
   const nextG = deal(G), nextF = deal(FK);
   if (isBossWave(i)) {
     const b = Math.max(4, Math.round(total * 0.3)), ground = F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0);
-    const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
-    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
+    const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', thrower: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
+    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : !tiny && G.includes('captain') ? 'captainboss' : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
     boss = { kind, hp: b }; total -= b;
   }
   let k = 0;
@@ -1710,9 +1797,10 @@ function buildWave(i) {
       const g = nextG();
       if (tiny) { if (g === 'spider') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
       else if (g === 'imp' || g === 'puglin') { kind = g; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
+      else if (g === 'thrower') { kind = 'impthrow'; hp = 2 + Math.floor(i / 3); }
       else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
       else if (g === 'robot') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
-      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' ? 3 : 2) + Math.floor(i / 3); } // zombis y monstruitos
+      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' || g === 'captain' ? 3 : 2) + Math.floor(i / 3); } // zombis, monstruitos y piratas
     }
     else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
@@ -1764,7 +1852,7 @@ function updateNextArc() {
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
-  projs = []; boltsClear();
+  projs = []; boltsClear(); rocksClear();
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
@@ -2125,7 +2213,7 @@ function gameStep(dt, t) {
     enemies = enemies.filter(e => (e.alive || (e.mode === 'dying' && !e.gone)));
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
-    updateProjectiles(dt);
+    updateProjectiles(dt); updateRocks(dt);
     updateGates(dt, t);
   }
   if (SPLEGS.fem) {

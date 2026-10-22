@@ -410,10 +410,12 @@ const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'T
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
 // Enemigos que se pueden elegir, en tres grupos: los que andan y salen de las compuertas, los que salen de las trampillas
 // (en las flexiones y las planchas sobre una mano, en el suelo) y los voladores. Cada uno es [clave, nombre]
-const FOE_GATE = [['robot', 'Robots'], ['imp', 'Diablillo'], ['puglin', 'Puglin'], ['zombie', 'Zombi'], ['zgreen', 'Zombi verde'], ['zchubby', 'Zombi gordo'], ['raptor', 'Velociraptor'],
+const FOE_GATE = [['robot', 'Robots'], ['imp', 'Diablillo'], ['puglin', 'Puglin'], ['thrower', 'Lanzador'], ['zombie', 'Zombi'], ['zgreen', 'Zombi verde'], ['zchubby', 'Zombi gordo'], ['raptor', 'Velociraptor'],
+  ['skeleton', 'Esqueleto pirata'], ['captain', 'Capitán Barbarroja'], ['sharky', 'Tiburón'], ['mako', 'Tiburón gris'],
   ['demon', 'Demonio'], ['greendemon', 'Demonio verde'], ['cyclops', 'Cíclope'], ['yeti', 'Yeti'], ['skull', 'Calavera'], ['alien', 'Alien'], ['alientall', 'Alien alto']];
 const FOE_HATCH = [['spider', 'Arañas'], ['crab', 'Cangrejo'], ['mushroom', 'Seta'], ['skull', 'Calavera']];
 const FOE_FLY = [['drone', 'Drones'], ['hornet', 'Avispones'], ['bee', 'Abeja'], ['bat', 'Murciélago'], ['cthulhu', 'Cthulhu'], ['dragon', 'Dragón (jefe)']];
+const PIRATE_GATE = ['skeleton', 'captain', 'sharky', 'mako']; // los piratas (Pirate Kit)
 const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall']; // los monstruitos (Cute Animated Monsters)
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
@@ -478,9 +480,9 @@ const SCHEMA = [
   { key: 'pace_robot', g: 'cada', label: 'Robots: rapidez de gestos', short: 'Gestos robots', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('robot'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
   { key: 'spd_robot', g: 'cada', label: 'Robots: velocidad al desplazarse', short: 'Velocidad robots', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('robot'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
   { key: 'move_robot', g: 'cada', label: 'Robots: forma de moverse', short: 'Movim. robots', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foeOn('robot'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
-  { key: 'pace_beast', g: 'cada', label: 'Diablillo y Puglin: rapidez de gestos', short: 'Gestos diablillo', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
-  { key: 'spd_beast', g: 'cada', label: 'Diablillo y Puglin: velocidad al desplazarse', short: 'Velocidad diablillo', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
-  { key: 'move_beast', g: 'cada', label: 'Diablillo y Puglin: forma de moverse', short: 'Movim. diablillo', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foeOn('imp', 'puglin'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_beast', g: 'cada', label: 'Diablillo y Puglin: rapidez de gestos', short: 'Gestos diablillo', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin', 'thrower'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_beast', g: 'cada', label: 'Diablillo y Puglin: velocidad al desplazarse', short: 'Velocidad diablillo', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('imp', 'puglin', 'thrower'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_beast', g: 'cada', label: 'Diablillo y Puglin: forma de moverse', short: 'Movim. diablillo', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'zigzag,bursts,dodge', modes: ['combat'], cond: () => foeOn('imp', 'puglin', 'thrower'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
   { key: 'pace_zombie', g: 'cada', label: 'Zombis: rapidez de gestos', short: 'Gestos zombis', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
   { key: 'spd_zombie', g: 'cada', label: 'Zombis: velocidad al desplazarse', short: 'Velocidad zombis', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
   { key: 'move_zombie', g: 'cada', label: 'Zombis: forma de moverse', short: 'Movim. zombis', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag', modes: ['combat'], cond: () => foeOn('zombie', 'zgreen', 'zchubby'), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
@@ -490,6 +492,9 @@ const SCHEMA = [
   { key: 'pace_cute', g: 'cada', label: 'Monstruitos: rapidez de gestos', short: 'Gestos monstruitos', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
   { key: 'spd_cute', g: 'cada', label: 'Monstruitos: velocidad al desplazarse', short: 'Velocidad monstruitos', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
   { key: 'move_cute', g: 'cada', label: 'Monstruitos: forma de moverse', short: 'Movim. monstruitos', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag,bursts', modes: ['combat'], cond: () => foeOn(...CUTE_GATE), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
+  { key: 'pace_pirate', g: 'cada', label: 'Piratas: rapidez de gestos', short: 'Gestos piratas', type: 'num', min: 50, max: 250, step: 10, def: 150, unit: '%', modes: ['combat'], cond: () => foeOn(...PIRATE_GATE), hint: 'Lo rápidos que son sus gestos: salir de la compuerta, amenazarte, preparar y dar el golpe, retroceder, encajar tus disparos, girarse, los espasmos y las esquivas (al 250 %, un golpe entero dura menos de la mitad). No cambia lo deprisa que se desplazan. Los golpes que se paran con la espada se preparan como mucho un 30 % más deprisa.' },
+  { key: 'spd_pirate', g: 'cada', label: 'Piratas: velocidad al desplazarse', short: 'Velocidad piratas', type: 'num', min: 100, max: 300, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foeOn(...PIRATE_GATE), hint: '100 %: van a la velocidad justa para llegar cuando pide «Tiempo llegada», sin pararse. Más: se desplazan más deprisa (también al salir de la compuerta) pero llegan igual: lo que les sobra lo gastan en zigzags o en paradas en guardia, según su forma de moverse.' },
+  { key: 'move_pirate', g: 'cada', label: 'Piratas: forma de moverse', short: 'Movim. piratas', type: 'multi', opts: [['straight', 'Recto'], ['zigzag', 'Zigzag'], ['bursts', 'A rachas'], ['dodge', 'Esquivas']], def: 'straight,zigzag,bursts', modes: ['combat'], cond: () => foeOn(...PIRATE_GATE), hint: 'Cada uno elige una de las marcadas. Recto: va derecho (si va más deprisa de lo justo, se para de vez en cuando). Zigzag: de lado a lado. A rachas: avanza deprisa y se para a amenazarte. Esquivas: se aparta de golpe (los monstruos, con una voltereta) cuando le das o cuando le toca.' },
   { key: 'flySpeed', g: 'enemigos', label: 'Velocidad de vuelo', short: 'Vel. vuelo', type: 'num', min: 0.5, max: 20, step: 0.5, def: 3.5, unit: 'km/h', modes: ['combat'], cond: () => foesHas('flyers'), hint: 'En flexiones los bichos van a escala, unas 4 veces más lentos.' },
   { key: 'erratic', g: 'enemigos', label: 'Vuelo errático', short: 'Errático', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], cond: () => foesHas('flyers') },
   { key: 'maxAlive', g: 'enemigos', label: 'Enemigos a la vez como máximo', short: 'Máx. a la vez', type: 'num', min: 1, max: 15, step: 1, def: 5, modes: ['combat'], hint: 'Bájalo si el juego va a tirones.' },
@@ -513,7 +518,7 @@ const SCHEMA = [
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
   { key: 'pistol', g: 'enemigos', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman'), relayout: true, hint: 'Los que vienen andando desde las compuertas. Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase.' },
+  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman'), relayout: true, hint: 'Los que vienen andando desde las compuertas (el lanzador, un diablillo, se queda lejos y te tira piedras: apártate o párala con la mano o la espada). Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase; con el capitán Barbarroja marcado, el jefe es él.' },
   { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny(), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
   { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm(), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
   { key: 'aim', g: 'enemigos', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
@@ -559,7 +564,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
-  { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche o un claro del bosque a pleno día (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
+  { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
   { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
@@ -974,7 +979,7 @@ function audioInit() {
 /* ---------- Sonidos propios: archivos en la carpeta sounds/ del repositorio ---------- */
 // Si existe sounds/<nombre>.mp3 (o .ogg, .wav), suena ese archivo; si no, el sonido sintetizado. Casi todos los efectos
 // (SND_FILES, más abajo) y los sonidos continuos (LOOP_FILES) se pueden sustituir; sounds/LEEME.md tiene la lista
-const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque', 'ambiente-naturaleza'];
+const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque', 'ambiente-naturaleza', 'ambiente-isla'];
 AUD.samples = {};
 async function loadSamples() {
   if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
@@ -1236,6 +1241,8 @@ const SND = {
   },
   vortexClose(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 1.5 }); tone(shaper(o), { f: 90, to: 35, d: 0.5, gain: 0.5 }); noise(o, { brown: true, f: 700, to: 100, d: 0.4, gain: 0.6 }); tone(o, { type: 'triangle', f: 660, to: 990, t: 0.05, d: 0.4, gain: 0.05 }); },
   // bosque: un búho que ulula a lo lejos y una rama que cruje
+  // isla: una gaviota que grita sobre el mar (dos o tres graznidos que suben y caen)
+  gull(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 0.5, ref: 5 }), n = 2 + Math.floor(Math.random() * 2), f = rand(1300, 1700); for (let i = 0; i < n; i++) tone(o, { type: 'triangle', f: f * rand(0.95, 1.05), to: f * 0.62, t: i * 0.28, a: 0.03, d: 0.24, gain: 0.07 }); },
   owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
   creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
@@ -1246,9 +1253,10 @@ const SND = {
 const VOICE_FILES = {
   roar: { robot: 'rugido-robot', imp: 'rugido-diablillo', puglin: 'rugido-puglin', zombie: 'rugido-zombi', raptor: 'rugido-velociraptor', zgreen: 'rugido-zombi-verde', zchubby: 'rugido-zombi-gordo',
     demon: 'voz-demonio', greendemon: 'voz-demonio-verde', cyclops: 'voz-ciclope', yeti: 'voz-yeti', skull: 'voz-calavera', alien: 'voz-alien', alientall: 'voz-alien-alto',
+    skeleton: 'voz-esqueleto', captain: 'voz-capitan', sharky: 'voz-tiburon', mako: 'voz-tiburon-gris',
     bee: 'voz-abeja', bat: 'voz-murcielago', cthulhu: 'voz-cthulhu', dragon: 'voz-dragon' },
   hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa', crab: 'voz-cangrejo', mushroom: 'voz-seta', skull: 'voz-calavera' },
-  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa' }
+  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa', throw: 'lanzamiento' }
 };
 // Efectos que se pueden sustituir por un archivo: nombre del archivo (o, en los de VOICE_FILES, la posición del argumento
 // que dice qué enemigo es), posición del argumento con el sitio del sonido y, en las espadas, el del «es láser» (entonces
@@ -1261,7 +1269,7 @@ const SND_FILES = {
   hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
-  owl: ['buho', 0], bird: ['pajaro', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
+  owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
@@ -1362,8 +1370,17 @@ function ambientStart() {
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
   AMB.kind = ambKind();
-  const own = AUD.samples[{ forest: 'ambiente-bosque', nature: 'ambiente-naturaleza' }[AMB.kind] || 'ambiente-arena'];
+  const own = AUD.samples[{ forest: 'ambiente-bosque', nature: 'ambiente-naturaleza', island: 'ambiente-isla' }[AMB.kind] || 'ambiente-arena'];
   if (own) { const s = C.createBufferSource(); s.buffer = own; s.loop = true; s.connect(out); s.start(); AMB.nodes = { nodes: [s], out }; return; } // ambiente desde archivo
+  if (AMB.kind === 'island') { // la playa: olas que rompen y se retiran (ruido grave que crece y baja) y una brisa (las gaviotas las pone la isla)
+    const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 600;
+    const wg = C.createGain(); wg.gain.value = 0.08; w.connect(wf).connect(wg).connect(out); nodes.push(w);
+    const l1 = C.createOscillator(); l1.frequency.value = 0.12; const lg1 = C.createGain(); lg1.gain.value = 0.09; l1.connect(lg1).connect(wg.gain); nodes.push(l1); // el vaivén de las olas
+    const l2 = C.createOscillator(); l2.frequency.value = 0.12; const lg2 = C.createGain(); lg2.gain.value = 450; l2.connect(lg2).connect(wf.frequency); nodes.push(l2);
+    const b = C.createBufferSource(); b.buffer = AUD.noise; b.loop = true; const bf = C.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 1100; bf.Q.value = 0.4;
+    const bg = C.createGain(); bg.gain.value = 0.05; b.connect(bf).connect(bg).connect(out); nodes.push(b);
+    nodes.forEach(n => n.start()); AMB.nodes = { nodes, out }; return;
+  }
   if (AMB.kind === 'nature') { // de día: brisa suave entre las hojas que va y viene (los pájaros los pone el bosque)
     const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 900; wf.Q.value = 0.4;
     const wg = C.createGain(); wg.gain.value = 0.12; w.connect(wf).connect(wg).connect(out); nodes.push(w);
@@ -1395,7 +1412,7 @@ function ambientStart() {
   AMB.nodes = { nodes, out };
 }
 // Al entrar o salir del bosque cambia el ambiente
-const ambKind = () => forestOn() ? 'forest' : natureOn() ? 'nature' : 'arena';
+const ambKind = () => forestOn() ? 'forest' : natureOn() ? 'nature' : islandOn() ? 'island' : 'arena';
 function ambientRefresh() { if (AMB.nodes && AMB.kind !== ambKind()) { ambientStop(); ambientStart(); } }
 function ambientStop() {
   if (!AMB.nodes) return; const T = AUD.C.currentTime;
@@ -2036,7 +2053,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn();
+  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn();
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && !forestOn();
@@ -2103,7 +2120,7 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest(); applyNature();
+  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland();
 }
 function applyShadows() {
   renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
@@ -2119,7 +2136,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode && !forestOn() && !NAT.group.visible) {
+  if (!arMode && !forestOn() && !NAT.group.visible && !ISL.group.visible) {
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }
@@ -2308,7 +2325,7 @@ settingHooks.push(k => { if (['mode', 'exercise'].includes(k) && (xrActive || pr
 // los enemigos. Cada modelo se dibuja con instancias (una pieza por modelo y material), para que vaya fluido en las Quest.
 // models/nature.glb (los modelos juntos, simplificados) y models/tex/nature (sus texturas, reducidas). Se carga la primera
 // vez que hace falta; mientras tanto (o si no se puede cargar), sigue la fortaleza
-const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, pick: Math.random() < 0.5 ? 'arena' : 'nature', built: '', birdT: 3 };
+const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, pick: pick(['arena', 'nature', 'island']), built: '', birdT: 3 };
 NAT.group.visible = false; arena.add(NAT.group);
 // material del modelo → [textura, con transparencia (hojas, flores), por las dos caras]
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
@@ -2537,7 +2554,7 @@ function natGateStyle(on) {
 }
 settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
 // Con «Alternar», cada partida en un sitio distinto
-function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NAT.pick === 'nature' ? 'arena' : 'nature'; applyEnvMode(); }
+function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = { arena: 'nature', nature: 'island' }[NAT.pick] || 'arena'; applyEnvMode(); } // fortaleza → bosque → isla
 // Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles
 function updateNature(dt, t) {
   if (!NAT.group.visible) return;
@@ -2729,21 +2746,62 @@ function layoutPool() {
   POOL.tents.forEach((T, i) => { const a = T.a; T.root.position.set(Math.cos(a) * POOL.rx * 0.92, 0, Math.sin(a) * POOL.rz * 0.92); T.root.rotation.y = Math.atan2(-Math.cos(a) * POOL.rx, -Math.sin(a) * POOL.rz); });
 }
 settingHooks.push(k => { if (k === 'exercise' || k === 'mode') layoutPool(); });
+// Tentáculo animado (del Pirate Kit): mide unos 15,5 de alto y ataca hacia +Z. Si no carga (o en las pruebas), los hechos a mano
+const TENT = { st: '', scene: null, clips: {}, hits: 0 }, TENT_K = 0.062;
+function tentLoad() {
+  if (TENT.st) return;
+  if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { TENT.st = 'failed'; return; }
+  TENT.st = 'loading';
+  new THREE.GLTFLoader().load('models/tentaculo.glb', g => {
+    for (const c of g.animations) TENT.clips[c.name.replace('Tentacle_', '')] = c;
+    g.scene.traverse(m => { if (m.isMesh) { m.frustumCulled = false; if (m.material) m.material.roughness = 0.4; } }); // se doblan mucho fuera de su caja; húmedos
+    TENT.scene = g.scene; TENT.st = 'ready';
+  }, undefined, e => { TENT.st = 'failed'; console.log('No se pudo cargar el tentáculo:', e && e.message); });
+}
 function ensureTentacles() {
-  if (POOL.tents.length || !RIGS.tentacle) return;
+  if (POOL.tents.length) return;
+  tentLoad(); if (TENT.st === 'loading') return; // enseguida salen los animados
   for (let i = 0; i < 5; i++) {
-    const inst = RIGS.tentacle.instance({ main: M.tentacleSkin, glow: M.glowSkin });
-    pool.add(inst.root);
-    POOL.tents.push({ inst, root: inst.root, B: inst.list, a: (i + 0.3) / 5 * TAU, ph: rand(0, TAU), lunge: 0, lungeV: 0, s: rand(0.8, 1.15) });
+    const T = { a: (i + 0.3) / 5 * TAU, ph: rand(0, TAU), lunge: 0, lungeV: 0, s: rand(0.8, 1.15) };
+    if (TENT.st === 'ready') {
+      const root = THREE.SkeletonUtils.clone(TENT.scene), mixer = new THREE.AnimationMixer(root), idle = mixer.clipAction(TENT.clips.Idle);
+      Object.assign(T, { mdl: true, root, mixer, idle, hit: null, hitT: 0, hitDur: 0, k: 0, ts: rand(0.8, 1.2) });
+      idle.time = rand(0, TENT.clips.Idle.duration); idle.play();
+    } else {
+      const inst = RIGS.tentacle && RIGS.tentacle.instance({ main: M.tentacleSkin, glow: M.glowSkin }); if (!inst) return;
+      Object.assign(T, { inst, root: inst.root, B: inst.list });
+    }
+    pool.add(T.root); POOL.tents.push(T);
   }
   layoutPool();
 }
+// El animado se lanza: Poke (pinchazo), Attack (latigazo) o Attack2 (barrido, al caer)
+function tentHit(T, n, ts = 1) {
+  if (T.hit) T.hit.stop();
+  const A = T.mixer.clipAction(TENT.clips[n]); A.reset(); A.setLoop(THREE.LoopOnce, 1); A.clampWhenFinished = true; A.timeScale = ts; A.fadeIn(0.12).play();
+  T.idle.fadeOut(0.12); T.hit = A; T.hitT = 0; T.hitDur = TENT.clips[n].duration; TENT.hits++;
+}
+function tentUpdate(T, dt, feet, ex) {
+  if (T.hit) { T.hitT += dt * T.hit.timeScale; if (T.hitT >= T.hitDur - 0.15) { T.hit.fadeOut(0.2); T.idle.enabled = true; T.idle.fadeIn(0.2).play(); T.hit = null; } }
+  T.k += ((T.hit ? 1 : 0) - T.k) * Math.min(1, dt * 8); const k = smooth(T.k);
+  T.idle.timeScale = T.ts * (1 + 2.2 * ex);
+  // al lanzarse, hacia tus pies y lo bastante largo para llegar (la punta avanza unas 8 veces la escala)
+  const P = T.root.position, dx = feet.x - P.x, dz = feet.z - P.z, rest = Math.atan2(-P.x, -P.z), base = TENT_K * T.s;
+  T.root.rotation.y = rest + wrapAng(Math.atan2(dx, dz) - rest) * k;
+  T.root.scale.setScalar(lerp(base, clamp(Math.hypot(dx, dz) / 8, base, base * 1.6), k));
+  T.mixer.update(dt);
+}
 const _pt2 = new V3();
 // Algo que pasa en el charco: un tentáculo se lanza a por tus pies, o todos te agarran si caes
-function poolLunge() { const T = pick(POOL.tents); if (T && T.lungeV === 0) { T.lungeV = 1; SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15)); } }
+function poolLunge() {
+  const T = pick(POOL.tents); if (!T || T.lungeV !== 0 || T.hit) return;
+  if (T.mdl) tentHit(T, pick(['Poke', 'Attack'])); else T.lungeV = 1;
+  SND.tentacle(T.root.getWorldPosition(_pt2), rand(0.85, 1.15));
+}
 function poolGrab(at) {
-  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
-  POOL.tents.forEach(T => { T.lungeV = 1; });
+  POOL.grabT = 1.6; POOL.excite = 6; SND.horror(at); // al caer se excitan: se agitan más rápido un buen rato
+  fx.droplets(at, 40, [0.25, 0.9, 0.5], 2.6, 0.04); fx.glow(at, [0.3, 1, 0.6], 0.8, 0.2);
+  POOL.tents.forEach(T => { if (T.mdl) tentHit(T, 'Attack2', rand(1, 1.3)); else T.lungeV = 1; });
 }
 function updatePool(dt, t) {
   const show = isBars() && eqKind() === 'door' && state !== 'idle' && !vortexOn(); // el charco solo bajo la barra de dominadas (o el remolino, colgado)
@@ -2765,6 +2823,7 @@ function updatePool(dt, t) {
   // tentáculos: ondulación, embestida hacia los pies y agarrón
   const feet = eqLocal(e, head.p, _pt2);
   for (const T of POOL.tents) {
+    if (T.mdl) { tentUpdate(T, dt, feet, ex); continue; }
     if (T.lungeV) { T.lunge += dt * 3.2 * T.lungeV; if (T.lunge >= 1) { T.lunge = 1; T.lungeV = -0.5; } else if (T.lunge <= 0) { T.lunge = 0; T.lungeV = 0; } }
     const k = smooth(Math.max(T.lunge, POOL.grabT > 0 ? Math.min(1, POOL.grabT) : 0)), n = T.B.length;
     const dx = feet.x - T.root.position.x, dz = feet.z - T.root.position.z, reach = Math.hypot(dx, dz);
@@ -3394,6 +3453,159 @@ function roomRows(back) {
   return rows;
 }
 
+/* =================== ISLA PIRATA (entorno «Isla pirata», en VR) =================== */
+// Una playa de arena en una isla con los modelos del Pirate Kit (Quaternius, CC0): palmeras, rocas, acantilados detrás de
+// las compuertas (que son cuevas, como en el bosque), casas de madera, un aserradero, huesos gigantes y calaveras, barriles,
+// cofres y un cañón, y detrás de ti el mar con un muelle y dos barcos fondeados. Como el bosque, rodea la arena sin tapar las
+// compuertas ni el camino de los enemigos, y cada modelo se dibuja con instancias. models/island.glb (los modelos juntos,
+// los grandes simplificados, con su textura una vez). Se carga la primera vez que hace falta; mientras, sigue la fortaleza
+const ISL = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, built: '', gullT: 4 };
+ISL.group.visible = false; arena.add(ISL.group);
+function islandOn() { return !arMode && !forestOn() && sceneryPick() === 'island' && ISL.ready; }
+function islandLoad() {
+  if (ISL.ready || ISL.loading || ISL.failed) return;
+  if (!THREE.GLTFLoader || typeof document === 'undefined') { ISL.failed = true; return; }
+  ISL.loading = true;
+  new THREE.GLTFLoader().load('models/island.glb', g => {
+    g.scene.updateMatrixWorld(true); const mats = {};
+    for (const node of g.scene.children) {
+      const parts = [];
+      node.traverse(o => {
+        if (!o.isMesh) return; const geo = new THREE.BufferGeometry();
+        for (const a of ['position', 'normal', 'uv', 'color']) if (o.geometry.attributes[a]) geo.setAttribute(a, natFloat(o.geometry.attributes[a]));
+        if (o.geometry.index) geo.setIndex(o.geometry.index);
+        geo.applyMatrix4(o.matrixWorld);
+        const src = o.material, key = src.name || src.uuid;
+        if (!mats[key]) { // mate, como pintado (sin brillos de metal); las ventanas, algo más claras
+          mats[key] = new THREE.MeshStandardMaterial({ map: src.map || null, color: src.color, roughness: 0.95, metalness: 0, vertexColors: !!o.geometry.attributes.color });
+          if (mats[key].map) mats[key].map.encoding = THREE.sRGBEncoding; mats[key].name = key;
+        }
+        parts.push({ geo, mat: mats[key] });
+      });
+      ISL.parts[node.name] = parts;
+    }
+    ISL.ready = true; ISL.loading = false; ISL.built = ''; applyEnvMode();
+  }, undefined, e => { ISL.failed = true; ISL.loading = false; console.log('No se pudo cargar la isla:', e && e.message); });
+}
+// El cielo es el del bosque de día; aquí, con su misma luz
+const islSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), natSkyMat); islSky.renderOrder = -10; ISL.group.add(islSky);
+// Arena: tonos dorados a manchas, con conchas, piedrecitas y la marca más oscura de la arena mojada hacia la orilla
+const islSand = (() => {
+  const c = mkCanvas(256), x = c.getContext('2d'), R = rng(41);
+  x.fillStyle = '#d8c08a'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 220; i++) { const r = 6 + R() * 24, X = R() * 256, Y = R() * 256, k = R(); x.fillStyle = k < 0.5 ? 'rgba(200,170,110,0.35)' : k < 0.85 ? 'rgba(240,220,170,0.3)' : 'rgba(170,140,90,0.25)'; for (const [dx, dy] of [[0, 0], [256, 0], [-256, 0], [0, 256], [0, -256]]) { x.beginPath(); x.arc(X + dx, Y + dy, r, 0, TAU); x.fill(); } }
+  for (let i = 0; i < 5000; i++) { x.fillStyle = R() < 0.5 ? 'rgba(150,120,80,0.45)' : 'rgba(255,245,210,0.5)'; x.fillRect(R() * 256, R() * 256, 1, 1); }
+  for (let i = 0; i < 40; i++) { x.fillStyle = R() < 0.5 ? 'rgba(250,240,230,0.8)' : 'rgba(120,110,100,0.6)'; x.beginPath(); x.ellipse(R() * 256, R() * 256, 1.5 + R() * 2, 1 + R() * 1.5, R() * 3, 0, TAU); x.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(26, 26); t.encoding = THREE.sRGBEncoding; t.anisotropy = MAX_ANISO;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(30, 72), new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = -0.005; m.receiveShadow = true; ISL.group.add(m); return m;
+})();
+// El mar: del turquesa de la orilla al azul profundo, con olas que se mueven, brillos del sol y espuma en la orilla. La isla
+// es un óvalo: el mar queda sobre todo detrás de ti y a los lados (delante están los acantilados)
+const ISL_SHORE = 24;
+const islSeaMat = new THREE.ShaderMaterial({
+  fog: false, uniforms: { time: { value: 0 }, shore: { value: ISL_SHORE } }, // (sin la niebla: se funde él mismo con el horizonte)
+  vertexShader: `uniform float time; varying vec2 vXZ; varying float vR;
+    void main(){ vec3 p = position; vXZ = (modelMatrix * vec4(p, 1.0)).xz; vR = length(p.xy);
+      p.z += (sin(vXZ.x * 0.35 + time * 1.1) + sin(vXZ.y * 0.27 - time * 0.8)) * 0.06 * smoothstep(20.0, 40.0, vR);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }`,
+  fragmentShader: `uniform float time, shore; varying vec2 vXZ; varying float vR;
+    void main(){
+      float w = sin(vXZ.x * 1.3 + time * 1.7) * sin(vXZ.y * 1.1 - time * 1.3) + sin((vXZ.x + vXZ.y) * 2.7 + time * 2.3) * 0.4;
+      vec3 c = mix(vec3(0.22, 0.78, 0.76), vec3(0.04, 0.27, 0.48), smoothstep(shore, shore + 22.0, vR));
+      c += vec3(0.9, 0.95, 1.0) * smoothstep(1.1, 1.35, w) * 0.35; // brillos
+      float foam = smoothstep(shore + 1.4, shore, vR) * (0.55 + 0.45 * sin(time * 1.2 + vR * 2.0)); // espuma que va y viene
+      c = mix(c, vec3(0.95, 0.97, 0.95), clamp(foam, 0.0, 1.0) * 0.8);
+      c = mix(c, vec3(0.75, 0.87, 0.92), smoothstep(45.0, 130.0, vR)); // a lo lejos, del color del horizonte
+      gl_FragColor = vec4(c, 1.0);
+    }`
+});
+const islSea = new THREE.Mesh(new THREE.RingGeometry(ISL_SHORE - 1.5, 140, 96, 8), islSeaMat); islSea.rotation.x = -Math.PI / 2; islSea.position.y = 0.01; ISL.group.add(islSea);
+const islPlants = new THREE.Group(); ISL.group.add(islPlants);
+// Lo que ocupa un modelo a ras de suelo (hasta 0,8 m), en metros a escala 1; en las palmeras, solo el tronco
+function islFoot(n) {
+  if (ISL.foot[n] !== undefined) return ISL.foot[n];
+  let m = 0; const palm = /Palm/.test(n);
+  for (const p of ISL.parts[n] || []) { const a = p.geo.attributes.position; for (let i = 0; i < a.count; i++) if (a.getY(i) < (palm ? 0.5 : 0.8)) m = Math.max(m, Math.hypot(a.getX(i), a.getZ(i))); }
+  return (ISL.foot[n] = (palm ? Math.min(m, 0.45) : m * 0.85) || 0.4);
+}
+// Hasta dónde llega un modelo en horizontal (lo que ocupa entero, desde su centro), en metros a escala 1
+function islRad(n) {
+  const k = 'r:' + n; if (ISL.foot[k] !== undefined) return ISL.foot[k];
+  let m = 0; for (const p of ISL.parts[n] || []) { const a = p.geo.attributes.position; for (let i = 0; i < a.count; i++) m = Math.max(m, Math.hypot(a.getX(i), a.getZ(i))); }
+  return (ISL.foot[k] = m || 1);
+}
+// Coloca los modelos (en la arena: tú en el centro, mirando hacia −Z, las compuertas delante). Delante, detrás de las
+// compuertas, los acantilados; a los lados, las palmeras, las rocas, las casas y lo demás; detrás de ti, la orilla, el
+// muelle y los barcos. Siempre igual para una misma distancia de las compuertas
+function islandBuild() {
+  if (!ISL.ready) return;
+  const D = arenaDepth(), key = D.toFixed(2); if (ISL.built === key) return; ISL.built = key;
+  while (islPlants.children.length) islPlants.remove(islPlants.children[0]);
+  const R = rng(57), put = {}, taken = [];
+  const front = (x, z, extra) => Math.abs(Math.atan2(x, -z)) < 0.8 && Math.hypot(x, z) < D + extra;
+  const nearGate = (x, z, r) => gates.some(g => g.on && Math.hypot(g.x - x, g.z - z) < r);
+  const free = (x, z, r) => !taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r);
+  const add = (n, x, z, s, y = R() * TAU, r = 0, h = 0) => { if (!ISL.parts[n]) return; (put[n] = put[n] || []).push(new THREE.Matrix4().compose(new V3(x, h, z), new Q4().setFromAxisAngle(_up, y), new V3(s, s, s))); if (r) taken.push({ x, z, r }); };
+  ISL.solids = []; const solid = (n, x, z, s) => { if (Math.hypot(x, z) < D + 4 && ISL.parts[n]) ISL.solids.push({ x, z, r: islFoot(n) * s }); };
+  const scatter = (count, rMin, rMax, ok, fn) => { for (let i = 0, tries = 0; i < count && tries < count * 40; tries++) { const a = R() * TAU, r = Math.sqrt(rMin * rMin + R() * (rMax * rMax - rMin * rMin)), x = Math.sin(a) * r, z = -Math.cos(a) * r; if (!ok(x, z, r)) continue; fn(x, z, r); i++; } };
+  const land = (x, z, r) => r < ISL_SHORE - 1.5; // en la arena, no en el agua
+  // a un lado (fuera del abanico de las compuertas y lejos de ti), con todo lo que ocupa (pad) dentro de la arena y sin pisar nada
+  const side = (x, z, r, pad) => r + pad < ISL_SHORE - 0.5 && r - pad > 5 && !front(x, z, 5 + pad) && !nearGate(x, z, 4 + pad) && free(x, z, pad);
+  const face = (x, z) => Math.atan2(-x, -z); // de cara a ti
+  // acantilados: una pared de roca detrás de las compuertas, de lado a lado, y algún peñasco más a los lados
+  // (cada uno, por detrás de las compuertas con todo lo que ocupa: su borde de delante, a unos 4 m detrás de ellas)
+  for (let i = 0; i < 7; i++) { const n = pick3(R, ['Cliff2', 'Cliff3', 'Cliff4']), sc = 1.6 + R() * 0.5, a = -0.95 + i * 0.32 + (R() - 0.5) * 0.1, r = D + 4 + islRad(n) * sc; add(n, Math.sin(a) * r, -Math.cos(a) * r, sc, R() * TAU); }
+  for (const s of [-1, 1]) { const sc = 2, r = D + 3 + islRad('Cliff1') * sc, a = s * 1.35; add('Cliff1', Math.sin(a) * r, -Math.cos(a) * r, sc, R() * TAU, islRad('Cliff1') * sc); }
+  // las casas, el aserradero y un huerto de barriles, a los lados y algo por detrás de las compuertas, de cara a la playa
+  const houses = [['House1', -14, 2], ['House3', 14, -2], ['House2', -12, 9], ['Sawmill', 11, 6]];
+  for (const [n, x, z] of houses) { const pad = islRad(n); if (side(x, z, Math.hypot(x, z), pad)) add(n, x, z, 1, face(x, z) + (R() - 0.5) * 0.3, pad); }
+  // huesos gigantes y calaveras: a un lado, medio enterrados
+  if (side(-7, 14, 15.7, islRad('LargeBones'))) add('LargeBones', -7, 14, 1, R() * TAU, islRad('LargeBones'));
+  if (side(9, 13, 15.8, islRad('Skulls') * 0.8)) add('Skulls', 9, 13, 0.8, face(9, 13), islRad('Skulls') * 0.8);
+  // palmeras: muchas, por los lados y detrás de ti, hasta la orilla
+  scatter(26, 6, ISL_SHORE - 2, (x, z, r) => side(x, z, r, 1.8), (x, z) => { const n = pick3(R, ['PalmTree_1', 'PalmTree_2', 'PalmTree_3']), s = 1.6 + R() * 0.6; add(n, x, z, s, R() * TAU, 1.6); solid(n, x, z, s); });
+  // rocas, barriles, cofres, un cañón mirando al mar, un ancla, cubos, botellas, calaveras y balas de cañón
+  scatter(14, 6, ISL_SHORE - 2, (x, z, r) => side(x, z, r, 1), (x, z) => { const n = `Rock_${1 + Math.floor(R() * 5)}`, s = 0.8 + R() * 1.6; add(n, x, z, s, R() * TAU, 1); solid(n, x, z, s); });
+  scatter(10, 6, 16, (x, z, r) => side(x, z, r, 0.8), (x, z) => { const n = pick3(R, ['Barrel', 'Barrel', 'Bucket', 'Chest_Closed', 'Chest_Gold']); add(n, x, z, 0.9, R() * TAU, 0.8); solid(n, x, z, 0.9); });
+  scatter(12, 5.5, 16, (x, z, r) => side(x, z, r, 0.4), (x, z) => add(pick3(R, ['Skull', 'Bottle_1', 'CannonBall', 'CannonBall', 'Bomb']), x, z, 0.7 + R() * 0.3, R() * TAU, 0.4));
+  for (const s of [-1, 1]) { const x = s * 7.5, z = 7; if (side(x, z, Math.hypot(x, z), 1.5)) { add('Cannon', x, z, 1, Math.atan2(x * 0.3, 1), 1.5); solid('Cannon', x, z, 1); } }
+  if (side(4, 12, 12.6, 1.5)) add('Anchor', 4, 12, 1.2, R() * TAU, 1.2);
+  // el muelle: desde la orilla, detrás de ti, mar adentro, con sus postes; al final, el barco pequeño; mar adentro, el grande
+  // (las tablas del muelle, a 1 m sobre la base de sus postes: se hunden para quedar a ras de la arena y sobre el agua)
+  const dx = 3.5; for (let i = 0; i < 7; i++) { const z = ISL_SHORE - 3 + i * 2.6; add(i === 4 ? 'Dock_Broken' : 'Dock', dx, z, 1, 0, 0, -0.75); }
+  for (let i = 0; i < 4; i++) for (const s of [-1, 1]) add('Dock_Pole', dx + s * 1.2, ISL_SHORE - 2 + i * 4.3, 1, 0, 0, -0.75);
+  add('ShipSmall', dx + 5, ISL_SHORE + 13, 1.1, Math.PI * 0.55);
+  add('ShipLarge', -18, ISL_SHORE + 26, 1.3, Math.PI * 0.35);
+  add('ShipLarge', 34, 30, 1.0, -Math.PI * 0.2);
+  for (const n in put) for (const p of ISL.parts[n]) {
+    const m = new THREE.InstancedMesh(p.geo, p.mat, put[n].length); put[n].forEach((M4, i) => m.setMatrixAt(i, M4));
+    m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; m.castShadow = !/Ship|Cliff/.test(n); m.receiveShadow = true; islPlants.add(m);
+  }
+}
+// Al entrar en la isla o salir de ella: qué se ve, la luz del trópico (sol cálido, rebote de la arena), la neblina del mar
+// y el sonido. Las compuertas, como en el bosque, son cuevas de piedra
+function applyIsland() {
+  const want = !arMode && !forestOn() && sceneryPick() === 'island';
+  if (want && !ISL.ready) islandLoad();
+  const on = islandOn(); ISL.group.visible = on;
+  if (!on) return;
+  natGateStyle(true); islandBuild(); env.visible = false;
+  scene.fog = new THREE.FogExp2(0xbfe2ee, 0.009); renderer.setClearColor(0xbfe2ee, 1);
+  hemi.color.setHex(0xe2f4ff); hemi.groundColor.setHex(0xc4a873); hemi.intensity = 1.0;
+  keyLight.color.setHex(0xfff0d0); keyLight.intensity = 1.6; rimLight.color.setHex(0xa8dcff); rimLight.intensity = 0.3; renderer.toneMappingExposure = 1.0;
+  applyVolume(); ambientRefresh();
+}
+layoutHooks.push(() => { if (ISL.group.visible) islandBuild(); });
+// Cada fotograma: el cielo y el mar se mueven y, de vez en cuando, una gaviota grita sobre el mar
+function updateIsland(dt, t) {
+  if (!ISL.group.visible) return;
+  natSkyMat.uniforms.time.value = t; islSeaMat.uniforms.time.value = t;
+  arena.worldToLocal(islSky.position.copy(head.p)); islSky.position.y = 0;
+  ISL.gullT -= dt; if (ISL.gullT <= 0) { ISL.gullT = rand(3, 9); const a = rand(Math.PI * 0.5, Math.PI * 1.5), r = rand(12, 30); SND.gull(arena.localToWorld(new V3(Math.sin(a) * r, rand(5, 12), -Math.cos(a) * r))); }
+}
+
 
 /* =================== MODELOS =================== */
 const RIGS = {};
@@ -3939,8 +4151,14 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
 // del .glb (ownTex). file: el archivo en models/; k: su escala (para que mida h metros)
 const ZOMBIE2 = { own: true, ownTex: true, lazy: true, walk: 0.6, jog: 1.6, run: 2.4, maxTs: 2.2, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
   alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Punch: 'Punch', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Idle_Attack' }, atk: ['Punch', 0.25, 0.45],
-  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArm.R' } };
+  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArmR' } }; // (el cargador quita los puntos de los nombres: LowerArm.R → LowerArmR)
 Object.assign(BEAST_DEF, { zgreen: { ...ZOMBIE2, file: 'zombie_basic', h: 1.36, k: 1 }, zchubby: { ...ZOMBIE2, file: 'zombie_chubby', h: 1.64, k: 1 } });
+// Los piratas (Pirate Kit, de Quaternius, CC0): el esqueleto, el capitán Barbarroja (con su loro) y los tiburones Sharky y
+// Mako, con su arma en la mano; dan un tajo a media altura (zone: por dónde llega, para pararlo con la espada)
+const PIRATE = { ...ZOMBIE2, walk: 0.7, jog: 1.7, run: 2.6, taunt: 'Dance_Loop', alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Sword: 'Sword', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Wave' },
+  atk: ['Sword', 0.15, 0.32], zone: ['mid', 1] };
+Object.assign(BEAST_DEF, { skeleton: { ...PIRATE, file: 'piratas/esqueleto', h: 1.5, k: 1 }, captain: { ...PIRATE, file: 'piratas/capitan', h: 1.85, k: 1, zone: ['mid', -1] },
+  sharky: { ...PIRATE, file: 'piratas/sharky', h: 1.56, k: 1 }, mako: { ...PIRATE, file: 'piratas/mako', h: 1.59, k: 1 } });
 // Los monstruitos andan dando saltitos (sus animaciones son en el sitio: más deprisa cuanto más corren) y muerden lanzándose
 const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.2, minTs: 0.7, maxTs: 2.4, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
   alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Walk', Sprint_Loop: 'Walk', Bite: 'Bite_Front', Death01: 'Death', Hit: 'HitRecieve', Dance_Loop: 'Jump', Fly: 'Flying' }, atk: ['Bite', 0.12, 0.28],
@@ -3950,7 +4168,9 @@ const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.
   ['crab', 1.57, 0.18], ['mushroom', 2.07, 0.2], ['bee', 1.9, 0.5], ['bat', 1.75, 0.45], ['cthulhu', 1.56, 0.55], ['dragon', 1.65, 0.5]].forEach(([k, nat, h]) => {
   BEAST_DEF[k] = { ...CUTE, file: 'monstruitos/' + ({ alientall: 'alien_tall', dragon: 'yellowdragon' }[k] || k), h, k: h / nat };
 });
-const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle'];
+const BEAST_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Punch_Cross', 'Punch_Jab', 'Sword_Attack', 'Hit_Chest', 'Hit_Head', 'Death01', 'Dance_Loop', 'Spell_Simple_Shoot', 'Roll', 'Sword_Idle',
+  // de la Universal Animation Library 2 (mismo esqueleto): derribado y levantarse, gancho, tres tajos y lanzar
+  'Hit_Knockback', 'LayToIdle', 'Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'OverhandThrow'];
 // Una animación de la biblioteca → para un monstruo: las rotaciones de sus huesos (menos root, que el juego mueve) y el
 // balanceo de la pelvis, a la escala de su altura de cadera. Las pistas de huesos que el monstruo no tiene (meñiques, punta
 // del pie) se quitan: si no, Three.js las aplica al modelo entero y le cambia la orientación
@@ -4084,7 +4304,8 @@ function beastRig(kind) {
     } else {
       mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
-      model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
+      const still = mat.clone(); still.skinning = false; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
+      model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; } });
     }
     const root = new THREE.Group(); root.add(model);
     if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z
@@ -5950,6 +6171,7 @@ const ROBOT_KIND = {
   imp: { rig: 'imp', scale: 1.0, speedF: 1.0, heavy: false, stop: 1.2, stride: 1.4, head: 1.5, beast3d: 'imp' }, // monstruos de archivo (Quaternius)
   puglin: { rig: 'puglin', scale: 1.15, speedF: 1.25, heavy: false, stop: 1.0, stride: 1.0, head: 0.95, beast3d: 'puglin' },
   impboss: { rig: 'imp', scale: 1.6, speedF: 0.75, heavy: true, stop: 1.8, stride: 1.4, head: 1.5, beast3d: 'imp', boss: true },
+  impthrow: { rig: 'imp', scale: 0.95, speedF: 1.0, heavy: false, stop: 4.2, stride: 1.4, head: 1.5, beast3d: 'imp', grp: 'beast', thrower: true }, // el lanzador: un diablillo que se queda lejos y te tira piedras
   zombie: { rig: 'zombie', scale: 1.0, speedF: 0.9, heavy: false, stop: 1.05, stride: 1.0, head: 1.65, beast3d: 'zombie' }, // zombi de Quaternius
   zombieboss: { rig: 'zombie', scale: 1.6, speedF: 0.7, heavy: true, stop: 1.7, stride: 1.0, head: 1.65, beast3d: 'zombie', boss: true },
   // dinosaurios: se paran más lejos (la cabeza les queda muy por delante del cuerpo) y ocupan más sitio
@@ -5958,9 +6180,9 @@ const ROBOT_KIND = {
 };
 // Los zombis nuevos y los monstruitos que andan, cada uno con su jefe (el mismo, más grande y más lento). grp: su clase en
 // Ajustes → Cada enemigo
-for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute'])]) {
+for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute']), ...PIRATE_GATE.map(c => [c, c === 'captain' ? 1.7 : 1.4, 'pirate'])]) {
   ROBOT_KIND[k] = { rig: k, scale: 1.0, speedF: grp === 'zombie' ? 0.9 : 1.0, heavy: false, stop: 1.1, stride: 1.0, head, beast3d: k, grp };
-  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true };
+  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: k === 'captain' ? 1.45 : 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true }; // (el capitán ya es alto: que quepa por la compuerta)
 }
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
@@ -5981,7 +6203,7 @@ function gateSolids(doors) {
 // y, en el bosque, los troncos, las rocas y los arbustos. Cada uno sabe de qué compuerta es: dentro de su túnel, el que
 // sale no choca con los de la suya
 const SOLIDS = { list: [], t: -1 };
-function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : []); }
+function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : []); }
 const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
 const GAMEF = { n: 0 };
 // Nadie se mete en algo sólido: si un empujón (de otro, de un disparo, del golpe) lo mete, sale por el lado más corto
@@ -6004,7 +6226,7 @@ function beatStep(dt) {
 }
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
-const robotStop = K => swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop;
+const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop; // (el lanzador, siempre lejos)
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
@@ -6121,7 +6343,7 @@ class Robot {
   // amenazar señalándote; el golpe (llevado a mano para que caiga justo al golpear): el pequeño, un zarpazo; el grande,
   // un directo con la garra (el cañón sigue apuntándote); encogerse al recibir
   animMx(dt, t, spd) {
-    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = isR ? 'Sword_Attack' : 'Punch_Jab';
+    const B = this.B, K = this.K, st = this.state, isR = !this.mxLegs, atk = this.atk && this.clips[this.atk] ? this.atk : isR ? 'Sword_Attack' : 'Punch_Jab';
     if (st === 'windup' && this.prevSt !== 'windup') { this.restart = true; this.react = 0; }
     this.prevSt = st;
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2, atkT = -1, w = 0;
@@ -6130,7 +6352,8 @@ class Robot {
       w = st === 'windup' ? smooth(clamp(this.st / wind, 0, 1)) : 0;
       atkT = st === 'windup' ? t0 * w : st === 'strike' ? lerp(t0, t1, clamp(this.st / 0.18, 0, 1)) : lerp(t1, t1 + 0.35, clamp(this.st / 0.5, 0, 1));
       want = atk; once = true; fade = st === 'windup' ? 0.3 : 0.1; ts = 0;
-    } else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
+    } else if (st === 'down' && this.downAnim) { want = this.st < this.clips.Hit_Knockback.duration ? 'Hit_Knockback' : 'LayToIdle'; once = true; fade = 0.08; }
+    else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st !== 'emerge' && st !== 'knock') { const v = spd / this.sc;
       if (v > 0.12) { want = v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8); }
@@ -6183,7 +6406,7 @@ class Robot {
         const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12) {
           faceTo = faceP;
-          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; if (blockOn()) blockStart(this); if (!K.beast3d) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
+          if (this.row === 0 && state === 'play' && !(this.stunT > 0) && !(this.throwCD > 0) && (!beatP() || BEAT.hit)) { this.state = 'windup'; this.st = 0; this.zone = null; this.atk = pickAttack(this); if (blockOn() && !K.thrower) blockStart(this); if (!K.beast3d) SND.servo(this.center(tmpB)); this.roar(this.center(tmpB), K.boss ? 0.65 : 1.0); }
           break; // esperando su turno en la fila de atrás: quieto, mirándote
         }
         to.normalize();
@@ -6241,7 +6464,12 @@ class Robot {
         break;
       }
       case 'strike': { // zancada hacia ti con el golpe
-        faceTo = faceP; this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, gd * 18)); this.lunge = Math.min(1, this.st / 0.15);
+        faceTo = faceP;
+        if (K.thrower) { // el lanzador no se acerca: suelta la piedra y espera a la siguiente
+          if (!this.thrownNow) { this.thrownNow = true; throwRock(this); }
+          if (this.st > 0.35) { this.state = 'walk'; this.st = 0; this.thrownNow = false; this.throwCD = rand(3.5, 5.5) / Math.sqrt(Math.max(0.7, this.pace)); } // una cada 3–5 s
+          break;
+        } this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, gd * 18)); this.lunge = Math.min(1, this.st / 0.15);
         const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
         this.pos.copy(this.knockFrom).addScaledVector(back, -(swordSet() ? 0.15 : 0.35) * smooth(this.lunge));
         if (this.zone) blockStep(this, t);
@@ -6256,6 +6484,11 @@ class Robot {
         }
         break;
       }
+      case 'down': { // derribado por un disparo muy cargado: sale despedido hacia atrás, cae de espaldas y se levanta
+        const k = smooth(Math.min(1, this.st / 0.35)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); faceTo = faceP; this.lunge = 0; this.arm = 0;
+        if (this.st > this.downT) { this.state = 'walk'; this.st = 0; this.charged = false; this.chargeD = 1.6; this.vel.set(0, 0, 0); }
+        break;
+      }
       case 'knock': {
         const k = smooth(Math.min(1, this.st / 0.7)); this.pos.lerpVectors(this.knockFrom, this.knockTo, k); this.arm = lerp(-1, 0, k); this.hitT = Math.max(this.hitT, (1 - k) * 0.6);
         this.lunge = 1 - k; faceTo = faceP;
@@ -6265,6 +6498,7 @@ class Robot {
     }
     this.dodgeStep(dt, faceP);
     if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
+    if (this.throwCD > 0) this.throwCD -= dt;
     if (this.state !== 'windup' && this.state !== 'strike' && this.state !== 'knock') { this.arm *= Math.max(0, 1 - gd * 5); this.twist *= Math.max(0, 1 - gd * 4); this.lunge *= Math.max(0, 1 - gd * 4); }
     if (this.state !== 'taunt') this.taunt = Math.max(0, this.taunt - gd * 3);
     if (this.state !== 'walk') this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
@@ -6287,7 +6521,7 @@ class Robot {
       this.yaw += dy;
     }
     this.spd = Math.hypot(this.pos.x - last.x, this.pos.z - last.z) / Math.max(dt, 1e-3);
-    if (this.state === 'strike' || this.state === 'knock') this.spd = 0; // la zancada y el retroceso no son pasos
+    if (this.state === 'strike' || this.state === 'knock' || this.state === 'down') this.spd = 0; // la zancada y el retroceso no son pasos
     // para la animación: la marcha hacia delante, suavizada (sin los empujones de los que tiene al lado ni el tambaleo), para
     // que los pies no patinen ni el paso tiemble
     const locoV = this.state === 'walk' && !(this.dodge > 0) ? Math.max(0, this.vel.x * Math.sin(this.yaw) + this.vel.z * Math.cos(this.yaw)) : this.spd;
@@ -6322,8 +6556,19 @@ class Robot {
       this.dodgeDir = Math.random() < 0.5 ? -1 : 1; this.dodgeYaw = faceP + this.dodgeDir * Math.PI / 2; // la voltereta, de cara hacia donde va
     }
   }
-  onHit(dmg, perfect, point) {
+  // Un disparo cargado ×3 o ×4 lo derriba (a los jefes no: solo se tambalean)
+  knockDown() {
+    if (this.state === 'down' || this.K.boss || this.state === 'emerge' || !this.out) return false;
+    if (this.zone) { blockCancel(this); this.zone = null; }
+    const c = this.clips || {}, anim = c.Hit_Knockback && c.LayToIdle && (this.D ? !this.D.own : this.mxLegs);
+    const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
+    Object.assign(this, { state: 'down', st: 0, atk: null, react: 0, restart: true, downAnim: anim, downT: anim ? c.Hit_Knockback.duration + c.LayToIdle.duration : 1.0 });
+    this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
+    this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; }
+    if (pow >= 3 && this.hp > dmg) this.knockDown();
     this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
@@ -6342,18 +6587,30 @@ const _nq = new Q4();
 // Se comportan como los robots (puestos, compuertas, bloqueos); el cuerpo lo mueven sus animaciones: andar, trotar o
 // correr según la velocidad (y al ritmo de lo que avanzan), provocarte (el Imp lanza un hechizo, el Puglin baila), un
 // puñetazo que llega justo al golpear, encogerse al recibir y caer al morir; esperando su turno con música, bailan al compás
-const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22], Sword_Attack: [0.33, 0.5] };
+const BEAST_PUNCH = { Punch_Cross: [0.15, 0.3], Punch_Jab: [0.12, 0.22], Sword_Attack: [0.33, 0.5], Melee_Hook: [0.2, 0.3], Sword_Regular_A: [0.18, 0.26], Sword_Regular_B: [0.18, 0.26], Sword_Regular_C: [0.58, 0.7], OverhandThrow: [0.25, 0.35] };
+// Dónde llega cada golpe, para pararlo con la espada: a qué altura y por qué lado (−1: por su derecha, que tú ves a tu
+// izquierda; 1: por su izquierda). Medido en las animaciones: los puñetazos, a la cara; el gancho, de lado al cuerpo; el
+// tajo A sube desde abajo, el B cruza a media altura y el C cae de arriba (sus primeros giros, un amago)
+const ATK_ZONE = { Punch_Cross: ['high', 0], Punch_Jab: ['high', 0], Sword_Attack: ['mid', 0], Melee_Hook: ['mid', -1], Sword_Regular_A: ['low', -1], Sword_Regular_B: ['mid', 1], Sword_Regular_C: ['high', 0] };
+// El golpe de cada uno, variado entre los que tiene (los jefes, más a menudo el tajo que cae de arriba)
+function pickAttack(e) {
+  if (e.K.thrower) return 'OverhandThrow';
+  if (e.D && e.D.atk) return e.D.atk[0]; // los que traen sus animaciones: el suyo
+  const pool = e.D ? ['Punch_Cross', 'Punch_Jab', 'Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', ...(e.K.boss ? ['Sword_Regular_C', 'Sword_Regular_C'] : [])]
+    : !e.mx ? [] : e.mxLegs ? ['Punch_Jab'] : ['Sword_Attack', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C']; // el grande golpea con la garra; el pequeño, tajos
+  const ok = pool.filter(n => e.clips && e.clips[n]); return ok.length ? pick(ok) : null;
+}
 // Animaciones de archivo (monstruos y humanoides de neón): la acción de cada animación, y ponerla apagando todas las demás
 // (si quedara alguna sonando, se mezclarían las posturas; también las paradas, como el golpe que se lleva a mano)
 function mxAct(o, n) { let a = o.acts[n]; if (!a) { const c = o.clips[n]; if (!c) return null; a = o.acts[n] = o.mx.clipAction(c); } return a; }
-const MX_GESTURE = new Set(['Idle_Loop', 'Sword_Idle', 'Spell_Simple_Shoot', 'Hit_Chest', 'Hit_Head']); // al ritmo de sus gestos (andar va con lo que avanza)
+const MX_GESTURE = new Set(['Idle_Loop', 'Sword_Idle', 'Spell_Simple_Shoot', 'Hit_Chest', 'Hit_Head', 'Hit_Knockback', 'LayToIdle']); // al ritmo de sus gestos (andar va con lo que avanza)
 function mxPlay(o, n, fade = 0.2, once = false, ts = 1, restart = false) {
   const a = mxAct(o, n); if (!a) return; a.timeScale = MX_GESTURE.has(n) ? ts * (o.pace || 1) : ts; if (o.cur === n && !restart) return;
   o.cur = n; a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.fadeIn(fade).play();
   for (const k in o.acts) { const b = o.acts[k]; if (b !== a && b.isScheduled()) { b.timeScale = 1; b.fadeOut(fade); } }
 }
 // Tono del rugido sintetizado de cada monstruo (sin su archivo de sonido): más agudo cuanto más pequeño
-const BEAST_PITCH = { puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
+const BEAST_PITCH = { skeleton: 1.3, captain: 0.8, sharky: 1.0, mako: 1.1, puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
@@ -6369,7 +6626,7 @@ class Beast extends Robot {
   animate(dt, t, spd) {
     if (!this.mx) return;
     const K = this.K, D = this.D, st = this.state; if (spd === true) spd = this.vWalk;
-    if (st === 'windup' && this.prevSt !== 'windup') { this.atk = D.atk ? D.atk[0] : Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
+    if (st === 'windup' && this.prevSt !== 'windup') { if (!this.atk || !this.clips[this.atk]) this.atk = D.atk ? D.atk[0] : Math.random() < 0.6 ? 'Punch_Cross' : 'Punch_Jab'; this.restart = true; this.react = 0; }
     this.prevSt = st;
     // el puñetazo, llevado a mano: recoge el brazo durante la preparación, lo estira justo en el golpe, lo mantiene un
     // instante mientras retrocede y lo recoge (BEAST_PUNCH: cuándo empieza a salir y cuándo está del todo estirado)
@@ -6381,6 +6638,8 @@ class Beast extends Robot {
     let want = 'Idle_Loop', ts = 1, once = false, fade = 0.2;
     const v = spd / this.sc; // a escala del modelo
     if (punchT >= 0) { want = this.atk; once = true; fade = 0.1; ts = 0; }
+    else if (st === 'down' && this.downAnim) { want = this.st < this.clips.Hit_Knockback.duration ? 'Hit_Knockback' : 'LayToIdle'; once = true; fade = 0.08; } // cae de espaldas y se levanta
+    else if (st === 'down') { want = D.hit && this.clips[D.hit] ? D.hit : 'Idle_Loop'; once = true; fade = 0.06; }
     else if (this.roll && this.clips.Roll) { want = 'Roll'; once = true; fade = 0.08; ts = this.clips.Roll.duration / this.dodgeDur; if (this.rollStart) { this.restart = true; this.rollStart = false; } }
     else if (this.react > 0) { this.react -= dt; want = this.reactClip; once = true; fade = 0.06; }
     else if (st === 'taunt') want = D.taunt || (K.beast3d === 'imp' ? 'Spell_Simple_Shoot' : 'Dance_Loop');
@@ -6398,9 +6657,11 @@ class Beast extends Robot {
     this.tint = Math.max(0, this.tint - dt * 4); const m = this.inst.mat; m.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); m.emissiveIntensity = 1 + this.tint * 3;
     this.inst.model.rotation.x = -(this.hitT || 0) * 0.6 - (this.stagger || 0) * 0.15;
   }
-  onHit(dmg, perfect, point) {
+  onHit(dmg, perfect, point, pow = 1) {
+    const down = pow >= 3 && this.hp > dmg && this.knockDown();
     this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
-    if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
+    if (down && this.downAnim) { /* ya cae con su animación */ }
+    else if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
     else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
     fx.sparks(point, 10, [0.9, 0.15, 0.1], 2.2, 0.04); fx.glow(point, [1, 0.5, 0.3], 0.35, 0.08); SND.squish(point);
     if (this.hp <= 0) this.kill(); else if (Math.random() < 0.3) this.roar(this.center(tmpB));
@@ -6421,7 +6682,7 @@ class Beast extends Robot {
     if (this.st > 2.3) this.root.position.y -= dt * 0.45 * this.sc; // se hunde
     if (this.st > 3.8 && !this.gone) { this.gone = true; this.dispose(); }
   }
-  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); }
+  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); if (this.inst.mat.still) this.inst.mat.still.dispose(); }
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
@@ -6586,6 +6847,53 @@ class Spider {
   }
   dispose() { arena.remove(this.root); this.inst.skel.dispose(); this.glowMat.dispose(); this.eyeGlow.material.dispose(); }
 }
+
+/* ---------- Las piedras del lanzador ---------- */
+// El lanzador se queda lejos y, cada pocos segundos, te tira una piedra en parábola: llega a donde estaba tu cabeza al
+// soltarla. Apártate (¡Esquivada!) o párala con una mano o con la hoja de la espada (¡Parada!); si te da, te golpea
+const ROCKS = [], ROCK_HIT = 0.28, ROCK_PARRY = 0.17;
+const rockGeo = new THREE.DodecahedronGeometry(0.085, 0), rockMat = std({ color: 0x8c7b66, roughness: 0.92, metalness: 0, flatShading: true });
+const _rk = new V3(), _rk2 = new V3(), _rkw = new V3();
+function throwRock(e) {
+  const from = arena.worldToLocal((e.B.handR || e.B.head || e.root).getWorldPosition(new V3())), to = HL.clone(), d = from.distanceTo(to), T = clamp(d / 4.5, 0.85, 1.4);
+  const m = new THREE.Mesh(rockGeo, rockMat); m.castShadow = true; m.position.copy(from); arena.add(m);
+  ROCKS.push({ m, from, to, T, t: 0, h: 0.6 * T * T, mode: 'fly', vel: new V3(), spin: new V3(rand(-9, 9), rand(-9, 9), rand(-9, 9)), src: e });
+  SND.whoosh(arena.localToWorld(from.clone()), 'throw');
+  if (!stats.rocks) say('¡Te lanza piedras! Apártate o párala con la mano', '#ff8a3d', 2.2); stats.rocks = (stats.rocks || 0) + 1;
+}
+const rockAt = (r, t, out) => { const k = clamp(t / r.T, 0, 1); out.lerpVectors(r.from, r.to, k); out.y += Math.sin(Math.PI * k) * r.h; return out; };
+// ¿Una mano (dedos, nudillos o muñeca) o la hoja de una espada toca la piedra? (en coordenadas del mundo)
+function rockParry(w) {
+  for (const s of ['left', 'right']) {
+    if (swordIn(s)) { const S = SWD.s[s]; for (let i = 1; i < BLADE_N; i++) if (S.cur[i].distanceTo(w) < ROCK_PARRY) return { side: s, sword: true }; }
+    const h = hands[s]; if (!h.ok) continue;
+    if (h.wrist.distanceTo(w) < ROCK_PARRY || (h.tipOk && h.tip.distanceTo(w) < ROCK_PARRY)) return { side: s };
+    if (h.isHand) for (const j of [4, 9, 14, 19, 24]) if (h.J[j] && h.J[j].ok && h.J[j].p.distanceTo(w) < ROCK_PARRY) return { side: s };
+  }
+  return null;
+}
+function updateRocks(dt) {
+  for (let i = ROCKS.length - 1; i >= 0; i--) {
+    const r = ROCKS[i]; r.t += dt; r.m.rotation.x += r.spin.x * dt; r.m.rotation.y += r.spin.y * dt; r.m.rotation.z += r.spin.z * dt;
+    if (r.mode === 'fly') {
+      const prev = _rk2.copy(r.m.position), p = rockAt(r, r.t, _rk); r.m.position.copy(p); r.vel.subVectors(p, prev).divideScalar(Math.max(dt, 1e-3));
+      const w = arena.localToWorld(_rkw.copy(p)), par = state === 'play' || state === 'rest' ? rockParry(w) : null;
+      if (par) { // parada: sale rebotada hacia donde vino
+        r.mode = 'fall'; r.vel.multiplyScalar(-0.45).add(_rk2.set(rand(-1, 1), 2.2, 0)); score += 100; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true;
+        if (par.sword) SND.swordBlock(w, settings.swordKind === 'laser'); else SND.metalHit(w, false);
+        fx.sparks(w, 16, [1, 0.8, 0.5], 2.4, 0.04); haptic(par.side, 0.8, 50); say('¡Parada!', '#3cf0c6', 0.8, false); continue;
+      }
+      if (r.t >= r.T) { // llega: ¿sigues ahí?
+        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
+        r.mode = 'fall'; if (state === 'play') { score += 50; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true; say('¡Esquivada!', '#3cf0c6', 0.8, false); }
+      }
+    } else { // parada o esquivada: cae y desaparece
+      r.vel.y -= 9.8 * dt; r.m.position.addScaledVector(r.vel, dt);
+      if (r.m.position.y < 0.05 || r.t > r.T + 2.5) { arena.remove(r.m); ROCKS.splice(i, 1); }
+    }
+  }
+}
+function rocksClear() { for (const r of ROCKS) arena.remove(r.m); ROCKS.length = 0; }
 
 /* ---------- Monstruitos de las trampillas ---------- */
 // Cangrejo, seta y calavera (Cute Animated Monsters): salen de las trampillas y se mueven como las arañas (corretean,
@@ -6834,12 +7142,12 @@ function fireOrb(origin, dmg, perfect, pow = 1, side) {
   SND.bolt(origin, L); if (pow > 1) SND.power(pow, origin); fx.muzzle(origin, col);
 }
 // Apuntando tú: el rayo sale hacia donde apuntas y se engancha al enemigo fijado
-function fireBolt(origin, dir, lockFrom, dmg, perfect, forced) {
+function fireBolt(origin, dir, lockFrom, dmg, perfect, forced, pow = 1) {
   const e = forced || findLock(lockFrom || origin, dir), L = boltLevel(perfect), col = boltRGB(L);
   const to = e ? e.center(new V3()) : origin.clone().addScaledVector(dir, 9);
   if (e) e.pending += dmg; stats.shots++;
   const lt = boltStart(origin, to, L, isTiny() ? 0.5 : 1, !e);
-  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, t: 0, dur: Math.max(0.09, origin.distanceTo(to) / 30), kind: 'bolt', col });
+  projs.push({ lt, from: origin.clone(), to, e, dmg, perfect, pow, t: 0, dur: Math.max(0.09, origin.distanceTo(to) / 30), kind: 'bolt', col });
   SND.bolt(origin, L); fx.muzzle(origin, col);
 }
 function updateProjectiles(dt) {
@@ -6855,10 +7163,10 @@ function updateProjectiles(dt) {
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
-        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone()); if (!target.alive) onKilled(target);
+        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); if (!target.alive) onKilled(target);
         if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
           const R = isTiny() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isTiny() ? 0.35 : 1, 0.15); SND.zap(p.to);
-          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone()); if (!o.alive) onKilled(o); }
+          for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone(), p.pow); if (!o.alive) onKilled(o); } // (la onda también derriba a los que aguantan)
         }
         if (p.kind === 'bolt' && p.perfect) {
           const R = isTiny() ? 0.45 : 1.6; fx.electric(p.to, 16);
@@ -6905,7 +7213,7 @@ function onRep(opts, side) {
       let o = s.o.clone();
       if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
       else gloves[s.key].pulse = 1;
-      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null);
+      fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null, pow);
     }
   }
   charged = false; chargePow = 1; chargeOrb.visible = false;
@@ -7397,7 +7705,7 @@ function throwPickTarget(o, d) {
 }
 function throwFire(s, o, d, tg) {
   const T = HTH[s], c = T.c; if (!c) return;
-  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg);
+  T.c = null; fireBolt(o, d, null, c.dmg, c.perfect, tg, c.pow || 1);
   gloves[s].pulse = 1; haptic(s, 0.7, 45); HTH.idle = 0; boardDirty = true;
 }
 // Lanza desde o en la dirección del recorrido d de la mano, si recorrió lo bastante y hay un enemigo hacia allí. Llevar
@@ -7596,8 +7904,8 @@ function buildWave(i) {
   const nextG = deal(G), nextF = deal(FK);
   if (isBossWave(i)) {
     const b = Math.max(4, Math.round(total * 0.3)), ground = F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0);
-    const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
-    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
+    const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', thrower: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
+    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : !tiny && G.includes('captain') ? 'captainboss' : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
     boss = { kind, hp: b }; total -= b;
   }
   let k = 0;
@@ -7607,9 +7915,10 @@ function buildWave(i) {
       const g = nextG();
       if (tiny) { if (g === 'spider') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
       else if (g === 'imp' || g === 'puglin') { kind = g; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
+      else if (g === 'thrower') { kind = 'impthrow'; hp = 2 + Math.floor(i / 3); }
       else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
       else if (g === 'robot') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
-      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' ? 3 : 2) + Math.floor(i / 3); } // zombis y monstruitos
+      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' || g === 'captain' ? 3 : 2) + Math.floor(i / 3); } // zombis, monstruitos y piratas
     }
     else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
@@ -7661,7 +7970,7 @@ function updateNextArc() {
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
-  projs = []; boltsClear();
+  projs = []; boltsClear(); rocksClear();
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
@@ -8022,7 +8331,7 @@ function gameStep(dt, t) {
     enemies = enemies.filter(e => (e.alive || (e.mode === 'dying' && !e.gone)));
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
-    updateProjectiles(dt);
+    updateProjectiles(dt); updateRocks(dt);
     updateGates(dt, t);
   }
   if (SPLEGS.fem) {
@@ -9131,16 +9440,20 @@ function swordStrike(S, e, p, dmg, counter) {
 const BLOCK_Z = { high: { dy: -0.02, crouch: 0, col: 0xffd166, txt: 'ALTO' }, mid: { dy: -0.42, crouch: 0.5, col: 0xff8a3d, txt: 'MEDIO: ¡agáchate!' }, low: { dy: -0.7, crouch: 0.85, col: 0xff3b5c, txt: 'BAJO: ¡agáchate más!' } };
 const blockOn = () => isCombat() && swordActive() && !!settings.swordBlock;
 const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'); x.strokeStyle = '#fff'; x.lineWidth = 10; x.beginPath(); x.arc(64, 64, 48, 0, TAU); x.stroke(); x.lineWidth = 6; x.beginPath(); x.moveTo(24, 64); x.lineTo(104, 64); x.stroke(); return c; })());
+// La marca sale de dónde llega su golpe (ATK_ZONE: los puñetazos, a la cara; el gancho y los tajos, de lado o desde
+// abajo); sin un golpe conocido, al azar
 function blockStart(r) {
-  r.zone = pick(['high', 'mid', 'mid', 'low']); r.blocked = false;
+  const z = (r.D && r.D.zone && r.atk === (r.D.atk || [])[0] && r.D.zone) || (r.atk && ATK_ZONE[r.atk]); // (los piratas, su tajo)
+  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
   if (!r.zoneSpr) { r.zoneSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: blockTex, transparent: true, depthWrite: false, toneMapped: false })); r.zoneSpr.renderOrder = 22; scene.add(r.zoneSpr); }
   r.zoneSpr.material.color.setHex(BLOCK_Z[r.zone].col); r.zoneSpr.visible = true;
-  say('Golpe ' + BLOCK_Z[r.zone].txt, '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
+  say('Golpe ' + BLOCK_Z[r.zone].txt + (r.zoneSide ? (r.zoneSide < 0 ? ' · por tu izquierda' : ' · por tu derecha') : ''), '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
 }
 // Dónde para el golpe: entre tú y el robot, a la altura marcada (respecto a tu altura de pie)
+// (y, si el golpe viene de lado, 30 cm hacia ese lado: su derecha la ves a tu izquierda)
 function blockPoint(r, out) {
-  const dx = r.pos.x - HL.x, dz = r.pos.z - HL.z, d = Math.hypot(dx, dz) || 1;
-  return arena.localToWorld(out.set(HL.x + dx / d * 0.5, calibRef + BLOCK_Z[r.zone].dy, HL.z + dz / d * 0.5));
+  const dx = r.pos.x - HL.x, dz = r.pos.z - HL.z, d = Math.hypot(dx, dz) || 1, sd = (r.zoneSide || 0) * 0.3; // su izquierda: (−dz, dx) desde ti hacia él
+  return arena.localToWorld(out.set(HL.x + dx / d * 0.5 - dz / d * sd, calibRef + BLOCK_Z[r.zone].dy, HL.z + dz / d * 0.5 + dx / d * sd));
 }
 // Durante la preparación y el golpe: ¿hay una hoja en la marca y la postura es la pedida?
 function blockStep(r, t) {
@@ -9417,11 +9730,11 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt); updateOutcome(dt);
-  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);
-  if (!arMode && !forestOn() && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
+  if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.1) { centerT = 0; drawCenter(); }
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   renderer.render(scene, camera);
