@@ -76,6 +76,9 @@ function findW(label) {
   for (const re of [/^Ejercicio:/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
+// Armas ▸ del menú principal: abrirlo, o leer lo que trae y volver (sin el botón, nada)
+function openArms() { const b = RA.activeWidgets().find(w => /^Armas: /.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
+function armsLabels() { if (!openArms()) return []; const l = RA.activeWidgets().map(w => w.label); press('Volver'); frame(1); return l; }
 function log(...a) { console.log(...a); }
 // centro del borde de arriba del menú (de ahí cuelga: los menús que se suceden lo comparten)
 function menuTop() { const g = RA.menu.group, h = RA.menu.H / 2; return new THREE.Vector3(g.position.x - h * Math.sin(0.38) * Math.sin(g.rotation.y), g.position.y + h * Math.cos(0.38), g.position.z - h * Math.sin(0.38) * Math.cos(g.rotation.y)); }
@@ -591,7 +594,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
   RA.settingsMenu(() => RA.lobbyMenu()); frame(2);
-  for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Menú', 'Tu meta']) {
+  for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Armas', 'Menú', 'Tu meta']) {
     press(tab); frame(1);
     const ws = RA.activeWidgets();
     ws.filter(w => w.kind === 'slider').forEach(w => { w.drag(0.7); w.commit(); w.drag(0.0); w.commit(); });
@@ -607,6 +610,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const tabs = RA.activeWidgets().filter(w => w.style === 'tab' || w.style === 'selected').map(w => w.label); log('settings tabs:', tabs.join(', '));
     if (tabs.some(l => /Sonido|Entorno/.test(l))) errors.push('menú: sonido y entorno deberían tener su submenú, no una pestaña en Ajustes'); }
   press('Volver'); frame(2);
+  // Armas: pistolas, puntería con las manos y espadas juntas, en su pestaña y en su submenú (y fuera de Enemigos)
+  { const mKeys = () => RA.menu.rows.filter(r => r.t === 'field').map(r => r.key), tabKeys = t => { RA.settingsMenu(() => RA.lobbyMenu(), t); frame(1); return mKeys(); };
+    const fg = RA.settings.foesGate, ff = RA.settings.foesFly; RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('foesGate', 'robots'); RA.setSetting('foesFly', ''); RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'full');
+    const arm = tabKeys('armas'), foe = tabKeys('enemigos'); RA.lobbyMenu(); frame(1);
+    const btn = (RA.activeWidgets().find(w => /^Armas: /.test(w.label)) || {}).label, inside = (openArms(), mKeys()); press('Volver'); frame(1);
+    const mainHas = mKeys().some(k => ['aim', 'throwPick', 'sword', 'swordKind', 'pistol'].includes(k));
+    log(`arms: tab ${arm.join(',')} · enemies tab ${foe.join(',')} · button “${btn}” · submenu ${inside.join(',')} · weapons left in the main menu ${mainHas}`);
+    if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
+    if (!btn || mainHas) errors.push('armas: el menú principal debería llevar el botón Armas ▸ en lugar de los ajustes sueltos');
+    RA.setSetting('foesGate', fg); RA.setSetting('foesFly', ff); RA.setSetting('aim', 'auto'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
   // sonido y entorno, cada uno en su submenú (y sin nada de sonido en Ajustes)
   press('Sonido'); frame(1); { const ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('sound menu sliders:', ks.join(', '));
     if (!ks.includes('volume') || !ks.includes('ambient')) errors.push('menú: el submenú de sonido no tiene los volúmenes'); }
@@ -636,15 +649,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
   // menú sencillo: Ajustes y el principal sin lo de afinar; un toque lo pasa a completo
   { const keys = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), labels = () => RA.activeWidgets().map(w => w.label);
-    RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = labels().includes('Al que miras');
+    RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = armsLabels().includes('Al que miras');
     press('Ajustes'); frame(1); press('Partida'); frame(1); const partS = keys(); press('Ver todos los ajustes (menú completo)'); frame(1); const partF = keys();
-    press('Ver solo lo básico (menú sencillo)'); frame(1); press('Volver'); frame(1); RA.setSetting('menuLevel', 'full'); RA.lobbyMenu(); frame(1); const lobbyF = labels().includes('Al que miras');
-    log(`simple menu: Partida ${partS.join(',')} · full ${partF.join(',')} · “el rayo va” in the main menu: simple ${lobbyS}, full ${lobbyF}`);
+    press('Ver solo lo básico (menú sencillo)'); frame(1); press('Volver'); frame(1); RA.setSetting('menuLevel', 'full'); RA.lobbyMenu(); frame(1); const lobbyF = armsLabels().includes('Al que miras');
+    log(`simple menu: Partida ${partS.join(',')} · full ${partF.join(',')} · “el rayo va” in Armas ▸: simple ${lobbyS}, full ${lobbyF}`);
     if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF) errors.push('menú sencillo: no esconde lo de afinar, o el completo no lo enseña');
     RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
-  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
-  press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
+  press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(armsLabels()); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
   press('Sentadillas'); frame(1);
   // menú por zonas del cuerpo: solo los ejercicios del modo (Combate), agrupados
@@ -673,9 +686,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
   for (const l of gateLabels) { RA.activeWidgets().find(w => w.label === l).onPress(); frame(1); }
   press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
-  press('Ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
+  press('Ajustes'); frame(1); press('Armas'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
   log('combat flyers gaze:', foesNow, flyNow, RA.settings.aim, '· gate left', JSON.stringify(RA.settings.foesGate)); if (foesNow !== 'flyers' || !flyNow.includes('bee') || RA.settings.aim !== 'gaze') errors.push('no se eligen solo voladores (con la abeja) y la mirada');
-  RA.setSetting('foesGate', gate0); RA.setSetting('foesFly', 'drone,hornet'); RA.lobbyMenu(); frame(1); press('Automática'); frame(1);
+  RA.setSetting('foesGate', gate0); RA.setSetting('foesFly', 'drone,hornet'); RA.lobbyMenu(); frame(1); openArms(); press('Automática'); frame(1); press('Volver'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
   press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
   // colocar: el atril se oculta, H = manos arriba; a los 5 s queda colocada y aparece el menú de ajuste
