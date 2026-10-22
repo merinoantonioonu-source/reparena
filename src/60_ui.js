@@ -130,7 +130,7 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
-const ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
 function wrapLines(text, maxPx) {
@@ -148,6 +148,8 @@ function openMenu(rows, opts = {}) {
   if (recent) menuAnchor = lastAnchor;
   else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
   POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
+  // las selecciones con muchas opciones (Enemigos) van en rejilla: f.grid por fila
+  rows.forEach(r => { const f = r.t === 'field' && FIELD[r.key]; if (f && f.grid && !r.h) r.h = Math.ceil(f.opts.length / f.grid) * (GRID_H + GAP) - GAP; });
   const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
   const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
@@ -178,7 +180,7 @@ function openMenu(rows, opts = {}) {
     } else if (r.t === 'field') {
       const f = FIELD[r.key], so = r.star ? 0.044 : 0;
       if (r.star) { const on = () => isFav(f.key), b = addW(new Btn(on() ? '★' : '☆', 0.036, h * 0.7, () => { if (favToggle(f.key)) b.setLabel(on() ? '★' : '☆', on() ? 'value' : 'ghost'); }, { style: on() ? 'value' : 'ghost', font: 0.62 }), X0 + 0.018, cy); } // ★: al menú principal
-      label(f.short || f.label, cy, undefined, so);
+      label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so);
       if (f.type === 'num') {
         const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
         const row = { f };
@@ -188,13 +190,14 @@ function openMenu(rows, opts = {}) {
         row.plus = addW(new Btn('+', bw, h, () => commit(settings[f.key] + f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
         row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
         fieldRows.push(row);
-      } else if (f.type === 'multi') { // varios a la vez (al menos uno)
-        const n = f.opts.length, w = (CW - LABW - GAP * (n - 1)) / n, row = { f, btns: [] }; let x = X0 + LABW;
+      } else if (f.type === 'multi') { // varios a la vez (al menos uno, salvo los que pueden quedarse vacíos); con f.grid, en rejilla
+        const n = f.opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h, row = { f, btns: [] };
         const on = () => String(settings[f.key]).split(',');
-        f.opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => {
-          const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length) return;
+        f.opts.forEach(([v, lab], i) => { const c = i % cols, rr_ = Math.floor(i / cols), x = X0 + LABW + c * (w + GAP), y = f.grid ? cy + h / 2 - bh / 2 - rr_ * (bh + GAP) : cy;
+          row.btns.push(addW(new Btn(lab, w, bh, () => {
+          const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length && !f.empty) return;
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
-        }, { style: on().includes(v) ? 'selected' : 'normal', font: 0.34 }), x + w / 2, cy)); x += w + GAP; });
+        }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
       } else {
         const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
         const row = { f, btns: [] };

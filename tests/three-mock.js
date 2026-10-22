@@ -167,7 +167,8 @@ class Object3D {
   rotateY(a) { this.quaternion.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), a)); return this; }
   rotateZ(a) { this.quaternion.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), a)); return this; }
   rotateX(a) { this.quaternion.multiply(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), a)); return this; }
-  clone(recursive = true) { const o = new this.constructor(this.geometry, this.material); o.position.copy(this.position); o.quaternion.copy(this.quaternion); o.scale.copy(this.scale); o.visible = this.visible; o.castShadow = this.castShadow; if (recursive) for (const c of this.children) o.add(c.clone()); return o; }
+  getObjectByName(n) { if (this.name === n) return this; for (const c of this.children) { const r = c.getObjectByName(n); if (r) return r; } return undefined; }
+  clone(recursive = true) { const o = new this.constructor(this.geometry, this.material); o.name = this.name; o.position.copy(this.position); o.quaternion.copy(this.quaternion); o.scale.copy(this.scale); o.visible = this.visible; o.castShadow = this.castShadow; if (recursive) for (const c of this.children) o.add(c.clone()); return o; }
 }
 class Group extends Object3D {}
 class Scene extends Object3D { constructor() { super(); this.fog = null; this.environment = null; this.background = null; } }
@@ -299,6 +300,9 @@ class Raycaster { constructor() { this.ray = new Ray(); } setFromCamera(c, cam) 
   for (const o of list) { if (!o.visible) continue; const w = o.userData.w, h = o.userData.h; if (!w) continue; o.updateWorldMatrix(true, false); const n = o.getWorldDirection(new Vector3()), p = o.getWorldPosition(new Vector3()); const pl = new Plane().setFromNormalAndCoplanarPoint(n, p); const pt = this.ray.intersectPlane(pl, new Vector3()); if (!pt) continue; const l = o.worldToLocal(pt.clone()); if (Math.abs(l.x) <= w / 2 && Math.abs(l.y) <= h / 2) hits.push({ object: o, point: pt, distance: pt.distanceTo(this.ray.origin) }); }
   return hits.sort((a, b) => a.distance - b.distance);
 } }
+// Animaciones: lo justo para que los monstruos con modelo (inyectado en las pruebas) se muevan sin errores
+class AnimationAction { constructor(c) { this.clip = c; this.time = 0; this.timeScale = 1; this.scheduled = false; } reset() { this.time = 0; return this; } setLoop() { return this; } fadeIn() { return this; } fadeOut() { this.scheduled = false; return this; } play() { this.scheduled = true; return this; } stop() { this.scheduled = false; return this; } isScheduled() { return this.scheduled; } }
+class AnimationMixer { constructor(root) { this.root = root; this.acts = new Map(); } clipAction(c) { if (!this.acts.has(c)) this.acts.set(c, new AnimationAction(c)); return this.acts.get(c); } update(dt) { for (const a of this.acts.values()) if (a.scheduled) a.time += dt * a.timeScale; } stopAllAction() { for (const a of this.acts.values()) a.stop(); } }
 class WebGLRenderer {
   constructor() { this.domElement = global.document.createElement('canvas'); this.shadowMap = { enabled: false, type: 0 }; this.capabilities = { getMaxAnisotropy: () => 16 }; this.toneMappingExposure = 1;
     const self = this; this.xr = { enabled: false, _session: null, setReferenceSpaceType() {}, setFoveation() {}, getSession() { return this._session; }, async setSession(s) { this._session = s; s._renderer = self; }, getReferenceSpace() { return this._session ? {} : null; } };
@@ -313,5 +317,6 @@ module.exports = {
   BufferGeometry, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, OctahedronGeometry, TorusGeometry, TubeGeometry, PlaneGeometry, CircleGeometry, RingGeometry, InstancedBufferGeometry, CatmullRomCurve3,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, SpriteMaterial, LineBasicMaterial, PointsMaterial, ShadowMaterial, CanvasTexture, Texture, PMREMGenerator, Plane, Raycaster, WebGLRenderer,
   sRGBEncoding: 3001, ACESFilmicToneMapping: 4, PCFSoftShadowMap: 2, BackSide: 1, AlwaysDepth: 1, DoubleSide: 2, FrontSide: 0, AdditiveBlending: 2, NormalBlending: 1, RepeatWrapping: 1000, ClampToEdgeWrapping: 1001, DynamicDrawUsage: 35048, KeepStencilOp: 7680, ReplaceStencilOp: 7681, NotEqualStencilFunc: 517, AlwaysStencilFunc: 519,
+  AnimationMixer, LoopOnce: 2200, LoopRepeat: 2201, SkeletonUtils: { clone: o => o.clone() },
   MathUtils: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) }
 };

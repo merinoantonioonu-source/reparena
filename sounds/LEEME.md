@@ -28,6 +28,7 @@ Vale `.mp3`, `.ogg` o `.wav` (por ejemplo `rayo.mp3`). Si un archivo no está, s
 | `ataque-arana` | Una araña salta a por ti. |
 | `aplastar` | Revientas una araña o un avispón (chapoteo viscoso). |
 | `ataque-volador` | Un avispón se lanza a picarte (o, en Barras, una avispa o un dron). |
+| `arco-pasa` | Un arco de energía te pasa por encima, o lo saltas (Arcos). |
 | `siseo-avispa` | Un avispón carga antes de picar; en Barras, las avispas y la reina amenazan o te pican. |
 | `ameba` | Revientas una ameba de agua (Toques). |
 | `pompa` | Revientas una pompa (Barras). |
@@ -47,8 +48,23 @@ Cada uno con su archivo: si falta, suena su rugido sintetizado (con su tono), no
 | `rugido-puglin` | El Puglin, en los mismos momentos. |
 | `rugido-zombi` | El zombi y su jefe (un gruñido grave). |
 | `rugido-velociraptor` | El velociraptor y el jefe (el velociraptor enorme). |
+| `rugido-zombi-verde` | El zombi verde y su jefe. |
+| `rugido-zombi-gordo` | El zombi gordo y su jefe. |
+| `voz-demonio` | El demonio (monstruito) y su jefe. |
+| `voz-demonio-verde` | El demonio verde y su jefe. |
+| `voz-ciclope` | El cíclope y su jefe. |
+| `voz-yeti` | El yeti y su jefe. |
+| `voz-calavera` | La calavera, andando o saliendo de las trampillas. |
+| `voz-alien` | El alien y su jefe. |
+| `voz-alien-alto` | El alien alto y su jefe. |
+| `voz-cangrejo` | El cangrejo de las trampillas (al salir, al amenazar y al morderte). |
+| `voz-seta` | La seta de las trampillas. |
+| `voz-abeja` | La abeja, al lanzarse a picarte. |
+| `voz-murcielago` | El murciélago, al lanzarse a morderte. |
+| `voz-cthulhu` | Cthulhu, al lanzarse a por ti. |
+| `voz-dragon` | El dragón (jefe de los voladores), al lanzarse a por ti. |
 
-Los voladores ya tienen cada uno su zumbido (`zumbido-dron`, `zumbido-avispa`, más abajo) y los tentáculos, `tentaculos`.
+Los drones y los avispones ya tienen cada uno su zumbido (`zumbido-dron`, `zumbido-avispa`, más abajo) y los tentáculos, `tentaculos`.
 
 ## Espadas
 

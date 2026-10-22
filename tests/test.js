@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -229,12 +229,39 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (held !== 2 || up !== 3 || lost !== 3 || !/18 %/.test(n2)) errors.push('dificultad creciente: no se para tras una oleada con muchos golpes o no sube tras una limpia'); R.lvl = 0; }
   // monstruos de archivo (Imp y Puglin): aquí no hay cargador de glTF, así que en su lugar salen robots, sin errores
   { const kinds = new Set();
-    await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 30, zombies: 30, dinos: 40, robotsW: 0 }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
+    await runConfig('monstruos sin modelos → robots', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'imp,puglin,zombie,zgreen,zchubby,raptor,demon,yeti,alientall' }, t => { squatSim(2.6)(t); RA.enemies.forEach(e => kinds.add(e.kind)); }, 420,
       s => [...kinds].some(k => !['scout', 'heavy', 'titan'].includes(k)) ? `sin los modelos deberían salir robots (${[...kinds]})` : s.kills < 4 ? 'no se derriba a nadie' : ''); }
+  // los enemigos elegidos (Ajustes → Enemigos): con sus modelos (aquí, de mentira: sin cargador de glTF) salen ellos, cada
+  // uno a su manera: los zombis y monstruitos de las compuertas andando, los voladores volando (el dragón, de jefe) y, en
+  // flexiones, cangrejos, setas y calaveras de las trampillas
+  { const fakeKind = k => { const D = RA.BEAST_DEF[k], g = new THREE.Group(); for (const n of ['Body', 'Head', 'Torso', 'LowerArm.R']) { const b = new THREE.Group(); b.name = n; g.add(b); } g.add(new THREE.Mesh());
+      const clips = {}; for (const a in D.alias) clips[a] = { name: D.alias[a], duration: 0.5, tracks: [] }; return { scene: g, clips, map: null }; };
+    const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon'];
+    for (const k of NEW) RA.BEAST.kinds[k] = fakeKind(k);
+    const seen = new Set(), cls = new Set();
+    await runConfig('enemigos elegidos: zombis, monstruitos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'zgreen,zchubby,demon,yeti,alientall', foesFly: 'bee,bat,cthulhu,dragon', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6, flySpeed: 6 },
+      t => { squatSim(2.6)(t); RA.enemies.forEach(e => { seen.add(e.kind); cls.add(e.constructor.name); }); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+    const want = ['zgreen', 'zchubby', 'demon', 'yeti', 'alientall', 'bee', 'bat', 'cthulhu', 'dragon'], miss = want.filter(k => k !== 'dragon' && !seen.has(k) && !seen.has(k + 'boss')), extra = [...seen].filter(k => !want.some(w => k === w || k === w + 'boss'));
+    log(`chosen enemies: seen ${[...seen].join(',')} · classes ${[...cls].join(',')} · missing ${miss.join(',') || 'none'} · not chosen ${extra.join(',') || 'none'}`);
+    if (miss.length || extra.length) errors.push(`enemigos elegidos: no salen justo los marcados (faltan ${miss}, sobran ${extra})`);
+    const hseen = new Set();
+    await runConfig('enemigos de las trampillas: cangrejo, seta y calavera', { ...base, mode: 'combat', aim: 'auto', exercise: 'pushup', foesHatch: 'crab,mushroom,skull', foesFly: '', waves: 2, repsWave: 10, walkTime: 6 },
+      t => { squatSim(2.4)(t); RA.enemies.forEach(e => hseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 4 ? `pocos derribados (${s.kills})` : '');
+    log(`hatch enemies: ${[...hseen].join(',')}`);
+    if (!['hcrab', 'hmushroom', 'hskull'].every(k => hseen.has(k + ':HatchBeast')) || [...hseen].some(k => !/^h(crab|mushroom|skull)(boss)?:HatchBeast$/.test(k))) errors.push('trampillas: no salen solo los monstruitos elegidos');
+    // sin ninguno de tierra: solo voladores; sin ninguno de nada: robots
+    RA.setSetting('foesGate', ''); RA.setSetting('foesFly', 'bee'); RA.setSetting('exercise', 'squat'); const onlyFly = RA.foes(), wave = RA.buildWave(0).map(e => e.kind);
+    RA.setSetting('foesFly', 'bee,dragon'); RA.setSetting('waves', 1); const bossFly = RA.buildWave(0).map(e => e.kind); RA.setSetting('waves', 3);
+    RA.setSetting('foesFly', ''); const none = RA.foes(), wave0 = RA.buildWave(0).map(e => e.kind);
+    log(`no ground enemies: ${onlyFly} (${[...new Set(wave)]}) · boss wave with the dragon: ${[...new Set(bossFly)]} · none at all: ${none} (${[...new Set(wave0)]})`);
+    if (bossFly[bossFly.length - 1] !== 'dragon') errors.push('voladores: con el dragón marcado, el jefe debería ser el dragón');
+    if (onlyFly !== 'flyers' || wave.some(k => k !== 'bee') || none !== 'robots' || wave0.some(k => !['scout', 'heavy'].includes(k))) errors.push('enemigos: sin los de tierra deberían salir solo voladores, y sin ninguno, robots');
+    for (const k of NEW) delete RA.BEAST.kinds[k];
+    RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesHatch', 'spider'); RA.setSetting('foesFly', 'drone,hornet'); }
   // cada enemigo: rapidez de gestos y velocidad al desplazarse, por separado; más rápidos no llegan antes (lo gastan en
   // zigzag o paradas); con esquivas se apartan de golpe
   { const runMove = async (name, pace, spd, move) => { const R = { arrive: [], vmax: 0, dodges: 0, sp: [], ex: [], atk: [] }, born = new Map(), seen = new Set(), wu = new Map();
-      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', beasts: 0, zombies: 0, dinos: 0, robotsW: 100, walkTime: 8, maxAlive: 2, pace_robot: pace, spd_robot: spd, move_robot: move }, t => {
+      await runConfig(name, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'robot', walkTime: 8, maxAlive: 2, pace_robot: pace, spd_robot: spd, move_robot: move }, t => {
         RA.PV.crouch = false;
         for (const e of RA.enemies) { if (!e.alive || e.type !== 'robot' || e.K.boss) continue; if (!born.has(e)) born.set(e, t);
           if (e.state === 'walk' && !e.charged && e.spd > 0.15) (e.out ? R.sp : R.ex).push(e.spd); if (e.dodge > 0 && !seen.has(e.dodgeT)) { seen.add(e.dodgeT); R.dodges++; }
@@ -254,7 +281,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (!A.med || !Z.med || !F.med || Math.abs(Z.med - A.med) > A.med * 0.35 || Math.abs(F.med - A.med) > A.med * 0.35) errors.push(`cada enemigo: más deprisa no deberían llegar mucho antes ni después (${A.med.toFixed(1)} → ${F.med.toFixed(1)} / ${Z.med.toFixed(1)} s)`);
       if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
-    for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('robotsW', 50); RA.setSetting('beasts', 50); RA.setSetting('zombies', 50); RA.setSetting('dinos', 50); }
+    for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
   const iwMid = new Set();
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
@@ -555,7 +582,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`simple menu: Partida ${partS.join(',')} · full ${partF.join(',')} · “el rayo va” in the main menu: simple ${lobbyS}, full ${lobbyF}`);
     if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF) errors.push('menú sencillo: no esconde lo de afinar, o el completo no lo enseña');
     RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
-  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', ['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!['Robots', 'Voladores', 'Mezcla', 'Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
@@ -581,9 +608,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (let i = 0; i < 4; i++) { findW(RA.activeWidgets().find(w => /^Al compás/.test(w.label)).label).onPress(); frame(1); await sleep(400); }
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
-  press('Combate'); frame(1); press('Voladores'); frame(1); press('Ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
-  log('combat flyers gaze:', RA.settings.foes, RA.settings.aim); if (RA.settings.foes !== 'flyers' || RA.settings.aim !== 'gaze') errors.push('no se eligen voladores con la mirada');
-  press('Robots'); frame(1); press('Automática'); frame(1);
+  // Enemigos ▸: cada uno se marca o se quita; sin ninguno de las compuertas, solo voladores
+  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^Enemigos: /.test(w.label)).label); frame(1);
+  const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
+  for (const l of gateLabels) { RA.activeWidgets().find(w => w.label === l).onPress(); frame(1); }
+  press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
+  press('Ajustes'); frame(1); press('Enemigos'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
+  log('combat flyers gaze:', foesNow, flyNow, RA.settings.aim, '· gate left', JSON.stringify(RA.settings.foesGate)); if (foesNow !== 'flyers' || !flyNow.includes('bee') || RA.settings.aim !== 'gaze') errors.push('no se eligen solo voladores (con la abeja) y la mirada');
+  RA.setSetting('foesGate', gate0); RA.setSetting('foesFly', 'drone,hornet'); RA.lobbyMenu(); frame(1); press('Automática'); frame(1);
   // barras: menús, colocar aparatos y pestaña de ajustes
   press('Barras'); frame(1); log('bars mode', RA.settings.mode, RA.settings.exercise);
   // colocar: el atril se oculta, H = manos arriba; a los 5 s queda colocada y aparece el menú de ajuste
@@ -638,7 +670,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     used.length = 0; RA.SND.roar(P, 0.75, 'zombie'); RA.SND.roar(P, 1.6, 'raptor'); RA.SND.hiss(P, 0.8, 'wasp'); RA.SND.hiss(P, 1); RA.SND.squish(P); RA.SND.whoosh(P, 'spider'); RA.SND.whoosh(P); const own = used.filter(Boolean).join(',');
     log(`enemy voices: without their files ${noOwn || 'synthesized'} · with them ${own}`);
     if (noOwn || own !== 'zombi,avispa,arana,salto') errors.push('sonidos propios: cada enemigo no suena con su propio archivo');
-    if (!['rugido-zombi', 'rugido-velociraptor', 'rugido-diablillo', 'rugido-puglin', 'siseo-avispa', 'ataque-arana', 'arco-pasa'].every(n => names.includes(n))) errors.push('sonidos propios: faltan las voces de los enemigos en la lista');
+    if (!['rugido-zombi', 'rugido-velociraptor', 'rugido-diablillo', 'rugido-puglin', 'siseo-avispa', 'ataque-arana', 'arco-pasa', 'rugido-zombi-gordo', 'voz-yeti', 'voz-cangrejo', 'voz-dragon'].every(n => names.includes(n))) errors.push('sonidos propios: faltan las voces de los enemigos en la lista');
     dr.stop(); sb.stop(); for (const k of ['rugido-robot', 'espada-golpe', 'espada-golpe-laser', 'oleada', 'zumbido-dron', 'espada-laser-zumbido', 'rugido-zombi', 'siseo-avispa', 'siseo-arana', 'ataque-arana']) delete RA.AUD.samples[k];
     C.createBufferSource = mk;
   }

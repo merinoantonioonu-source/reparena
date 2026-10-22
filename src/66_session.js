@@ -5,7 +5,7 @@
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
-const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foes', 'aim'];
+const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
 (function loadSession() {
@@ -16,10 +16,15 @@ const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.m
   if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
 })();
 // En Combate el bloque guarda sus enemigos (y, si venía de Enjambre o Asalto, su puntería)
-function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: clampSetting(FIELD.foes, b.foes || settings.foes) }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
+// (foes: por tierra, voladores o mezcla, sobre los enemigos elegidos en Ajustes → Enemigos; por defecto, lo que haya ahí)
+const foeCat = v => FOE_CATS.some(o => o[0] === v) ? v : null;
+const foeCatNow = () => { const g = foeList('foesGate').length || foeList('foesHatch').length, f = foeList('foesFly').length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
+function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: foeCat(b.foes) || foeCatNow() }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
+// Lo que el bloque cambia en los ajustes mientras se juega
+function blockSettings(b) { const { foes: c, ...o } = blockExtra(b); return c ? Object.assign(o, foeCatPatch(c)) : o; }
 function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${b.foes ? ` (${fmtVal(FIELD.foes, b.foes).toLowerCase()})` : ''}`; }
+function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes); return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
@@ -32,7 +37,7 @@ function sessionMinutes() {
 function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockExtra(b));
+  Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b));
   onSettingChanged('mode'); onSettingChanged('exercise');
 }
 function startSession() {
@@ -99,7 +104,7 @@ function renderSession() {
   host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
-    ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FIELD.foes.opts, b.foes)}</select>` : ''}
+    ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
     <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
@@ -113,7 +118,7 @@ function sesInitPage() {
     const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
     const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
     if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); delete b.foes; delete b.aim; Object.assign(b, blockExtra(b)); }
-    else if (f === 'foes') b.foes = clampSetting(FIELD.foes, ev.target.value);
+    else if (f === 'foes') b.foes = foeCat(ev.target.value) || 'robots';
     else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
     saveSession(); renderSession();

@@ -311,8 +311,10 @@ const SND = {
 // Cada enemigo con su propia voz: el rugido de los que andan, el siseo (arañas o avispas) y el ataque al lanzarse. El último
 // argumento del efecto dice quién es; sin su archivo suena el sintetizado (con el tono de ese enemigo), no el de otro
 const VOICE_FILES = {
-  roar: { robot: 'rugido-robot', imp: 'rugido-diablillo', puglin: 'rugido-puglin', zombie: 'rugido-zombi', raptor: 'rugido-velociraptor' },
-  hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa' },
+  roar: { robot: 'rugido-robot', imp: 'rugido-diablillo', puglin: 'rugido-puglin', zombie: 'rugido-zombi', raptor: 'rugido-velociraptor', zgreen: 'rugido-zombi-verde', zchubby: 'rugido-zombi-gordo',
+    demon: 'voz-demonio', greendemon: 'voz-demonio-verde', cyclops: 'voz-ciclope', yeti: 'voz-yeti', skull: 'voz-calavera', alien: 'voz-alien', alientall: 'voz-alien-alto',
+    bee: 'voz-abeja', bat: 'voz-murcielago', cthulhu: 'voz-cthulhu', dragon: 'voz-dragon' },
+  hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa', crab: 'voz-cangrejo', mushroom: 'voz-seta', skull: 'voz-calavera' },
   whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa' }
 };
 // Efectos que se pueden sustituir por un archivo: nombre del archivo (o, en los de VOICE_FILES, la posición del argumento
