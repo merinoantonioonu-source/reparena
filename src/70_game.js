@@ -62,9 +62,9 @@ const ROBOT_KIND = {
 };
 // Los zombis nuevos y los monstruitos que andan, cada uno con su jefe (el mismo, más grande y más lento). grp: su clase en
 // Ajustes → Cada enemigo
-for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute'])]) {
+for (const [k, head, grp] of [['zgreen', 1.25, 'zombie'], ['zchubby', 1.5, 'zombie'], ...CUTE_GATE.map(c => [c, 1.0, 'cute']), ...PIRATE_GATE.map(c => [c, c === 'captain' ? 1.7 : 1.4, 'pirate'])]) {
   ROBOT_KIND[k] = { rig: k, scale: 1.0, speedF: grp === 'zombie' ? 0.9 : 1.0, heavy: false, stop: 1.1, stride: 1.0, head, beast3d: k, grp };
-  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true };
+  ROBOT_KIND[k + 'boss'] = { ...ROBOT_KIND[k], scale: k === 'captain' ? 1.45 : 1.65, speedF: 0.72, heavy: true, stop: 1.8, boss: true }; // (el capitán ya es alto: que quepa por la compuerta)
 }
 // Puestos de ataque: cada robot tiene el suyo en un arco delante de ti, separado de los demás para que nunca se
 // estorben. Si la primera fila está llena, esperan en una segunda (o tercera) y avanzan cuando queda un hueco.
@@ -85,7 +85,7 @@ function gateSolids(doors) {
 // y, en el bosque, los troncos, las rocas y los arbustos. Cada uno sabe de qué compuerta es: dentro de su túnel, el que
 // sale no choca con los de la suya
 const SOLIDS = { list: [], t: -1 };
-function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : []); }
+function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : []); }
 const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
 const GAMEF = { n: 0 };
 // Nadie se mete en algo sólido: si un empujón (de otro, de un disparo, del golpe) lo mete, sale por el lado más corto
@@ -492,7 +492,7 @@ function mxPlay(o, n, fade = 0.2, once = false, ts = 1, restart = false) {
   for (const k in o.acts) { const b = o.acts[k]; if (b !== a && b.isScheduled()) { b.timeScale = 1; b.fadeOut(fade); } }
 }
 // Tono del rugido sintetizado de cada monstruo (sin su archivo de sonido): más agudo cuanto más pequeño
-const BEAST_PITCH = { puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
+const BEAST_PITCH = { skeleton: 1.3, captain: 0.8, sharky: 1.0, mako: 1.1, puglin: 1.9, zombie: 0.75, zgreen: 0.85, zchubby: 0.65, raptor: 1.6, yeti: 1.0, cyclops: 1.15, demon: 1.5, greendemon: 1.5, skull: 1.7, alien: 1.8, alientall: 1.6, bee: 2.4, bat: 2.2, cthulhu: 1.2, dragon: 0.9 };
 class Beast extends Robot {
   constructor(spec, gate) {
     super(spec, gate); this.D = BEAST_DEF[this.K.beast3d]; this.bar.g.position.y = this.D.h + 0.25;
@@ -564,7 +564,7 @@ class Beast extends Robot {
     if (this.st > 2.3) this.root.position.y -= dt * 0.45 * this.sc; // se hunde
     if (this.st > 3.8 && !this.gone) { this.gone = true; this.dispose(); }
   }
-  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); }
+  dispose() { if (this.disposed) return; this.disposed = true; super.dispose(); this.mx.stopAllAction(); this.inst.mat.dispose(); if (this.inst.mat.still) this.inst.mat.still.dispose(); }
 }
 
 /* =================== ARAÑAS (flexiones) =================== */
@@ -1787,7 +1787,7 @@ function buildWave(i) {
   if (isBossWave(i)) {
     const b = Math.max(4, Math.round(total * 0.3)), ground = F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0);
     const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', thrower: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
-    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
+    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : !tiny && G.includes('captain') ? 'captainboss' : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
     boss = { kind, hp: b }; total -= b;
   }
   let k = 0;
@@ -1800,7 +1800,7 @@ function buildWave(i) {
       else if (g === 'thrower') { kind = 'impthrow'; hp = 2 + Math.floor(i / 3); }
       else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
       else if (g === 'robot') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
-      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' ? 3 : 2) + Math.floor(i / 3); } // zombis y monstruitos
+      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' || g === 'captain' ? 3 : 2) + Math.floor(i / 3); } // zombis, monstruitos y piratas
     }
     else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
     hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;

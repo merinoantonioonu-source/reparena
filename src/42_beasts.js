@@ -23,8 +23,14 @@ const BEAST_DEF = { imp: { h: 1.68, walk: 1.25, jog: 2.9, run: 4.6 }, puglin: { 
 // del .glb (ownTex). file: el archivo en models/; k: su escala (para que mida h metros)
 const ZOMBIE2 = { own: true, ownTex: true, lazy: true, walk: 0.6, jog: 1.6, run: 2.4, maxTs: 2.2, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
   alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Punch: 'Punch', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Idle_Attack' }, atk: ['Punch', 0.25, 0.45],
-  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArm.R' } };
+  bones: { chest: 'Torso', head: 'Head', handR: 'LowerArmR' } }; // (el cargador quita los puntos de los nombres: LowerArm.R → LowerArmR)
 Object.assign(BEAST_DEF, { zgreen: { ...ZOMBIE2, file: 'zombie_basic', h: 1.36, k: 1 }, zchubby: { ...ZOMBIE2, file: 'zombie_chubby', h: 1.64, k: 1 } });
+// Los piratas (Pirate Kit, de Quaternius, CC0): el esqueleto, el capitán Barbarroja (con su loro) y los tiburones Sharky y
+// Mako, con su arma en la mano; dan un tajo a media altura (zone: por dónde llega, para pararlo con la espada)
+const PIRATE = { ...ZOMBIE2, walk: 0.7, jog: 1.7, run: 2.6, taunt: 'Dance_Loop', alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Run', Sprint_Loop: 'Run', Sword: 'Sword', Death01: 'Death', Hit: 'HitReact', Dance_Loop: 'Wave' },
+  atk: ['Sword', 0.15, 0.32], zone: ['mid', 1] };
+Object.assign(BEAST_DEF, { skeleton: { ...PIRATE, file: 'piratas/esqueleto', h: 1.5, k: 1 }, captain: { ...PIRATE, file: 'piratas/capitan', h: 1.85, k: 1, zone: ['mid', -1] },
+  sharky: { ...PIRATE, file: 'piratas/sharky', h: 1.56, k: 1 }, mako: { ...PIRATE, file: 'piratas/mako', h: 1.59, k: 1 } });
 // Los monstruitos andan dando saltitos (sus animaciones son en el sitio: más deprisa cuanto más corren) y muerden lanzándose
 const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.2, minTs: 0.7, maxTs: 2.4, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
   alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Walk', Sprint_Loop: 'Walk', Bite: 'Bite_Front', Death01: 'Death', Hit: 'HitRecieve', Dance_Loop: 'Jump', Fly: 'Flying' }, atk: ['Bite', 0.12, 0.28],
@@ -170,7 +176,8 @@ function beastRig(kind) {
     } else {
       mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
-      model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
+      const still = mat.clone(); still.skinning = false; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
+      model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; } });
     }
     const root = new THREE.Group(); root.add(model);
     if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z

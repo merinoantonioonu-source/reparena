@@ -5,7 +5,7 @@
 // los enemigos. Cada modelo se dibuja con instancias (una pieza por modelo y material), para que vaya fluido en las Quest.
 // models/nature.glb (los modelos juntos, simplificados) y models/tex/nature (sus texturas, reducidas). Se carga la primera
 // vez que hace falta; mientras tanto (o si no se puede cargar), sigue la fortaleza
-const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, pick: Math.random() < 0.5 ? 'arena' : 'nature', built: '', birdT: 3 };
+const NAT = { group: new THREE.Group(), ready: false, loading: false, failed: false, parts: {}, solids: [], foot: {}, pick: pick(['arena', 'nature', 'island']), built: '', birdT: 3 };
 NAT.group.visible = false; arena.add(NAT.group);
 // material del modelo → [textura, con transparencia (hojas, flores), por las dos caras]
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
@@ -234,7 +234,7 @@ function natGateStyle(on) {
 }
 settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
 // Con «Alternar», cada partida en un sitio distinto
-function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = NAT.pick === 'nature' ? 'arena' : 'nature'; applyEnvMode(); }
+function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = { arena: 'nature', nature: 'island' }[NAT.pick] || 'arena'; applyEnvMode(); } // fortaleza → bosque → isla
 // Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles
 function updateNature(dt, t) {
   if (!NAT.group.visible) return;

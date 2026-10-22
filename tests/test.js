@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -236,7 +236,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // flexiones, cangrejos, setas y calaveras de las trampillas
   { const fakeKind = k => { const D = RA.BEAST_DEF[k], g = new THREE.Group(); for (const n of ['Body', 'Head', 'Torso', 'LowerArm.R']) { const b = new THREE.Group(); b.name = n; g.add(b); } g.add(new THREE.Mesh());
       const clips = {}; for (const a in D.alias) clips[a] = { name: D.alias[a], duration: 0.5, tracks: [] }; return { scene: g, clips, map: null }; };
-    const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon'];
+    const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon', 'skeleton', 'captain', 'sharky', 'mako'];
     for (const k of NEW) RA.BEAST.kinds[k] = fakeKind(k);
     const seen = new Set(), cls = new Set();
     await runConfig('enemigos elegidos: zombis, monstruitos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'zgreen,zchubby,demon,yeti,alientall', foesFly: 'bee,bat,cthulhu,dragon', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6, flySpeed: 6 },
@@ -244,6 +244,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const want = ['zgreen', 'zchubby', 'demon', 'yeti', 'alientall', 'bee', 'bat', 'cthulhu', 'dragon'], miss = want.filter(k => k !== 'dragon' && !seen.has(k) && !seen.has(k + 'boss')), extra = [...seen].filter(k => !want.some(w => k === w || k === w + 'boss'));
     log(`chosen enemies: seen ${[...seen].join(',')} · classes ${[...cls].join(',')} · missing ${miss.join(',') || 'none'} · not chosen ${extra.join(',') || 'none'}`);
     if (miss.length || extra.length) errors.push(`enemigos elegidos: no salen justo los marcados (faltan ${miss}, sobran ${extra})`);
+    // los piratas: esqueleto, capitán y tiburones; con el capitán marcado, el jefe es él
+    const pseen = new Set();
+    await runConfig('enemigos elegidos: piratas', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'skeleton,captain,sharky,mako', foesFly: '', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6 },
+      t => { squatSim(2.6)(t); RA.enemies.forEach(e => pseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+    log(`pirates: ${[...pseen].join(',')}`);
+    if (!['skeleton', 'captain', 'sharky', 'mako', 'captainboss'].every(k => pseen.has(k + ':Beast'))) errors.push('piratas: no salen el esqueleto, el capitán, los tiburones y el capitán de jefe');
     const hseen = new Set();
     await runConfig('enemigos de las trampillas: cangrejo, seta y calavera', { ...base, mode: 'combat', aim: 'auto', exercise: 'pushup', foesHatch: 'crab,mushroom,skull', foesFly: '', waves: 2, repsWave: 10, walkTime: 6 },
       t => { squatSim(2.4)(t); RA.enemies.forEach(e => hseen.add(e.kind + ':' + e.constructor.name)); }, 420, s => s.kills < 4 ? `pocos derribados (${s.kills})` : '');
@@ -720,7 +726,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
   // ---- entorno: sin cargador de glTF (aquí) el bosque no se puede cargar y sigue la fortaleza, sin errores ----
   { RA.setSetting('scenery', 'nature'); frame(1); const envOn = RA.env.visible; RA.setSetting('scenery', 'arena'); frame(1);
-    log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza'); }
+    log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza');
+    RA.setSetting('scenery', 'island'); frame(1); const islEnv = RA.env.visible, islGrp = RA.ISL.group.visible; RA.setSetting('scenery', 'mix'); const picks = [];
+    for (let i = 0; i < 3; i++) { RA.sceneryNewRun(); picks.push(RA.NAT.pick); } RA.setSetting('scenery', 'arena'); frame(1);
+    log('scenery island without loader: fortress visible', islEnv, '· island shown', islGrp, '· alternating', picks.join(' → '));
+    if (!islEnv || islGrp) errors.push('entorno: si la isla no se puede cargar debería verse la fortaleza');
+    if (new Set(picks).size !== 3) errors.push('entorno: «Alternar» debería pasar por la fortaleza, el bosque y la isla'); }
   // ---- progreso: calorías en cada ronda, racha de días y resumen de hoy ----
   { const H = JSON.parse(storage.get('reparena3-history') || '[]'), last = H[H.length - 1], txt = RA.activeWidgets().map(w => w.label || '').join(' | ') + ' ' + (RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : '');
     const now = Date.now(), D = 864e5, mk = (dd, ex = 'squat', time = 600) => ({ ex, mode: 'combat', reps: 10, perfect: 0, kills: 0, win: true, time, date: now - dd * D });

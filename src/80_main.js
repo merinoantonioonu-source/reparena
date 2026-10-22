@@ -225,11 +225,11 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt); updateOutcome(dt);
-  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);
-  if (!arMode && !forestOn() && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
+  if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.1) { centerT = 0; drawCenter(); }
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   renderer.render(scene, camera);

@@ -202,7 +202,8 @@ const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'
 // La marca sale de dónde llega su golpe (ATK_ZONE: los puñetazos, a la cara; el gancho y los tajos, de lado o desde
 // abajo); sin un golpe conocido, al azar
 function blockStart(r) {
-  const z = r.atk && ATK_ZONE[r.atk]; r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
+  const z = (r.D && r.D.zone && r.atk === (r.D.atk || [])[0] && r.D.zone) || (r.atk && ATK_ZONE[r.atk]); // (los piratas, su tajo)
+  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
   if (!r.zoneSpr) { r.zoneSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: blockTex, transparent: true, depthWrite: false, toneMapped: false })); r.zoneSpr.renderOrder = 22; scene.add(r.zoneSpr); }
   r.zoneSpr.material.color.setHex(BLOCK_Z[r.zone].col); r.zoneSpr.visible = true;
   say('Golpe ' + BLOCK_Z[r.zone].txt + (r.zoneSide ? (r.zoneSide < 0 ? ' · por tu izquierda' : ' · por tu derecha') : ''), '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);

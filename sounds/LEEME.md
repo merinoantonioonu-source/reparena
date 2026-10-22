@@ -60,6 +60,10 @@ Cada uno con su archivo: si falta, suena su rugido sintetizado (con su tono), no
 | `voz-alien-alto` | El alien alto y su jefe. |
 | `voz-cangrejo` | El cangrejo de las trampillas (al salir, al amenazar y al morderte). |
 | `voz-seta` | La seta de las trampillas. |
+| `voz-esqueleto` | El esqueleto pirata y su jefe. |
+| `voz-capitan` | El capitán Barbarroja (y el capitán jefe). |
+| `voz-tiburon` | Sharky, el tiburón, y su jefe. |
+| `voz-tiburon-gris` | Mako, el tiburón gris, y su jefe. |
 | `voz-abeja` | La abeja, al lanzarse a picarte. |
 | `voz-murcielago` | El murciélago, al lanzarse a morderte. |
 | `voz-cthulhu` | Cthulhu, al lanzarse a por ti. |
@@ -107,6 +111,7 @@ ahora el sintetizado, para reconocerlo.
 | `trueno` | Los truenos lejanos de la arena. |
 | `metal-lejano` | Golpes metálicos lejanos de la arena. |
 | `buho` | Un búho en el bosque. |
+| `gaviota` | Una gaviota que grita sobre el mar (Entorno: Isla pirata), cada pocos segundos y desde un sitio distinto. |
 | `pajaro` | Un pájaro que canta en el bosque de día (Entorno: Bosque), cada pocos segundos y desde un sitio distinto. |
 | `crujido` | Crujidos de ramas en el bosque. |
 
@@ -118,6 +123,7 @@ Que el final empalme con el principio sin corte. Pueden durar varios segundos.
 | --- | --- |
 | `ambiente-arena` | Fondo de la arena (realidad virtual). Sustituye a todo el ambiente sintetizado. |
 | `ambiente-bosque` | Fondo del bosque (viento, grillos…). |
+| `ambiente-isla` | Fondo de la isla pirata (Entorno: Isla pirata): las olas que rompen y se retiran, y la brisa. |
 | `ambiente-naturaleza` | Fondo del bosque de día (Entorno ▸ → Entorno: Bosque): brisa entre las hojas. |
 | `zumbido-dron` | Vuelo de drones, bombarderos y nodrizas (cada uno con su tono). |
 | `zumbido-avispa` | Vuelo de avispones, avispas y la reina (cada uno con su tono). |
