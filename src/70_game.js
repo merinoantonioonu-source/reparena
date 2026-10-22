@@ -1888,6 +1888,21 @@ function foesMenu(back) {
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows); m.rebuild = () => foesMenu(back);
 }
+// Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
+const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
+function armsSummary() {
+  const sw = swordSet() ? (settings.sword === 'two' ? 'dos espadas' : 'espada') : '';
+  if (pistolOn()) return settings.sword === 'one' && sw ? 'espada y bláster' : sw || 'pistolas';
+  if (sw || !isCombat()) return sw || 'sin espadas';
+  return autoAim() ? 'puntería automática' : settings.aim === 'gaze' ? 'con la mirada' : 'con las manos';
+}
+function armsMenu(back) {
+  const again = () => armsMenu(back);
+  const rows = [{ t: 'title', text: 'ARMAS' },
+    ...SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true, after: f.relayout ? again : undefined })),
+    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows); m.rebuild = again;
+}
 function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
@@ -1901,15 +1916,14 @@ function lobbyMenu() {
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, onPress: () => exerciseMenu(lobbyMenu) }] },
-    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, onPress: () => foesMenu(lobbyMenu) }] }, ...(fieldVisible(FIELD.aim) ? [{ t: 'field', key: 'aim', after: () => lobbyMenu() }] : []), ...(fieldVisible(FIELD.throwPick) ? [{ t: 'field', key: 'throwPick' }] : [])] : []),
+    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, onPress: () => foesMenu(lobbyMenu) }] }] : []),
+    ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, onPress: () => armsMenu(lobbyMenu) }] }] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
     ...(bars && hang ? [{ t: 'field', key: 'hangPit' }] : [])
   ];
   if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
-  // espadas (Combate contra robots con sentadillas o zancadas, Toques de pie)
-  if (fieldVisible(FIELD.sword)) { rows.push({ t: 'field', key: 'sword', after: () => lobbyMenu() }); if (swordSet()) rows.push({ t: 'field', key: 'swordKind' }); }
   if (settings.mode === 'touch') {
     if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
     else rows.push({ t: 'field', key: 'tchHands' });
