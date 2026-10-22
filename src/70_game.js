@@ -106,12 +106,13 @@ function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
   let best = null, bestC = Infinity;
-  // en tu habitación, ni en un mueble ni detrás de una pared; si así no queda ningún puesto (escaneo raro), sin mirarla
-  for (const room of [true, false]) for (let row = 0; row < 3 && !best; row++) {
+  // en tu habitación, ni en un mueble ni detrás de una pared; con la habitación llena, antes cerca del puesto de otro (ya se
+  // apartan al andar) que en un mueble; si ni así queda ninguno (escaneo raro), sin mirarla
+  for (const [room, apart] of [[true, true], ...(roomPlan() ? [[true, false]] : []), [false, true]]) for (let row = 0; row < 3 && !best; row++) {
     const R = robotStop(r.K) + row * ROW_GAP;
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
       _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
-      if (others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
+      if (apart && others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
       if (room && roomBlocked(_rs.x, _rs.z, r.radius)) continue;
       const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
@@ -457,7 +458,7 @@ class Beast extends Robot {
     const natural = this.D.walk * this.sc * 0.8; if (this.vWalk < natural * 0.75 && this.style !== 'zigzag') this.vMove = Math.max(this.vMove, natural);
     this.animate(0, 0, 0);
   }
-  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, raptor: 1.6 }[this.K.beast3d] || 1.4); } // el zombi, un gruñido grave
+  roar(pos) { SND.roar(pos, { puglin: 1.9, zombie: 0.75, raptor: 1.6 }[this.K.beast3d] || 1.4, this.K.beast3d); } // el zombi, un gruñido grave; cada uno con su archivo
   center(out) { return this.B.chest.getWorldPosition(out); }
   play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
@@ -501,7 +502,7 @@ class Beast extends Robot {
   // al morir cae con su animación (el zombi, que no la tiene, se desploma de espaldas), se hunde en el suelo y desaparece
   kill() {
     if (this.mode === 'dying') return; this.alive = false; this.mode = 'dying'; this.st = 0; this.react = 0; this.bar.g.visible = false; this.tint = 1;
-    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6, raptor: 1.3 }[this.K.beast3d] || 1.0); SND.squish(c);
+    const c = this.center(new V3()); fx.sparks(c, 18, [0.9, 0.15, 0.1], 2.6, 0.05); SND.roar(c, { puglin: 1.5, zombie: 0.6, raptor: 1.3 }[this.K.beast3d] || 1.0, this.K.beast3d); SND.squish(c);
     if (this.clips.Death01) this.play('Death01', 0.1, true, 1, true); else { this.fall = this.inst.model.rotation.x; if (this.acts[this.cur]) this.acts[this.cur].timeScale = 0.3; }
   }
   update(dt, t) {
@@ -585,7 +586,7 @@ class Spider {
       }
       case 'rear':
         this.rear = Math.min(1, this.st / 0.45); this.yaw += wrapAng(Math.atan2(HL.x - this.pos.x, HL.z - this.pos.z) - this.yaw) * Math.min(1, dt * 8);
-        if (this.st > 0.55) { this.mode = 'lunge'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(lerp(this.pos.x, HL.x, 0.75), 0, lerp(this.pos.z, HL.z, 0.75)); SND.whoosh(this.center(tmpA)); }
+        if (this.st > 0.55) { this.mode = 'lunge'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(lerp(this.pos.x, HL.x, 0.75), 0, lerp(this.pos.z, HL.z, 0.75)); SND.whoosh(this.center(tmpA), 'spider'); }
         break;
       case 'lunge': {
         const k = Math.min(1, this.st / 0.22); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, k); this.pos.y = Math.sin(k * Math.PI) * 0.12 + k * Math.max(0, HL.y - 0.25) * 0.7;
@@ -710,7 +711,7 @@ class Flyer {
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
-        if (!this.windT) { this.windT = 1e-3; SND.hiss(this.center(tmpC), 0.8); } // el avispón carga antes de picar (y te da un momento para dispararle)
+        if (!this.windT) { this.windT = 1e-3; SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle)
       }
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
@@ -834,13 +835,13 @@ class Arc {
     if (this.jump) {
       const need = settings.jumpHeight / 100;
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
-      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp); registerRep(perfect, false);
+      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false);
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
       return;
     }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
-    SND.whoosh(hp);
+    SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
     registerRep(perfect, false);
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);

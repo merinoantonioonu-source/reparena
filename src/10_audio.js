@@ -200,7 +200,7 @@ const SND = {
     const n = 5 + Math.floor(Math.random() * 7); let t = 0;
     for (let i = 0; i < n; i++) { t += rand(0.015, 0.04); noise(o, { t, type: 'highpass', f: 3500 / Math.sqrt(s), d: 0.005, gain: rand(0.08, 0.2) }); }
   },
-  squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3); },
+  squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3, 'squish'); }, // (su siseo, siempre el sintetizado)
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
   bolt(pos, L = 0) {
     if (!sndOK()) return;
@@ -264,7 +264,7 @@ const SND = {
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
     for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
-  whoosh(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
+  whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
   thunder(dist = 1) {
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
@@ -308,27 +308,37 @@ const SND = {
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
 
-// Efectos que se pueden sustituir por un archivo: nombre del archivo, posición del argumento con el sitio del sonido y,
-// en las espadas, el del «es láser» (entonces se busca antes <nombre>-laser). rayo, impacto, tentáculos, caída al foso y
-// pompa tienen su propio manejo (con variantes de tono) dentro de cada efecto
+// Cada enemigo con su propia voz: el rugido de los que andan, el siseo (arañas o avispas) y el ataque al lanzarse. El último
+// argumento del efecto dice quién es; sin su archivo suena el sintetizado (con el tono de ese enemigo), no el de otro
+const VOICE_FILES = {
+  roar: { robot: 'rugido-robot', imp: 'rugido-diablillo', puglin: 'rugido-puglin', zombie: 'rugido-zombi', raptor: 'rugido-velociraptor' },
+  hiss: { spider: 'siseo-arana', wasp: 'siseo-avispa' },
+  whoosh: { flyer: 'ataque-volador', spider: 'ataque-arana', arc: 'arco-pasa' }
+};
+// Efectos que se pueden sustituir por un archivo: nombre del archivo (o, en los de VOICE_FILES, la posición del argumento
+// que dice qué enemigo es), posición del argumento con el sitio del sonido y, en las espadas, el del «es láser» (entonces
+// se busca antes <nombre>-laser). rayo, impacto, tentáculos, caída al foso y pompa tienen su propio manejo (con variantes
+// de tono) dentro de cada efecto
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
-  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: ['rugido-robot', 0],
-  hiss: ['siseo-arana', 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
-  whoosh: ['ataque-volador', 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
+  explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: [{ who: 2, def: 'robot' }, 0],
+  hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
   const out = [...OWN_FILES, ...LOOP_FILES];
-  for (const [f, , li] of Object.values(SND_FILES)) { out.push(f); if (li != null) out.push(f + '-laser'); }
+  for (const [f, , li] of Object.values(SND_FILES)) { if (typeof f === 'string') out.push(f); if (li != null) out.push(f + '-laser'); }
+  for (const k in VOICE_FILES) out.push(...Object.values(VOICE_FILES[k]));
   return out;
 }
-for (const [k, [file, pi, li]] of Object.entries(SND_FILES)) {
+for (const [k, [F, pi, li]] of Object.entries(SND_FILES)) {
   const synth = SND[k];
   SND[k] = function (...a) {
+    const file = typeof F === 'string' ? F : VOICE_FILES[k][a[F.who] || F.def]; // (quien no está en la lista: el sintetizado)
     const pos = pi != null ? a[pi] || null : null, name = li != null && a[li] && AUD.samples[file + '-laser'] ? file + '-laser' : file;
     if (AUD.samples[name] && playSample(name, pos, { rev: pos ? 0.3 : 0.1 })) return;
     return synth.apply(this, a);

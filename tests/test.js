@@ -623,7 +623,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`own sounds: synthesized used files ${before} · with files ${got.join(',')} · loops from file ${!!(dr && dr.fileSrc)} ${!!(sb && sb.fileSrc)} · names ${names.length}`);
     if (before || got.join(',') !== 'rugido,golpe-laser,golpe,oleada,dron,sable') errors.push('sonidos propios: los archivos no sustituyen a los efectos');
     if (!names.includes('espada-golpe-laser') || !names.includes('ambiente-bosque') || names.length < 50) errors.push('sonidos propios: faltan nombres en la lista');
-    dr.stop(); sb.stop(); for (const k of ['rugido-robot', 'espada-golpe', 'espada-golpe-laser', 'oleada', 'zumbido-dron', 'espada-laser-zumbido']) delete RA.AUD.samples[k];
+    // cada enemigo con su voz: el zombi no suena con el rugido del robot; con su archivo, con el suyo
+    used.length = 0; RA.SND.roar(P, 0.75, 'zombie'); RA.SND.hiss(P, 0.8, 'wasp'); RA.SND.hiss(P, 1); const noOwn = used.filter(Boolean).join(',');
+    Object.assign(RA.AUD.samples, { 'rugido-zombi': fake('zombi'), 'siseo-avispa': fake('avispa'), 'siseo-arana': fake('arana'), 'ataque-arana': fake('salto') });
+    used.length = 0; RA.SND.roar(P, 0.75, 'zombie'); RA.SND.roar(P, 1.6, 'raptor'); RA.SND.hiss(P, 0.8, 'wasp'); RA.SND.hiss(P, 1); RA.SND.squish(P); RA.SND.whoosh(P, 'spider'); RA.SND.whoosh(P); const own = used.filter(Boolean).join(',');
+    log(`enemy voices: without their files ${noOwn || 'synthesized'} · with them ${own}`);
+    if (noOwn || own !== 'zombi,avispa,arana,salto') errors.push('sonidos propios: cada enemigo no suena con su propio archivo');
+    if (!['rugido-zombi', 'rugido-velociraptor', 'rugido-diablillo', 'rugido-puglin', 'siseo-avispa', 'ataque-arana', 'arco-pasa'].every(n => names.includes(n))) errors.push('sonidos propios: faltan las voces de los enemigos en la lista');
+    dr.stop(); sb.stop(); for (const k of ['rugido-robot', 'espada-golpe', 'espada-golpe-laser', 'oleada', 'zumbido-dron', 'espada-laser-zumbido', 'rugido-zombi', 'siseo-avispa', 'siseo-arana', 'ataque-arana']) delete RA.AUD.samples[k];
     C.createBufferSource = mk;
   }
   { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
