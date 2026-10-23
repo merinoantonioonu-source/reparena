@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
 <style>
-/* Una columna centrada; tarjetas solo para elegir modo y ejercicio. Tema oscuro único (fortaleza industrial nocturna). */
+/* Dos columnas: a la izquierda un panel fijo (entrar, lo elegido y lo de hoy) y a la derecha se elige; en el móvil, una columna
+   con los botones de entrar en una barra abajo. Tema oscuro único (fortaleza industrial nocturna). */
 :root{
   --bg:#100d1a; --panel:#1a1529; --panel2:#221b36; --line:#30284f; --fg:#eeeaff; --muted:#a49fc8;
   --teal:#3cf0c6; --pink:#ff4fa3; --gold:#ffd166; --red:#ff4a4a;
@@ -19,23 +20,61 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
-.wrap{max-width:940px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:34px}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:340px minmax(0,1fr);gap:28px;align-items:start}
+.side{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--line);border-radius:20px;background:radial-gradient(120% 90% at 0% 0%,rgba(60,240,198,.12),transparent 60%),radial-gradient(120% 90% at 100% 100%,rgba(255,79,163,.10),transparent 60%),var(--panel)}
+.main{display:flex;flex-direction:column;gap:30px;min-width:0}
+.go{display:flex;flex-direction:column;gap:8px}.go .btn{width:100%;padding:12px 16px}.go .sm{display:none}
+.side .status{margin:0;font-size:.85rem}.side .status:empty{display:none}
+.side .estimate{font-size:.85rem}
+.pick{display:flex;flex-direction:column;gap:4px;border-top:1px dashed var(--line);padding-top:14px}
+.pick .label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pick h3{margin:0;font-family:var(--display);font-weight:400;font-size:1.25rem;line-height:1.2}
+.pick .tag{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.pick p{margin:4px 0 0;color:var(--muted);font-size:.88rem}
+.todayMini a{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:12px;color:inherit;text-decoration:none}
+.tmRing{width:44px;height:44px;flex:none;border-radius:50%;background:conic-gradient(var(--teal) var(--k),var(--line) 0);display:grid;place-items:center}
+.tmRing i{width:34px;height:34px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font:700 .82rem var(--body);font-style:normal}
+.tmS b{display:block;font-size:1rem;line-height:1.2;font-variant-numeric:tabular-nums}.tmS small{font-size:.72rem;color:var(--muted)}
+.tmMore{margin-left:auto;font-size:.8rem;color:var(--teal)}
+@media (max-width:899px){
+  .wrap{display:flex;flex-direction:column;gap:24px;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+  .side,.main{display:contents}
+  .main>*{order:10}
+  .brand{order:1}.side .status{order:2}.todayMini{order:3}.secMode{order:4}.secEx{order:5}.pick{order:6}.side .demo{order:7}.side .estimate{order:8}
+  .pick{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px}
+  .todayMini a{border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:var(--panel)}
+  .go{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;padding:10px max(12px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));background:rgba(16,13,26,.94);border-top:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .go .btn{flex:1;min-width:0;padding:12px 4px;font-size:.9rem;white-space:nowrap}.go .lg{display:none}.go .sm{display:inline}
+}
 .eyebrow{margin:0;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:500}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(2.6rem,9vw,4.6rem);line-height:1;margin:8px 0 12px}
+h1{font-family:var(--display);font-weight:400;font-size:2.4rem;line-height:1;margin:6px 0 0}
 h1 span{color:var(--pink)}
-.lede{margin:0;max-width:62ch;color:var(--muted);font-size:1.1rem}
+.lede{margin:0 0 14px;max-width:62ch;color:var(--fg);font-size:1.05rem}
 h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.04em;margin:0 0 12px}
-.demo{margin-top:14px;max-width:720px}.demo canvas{width:100%;height:auto;display:block;border-radius:14px}
-.cards{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
-.cards .zone{grid-column:1/-1;margin:10px 0 -2px;font-size:.95rem;letter-spacing:.04em;color:var(--gold)}
-.cards.four{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media (max-width:680px){.cards,.cards.four{grid-template-columns:1fr}}
-.card{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border:2px solid var(--line);border-radius:14px;background:var(--panel);cursor:pointer;min-width:0}
+.demo{max-width:720px}.demo canvas{width:100%;height:auto;display:block;border-radius:14px}
+/* Modos y ejercicios: fichas pequeñas con el nombre y lo que hace falta; la explicación larga, solo la del elegido (en el panel) */
+.cards{display:grid;gap:8px}
+.cards.modes{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cards.exs{grid-template-columns:repeat(auto-fill,minmax(172px,1fr))}
+.cards .zone{grid-column:1/-1;margin:8px 0 0;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.cards .zone:first-child{margin-top:0}
+@media (max-width:640px){.cards.modes,.cards.exs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{position:relative;display:flex;flex-direction:column;gap:2px;padding:9px 12px;border:2px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;min-width:0}
+.card small{display:none}
+.card b{order:-1}
+.card .tag{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card:hover{border-color:#4a3f78}
+.exHead{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin:0 0 12px}
+.exHead h2{margin:0}.exHead .count{font:500 .85rem var(--body);letter-spacing:0;color:var(--muted);margin-left:6px}
+#exSortBox .field{flex-direction:row;align-items:center;gap:10px}#exSortBox .field>.lab{font-size:.82rem;color:var(--muted);font-weight:400}#exSortBox .hint{display:none}
+#exSortBox .seg label{padding:5px 10px;font-size:.8rem}
+.modeInfo{margin:10px 0 0;max-width:80ch;font-size:.88rem;color:var(--muted)}
 .card input{position:absolute;opacity:0;pointer-events:none}
-.card b{font-family:var(--display);font-weight:400;font-size:1.15rem}
+.card b{font-weight:500;font-size:.98rem;line-height:1.25}
+.cards.modes .card b{font-family:var(--display);font-weight:400;font-size:1.05rem}
 .card small{color:var(--muted);font-size:.86rem}
-.card .tag{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
-.card:has(input:checked){border-color:var(--teal);box-shadow:0 0 0 4px rgba(60,240,198,.12)}
+.card .tag{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
+.card:has(input:checked){border-color:var(--teal);background:var(--panel2);box-shadow:0 0 0 3px rgba(60,240,198,.14)}
 .card:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:2px}
 .card:has(input:disabled){opacity:.45;cursor:not-allowed}
 .note{margin:10px 0 0;font-size:.85rem;color:var(--gold)}
@@ -77,7 +116,7 @@ button{font:inherit;cursor:pointer}
 .btn.small{padding:8px 14px;font-size:.88rem}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.status{margin:-18px 0 0;font-size:.9rem;color:var(--gold)}
+.status{margin:0;font-size:.9rem;color:var(--gold)}
 .how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px;max-width:70ch}
 .how li::marker{color:var(--teal)}
 .hist table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
@@ -162,28 +201,29 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 </head>
 <body>
 <main class="wrap">
-  <header>
-    <p class="eyebrow">Meta Quest 3 · WebXR · seguimiento de manos</p>
-    <h1>Rep<span>Arena</span></h1>
-    <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
-  </header>
-
-  <section class="today" id="todayBox" aria-live="polite"></section>
-
-  <section class="enter">
-    <div class="actions">
-      <button class="btn primary" id="btnAR">Entrar en realidad mixta</button>
-      <button class="btn alt" id="btnVR">Entrar en VR</button>
-      <button class="btn" id="btnPreview">Probar en el ordenador</button>
+  <!-- Panel fijo: entrar, lo elegido con su explicación y su animación, y lo de hoy. En el móvil se reparte por la página
+       y los botones de entrar van en una barra abajo -->
+  <aside class="side">
+    <header class="brand">
+      <p class="eyebrow">Meta Quest 3 · WebXR · manos</p>
+      <h1>Rep<span>Arena</span></h1>
+    </header>
+    <div class="go">
+      <button class="btn primary" id="btnAR"><span class="lg">Entrar en realidad mixta</span><span class="sm">Realidad mixta</span></button>
+      <button class="btn alt" id="btnVR"><span class="lg">Entrar en VR</span><span class="sm">VR</span></button>
+      <button class="btn" id="btnPreview"><span class="lg">Probar en el ordenador</span><span class="sm">Probar</span></button>
     </div>
     <p class="status" id="xrStatus"></p>
+    <div class="pick" id="pickBox" aria-live="polite"></div>
+    <div class="demo"><canvas id="demoCv" width="720" height="420" aria-label="Animación del ejercicio elegido: cómo se hace y qué pasa al hacerlo"></canvas></div>
     <p class="estimate" id="estimate"></p>
-    <p class="note">Antes de entrar, elige abajo el modo y el ejercicio; después, sus opciones. Dentro del juego también puedes cambiarlos desde el menú.</p>
-  </section>
+    <div class="todayMini" id="todayMini"></div>
+  </aside>
 
-  <section>
+  <div class="main">
+  <section class="secMode">
     <h2>1 · Modo de juego</h2>
-    <div class="cards">
+    <div class="cards modes">
       <label class="card"><input type="radio" name="mode" id="mode-combat" value="combat">
         <span class="tag">Cada repetición dispara</span><b>Combate</b>
         <small>Eliges los enemigos: robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones gigantes que vuelan, o una mezcla. Y la puntería: automática, para pensar solo en el ejercicio, o apuntando tú con las manos (cada repetición carga las dos; lanza el rayo llevando la mano atrás y adelante deprisa hacia el enemigo) o la mirada.</small></label>
@@ -197,20 +237,20 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <span class="tag">Cabeza y manos</span><b>Toques</b>
         <small>Vienen hacia ti amebas de agua que ondulan (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
     </div>
+    <p class="modeInfo" id="modeInfo"></p>
   </section>
 
-  <section>
-    <h2>2 · Ejercicio</h2>
-    <div id="exSortBox"></div>
-    <div class="cards">
+  <section class="secEx">
+    <div class="exHead"><h2>2 · Ejercicio <span class="count" id="exCount"></span></h2><div id="exSortBox"></div></div>
+    <div class="cards exs">
       <label class="card"><input type="radio" name="exercise" id="ex-squat" value="squat">
-        <span class="tag">Sensor: altura del visor</span><b>Sentadillas</b>
+        <span class="tag">Altura del visor</span><b>Sentadillas</b>
         <small>Apuntando con las manos disparas con las dos a la vez al subir: cada mano, a donde apunte.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-lunge" value="lunge">
-        <span class="tag">Sensor: altura del visor</span><b>Zancadas</b>
+        <span class="tag">Altura del visor</span><b>Zancadas</b>
         <small>Da un paso y baja hasta que la rodilla de atrás casi toque el suelo; alterna las piernas. Como en las sentadillas, valen las manos o las pistolas para apuntar.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-pushup" value="pushup">
-        <span class="tag">Sensor: altura del visor</span><b>Flexiones</b>
+        <span class="tag">Altura del visor</span><b>Flexiones</b>
         <small>La batalla ocurre en el suelo, delante de tu cara. Disparas al empujar (si apuntas tú, con la mirada).</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-inchworm" value="inchworm">
         <span class="tag">Manos libres · visor y manos · 2 m de sitio</span><b>Flexiones inchworm</b>
@@ -219,10 +259,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <span class="tag">Una silla estable · altura del visor</span><b>Fondos en silla</b>
         <small>Sentado en el borde, manos en el asiento: saca el culo y baja doblando los codos. Disparas al estirarlos.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-curl" value="curl">
-        <span class="tag">Sensor: muñecas</span><b>Curl de bíceps</b>
+        <span class="tag">Muñecas</span><b>Curl de bíceps</b>
         <small>Cada brazo dispara al llegar al hombro. Si apuntas tú, mira al objetivo mientras subes la mancuerna.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-press" value="press">
-        <span class="tag">Sensor: muñecas</span><b>Press de hombro</b>
+        <span class="tag">Muñecas</span><b>Press de hombro</b>
         <small>Con las mancuernas en los hombros, súbelas hasta estirar los brazos. Cada brazo dispara al llegar arriba.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-curl2" value="curl2">
         <span class="tag">Barra o kettlebell · muñecas</span><b>Curl con barra</b>
@@ -240,7 +280,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <span class="tag">Mancuernas o disco · visor y muñecas</span><b>Sentadilla con elevación frontal</b>
         <small>Baja en sentadilla para cargar y, al subir, lleva los brazos estirados al frente hasta la altura de los hombros: así disparas.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-jsquat" value="jsquat">
-        <span class="tag">Sensor: altura del visor</span><b>Sentadilla con salto</b>
+        <span class="tag">Altura del visor</span><b>Sentadilla con salto</b>
         <small>La sentadilla carga y el salto al subir dispara (la cabeza tiene que subir deprisa por encima de tu altura de pie). Deja espacio y techo.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-swing" value="swing">
         <span class="tag">Kettlebell · visor y muñecas</span><b>Swing con kettlebell</b>
@@ -283,7 +323,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Elige una postura y mezcla movimientos: sentadilla + salto, flexión + plancha aguantada, abdominal + oblicuo… en orden o al azar.</small></label>
     </div>
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
-    <div class="demo"><canvas id="demoCv" width="720" height="420" aria-label="Animación del ejercicio elegido: cómo se hace y qué pasa al hacerlo"></canvas></div>
   </section>
 
   <section>
@@ -337,6 +376,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
 
 
+  <section class="today" id="todayBox" aria-live="polite"></section>
+
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
     <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
@@ -353,6 +394,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="how">
     <h2>Dentro del juego</h2>
+    <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
       <li>El menú sale de tu <b>muñeca izquierda</b>: gírala hacia la cara (como para mirar un reloj) y el panel crece encima de ella; pulsa los botones con la punta del índice derecho. Se coloca a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo). Mientras acercas el dedo el panel se queda quieto, y al bajar el brazo se recoge (un punto rosa en la muñeca te recuerda que hay un menú esperando). Si prefieres el atril fijo delante de ti, cámbialo en Ajustes → Menú → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
@@ -378,6 +420,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <tbody id="histBody"></tbody>
     </table></div>
   </section>
+  </div>
 </main>
 
 <div id="stage" hidden>
@@ -793,7 +836,7 @@ function syncForm() {
   }
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldShown(f)); });
   if (typeof animNote === 'function') animNote();
-  updateSummary();
+  renderPick(); updateSummary();
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
 const EXCARDS = { order: null };
@@ -808,6 +851,15 @@ function sortExCards(byBody) {
     for (const x of list) { const c = card(x); if (c) { host.appendChild(c); used.add(c); } }
   }
   EXCARDS.order.forEach(c => { if (!used.has(c)) host.appendChild(c); });
+}
+// Página: en las fichas solo va el nombre y el material; la explicación del ejercicio elegido, en el panel fijo, y la del modo,
+// bajo los modos (las dos salen del texto de su tarjeta)
+function renderPick() {
+  const card = el => el && el.closest && el.closest('.card'), part = (c, sel) => { const n = c && c.querySelector(sel); return n ? n.innerHTML : ''; };
+  const mc = card($(`#mode-${settings.mode}`)), ec = card($(`#ex-${settings.exercise}`));
+  const cnt = $('#exCount'); if (cnt) cnt.textContent = `${Object.keys(EX_NAMES).filter(x => exOk(settings.mode, x)).length} en ${MODE_NAMES[settings.mode]}`;
+  const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
+  const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
 function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
@@ -906,6 +958,9 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
     ${exs ? `<div class="chips">${exs}</div>` : ''}
     <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
     <p class="todayMsg">${msg}</p>`;
+  // y en pequeño, en el panel fijo (lleva al grande)
+  const mini = $('#todayMini');
+  if (mini) mini.innerHTML = `<a href="#todayBox" aria-label="Hoy: ${mins} de ${settings.goalMin} minutos, ${T.reps} repeticiones, ${P.streak} días de racha. Ver el día"><span class="tmRing" style="--k:${Math.round(k * 100)}%"><i>${mins}</i></span><span class="tmS"><b>${mins} / ${settings.goalMin} min</b><small>hoy</small></span><span class="tmS"><b>${T.reps}</b><small>reps</small></span><span class="tmS"><b>${P.streak} 🔥</b><small>racha</small></span><span class="tmMore">Ver el día ↓</span></a>`;
   animateToday(host);
 }
 // Las cifras suben desde 0, el anillo se llena y las barras crecen (sin animación si el sistema pide menos movimiento)

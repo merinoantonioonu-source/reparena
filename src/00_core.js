@@ -399,7 +399,7 @@ function syncForm() {
   }
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldShown(f)); });
   if (typeof animNote === 'function') animNote();
-  updateSummary();
+  renderPick(); updateSummary();
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
 const EXCARDS = { order: null };
@@ -414,6 +414,15 @@ function sortExCards(byBody) {
     for (const x of list) { const c = card(x); if (c) { host.appendChild(c); used.add(c); } }
   }
   EXCARDS.order.forEach(c => { if (!used.has(c)) host.appendChild(c); });
+}
+// Página: en las fichas solo va el nombre y el material; la explicación del ejercicio elegido, en el panel fijo, y la del modo,
+// bajo los modos (las dos salen del texto de su tarjeta)
+function renderPick() {
+  const card = el => el && el.closest && el.closest('.card'), part = (c, sel) => { const n = c && c.querySelector(sel); return n ? n.innerHTML : ''; };
+  const mc = card($(`#mode-${settings.mode}`)), ec = card($(`#ex-${settings.exercise}`));
+  const cnt = $('#exCount'); if (cnt) cnt.textContent = `${Object.keys(EX_NAMES).filter(x => exOk(settings.mode, x)).length} en ${MODE_NAMES[settings.mode]}`;
+  const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
+  const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
 function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
@@ -512,6 +521,9 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
     ${exs ? `<div class="chips">${exs}</div>` : ''}
     <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
     <p class="todayMsg">${msg}</p>`;
+  // y en pequeño, en el panel fijo (lleva al grande)
+  const mini = $('#todayMini');
+  if (mini) mini.innerHTML = `<a href="#todayBox" aria-label="Hoy: ${mins} de ${settings.goalMin} minutos, ${T.reps} repeticiones, ${P.streak} días de racha. Ver el día"><span class="tmRing" style="--k:${Math.round(k * 100)}%"><i>${mins}</i></span><span class="tmS"><b>${mins} / ${settings.goalMin} min</b><small>hoy</small></span><span class="tmS"><b>${T.reps}</b><small>reps</small></span><span class="tmS"><b>${P.streak} 🔥</b><small>racha</small></span><span class="tmMore">Ver el día ↓</span></a>`;
   animateToday(host);
 }
 // Las cifras suben desde 0, el anillo se llena y las barras crecen (sin animación si el sistema pide menos movimiento)
