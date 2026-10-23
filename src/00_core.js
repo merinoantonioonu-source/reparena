@@ -9,8 +9,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto con remo', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Muerto + remo', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
@@ -50,6 +50,8 @@ function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', '
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
+// Con las piernas (sentadillas, zancadas, peso muerto…): aguantar abajo carga el disparo, y bajar mucho, la recarga profunda
+const DEEP_EX = ['squat', 'lunge', 'jsquat', 'thruster', 'frontsq', 'dlrow'];
 const SCHEMA = [
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
@@ -69,7 +71,7 @@ const SCHEMA = [
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
   { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
-  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['dlrow', 'plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
+  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
@@ -80,6 +82,7 @@ const SCHEMA = [
   { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
   { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
+  { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 15, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0: sin recarga profunda.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
@@ -142,6 +145,7 @@ const SCHEMA = [
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
   { key: 'arcMax', g: 'arcos', label: 'Bajada máxima bajo un arco', short: 'Bajada máxima', type: 'num', min: 5, max: 90, step: 1, def: 38, unit: 'cm', modes: ['arcs'], hint: 'Cada arco sale a una altura al azar entre la mínima y la máxima.' },
   { key: 'arcRate', g: 'arcos', label: 'Arcos por minuto', short: 'Arcos/minuto', type: 'num', min: 3, max: 40, step: 1, def: 12, modes: ['arcs'] },
+  { key: 'arcMaxGap', g: 'arcos', label: 'Espera máxima entre un arco y el siguiente', short: 'Espera máx.', type: 'num', min: 1.5, max: 20, step: 0.5, def: 6, unit: 's', modes: ['arcs'], hint: 'Por muchos arcos por minuto que pidas o por irregular que sea la aparición, nunca pasa más tiempo que este sin que salga el siguiente.' },
   { key: 'arcSpeed', g: 'arcos', label: 'Velocidad de los arcos', short: 'Vel. arcos', type: 'num', min: 1, max: 25, step: 0.5, def: 7, unit: 'km/h', modes: ['arcs'] },
   { key: 'arcTiming', g: 'arcos', label: 'Aparición de los arcos', short: 'Aparición', type: 'choice', opts: [['irregular', 'Irregular'], ['regular', 'Regular']], def: 'irregular', modes: ['arcs'], hint: 'Irregular: unas veces seguidos y otras con más hueco, sin que puedas cogerle el ritmo (la media no cambia).' },
   { key: 'arcTilt', g: 'arcos', label: 'Arcos con la barra inclinada', short: 'Inclinados', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'La barra baja por un lado: apártate hacia el lado alto flexionando esa pierna y estirando la otra (zancada lateral).' },
@@ -243,7 +247,7 @@ function setSetting(key, v) {
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
-  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
+  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 const isBasic = f => f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
@@ -264,6 +268,7 @@ const handsFree = () => settings.exercise === 'squat' || settings.exercise === '
 const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
 const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'plankrow';
+const deepOn = () => settings.deepDrop > 0 && DEEP_EX.includes(settings.exercise) && isCombat();
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
 const isCombat = () => settings.mode === 'combat';
 // Enemigos de la partida: la plancha con un brazo trae siempre arañas y el superman, voladores bajos
@@ -424,7 +429,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.6, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;

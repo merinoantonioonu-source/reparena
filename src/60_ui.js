@@ -572,7 +572,7 @@ function drawCenter() {
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
-    if (holdsWeights() || oneArm() || settings.exercise === 'superman' || (aimManual() && settings.aim === 'hands' && handsFree()) || pistolOn()) {
+    if ((holdsWeights() && settings.exercise !== 'dlrow') || oneArm() || settings.exercise === 'superman' || (aimManual() && settings.aim === 'hands' && handsFree()) || pistolOn()) {
       const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
     }
   } else {

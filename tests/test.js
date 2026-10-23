@@ -185,6 +185,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const aim of ['auto', 'hands']) { let maxPow = 1;
     await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]); }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
     log(`  squat held low (${aim}): charge up to ×${maxPow}`); }
+  // zancadas: también cargan aguantando abajo; y bajando mucho más de lo pedido, la recarga profunda (×4 al instante)
+  { let lunge = 1, deep = 0, deepOff = 0, quick = 1;
+    await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
+    await runConfig('Combate sentadilla con recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 6 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; const tx = RA.msg.text || ''; if (/PROFUNDA/.test(tx)) deep++; const m = /DISPARO ×(\d)/.exec(tx); if (m) quick = Math.max(quick, +m[1]); }, 200, s => '', true);
+    await runConfig('Combate sentadilla sin llegar a la recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; if (/PROFUNDA/.test(RA.msg.text || '')) deepOff++; }, 200, s => '', true);
+    log(`  lunge held low: charge up to ×${lunge} · deep squat (6 cm extra): deep reloads seen ${deep}, quick squat shot up to ×${quick} · not deep enough (30 cm): ${deepOff}`);
+    if (lunge < 4) errors.push(`zancadas: aguantar abajo no carga el disparo (×${lunge})`);
+    if (!deep || quick < 4 || deepOff) errors.push('recarga profunda: bajando mucho el disparo debería salir ×4 al instante (y sin bajar tanto, no)'); }
   // press de hombro: las cámaras pierden la mano en cuanto pasa por encima de los ojos (subiendo deprisa): cuenta igual
   await runConfig('Combate press de hombro, la mano se pierde arriba', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press', waves: 2, repsWave: 6 }, t => { squatSim(1.8)(t); RA.PV.lostAbove = 0; }, 200, s => s.reps < 10 ? `el press no cuenta si la mano se pierde arriba (${s.reps} reps)` : s.partial > 1 ? 'el press da medias de más al perder la mano arriba' : '');
   RA.PV.lostAbove = null;
@@ -204,9 +212,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Combate sentadilla con press', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster' }, squatSim(3.0), 420, s => s.reps < 9 ? 'la sentadilla con press no dispara' : s.partial > 2 ? 'la sentadilla con press da medias de más' : '');
   await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.noArms = true; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
   RA.PV.noArms = false;
+  // peso muerto: bajar y subir dispara, sin necesidad de ver las manos
+  await runConfig('Combate peso muerto (sin manos)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'dlrow' }, t => { squatSim(3.0)(t); RA.hands.left.ok = RA.hands.right.ok = false; }, 420, s => s.reps < 9 ? 'el peso muerto no dispara (sin manos)' : s.partial > 2 ? 'el peso muerto da medias de más' : '');
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
-  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['dlrow', 'peso muerto con remo', 3.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
+  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
     await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex, rowLift: 16 }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
     await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1, rowLift: 16 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
@@ -241,9 +251,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const clips = {}; for (const a in D.alias) clips[a] = { name: D.alias[a], duration: 0.5, tracks: [] }; return { scene: g, clips, map: null }; };
     const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon', 'skeleton', 'captain', 'sharky', 'mako'];
     for (const k of NEW) RA.BEAST.kinds[k] = fakeKind(k);
-    const seen = new Set(), cls = new Set();
+    const seen = new Set(), cls = new Set(), ctrY = [];
     await runConfig('enemigos elegidos: zombis, monstruitos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'zgreen,zchubby,demon,yeti,alientall', foesFly: 'bee,bat,cthulhu,dragon', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6, flySpeed: 6 },
-      t => { squatSim(2.6)(t); RA.enemies.forEach(e => { seen.add(e.kind); cls.add(e.constructor.name); }); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+      t => { squatSim(2.6)(t); RA.enemies.forEach(e => { seen.add(e.kind); cls.add(e.constructor.name); if (e.kind === 'demon' && e.alive) ctrY.push(e.center(new THREE.Vector3()).y - e.root.position.y); }); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+    { const h = RA.BEAST_DEF.demon.h, m = ctrY.length ? Math.min(...ctrY) : -1; log(`cute monster aim centre: ${m.toFixed(2)} m above its feet (height ${h} m)`); if (!(m > h * 0.35)) errors.push('monstruitos: la diana y los disparos deberían ir al cuerpo, no a sus pies'); }
     const want = ['zgreen', 'zchubby', 'demon', 'yeti', 'alientall', 'bee', 'bat', 'cthulhu', 'dragon'], miss = want.filter(k => k !== 'dragon' && !seen.has(k) && !seen.has(k + 'boss')), extra = [...seen].filter(k => !want.some(w => k === w || k === w + 'boss'));
     log(`chosen enemies: seen ${[...seen].join(',')} · classes ${[...cls].join(',')} · missing ${miss.join(',') || 'none'} · not chosen ${extra.join(',') || 'none'}`);
     if (miss.length || extra.length) errors.push(`enemigos elegidos: no salen justo los marcados (faltan ${miss}, sobran ${extra})`);
@@ -437,6 +448,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const spread = g => g.length ? Math.max(...g) - Math.min(...g) : 0;
   log('arc gaps spread: regular', spread(gaps.regular).toFixed(2), 'irregular', spread(gaps.irregular).toFixed(2), 'irregular mean', (gaps.irregular.reduce((a, b) => a + b, 0) / gaps.irregular.length).toFixed(2));
   if (spread(gaps.regular) > 0.1 || spread(gaps.irregular) < 1.0) errors.push('la aparición regular/irregular de los arcos no se nota');
+  // espera máxima: con pocos arcos por minuto (uno cada 20 s), nunca más de lo pedido entre uno y el siguiente
+  { const G = []; let last = -1, n = -1;
+    await runConfig('Arcos con espera máxima', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTiming: 'irregular', arcTilt: 0, waves: 1, repsWave: 6, arcRate: 3, arcMaxGap: 4 }, t => { RA.PV.crouch = true; const q = RA.spawnQueue.length; if (n >= 0 && q < n) { if (last >= 0) G.push(t - last); last = t; } n = q; }, 200);
+    log('arc max wait 4 s at 3 arcs/min: gaps', G.map(g => g.toFixed(1)).join(' '));
+    if (!G.length || Math.max(...G) > 4.15) errors.push('arcos: la espera máxima entre uno y el siguiente no se respeta'); }
   await runConfig('Arcos inclinados (apartándose)', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, waves: 1, repsWave: 8, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken ? `golpes al apartarse hacia el lado alto: ${s.taken}` : '');
   RA.PV.noLean = true;
   await runConfig('Arcos inclinados sin apartarse', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, arcMin: 30, arcMax: 30, waves: 1, repsWave: 6, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken < 4 ? `sin apartarse deberían golpear casi todos (${s.taken})` : '');

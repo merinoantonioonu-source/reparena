@@ -516,7 +516,7 @@ class Beast extends Robot {
   }
   roar(pos) { SND.roar(pos, BEAST_PITCH[this.K.beast3d] || 1.4, this.K.beast3d); }
   backV() { return this.D.walk * this.sc * 0.85; } // el zombi, un gruñido grave; cada uno con su archivo
-  center(out) { return this.B.chest.getWorldPosition(out); }
+  center(out) { this.B.chest.getWorldPosition(out); if (this.D.ctr) out.y += this.D.h * this.D.ctr * this.sc; return out; } // (la diana y los disparos, al cuerpo)
   play(n, fade, once, ts, restart) { mxPlay(this, n, fade, once, ts, restart); }
   animate(dt, t, spd) {
     if (!this.mx) return;
@@ -832,7 +832,7 @@ function beastFlyer(kind) {
   const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
   model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
-  model.scale.setScalar(D.k); root.add(model);
+  model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); root.add(model); // (los pies, abajo: el centro del bicho queda donde vuela)
   return { root, model, mat, bones: { body: model }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
 }
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
@@ -1119,10 +1119,11 @@ function onPartial(text) {
   stats.partial++; combo = 0; say(text, '#ff8a3d', 1.2); SND.partial(); charged = false; chargePow = 1; chargeOrb.visible = false;
 }
 // Sube un nivel de carga mientras aguantas abajo
-function onPower(pow) {
+function onPower(pow, deep) {
   if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
   chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
-  say(`CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 0.9); boardDirty = true;
+  if (deep) { SND.perfect(); fx.glow(head.p.clone().addScaledVector(fwd(), 0.5), [1, 0.25, 0.95], 0.5, 0.2); }
+  say(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
@@ -1161,6 +1162,8 @@ function vertDetector(d, y, t, dt, cfg) {
     if (!d.charged && drop >= cfg.req) { d.charged = true; onCharge(); }
     // carga: cada POW_STEP segundos abajo (cerca del fondo) sube un nivel, hasta 4
     if (cfg.power && d.charged && y < d.ref - cfg.req * 0.8) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } }
+    // recarga profunda: bajando mucho más de lo pedido (Ajustes → Ejercicio), la carga máxima al instante
+    if (cfg.power && d.charged && d.pow < 4 && deepOn() && drop >= cfg.req + settings.deepDrop / 100) { d.pow = 4; onPower(4, true); }
     d.stillT = still ? d.stillT + dt : 0;
     // vuelve arriba al recuperar la mayor parte del recorrido, aunque no llegues a la referencia
     const upAt = Math.min(d.ref - cfg.back, d.min + Math.max(cfg.req * 0.9, drop * 0.6));
@@ -1254,7 +1257,7 @@ function chainStep(kind, t, dt) {
   if (K.jump) jumpTrack(dt);
   if (t < T.quiet) return; // recién aterrizado: la caída del salto no es otra sentadilla
   T.hold = null;
-  if (!T.pending) vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: K.low || '¡Baja más!', defer: o => { T.hold = o; } });
+  if (!T.pending) vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: K.low || '¡Baja más!', defer: o => { T.hold = o; }, power: isCombat() && !pistolOn() && !swordActive() });
   if (S.state === 'down' && S.charged && !T.armed && !T.pending) { T.armed = true; T.ref = S.ref; for (const s of ['left', 'right']) { T.seen[s] = false; T.low[s] = 9; T.lostT[s] = 0; } }
   if (T.hold) { T.pending = T.hold; T.t0 = t; T.armed = false; }
   if (!T.pending && !T.armed) return;
@@ -1273,26 +1276,12 @@ function chainStep(kind, t, dt) {
   if ((L && R) || ((L || R) && one)) { onRep(T.pending); T.pending = null; if (K.jump) { T.quiet = t + 0.6; S.ref = T.ref; S.state = 'up'; } }
   else if (t - T.t0 > CH_WIN) { onPartial(K.miss); T.pending = null; }
 }
-// Peso muerto con remo: bajar el peso (la cabeza baja dlDepth) carga; el remo dispara en el momento en que se hace,
-// de pie o aún inclinado: tirar de los codos atrás sube la muñeca rowLift respecto a la cabeza desde donde colgaba.
-// «Donde colgaba» es lo más bajo de los últimos instantes (sube despacio), así vale en cualquier postura. Sin remo en
-// DL_WIN s se avisa; un remo sin peso muerto antes, también
-const DL_WIN = 6;
-function dlrowStep(t, dt) {
-  const D = DET.dl, S = DET.sq, req = settings.dlDepth / 100, rr = settings.rowLift / 100;
-  vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: '¡Baja más el peso!', defer: o => { D.o = o; } });
-  const ch = S.state === 'down' && S.charged; if (ch && !D.was) { if (D.armed) onPartial('¡Tira de los codos hacia atrás!'); D.armed = true; D.t0 = t; D.o = null; } D.was = ch; // otro peso muerto sin remo: aviso
-  for (const s of ['left', 'right']) {
-    const h = hands[s];
-    if (h.ok) { const r = h.wrist.y - head.p.y; D.low[s] = Math.min(r, D.low[s] + dt * 0.12); D.up[s] = r - D.low[s]; D.lost[s] = 0; }
-    else D.lost[s] += dt;
-  }
-  if (D.armed && t - D.t0 > DL_WIN) { D.armed = false; onPartial('¡Tira de los codos hacia atrás!'); }
-  const rowed = ['left', 'right'].some(s => D.lost[s] === 0 ? D.up[s] >= rr : D.lost[s] < 0.5 && D.up[s] >= rr * 0.6); // si se pierde la mano subiendo, cuenta
-  if (!rowed) { D.rowing = false; return; }
-  if (D.rowing) return; D.rowing = true; // cada remo, una vez
-  if (D.armed) { onRep(D.o || { perfect: S.ref - S.min >= req + 0.03, fast: false }); D.armed = false; D.o = null; }
-  else if (state === 'play' && t - D.warnT > 3) { D.warnT = t; onPartial('Primero baja el peso (peso muerto)'); }
+// Peso muerto: bajar el peso con la cadera atrás (la cabeza baja dlDepth) carga y ponerse de pie dispara; como en la
+// sentadilla, aguantar abajo da más fuerza. Solo con el visor: no hace falta ver las manos (la clave «dlrow» se queda, por
+// los ajustes y el historial guardados de cuando llevaba remo)
+function deadliftStep(t, dt) {
+  const req = settings.dlDepth / 100;
+  vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: '¡Baja más el peso!', power: !pistolOn() && !swordActive() });
 }
 // Leñador: las manos juntas (con la kettlebell o el disco) bajan junto a una cadera y suben en diagonal por encima del
 // hombro contrario. Abajo a un lado carga; arriba al otro lado dispara (en CHOP_WIN s). Alturas respecto a tu altura de pie
@@ -1421,9 +1410,9 @@ function runDetectors(t, dt) {
     // como en las flexiones, cuanto más aguantas abajo, más carga el disparo (×2, ×3, ×4)
     vertDetector(DET.sq, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más!', power: !pistolOn() && !swordActive() });
   } else if (settings.exercise === 'lunge') {
-    // zancada: como la sentadilla, con su propia bajada; después de cada una toca la otra pierna
+    // zancada: como la sentadilla, con su propia bajada (y su carga al aguantar abajo); después de cada una toca la otra pierna
     const d = DET.lu, req = dv('lungeDepth') / 100, before = stats.reps;
-    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más la rodilla de atrás!' });
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: pt, partialMsg: '¡Baja más la rodilla de atrás!', power: !pistolOn() && !swordActive() }); // (aguantar abajo también carga)
     if (stats.reps > before) { d.leg ^= 1; showToast(`Ahora con la pierna ${d.leg ? 'izquierda' : 'derecha'} delante`, '#a49fc8', 1.4); }
   } else if (settings.exercise === 'dips') {
     // fondos en silla: la cabeza baja al doblar los codos y sube al estirarlos
@@ -1440,12 +1429,12 @@ function runDetectors(t, dt) {
     // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
     pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
   } else if (CHAIN[settings.exercise]) {
-    // en dos tiempos (sentadilla con press o con elevación, swing, peso muerto con remo, sentadilla con salto): bajar carga y el gesto al subir dispara
+    // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
   } else if (settings.exercise === 'chop') {
     chopStep(t, dt);
   } else if (settings.exercise === 'dlrow') {
-    dlrowStep(t, dt);
+    deadliftStep(t, dt);
   } else if (settings.exercise === 'splank') {
     // plancha lateral: aguantar con la cadera arriba; cada splHold segundos seguidos, un disparo.
     // Si la cabeza baja splDrop desde tu postura, la cadera ha caído y el tiempo vuelve a empezar
@@ -2224,7 +2213,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = spawnInterval * (settings.mode === 'arcs' ? arcGap() : rand(0.8, 1.2)); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * arcGap(), settings.arcMaxGap) : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
