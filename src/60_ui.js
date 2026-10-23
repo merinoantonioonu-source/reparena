@@ -18,9 +18,23 @@ const STY = {
 // Cada parte del menú tiene su color: el botón que lleva a ella (borde y una raya a la izquierda) y el marco y el título de su
 // submenú, para saber de un vistazo dónde estás
 const MC = { ex: '#3cf0c6', foes: '#ff8a3d', arms: '#ff4fa3', sound: '#a68bff', scene: '#7ee081', set: '#ffd166', prof: '#5ab8ff', body: '#5ab8ff' };
+// Iconos dibujados (no dependen de que la letra tenga esos símbolos): reproducir, pausa, anterior, siguiente y volumen
+function drawIcon(c, k, x, y, S, col) {
+  c.save(); c.translate(x, y); c.fillStyle = col; c.strokeStyle = col; c.lineWidth = S * 0.12; c.lineCap = 'round'; c.lineJoin = 'round';
+  const tri = (x0, dir, w, h) => { c.beginPath(); c.moveTo(x0, -h); c.lineTo(x0 + dir * w, 0); c.lineTo(x0, h); c.closePath(); c.fill(); };
+  const bar = (x0, w, h) => { c.fillRect(x0, -h, w, h * 2); };
+  if (k === 'play') tri(-S * 0.32, 1, S * 0.72, S * 0.45);
+  else if (k === 'pause') { bar(-S * 0.34, S * 0.24, S * 0.42); bar(S * 0.1, S * 0.24, S * 0.42); }
+  else if (k === 'next' || k === 'prev') { const d = k === 'next' ? 1 : -1; c.scale(d, 1); tri(-S * 0.42, 1, S * 0.42, S * 0.38); tri(-S * 0.02, 1, S * 0.42, S * 0.38); bar(S * 0.4, S * 0.12, S * 0.38); }
+  else if (k === 'voldown' || k === 'volup') {
+    c.beginPath(); c.moveTo(-S * 0.62, -S * 0.17); c.lineTo(-S * 0.42, -S * 0.17); c.lineTo(-S * 0.12, -S * 0.42); c.lineTo(-S * 0.12, S * 0.42); c.lineTo(-S * 0.42, S * 0.17); c.lineTo(-S * 0.62, S * 0.17); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(S * 0.12, 0); c.lineTo(S * 0.56, 0); if (k === 'volup') { c.moveTo(S * 0.34, -S * 0.22); c.lineTo(S * 0.34, S * 0.22); } c.stroke();
+  }
+  c.restore();
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon;
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -33,6 +47,7 @@ class Btn {
     if ((s[2] || acc) && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = acc ? this.accent : s[2]; c.stroke(); }
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
     const ax = this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
     c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
@@ -177,9 +192,10 @@ function openMenu(rows, opts = {}) {
       if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
       else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
     }
+    else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });

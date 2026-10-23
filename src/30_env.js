@@ -10,7 +10,20 @@ function makePanel(w, h, px = 1024, opts = {}) {
 }
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const FD = '"Bungee","Arial Black",sans-serif', FB = '"Rubik",system-ui,sans-serif';
-function fitFont(c, text, max, start, fam) { let fs = start; c.font = fam.replace('%', fs); while (c.measureText(text).width > max && fs > 14) { fs -= 2; c.font = fam.replace('%', fs); } return fs; }
+// El tamaño de letra para que el texto quepa: el ancho crece con el tamaño, así que basta medir una vez (y comprobar);
+// cambiar de letra es caro y, probando de 2 en 2, construir un menú se llevaba casi todo el tiempo (tirones en las gafas)
+// (las medidas, en un lienzo aparte y recordadas: cada botón tiene su lienzo, y estrenar letra en cada uno también cuesta)
+let _fitCtx = null; const _fitW = new Map();
+function fitWidth(font, text) {
+  const k = font + '\u0001' + text; let w = _fitW.get(k); if (w !== undefined) return w;
+  if (!_fitCtx) _fitCtx = mkCanvas(8).getContext('2d'); if (_fitCtx.font !== font) _fitCtx.font = font;
+  w = _fitCtx.measureText(text).width; if (_fitW.size > 4000) _fitW.clear(); _fitW.set(k, w); return w;
+}
+function fitFont(c, text, max, start, fam) {
+  const f0 = fam.replace('%', start), w = fitWidth(f0, text); let fs = start;
+  if (w > max && fs > 14) { fs = Math.max(14, Math.floor(start * max / w)); if (fs > 14 && fitWidth(fam.replace('%', fs), text) > max) fs = Math.max(14, fs - 2); }
+  c.font = fam.replace('%', fs); return fs;
+}
 
 /* =================== ENTORNO VR =================== */
 const env = new THREE.Group(); scene.add(env);
@@ -125,7 +138,7 @@ function makeGate() {
   g.add(frame); gateDark(frame, 2.4, 3.0);
   const side = ks.build({ concrete: M.concrete }, { cast: true, receive: true }); g.add(side);
   const ramp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.35), M.hazard); ramp.rotation.x = -Math.PI / 2; ramp.position.set(0, 0.006, 0.75); g.add(ramp);
-  const doorGeo = new THREE.BoxGeometry(1.26, 3.0, 0.16);
+  const doorGeo = new THREE.BoxGeometry(1.23, 3.0, 0.16); // (cerradas dejan una raja de 1 cm: antes se solapaban 2 cm y sus caras peleaban, destellando)
   const doorL = new THREE.Mesh(doorGeo, M.door), doorR = new THREE.Mesh(doorGeo, M.door);
   doorL.position.set(-0.62, 1.5, 0.06); doorR.position.set(0.62, 1.5, 0.06); doorR.rotation.y = Math.PI;
   [doorL, doorR].forEach(d => { d.castShadow = true; d.receiveShadow = true; g.add(d); });

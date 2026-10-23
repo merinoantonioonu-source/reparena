@@ -22,7 +22,15 @@ const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45), spot: mkPose(0) }, pv
 function saveEquip() { const o = {}; for (const k of EQ_KINDS) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle, b: e.b }; } store(EQUIP_KEY, o); }
 // Pose respecto al suelo del guardián ↔ pose en local-floor
 function eqToBounded(e) { const T = EQ.b2l; if (!T) return; const dx = e.x - T.x, dz = e.z - T.z, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.b = { x: dx * c - dz * s, z: dx * s + dz * c, yaw: e.yaw - T.yaw }; }
-function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.x = T.x + b.x * c + b.z * s; e.z = T.z - b.x * s + b.z * c; e.yaw = b.yaw + T.yaw; }
+function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); eqTrack(e, T.x + b.x * c + b.z * s, T.z - b.x * s + b.z * c, b.yaw + T.yaw); }
+// La pose que da el seguimiento (el ancla o el guardián) tiembla unos milímetros de un fotograma a otro, sobre todo al mover
+// la cabeza: aplicada tal cual, la barra y todo lo que cuelga de ella (el bosque entero, con sus sombras) se mueven y
+// destellan. El temblor se ignora; una deriva lenta se sigue poco a poco, y un salto de verdad (se recolocó), de golpe
+function eqTrack(e, x, z, yaw) {
+  const dd = Math.hypot(x - e.x, z - e.z), da = Math.abs(wrapAng(yaw - e.yaw));
+  if (!e.fix || dd > 0.03 || da > 0.025) { e.x = x; e.z = z; e.yaw = yaw; e.fix = true; }
+  else if (dd > 0.004 || da > 0.004) { e.x += (x - e.x) * 0.05; e.z += (z - e.z) * 0.05; e.yaw += wrapAng(yaw - e.yaw) * 0.05; }
+}
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
 const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
@@ -100,7 +108,7 @@ function updateEquip(dt, t) {
 function anchorsInit(session) {
   EQ.bref = EQ.b2l = EQ.ref = null;
   if (session.requestReferenceSpace) session.requestReferenceSpace('bounded-floor').then(r => { EQ.bref = r; }).catch(() => {});
-  for (const k of EQ_KINDS) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; if (e.handle) restoreAnchor(session, e, 0); }
+  for (const k of EQ_KINDS) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; e.fix = false; if (e.handle) restoreAnchor(session, e, 0); }
 }
 // Al empezar la sesión las Quest pueden no haber reconocido aún la habitación: se reintenta antes de dar el ancla por perdida
 function restoreAnchor(session, e, tries) {
@@ -145,7 +153,7 @@ function anchorsFrame(frame, ref) {
     const pose = e.anchor && e.anchor.anchorSpace && frame.getPose(e.anchor.anchorSpace, ref);
     if (pose) {
       const p = pose.transform.position, o = pose.transform.orientation;
-      e.x = p.x; e.z = p.z; e.yaw = yawOf(_eqq.set(o.x, o.y, o.z, o.w));
+      eqTrack(e, p.x, p.z, yawOf(_eqq.set(o.x, o.y, o.z, o.w)));
       if (!e.synced && EQ.b2l) { e.synced = true; eqToBounded(e); saveEquip(); } // el ancla manda: el guardián se pone al día
     } else if (e.b && EQ.b2l) eqFromBounded(e);
     else if (!e.b && EQ.b2l && e.handle === null && e.synced === false) { e.synced = true; eqToBounded(e); saveEquip(); } // poses antiguas: desde ahora, también respecto al guardián

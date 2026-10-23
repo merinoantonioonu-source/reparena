@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -408,7 +408,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · behind it solid black ${solid} (radius ${R.toFixed(2)}, menu inside ${menuIn}) · enemies left ${RA.enemies.length}`);
     if (RA.state !== 'end' || dark < 0.99 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
     if (!solid || !menuIn || RA.enemies.length) errors.push('derrota: el negro no es total y definitivo detrás del resumen');
-    press('Menú principal'); frame(3); if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
+    // si no pulsas nada, el resumen da paso solo al menú principal
+    { let k = 0; for (; k < 60 * 20 && RA.state === 'end'; k++) frame(1); log(`summary card: ${RA.menu ? 'menu' : 'none'} · opened the main menu by itself after ${(k / 60).toFixed(1)} s (state ${RA.state})`);
+      if (RA.state !== 'lobby') errors.push('resumen: debería abrirse solo el menú principal al cabo de unos segundos'); }
+    if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
     // terminarla tú: también a negro, y el resumen enseguida
     RA.setSetting('lives', 3); RA.startPreview(); frame(3); press('EMPEZAR'); for (let k = 0; k < 600 && RA.state !== 'play'; k++) frame(1);
     RA.endRun(false, true); frame(10); const early = !!RA.menu; frame(20); const mBlack = O.black.visible, mMenu = !!RA.menu && RA.activeWidgets().some(w => w.label === 'Otra ronda');
@@ -954,6 +957,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('calib follows body: state', RA.state, 'arena pos', RA.arena.position.x.toFixed(2), RA.arena.position.z.toFixed(2), 'yaw', RA.arena.rotation.y.toFixed(2));
   if (RA.state !== 'ready' || Math.abs(RA.arena.position.x - 1) > 0.02 || Math.abs(RA.arena.position.z - 0.3) > 0.02 || Math.abs(RA.arena.rotation.y + Math.PI / 2) > 0.05) errors.push('al calibrar el entorno no se coloca según el cuerpo');
   XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
+  // de pie, las compuertas no acompañan a la cabeza mientras calibras; al calibrar, el entorno se desliza hasta quedar delante
+  { for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat', lives: 0, waves: 1, repsWave: 4 })) RA.setSetting(k, v);
+    XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); const y0 = RA.arena.rotation.y, p0 = RA.arena.position.clone(); let drift = 0, i = 0;
+    XRS.headX = 0.5; XRS.headZ = -0.2; XRS.headY = 1.7;
+    for (; i < 400 && RA.state === 'calib'; i++) { XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.8 + 0.5 * Math.sin(i / 9), 0, 'YXZ')); if (i > 150) XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.8, 0, 'YXZ')); frame(1, 16, xrFrame); if (RA.state === 'calib') drift = Math.max(drift, Math.abs(RA.arena.rotation.y - y0), RA.arena.position.distanceTo(p0)); }
+    const atCal = RA.arena.rotation.y; frame(70, 16, xrFrame);
+    log(`standing calib: arena moved while calibrating ${drift.toFixed(3)} · at calibration yaw ${atCal.toFixed(2)} → after the glide ${RA.arena.rotation.y.toFixed(2)} pos ${RA.arena.position.x.toFixed(2)},${RA.arena.position.z.toFixed(2)} · state ${RA.state}`);
+    if (drift > 0.01) errors.push('de pie, las compuertas no deberían moverse con la cabeza mientras calibras');
+    if (Math.abs(RA.arena.rotation.y - 0.8) > 0.05 || Math.abs(RA.arena.position.x - 0.5) > 0.03 || Math.abs(RA.arena.position.z + 0.2) > 0.03) errors.push('de pie, al calibrar el entorno debería colocarse delante de ti');
+    XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Flexiones en XR: calibrar un poco alto o mirar al suelo no debe impedir el disparo ----
   for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 6, rest: 0, walkTime: 30, pushDepth: 13 })) RA.setSetting(k, v);
@@ -990,6 +1004,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await sleep(50);
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
+  // minicontroles (con iconos) en el menú principal y en la pausa; usarlos en plena partida no la termina; con música, sin ambiente
+  { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2);
+    const lw = RA.activeWidgets(), mini = ['prev', 'next', 'voldown', 'volup'].every(k => lw.some(w => w.icon === k)) && lw.some(w => w.icon === 'pause' || w.icon === 'play');
+    RA.beginRun(); frame(30); RA.openPause(); frame(2); const inPause = RA.activeWidgets().some(w => w.icon === 'next');
+    RA.activeWidgets().find(w => w.icon === 'next').onPress(); await sleep(20); frame(2); const st = RA.state; press('Continuar'); frame(2); const back = RA.state;
+    const muted = RA.AUDM.music && RA.ambMute();
+    log(`spotify mini controls: main menu ${mini} · pause ${inPause} · state after «next» in the pause ${st} → after Continuar ${back} · ambience muted while it plays ${muted}`);
+    if (!mini || !inPause) errors.push('Spotify: faltan los minicontroles con iconos en el menú principal o en la pausa');
+    if (st !== 'paused' || !RA.GAME_STATES.includes(back)) errors.push('Spotify: usar los minicontroles en plena partida no debería terminarla (pausa y se reanuda)');
+    if (!muted) errors.push('Spotify: mientras suena, el sonido ambiente debería callarse');
+    RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);

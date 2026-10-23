@@ -2,7 +2,7 @@
 /* =================== RENDER =================== */
 let arMode = false;
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.02, 300);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 300); // (cerca de 5 cm: con 2 cm, de lejos la profundidad no distinguía superficies muy juntas y destellaban)
 camera.position.set(0, 1.6, 0); camera.rotation.order = 'YXZ';
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));

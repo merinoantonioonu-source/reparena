@@ -1061,6 +1061,7 @@ function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}
 }
 // music: suena Spotify (entonces el sonido ambiente se calla del todo)
 const AUDM = { music: false };
+const ambMute = () => AUDM.music || settings.ambient <= 0;
 function applyVolume() {
   if (!AUD.C) return;
   AUD.sfx.gain.value = settings.volume / 100;
@@ -1184,7 +1185,7 @@ const SND = {
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
   // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
-  bird(pos) {
+  bird(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
     for (let i = 0; i < n; i++) { const d = rand(0.05, 0.12); tone(o, { t, f: up ? f0 : f0 * 1.35, to: up ? f0 * 1.4 : f0, d, gain: rand(0.05, 0.09) }); t += d + rand(0.03, 0.09); }
   },
@@ -1263,7 +1264,7 @@ const SND = {
     for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
   whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
-  thunder(dist = 1) {
+  thunder(dist = 1) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
@@ -1302,8 +1303,8 @@ const SND = {
   vortexClose(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 1.5 }); tone(shaper(o), { f: 90, to: 35, d: 0.5, gain: 0.5 }); noise(o, { brown: true, f: 700, to: 100, d: 0.4, gain: 0.6 }); tone(o, { type: 'triangle', f: 660, to: 990, t: 0.05, d: 0.4, gain: 0.05 }); },
   // bosque: un búho que ulula a lo lejos y una rama que cruje
   // isla: una gaviota que grita sobre el mar (dos o tres graznidos que suben y caen)
-  gull(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 0.5, ref: 5 }), n = 2 + Math.floor(Math.random() * 2), f = rand(1300, 1700); for (let i = 0; i < n; i++) tone(o, { type: 'triangle', f: f * rand(0.95, 1.05), to: f * 0.62, t: i * 0.28, a: 0.03, d: 0.24, gain: 0.07 }); },
-  owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
+  gull(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */ if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 0.5, ref: 5 }), n = 2 + Math.floor(Math.random() * 2), f = rand(1300, 1700); for (let i = 0; i < n; i++) tone(o, { type: 'triangle', f: f * rand(0.95, 1.05), to: f * 0.62, t: i * 0.28, a: 0.03, d: 0.24, gain: 0.07 }); },
+  owl(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */ if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
   creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
@@ -1492,7 +1493,7 @@ function updateListener(pos, q) {
 /* =================== RENDER =================== */
 let arMode = false;
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.02, 300);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 300); // (cerca de 5 cm: con 2 cm, de lejos la profundidad no distinguía superficies muy juntas y destellaban)
 camera.position.set(0, 1.6, 0); camera.rotation.order = 'YXZ';
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -1928,7 +1929,20 @@ function makePanel(w, h, px = 1024, opts = {}) {
 }
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const FD = '"Bungee","Arial Black",sans-serif', FB = '"Rubik",system-ui,sans-serif';
-function fitFont(c, text, max, start, fam) { let fs = start; c.font = fam.replace('%', fs); while (c.measureText(text).width > max && fs > 14) { fs -= 2; c.font = fam.replace('%', fs); } return fs; }
+// El tamaño de letra para que el texto quepa: el ancho crece con el tamaño, así que basta medir una vez (y comprobar);
+// cambiar de letra es caro y, probando de 2 en 2, construir un menú se llevaba casi todo el tiempo (tirones en las gafas)
+// (las medidas, en un lienzo aparte y recordadas: cada botón tiene su lienzo, y estrenar letra en cada uno también cuesta)
+let _fitCtx = null; const _fitW = new Map();
+function fitWidth(font, text) {
+  const k = font + '\u0001' + text; let w = _fitW.get(k); if (w !== undefined) return w;
+  if (!_fitCtx) _fitCtx = mkCanvas(8).getContext('2d'); if (_fitCtx.font !== font) _fitCtx.font = font;
+  w = _fitCtx.measureText(text).width; if (_fitW.size > 4000) _fitW.clear(); _fitW.set(k, w); return w;
+}
+function fitFont(c, text, max, start, fam) {
+  const f0 = fam.replace('%', start), w = fitWidth(f0, text); let fs = start;
+  if (w > max && fs > 14) { fs = Math.max(14, Math.floor(start * max / w)); if (fs > 14 && fitWidth(fam.replace('%', fs), text) > max) fs = Math.max(14, fs - 2); }
+  c.font = fam.replace('%', fs); return fs;
+}
 
 /* =================== ENTORNO VR =================== */
 const env = new THREE.Group(); scene.add(env);
@@ -2043,7 +2057,7 @@ function makeGate() {
   g.add(frame); gateDark(frame, 2.4, 3.0);
   const side = ks.build({ concrete: M.concrete }, { cast: true, receive: true }); g.add(side);
   const ramp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.35), M.hazard); ramp.rotation.x = -Math.PI / 2; ramp.position.set(0, 0.006, 0.75); g.add(ramp);
-  const doorGeo = new THREE.BoxGeometry(1.26, 3.0, 0.16);
+  const doorGeo = new THREE.BoxGeometry(1.23, 3.0, 0.16); // (cerradas dejan una raja de 1 cm: antes se solapaban 2 cm y sus caras peleaban, destellando)
   const doorL = new THREE.Mesh(doorGeo, M.door), doorR = new THREE.Mesh(doorGeo, M.door);
   doorL.position.set(-0.62, 1.5, 0.06); doorR.position.set(0.62, 1.5, 0.06); doorR.rotation.y = Math.PI;
   [doorL, doorR].forEach(d => { d.castShadow = true; d.receiveShadow = true; g.add(d); });
@@ -2646,7 +2660,15 @@ const EQ = { xr: { door: mkPose(-0.2), dip: mkPose(-0.45), spot: mkPose(0) }, pv
 function saveEquip() { const o = {}; for (const k of EQ_KINDS) { const e = EQ.xr[k]; o[k] = { x: e.x, z: e.z, yaw: e.yaw, set: e.set, handle: e.handle, b: e.b }; } store(EQUIP_KEY, o); }
 // Pose respecto al suelo del guardián ↔ pose en local-floor
 function eqToBounded(e) { const T = EQ.b2l; if (!T) return; const dx = e.x - T.x, dz = e.z - T.z, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.b = { x: dx * c - dz * s, z: dx * s + dz * c, yaw: e.yaw - T.yaw }; }
-function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); e.x = T.x + b.x * c + b.z * s; e.z = T.z - b.x * s + b.z * c; e.yaw = b.yaw + T.yaw; }
+function eqFromBounded(e) { const T = EQ.b2l, b = e.b, c = Math.cos(T.yaw), s = Math.sin(T.yaw); eqTrack(e, T.x + b.x * c + b.z * s, T.z - b.x * s + b.z * c, b.yaw + T.yaw); }
+// La pose que da el seguimiento (el ancla o el guardián) tiembla unos milímetros de un fotograma a otro, sobre todo al mover
+// la cabeza: aplicada tal cual, la barra y todo lo que cuelga de ella (el bosque entero, con sus sombras) se mueven y
+// destellan. El temblor se ignora; una deriva lenta se sigue poco a poco, y un salto de verdad (se recolocó), de golpe
+function eqTrack(e, x, z, yaw) {
+  const dd = Math.hypot(x - e.x, z - e.z), da = Math.abs(wrapAng(yaw - e.yaw));
+  if (!e.fix || dd > 0.03 || da > 0.025) { e.x = x; e.z = z; e.yaw = yaw; e.fix = true; }
+  else if (dd > 0.004 || da > 0.004) { e.x += (x - e.x) * 0.05; e.z += (z - e.z) * 0.05; e.yaw += wrapAng(yaw - e.yaw) * 0.05; }
+}
 const eqKind = () => settings.exercise === 'row' ? 'dip' : 'door';
 const eqPose = (k = eqKind()) => (preview ? EQ.pv : EQ.xr)[k];
 const dipOne = () => settings.dipBars === '1'; // una sola paralela: te tumbas cruzado debajo de ella
@@ -2724,7 +2746,7 @@ function updateEquip(dt, t) {
 function anchorsInit(session) {
   EQ.bref = EQ.b2l = EQ.ref = null;
   if (session.requestReferenceSpace) session.requestReferenceSpace('bounded-floor').then(r => { EQ.bref = r; }).catch(() => {});
-  for (const k of EQ_KINDS) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; if (e.handle) restoreAnchor(session, e, 0); }
+  for (const k of EQ_KINDS) { const e = EQ.xr[k]; e.anchor = null; e.synced = false; e.fix = false; if (e.handle) restoreAnchor(session, e, 0); }
 }
 // Al empezar la sesión las Quest pueden no haber reconocido aún la habitación: se reintenta antes de dar el ancla por perdida
 function restoreAnchor(session, e, tries) {
@@ -2769,7 +2791,7 @@ function anchorsFrame(frame, ref) {
     const pose = e.anchor && e.anchor.anchorSpace && frame.getPose(e.anchor.anchorSpace, ref);
     if (pose) {
       const p = pose.transform.position, o = pose.transform.orientation;
-      e.x = p.x; e.z = p.z; e.yaw = yawOf(_eqq.set(o.x, o.y, o.z, o.w));
+      eqTrack(e, p.x, p.z, yawOf(_eqq.set(o.x, o.y, o.z, o.w)));
       if (!e.synced && EQ.b2l) { e.synced = true; eqToBounded(e); saveEquip(); } // el ancla manda: el guardián se pone al día
     } else if (e.b && EQ.b2l) eqFromBounded(e);
     else if (!e.b && EQ.b2l && e.handle === null && e.synced === false) { e.synced = true; eqToBounded(e); saveEquip(); } // poses antiguas: desde ahora, también respecto al guardián
@@ -4727,9 +4749,23 @@ const STY = {
 // Cada parte del menú tiene su color: el botón que lleva a ella (borde y una raya a la izquierda) y el marco y el título de su
 // submenú, para saber de un vistazo dónde estás
 const MC = { ex: '#3cf0c6', foes: '#ff8a3d', arms: '#ff4fa3', sound: '#a68bff', scene: '#7ee081', set: '#ffd166', prof: '#5ab8ff', body: '#5ab8ff' };
+// Iconos dibujados (no dependen de que la letra tenga esos símbolos): reproducir, pausa, anterior, siguiente y volumen
+function drawIcon(c, k, x, y, S, col) {
+  c.save(); c.translate(x, y); c.fillStyle = col; c.strokeStyle = col; c.lineWidth = S * 0.12; c.lineCap = 'round'; c.lineJoin = 'round';
+  const tri = (x0, dir, w, h) => { c.beginPath(); c.moveTo(x0, -h); c.lineTo(x0 + dir * w, 0); c.lineTo(x0, h); c.closePath(); c.fill(); };
+  const bar = (x0, w, h) => { c.fillRect(x0, -h, w, h * 2); };
+  if (k === 'play') tri(-S * 0.32, 1, S * 0.72, S * 0.45);
+  else if (k === 'pause') { bar(-S * 0.34, S * 0.24, S * 0.42); bar(S * 0.1, S * 0.24, S * 0.42); }
+  else if (k === 'next' || k === 'prev') { const d = k === 'next' ? 1 : -1; c.scale(d, 1); tri(-S * 0.42, 1, S * 0.42, S * 0.38); tri(-S * 0.02, 1, S * 0.42, S * 0.38); bar(S * 0.4, S * 0.12, S * 0.38); }
+  else if (k === 'voldown' || k === 'volup') {
+    c.beginPath(); c.moveTo(-S * 0.62, -S * 0.17); c.lineTo(-S * 0.42, -S * 0.17); c.lineTo(-S * 0.12, -S * 0.42); c.lineTo(-S * 0.12, S * 0.42); c.lineTo(-S * 0.42, S * 0.17); c.lineTo(-S * 0.62, S * 0.17); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(S * 0.12, 0); c.lineTo(S * 0.56, 0); if (k === 'volup') { c.moveTo(S * 0.34, -S * 0.22); c.lineTo(S * 0.34, S * 0.22); } c.stroke();
+  }
+  c.restore();
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon;
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -4742,6 +4778,7 @@ class Btn {
     if ((s[2] || acc) && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = acc ? this.accent : s[2]; c.stroke(); }
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
     const ax = this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
     c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
@@ -4886,9 +4923,10 @@ function openMenu(rows, opts = {}) {
       if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
       else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
     }
+    else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
@@ -5929,6 +5967,16 @@ function musicRows() {
     ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
+// Minicontroles para el menú de muñeca o el atril (principal y pausa): lo que suena y anterior, pausa/play, siguiente y
+// volumen, con iconos. Pulsarlos en plena partida no la termina: la pausa sigue ahí y «Continuar» la reanuda
+function spMiniRows() {
+  if (!spConnected()) return [];
+  if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
+  const it = SP.st && SP.st.item, now = SP.err || (it ? `♪ ${it.name}${it.artists ? ' — ' + it.artists.map(a => a.name).join(', ') : ''}` : 'Spotify: no suena nada');
+  return [{ t: 'text', text: now, color: SP.err ? '#ff8a3d' : '#a68bff', music: true },
+    { t: 'btns', h: 0.058, items: [{ label: 'Anterior', icon: 'prev', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', icon: spPlaying() ? 'pause' : 'play', style: 'primary', flex: 1.3, onPress: spToggle },
+      { label: 'Siguiente', icon: 'next', onPress: spNext }, { label: 'Vol −', icon: 'voldown', onPress: () => spVol(-10) }, { label: 'Vol +', icon: 'volup', onPress: () => spVol(10) }] }];
+}
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
 // Con el menú de música abierto, se pregunta a Spotify cada 5 s; si no, cada 8 s (para callar el ambiente mientras
 // suena y para seguir el ritmo de cada canción)
@@ -6053,10 +6101,14 @@ function finishSession() {
   const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
-  lines.push(`Total: ${tot.reps} repeticiones${tot.secs ? ` y ${tot.secs} s colgado` : ''} · ${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')} · ≈ ${Math.round(tot.kcal)} kcal · ${tot.score} puntos`);
-  if (progressLine()) lines.push(progressLine());
   if (all) SND.victory();
-  endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', lines);
+  // la misma ficha que al acabar una ronda, con el total de la sesión (y la lista de bloques debajo)
+  const perf = R.reduce((a, r) => a + (r.perfect || 0), 0), won = R.filter(r => r.win).length, pr = tot.reps ? perf / tot.reps : 0;
+  const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques`,
+    sub: all ? 'Todos los bloques hechos' : `${R.length} de ${SES.blocks.length} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
+    tiles: [[`${won}/${SES.blocks.length}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
+    chips: [], today: progressLine(), lines };
+  endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', S);
 }
 // Devuelve los ajustes como estaban antes de la sesión
 function endSession() {
@@ -8140,6 +8192,7 @@ function lobbyMenu() {
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
+  rows.push(...spMiniRows()); // con Spotify: lo que suena y sus controles (todo lo demás, en Sonido)
   sub.push({ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', accent: MC.scene, style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
     { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
   rows.push({ t: 'btns', items: sub });
@@ -8211,6 +8264,7 @@ function pauseMenu() {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
+    ...spMiniRows(), // la música, sin salir de la pausa
     { t: 'btns', items: [{ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', accent: MC.scene, onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(() => pauseMenu()) }] },
     { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', accent: MC.body, onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : [])] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
@@ -8241,15 +8295,29 @@ function bodyYaw() {
 }
 // (en las flexiones inchworm, el origen va IW_OFF() por delante: donde quedará la cabeza en la plancha)
 function arenaFromHead() { const y = bodyYaw(), o = IW_OFF(); arena.position.set(head.p.x - Math.sin(y) * o, 0, head.p.z - Math.cos(y) * o); arena.rotation.y = y; }
-// Mientras calibras, el entorno y los enemigos se van colocando a tu alrededor; al calibrar se fijan
+// De pie, mientras calibras, el entorno se queda quieto (las compuertas no acompañan a la cabeza) y, al calibrar, se
+// desliza en poco menos de un segundo hasta quedar delante de ti; en el suelo o sentado, se va colocando a tu alrededor
+const ARG = { t: 0, from: null, to: null };
+const standingEx = () => !isFloor() && !isSeated() && !isSupine() && !isBars();
+function arenaGlideToHead() {
+  const from = { x: arena.position.x, z: arena.position.z, y: arena.rotation.y }; arenaFromHead();
+  ARG.to = { x: arena.position.x, z: arena.position.z, y: arena.rotation.y }; ARG.from = from; ARG.t = 1e-4;
+  arena.position.x = from.x; arena.position.z = from.z; arena.rotation.y = from.y;
+}
+function arenaGlide(dt) {
+  if (!ARG.t) return; ARG.t = Math.min(1, ARG.t + dt / 0.8); const k = smooth(ARG.t), F = ARG.from, T = ARG.to;
+  arena.position.x = lerp(F.x, T.x, k); arena.position.z = lerp(F.z, T.z, k); arena.rotation.y = F.y + wrapAng(T.y - F.y) * k;
+  if (ARG.t >= 1) ARG.t = 0;
+}
 function arenaFollow(dt) {
+  if (standingEx()) return;
   const k = Math.min(1, dt * 4);
   const o = IW_OFF(), y = arena.rotation.y;
   arena.position.x += (head.p.x - Math.sin(y) * o - arena.position.x) * k; arena.position.z += (head.p.z - Math.cos(y) * o - arena.position.z) * k;
   arena.rotation.y += wrapAng(bodyYaw() - arena.rotation.y) * k;
 }
 function calibrate() {
-  arenaFromHead();
+  if (standingEx() && !preview) arenaGlideToHead(); else arenaFromHead();
   const y = head.p.y; DET.sq.ref = DET.pu.ref = DET.lu.ref = DET.di.ref = y; if (!isFloor() && !isSeated() && y > 1.1) { calibRef = y; lastStandY = y; }
   if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
@@ -8322,18 +8390,21 @@ function endRun(win, manual) {
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop());
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
-  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
-  const lines = [
-    !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : '',
-    hang ? `Colgado ${got} s · ${stats.falls} caídas · racha máx. ${stats.bestCombo} s` : `${EX_NAMES[settings.exercise]}: ${stats.reps} reps · ${stats.perfect} perfectas · ${stats.partial} a medias`,
-    isBars() ? (hang ? `Oleadas superadas: ${waveIdx + (win ? 1 : 0)}` : `${stats.kills} reventados con la cabeza · ${stats.falls} caídas · combo máx. ×${stats.bestCombo}`) : isCombat() && stats.shots ? `Precisión ${Math.round(100 * stats.hits / stats.shots)}% · ${stats.kills} derribados · combo ×${stats.bestCombo}` : settings.mode === 'arcs' ? `Golpes recibidos: ${stats.taken} · combo máx. ×${stats.bestCombo}` : settings.mode === 'touch' ? `${stats.reps} tocados · ${stats.taken} fallos · combo máx. ×${stats.bestCombo}` : `${stats.kills} enemigos destruidos · combo máx. ×${stats.bestCombo}`,
-    `Tiempo ${mm}:${ss} · ≈ ${Math.round(runStatsKcal())} kcal · ${score} puntos`,
-    RAMP.lvl && settings.ramp > 0 ? `Dificultad alcanzada: +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} % (${RAMP.lvl} ${RAMP.lvl === 1 ? 'subida' : 'subidas'})` : '',
-    streakUp ? `¡${P.streak} días seguidos entrenando!${P.streak >= P.best ? ' Tu mejor racha' : ''}` : progressLine(P),
-    got > prevBest && prevBest > 0 ? (hang ? '¡Nuevo récord de tiempo colgado!' : '¡Nuevo récord de repeticiones!') : (win ? 'Zona despejada.' : manual ? 'Ronda terminada.' : 'Descansa y vuelve a por ellos.')
-  ];
+  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
+  const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;
+  const tiles = hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
+    : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
+    : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
+    : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode],
+    sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
+    pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
+    tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
+    chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
+      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null].filter(Boolean),
+    today: progressLine(P) };
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
-  const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', lines.filter(Boolean)); // en una sesión, al siguiente bloque
+  const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
   if (SES.active && (manual || win)) go(); else showOutcome(win, go, manual); // en una sesión, entre bloques ya hay su pantalla de descanso
 }
 /* ---------- Final de la ronda, con sensación de juego ---------- */
@@ -8377,10 +8448,57 @@ function updateOutcome(dt) {
   if (!OUT.done && t >= delay) { OUT.done = true; const go = OUT.go; OUT.go = null; if (go) go(); }
 }
 function outcomeClear() { OUT.t = -1; OUT.cleared = false; OUT.veil.visible = false; OUT.black.visible = false; OUT.title.mesh.visible = false; }
-function endMenu(title, lines) {
-  const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }, ...lines.map(l => ({ t: 'text', text: l })),
-    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
-  const m = openMenu(rows); m.rebuild = () => endMenu(title, lines);
+// El resumen: una ficha con el número grande (repeticiones o segundos colgado), las estrellas y el porcentaje de perfectas,
+// seis casillas con lo demás y los logros; debajo, los botones. Si no pulsas nada, a los END_AUTO s se abre solo el menú
+// principal (la barra de abajo lo va contando)
+const END_AUTO = 12, END = { t: -1, bar: null };
+function summaryDraw(S, c, x, y, w, h) {
+  const gold = '#ffd166', teal = '#3cf0c6', pink = '#ff4fa3', ink = '#eeeaff', dim = '#a49fc8';
+  c.textBaseline = 'middle'; c.textAlign = 'center';
+  c.fillStyle = dim; fitFont(c, S.ex, w - 40, 28, '500 %px ' + FB); c.fillText(S.ex, x + w / 2, y + 22);
+  c.fillStyle = S.win ? teal : S.manual ? ink : '#ff8a8a'; fitFont(c, S.sub, w - 40, 30, '600 %px ' + FB); c.fillText(S.sub, x + w / 2, y + 60);
+  // el número grande, con su brillo
+  const hy = y + 92, hh = h * 0.36; rr(c, x + 10, hy, w - 20, hh, 26); c.fillStyle = 'rgba(255,209,102,0.07)'; c.fill(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,209,102,0.35)'; c.stroke();
+  const nx = x + w * 0.3; c.save(); c.shadowColor = gold; c.shadowBlur = 24; c.fillStyle = gold; fitFont(c, String(S.got), w * 0.42, Math.round(hh * 0.62), '%px ' + FD); c.fillText(String(S.got), nx, hy + hh * 0.43); c.restore();
+  c.fillStyle = ink; fitFont(c, S.unit, w * 0.42, 30, '500 %px ' + FB); c.fillText(S.unit, nx, hy + hh * 0.82);
+  // estrellas y perfectas
+  const sx = x + w * 0.72, star = (cx, cy, r, on) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.45 : r; c.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } c.closePath(); c.fillStyle = on ? gold : 'rgba(255,255,255,0.12)'; c.fill(); };
+  for (let k = 0; k < 3; k++) star(sx + (k - 1) * hh * 0.34, hy + hh * 0.33, hh * 0.15, k < S.stars);
+  if (S.pct !== null) {
+    const bw = w * 0.36, bx = sx - bw / 2, by = hy + hh * 0.66; rr(c, bx, by, bw, 18, 9); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    if (S.pct > 0) { rr(c, bx, by, Math.max(18, bw * S.pct / 100), 18, 9); c.fillStyle = teal; c.fill(); }
+    c.fillStyle = ink; fitFont(c, `${S.pct} % perfectas`, bw, 28, '600 %px ' + FB); c.fillText(`${S.pct} % perfectas`, sx, by + 44);
+  } else { c.fillStyle = ink; c.font = '600 28px ' + FB; c.fillText(S.win ? '¡Aguantaste!' : '¡Sigue así!', sx, hy + hh * 0.72); }
+  // seis casillas
+  const gy = hy + hh + 16, cols = 3, gap = 12, tw = (w - 20 - gap * (cols - 1)) / cols, th = (h - (gy - y) - 70 - gap) / 2, cc = [teal, pink, gold, '#a68bff', '#7ee081', '#5ab8ff'];
+  S.tiles.forEach(([v, l], k) => {
+    const tx = x + 10 + (k % cols) * (tw + gap), ty = gy + Math.floor(k / cols) * (th + gap);
+    rr(c, tx, ty, tw, th, 18); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill(); rr(c, tx, ty + th * 0.18, 7, th * 0.64, 4); c.fillStyle = cc[k]; c.fill();
+    c.fillStyle = ink; fitFont(c, String(v), tw - 40, Math.round(th * 0.42), '700 %px ' + FB); c.fillText(String(v), tx + tw / 2 + 4, ty + th * 0.42);
+    c.fillStyle = dim; fitFont(c, l, tw - 30, Math.round(th * 0.27), '500 %px ' + FB); c.fillText(l, tx + tw / 2 + 4, ty + th * 0.78);
+  });
+  // logros (récord, racha, dificultad) o, si no hay, lo de hoy
+  const cy0 = y + h - 32, chips = S.chips.length ? S.chips : S.today ? [[S.today, dim]] : [];
+  c.font = '600 26px ' + FB; const cw = chips.map(([t]) => Math.min(w - 20, c.measureText(t).width + 44)), tot = cw.reduce((a, b) => a + b, 0) + 12 * Math.max(0, chips.length - 1);
+  let cx = x + (w - Math.min(w, tot)) / 2;
+  chips.forEach(([t, col], k) => { rr(c, cx, cy0 - 22, cw[k], 44, 22); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); c.fillStyle = col; fitFont(c, t, cw[k] - 30, 26, '600 %px ' + FB); c.fillText(t, cx + cw[k] / 2, cy0 + 1); cx += cw[k] + 12; });
+}
+function endMenu(title, S) {
+  const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
+    { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
+    ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
+    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] },
+    { t: 'canvas', h: 0.03, draw: (c, x, y, w, h) => { c.fillStyle = '#a49fc8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '500 22px ' + FB; c.fillText('El menú principal se abre solo en unos segundos', x + w / 2, y + h * 0.3); rr(c, x + 40, y + h * 0.72, w - 80, 8, 4); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill(); },
+      mount: (g, x0, cy, cw, h) => { const b = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.006), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false, transparent: true })); const W = cw - 80 / (1024 / MW); b.position.set(x0 + 40 / (1024 / MW), cy - h * 0.22, 0.002); b.renderOrder = RO.widget; b.userData = { x0: b.position.x, W }; g.add(b); END.bar = b; } }];
+  END.t = 0; const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => { const t = END.t; endMenu(title, S); END.t = t; }; m.endMenu = true;
+}
+// El resumen cuenta hacia el menú principal (y la barra se va llenando)
+function endAutoStep(dt) {
+  if (END.t < 0) return;
+  if (state !== 'end' || !menu || !menu.endMenu) { END.t = -1; END.bar = null; return; }
+  END.t += dt; const k = Math.min(1, END.t / END_AUTO), b = END.bar;
+  if (b) { const w = Math.max(1e-3, b.userData.W * k); b.scale.x = w; b.position.x = b.userData.x0 + w / 2; }
+  if (k >= 1) { END.t = -1; lobbyMenu(); }
 }
 function exitAll() {
   endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
@@ -8394,6 +8512,7 @@ function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
+  arenaGlide(dt); endAutoStep(dt);
   if (state === 'calib') {
     arenaFollow(dt);
     const ok = settings.exercise === 'twist' ? head.p.y > 0.55 && hands.left.ok && hands.right.ok : isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
@@ -9864,6 +9983,8 @@ async function startXR(ar) {
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
+    session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet()) openPause(); });
     ambientStart();

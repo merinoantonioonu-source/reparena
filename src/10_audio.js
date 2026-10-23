@@ -63,6 +63,7 @@ function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}
 }
 // music: suena Spotify (entonces el sonido ambiente se calla del todo)
 const AUDM = { music: false };
+const ambMute = () => AUDM.music || settings.ambient <= 0;
 function applyVolume() {
   if (!AUD.C) return;
   AUD.sfx.gain.value = settings.volume / 100;
@@ -186,7 +187,7 @@ const SND = {
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
   // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
-  bird(pos) {
+  bird(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
     for (let i = 0; i < n; i++) { const d = rand(0.05, 0.12); tone(o, { t, f: up ? f0 : f0 * 1.35, to: up ? f0 * 1.4 : f0, d, gain: rand(0.05, 0.09) }); t += d + rand(0.03, 0.09); }
   },
@@ -265,7 +266,7 @@ const SND = {
     for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
   whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
-  thunder(dist = 1) {
+  thunder(dist = 1) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
@@ -304,8 +305,8 @@ const SND = {
   vortexClose(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 1.5 }); tone(shaper(o), { f: 90, to: 35, d: 0.5, gain: 0.5 }); noise(o, { brown: true, f: 700, to: 100, d: 0.4, gain: 0.6 }); tone(o, { type: 'triangle', f: 660, to: 990, t: 0.05, d: 0.4, gain: 0.05 }); },
   // bosque: un búho que ulula a lo lejos y una rama que cruje
   // isla: una gaviota que grita sobre el mar (dos o tres graznidos que suben y caen)
-  gull(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 0.5, ref: 5 }), n = 2 + Math.floor(Math.random() * 2), f = rand(1300, 1700); for (let i = 0; i < n; i++) tone(o, { type: 'triangle', f: f * rand(0.95, 1.05), to: f * 0.62, t: i * 0.28, a: 0.03, d: 0.24, gain: 0.07 }); },
-  owl(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
+  gull(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */ if (!sndOK()) return; const o = sout(pos, { rev: 0.6, gain: 0.5, ref: 5 }), n = 2 + Math.floor(Math.random() * 2), f = rand(1300, 1700); for (let i = 0; i < n; i++) tone(o, { type: 'triangle', f: f * rand(0.95, 1.05), to: f * 0.62, t: i * 0.28, a: 0.03, d: 0.24, gain: 0.07 }); },
+  owl(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */ if (!sndOK()) return; const o = sout(pos, { rev: 1.1, gain: 0.55, ref: 6 }), f = rand(330, 390); [0, 0.55, 0.8].forEach((t, i) => tone(o, { type: 'sine', f: f * (i === 1 ? 1.06 : 1), to: f * 0.88, t, a: 0.05, d: i ? 0.35 : 0.5, gain: 0.09 })); },
   creak(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.5, ref: 3 }); const n = 6 + Math.floor(Math.random() * 6); for (let i = 0; i < n; i++) tone(o, { type: 'sawtooth', f: rand(140, 220), to: rand(110, 180), t: i * 0.05, d: 0.06, gain: 0.04 }); noise(o, { type: 'bandpass', f: 700, q: 3, d: 0.4, gain: 0.08 }); },
   clankFar(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 1.2, gain: 0.5, ref: 6 }); [210, 470, 1040, 1730].forEach((f, i) => tone(o, { f: f * rand(0.9, 1.1), d: 0.6 + i * 0.2, gain: 0.05, type: 'triangle' })); noise(o, { brown: true, f: 500, d: 0.3, gain: 0.3 }); }
 };
