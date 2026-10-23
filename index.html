@@ -120,6 +120,11 @@ button{font:inherit;cursor:pointer}
 .how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px;max-width:70ch}
 .how li::marker{color:var(--teal)}
 .hist table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.sounds h3{margin:18px 0 8px;font-size:.95rem;color:var(--muted);letter-spacing:.04em}
+.sndlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 18px}
+.snd{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.snd code{flex:0 0 auto;min-width:150px;color:var(--teal,#3cf0c6);font-weight:600}
+.snd span{color:var(--fg)}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
 .hist th{color:var(--muted);font-weight:500;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase}
 .tablebox{overflow-x:auto}
@@ -423,6 +428,106 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <tbody id="histBody"></tbody>
     </table></div>
   </section>
+
+  <section class="sounds" id="soundsBox">
+<h2>Sonidos que puedes cambiar</h2>
+<p class="note">Sube a la carpeta <code>sounds/</code> del repositorio un archivo <code>.mp3</code>, <code>.ogg</code> o <code>.wav</code> con el nombre exacto (por ejemplo <code>rayo.mp3</code>) y el juego lo usará en lugar del sonido sintetizado. En GitHub: carpeta <code>sounds</code> → <b>Add file → Upload files</b> → <b>Commit changes</b>.</p>
+<h3>Disparos y golpes</h3><div class="sndlist">
+<div class="snd"><code>rayo</code><span>Cada disparo (el rayo sale de la mano o la pistola).</span></div>
+<div class="snd"><code>rayo-cargado</code><span>Disparos cargados (×2, ×3, ×4). Si no está, se usa <code>rayo</code> más grave.</span></div>
+<div class="snd"><code>impacto</code><span>Cuando el rayo alcanza al enemigo.</span></div>
+<div class="snd"><code>chispazo</code><span>Descarga eléctrica: segundo latigazo de un rayo fuerte, o te da un arco/valla en Arcos.</span></div>
+<div class="snd"><code>explosion</code><span>Explota un robot o un dron.</span></div>
+<div class="snd"><code>impacto-metal</code><span>Le das a un robot sin derribarlo, o un robot te golpea.</span></div>
+<div class="snd"><code>golpe-recibido</code><span>Te golpean (lo oyes tú, sin posición).</span></div>
+</div>
+<h3>Enemigos</h3><div class="sndlist">
+<div class="snd"><code>rugido-robot</code><span>Un robot ruge (al salir, al cargar o al prepararse para golpear). Solo los robots: cada monstruo tiene el suyo (abajo).</span></div>
+<div class="snd"><code>paso-robot</code><span>Cada paso de un robot.</span></div>
+<div class="snd"><code>servo</code><span>Un robot levanta el brazo para golpear.</span></div>
+<div class="snd"><code>compuerta</code><span>Se abre una compuerta.</span></div>
+<div class="snd"><code>siseo-arana</code><span>Una araña sisea (al acercarse, al amenazar y al picarte).</span></div>
+<div class="snd"><code>patas-arana</code><span>Una araña corretea o salta.</span></div>
+<div class="snd"><code>ataque-arana</code><span>Una araña salta a por ti.</span></div>
+<div class="snd"><code>aplastar</code><span>Revientas una araña o un avispón (chapoteo viscoso).</span></div>
+<div class="snd"><code>ataque-volador</code><span>Un avispón se lanza a picarte (o, en Barras, una avispa o un dron).</span></div>
+<div class="snd"><code>lanzamiento</code><span>El lanzador te tira una piedra.</span></div>
+<div class="snd"><code>arco-pasa</code><span>Un arco de energía te pasa por encima, o lo saltas (Arcos).</span></div>
+<div class="snd"><code>siseo-avispa</code><span>Un avispón carga antes de picar; en Barras, las avispas y la reina amenazan o te pican.</span></div>
+<div class="snd"><code>ameba</code><span>Revientas una ameba de agua (Toques).</span></div>
+<div class="snd"><code>pompa</code><span>Revientas una pompa (Barras).</span></div>
+<div class="snd"><code>tentaculos</code><span>Un tentáculo del charco se lanza hacia ti.</span></div>
+<div class="snd"><code>caida-foso</code><span>Caes al charco (se suma al chapoteo).</span></div>
+<div class="snd"><code>chapoteo</code><span>La zambullida al caer al charco.</span></div>
+<div class="snd"><code>remolino-engulle</code><span>El remolino te engulle.</span></div>
+<div class="snd"><code>remolino-cierra</code><span>El remolino se cierra al acabar el tiempo.</span></div>
+</div>
+<h3>La voz de cada monstruo</h3><div class="sndlist">
+<div class="snd"><code>rugido-diablillo</code><span>El diablillo (Imp) y su jefe: al salir, al amenazar, al prepararse para golpear y al morir.</span></div>
+<div class="snd"><code>rugido-puglin</code><span>El Puglin, en los mismos momentos.</span></div>
+<div class="snd"><code>rugido-zombi</code><span>El zombi y su jefe (un gruñido grave).</span></div>
+<div class="snd"><code>rugido-velociraptor</code><span>El velociraptor y el jefe (el velociraptor enorme).</span></div>
+<div class="snd"><code>rugido-zombi-verde</code><span>El zombi verde y su jefe.</span></div>
+<div class="snd"><code>rugido-zombi-gordo</code><span>El zombi gordo y su jefe.</span></div>
+<div class="snd"><code>voz-demonio</code><span>El demonio (monstruito) y su jefe.</span></div>
+<div class="snd"><code>voz-demonio-verde</code><span>El demonio verde y su jefe.</span></div>
+<div class="snd"><code>voz-ciclope</code><span>El cíclope y su jefe.</span></div>
+<div class="snd"><code>voz-yeti</code><span>El yeti y su jefe.</span></div>
+<div class="snd"><code>voz-calavera</code><span>La calavera, andando o saliendo de las trampillas.</span></div>
+<div class="snd"><code>voz-alien</code><span>El alien y su jefe.</span></div>
+<div class="snd"><code>voz-alien-alto</code><span>El alien alto y su jefe.</span></div>
+<div class="snd"><code>voz-cangrejo</code><span>El cangrejo de las trampillas (al salir, al amenazar y al morderte).</span></div>
+<div class="snd"><code>voz-seta</code><span>La seta de las trampillas.</span></div>
+<div class="snd"><code>voz-esqueleto</code><span>El esqueleto pirata y su jefe.</span></div>
+<div class="snd"><code>voz-capitan</code><span>El capitán Barbarroja (y el capitán jefe).</span></div>
+<div class="snd"><code>voz-tiburon</code><span>Sharky, el tiburón, y su jefe.</span></div>
+<div class="snd"><code>voz-tiburon-gris</code><span>Mako, el tiburón gris, y su jefe.</span></div>
+<div class="snd"><code>voz-abeja</code><span>La abeja, al lanzarse a picarte.</span></div>
+<div class="snd"><code>voz-murcielago</code><span>El murciélago, al lanzarse a morderte.</span></div>
+<div class="snd"><code>voz-cthulhu</code><span>Cthulhu, al lanzarse a por ti.</span></div>
+<div class="snd"><code>voz-dragon</code><span>El dragón (jefe de los voladores), al lanzarse a por ti.</span></div>
+</div>
+<h3>Espadas</h3><div class="sndlist">
+<div class="snd"><code>espada-aire</code><span>La hoja corta el aire en un tajo rápido.</span></div>
+<div class="snd"><code>espada-choque</code><span>La hoja rebota (sin carga, o choca con algo).</span></div>
+<div class="snd"><code>espada-golpe</code><span>Un tajo cargado le da a un robot.</span></div>
+<div class="snd"><code>espada-bloqueo</code><span>Paras un golpe con la espada.</span></div>
+<div class="snd"><code>espada-corte</code><span>Partes un bloque en Toques.</span></div>
+</div>
+<h3>Avisos del juego (sin posición, suenan «en tu cabeza»)</h3><div class="sndlist">
+<div class="snd"><code>carga</code><span>La bajada ya es suficiente: la repetición cuenta y el disparo queda cargado (en la sentadilla, al llegar abajo; en el press, al empezar a subir). También al terminar la calibración, al recargar las pistolas y al colocar la barra. (Un «fiuu» corto que sube.)</span></div>
+<div class="snd"><code>carga-nivel</code><span>Aguantando abajo (flexiones y sentadillas), cada 0,8 s sube la carga: ×2, ×3, ×4. Suena una vez por nivel; el sintetizado, cada vez más agudo. (Un zumbido eléctrico que sube.)</span></div>
+<div class="snd"><code>perfecta</code><span>Repetición PERFECTA: completa y al ritmo pedido. (Un brillo de campanitas agudas.)</span></div>
+<div class="snd"><code>a-medias</code><span>Repetición a medias: no bajaste o no subiste lo suficiente; también sale «¡Baja más!» o similar y se corta el combo. (Una nota grave que cae, «buuu».)</span></div>
+<div class="snd"><code>fallo</code><span>Un rayo apuntado (con la mirada o las manos) no da a ningún enemigo; en Barras, se escapa una pompa. (Un «pu» corto y suave que baja.)</span></div>
+<div class="snd"><code>combo</code><span>Cada 10 repeticiones seguidas sin fallar (×10, ×20…). (Cuatro notas que suben, «tirirí».)</span></div>
+<div class="snd"><code>pitido</code><span>Cuenta atrás de segundos (plancha lateral, superman, colgarse de la barra, colocar el equipo) y aviso de que llega una valla en Arcos; el sintetizado sube de tono en cada segundo. (Un «bip» corto.)</span></div>
+<div class="snd"><code>oleada</code><span>Empieza una oleada. (Una bocina de dos toques, grave.)</span></div>
+<div class="snd"><code>victoria</code><span>Ganas la ronda o superas una oleada con descanso. (Una fanfarria que sube.)</span></div>
+<div class="snd"><code>derrota</code><span>Pierdes la ronda (al quedarte sin vidas). (Cuatro notas que bajan.)</span></div>
+<div class="snd"><code>clic</code><span>Pulsas un botón de un menú.</span></div>
+<div class="snd"><code>tic</code><span>Mueves un deslizador, aparece el menú de la muñeca o tocas una marca en la inchworm.</span></div>
+</div>
+<h3>Ambiente</h3><div class="sndlist">
+<div class="snd"><code>trueno</code><span>Los truenos lejanos de la arena.</span></div>
+<div class="snd"><code>metal-lejano</code><span>Golpes metálicos lejanos de la arena.</span></div>
+<div class="snd"><code>buho</code><span>Un búho en el bosque.</span></div>
+<div class="snd"><code>gaviota</code><span>Una gaviota que grita sobre el mar (Entorno: Isla pirata), cada pocos segundos y desde un sitio distinto.</span></div>
+<div class="snd"><code>pajaro</code><span>Un pájaro que canta en el bosque de día (Entorno: Bosque), cada pocos segundos y desde un sitio distinto.</span></div>
+<div class="snd"><code>crujido</code><span>Crujidos de ramas en el bosque.</span></div>
+</div>
+<h3>Sonidos continuos (se repiten en bucle)</h3><div class="sndlist">
+<div class="snd"><code>ambiente-arena</code><span>Fondo de la arena (realidad virtual). Sustituye a todo el ambiente sintetizado.</span></div>
+<div class="snd"><code>ambiente-bosque</code><span>Fondo del bosque (viento, grillos…).</span></div>
+<div class="snd"><code>ambiente-isla</code><span>Fondo de la isla pirata (Entorno: Isla pirata): las olas que rompen y se retiran, y la brisa.</span></div>
+<div class="snd"><code>ambiente-naturaleza</code><span>Fondo del bosque de día (Entorno ▸ → Entorno: Bosque): brisa entre las hojas.</span></div>
+<div class="snd"><code>zumbido-dron</code><span>Vuelo de drones, bombarderos y nodrizas (cada uno con su tono).</span></div>
+<div class="snd"><code>zumbido-avispa</code><span>Vuelo de avispones, avispas y la reina (cada uno con su tono).</span></div>
+<div class="snd"><code>espada-laser-zumbido</code><span>Zumbido de la espada láser (sube de tono y volumen al moverla).</span></div>
+<div class="snd"><code>remolino</code><span>Succión del remolino (sube con lo abierto que está).</span></div>
+<div class="snd"><code>arco-zumbido</code><span>Zumbido de los arcos de energía en Arcos.</span></div>
+</div>
+</section>
   </div>
 </main>
 
@@ -2829,7 +2934,21 @@ const poolTex = texFrom((() => {
   return c;
 })());
 poolTex.wrapS = poolTex.wrapT = THREE.ClampToEdgeWrapping;
-const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, toneMapped: false }));
+// El agua del charco: ondas que salen de donde asoma cada tentáculo, suaves mientras se mecen y fuertes cuando se lanzan
+// o barren (y un rizado leve de fondo); desplazan el dibujo del charco y le sacan brillos
+const POOL_FS = `uniform sampler2D map; uniform float uTime; uniform vec4 uSrc[5]; varying vec2 vUv;
+void main() {
+  vec2 p = vUv * 2.0 - 1.0; float w = 0.0; vec2 g = vec2(0.0);
+  for (int i = 0; i < 5; i++) { vec2 d = p - uSrc[i].xy; float r = length(d) + 1e-4, s = uSrc[i].z;
+    float k = sin(r * 34.0 - uTime * (6.0 + 6.0 * uSrc[i].w) + float(i) * 1.7) * exp(-r * 2.6) * s; w += k; g += d / r * k; }
+  w += 0.12 * sin(p.x * 9.0 + uTime * 1.3) * sin(p.y * 8.0 - uTime * 1.1);
+  vec4 c = texture2D(map, vUv + g * 0.02);
+  vec3 col = c.rgb + vec3(0.1, 0.7, 0.42) * max(0.0, w) * 0.45 * (1.0 - length(p) * 0.35) + vec3(0.6, 1.0, 0.8) * pow(max(0.0, w), 2.0) * 0.3;
+  gl_FragColor = vec4(col, c.a);
+}`;
+const poolSrc = [0, 1, 2, 3, 4].map(() => new THREE.Vector4(0, 0, 0, 0));
+const poolWater = new THREE.ShaderMaterial({ uniforms: { map: { value: poolTex }, uTime: { value: 0 }, uSrc: { value: poolSrc } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: POOL_FS, transparent: true, depthWrite: false });
+const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), poolWater);
 poolDisc.rotation.x = -Math.PI / 2; poolDisc.position.y = 0.004; poolDisc.renderOrder = 1; pool.add(poolDisc);
 const poolRimMat = new THREE.MeshBasicMaterial({ color: 0x2cff9a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 const poolRim = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.0, 64), poolRimMat); poolRim.rotation.x = -Math.PI / 2; poolRim.position.y = 0.006; pool.add(poolRim);
@@ -2919,6 +3038,10 @@ function updatePool(dt, t) {
   POOL.bubbleT -= dt;
   if (POOL.bubbleT <= 0) { POOL.bubbleT = rand(0.15, 0.5); const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 0.85; const p = pool.localToWorld(_pt2.set(Math.cos(a) * r * POOL.rx, 0.02, Math.sin(a) * r * POOL.rz)); fx.glow(p, [0.2, 0.8, 0.45], rand(0.04, 0.1), 0.35, 0.6); if (Math.random() < 0.3) fx.droplets(p, 3, [0.2, 0.7, 0.4], 0.5, 0.015); }
   for (const E of POOL.eyes) { E.t -= dt; const open = E.t > 0.15 || E.t < 0; if (E.t <= 0) E.t = rand(2, 6); E.g.visible = open; E.a += dt * 0.12; E.g.position.set(Math.cos(E.a) * E.r * POOL.rx, 0, Math.sin(E.a) * E.r * POOL.rz); }
+  // el agua se mueve con ellos: cada tentáculo hace ondas desde donde asoma (más fuertes al lanzarse o al barrer)
+  poolWater.uniforms.uTime.value = t;
+  poolSrc.forEach((v, i) => { const T = POOL.tents[i]; if (!T) { v.z = 0; return; } const k = T.mdl ? T.k : Math.max(T.lunge, POOL.grabT > 0 ? Math.min(1, POOL.grabT) : 0);
+    v.set(T.root.position.x / POOL.rx, -T.root.position.z / POOL.rz, 0.25 + 1.1 * k + 0.5 * ex, k + ex); });
   // tentáculos: ondulación, embestida hacia los pies y agarrón
   const feet = eqLocal(e, head.p, _pt2);
   for (const T of POOL.tents) {
