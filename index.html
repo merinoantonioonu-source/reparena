@@ -450,6 +450,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div class="snd"><code>ataque-volador</code><span>Un avispón se lanza a picarte (o, en Barras, una avispa o un dron).</span></div>
 <div class="snd"><code>lanzamiento</code><span>El lanzador te tira una piedra.</span></div>
 <div class="snd"><code>arco-pasa</code><span>Un arco de energía te pasa por encima, o lo saltas (Arcos).</span></div>
+<div class="snd"><code>orbe</code><span>Coges un orbe en Arcos. (Campanitas de cristal que suben.)</span></div>
 <div class="snd"><code>siseo-avispa</code><span>Un avispón carga antes de picar; en Barras, las avispas y la reina amenazan o te pican.</span></div>
 <div class="snd"><code>ameba</code><span>Revientas una ameba de agua (Toques).</span></div>
 <div class="snd"><code>pompa</code><span>Revientas una pompa (Barras).</span></div>
@@ -662,6 +663,7 @@ const SCHEMA = [
   { key: 'tchArrive', g: 'toques', label: 'Tiempo que tardan en llegar', short: 'Llegada', type: 'num', min: 1, max: 8, step: 0.5, def: 3, unit: 's', modes: ['touch'], hint: 'Desde que aparecen al fondo hasta que llegan a ti. Menos = más rápidos.' },
   { key: 'tchWindow', g: 'toques', label: 'Tiempo para tocarlos', short: 'Para tocar', type: 'num', min: 0.4, max: 3, step: 0.1, def: 1.2, unit: 's', modes: ['touch'], hint: 'Lo que esperan quietos delante de ti antes de pasar de largo.' },
   { key: 'tchGap', g: 'toques', label: 'Separación entre objetivos', short: 'Separación', type: 'num', min: 0.8, max: 6, step: 0.1, def: 2.4, unit: 's', modes: ['touch'], hint: 'Con ritmo (BPM), se redondea a pulsos enteros.' },
+  { key: 'slamDeep', g: 'toques', label: 'Amebas del Slam: cuánto más abajo', short: 'Más abajo', type: 'num', min: 0, max: 40, step: 2, def: 12, unit: 'cm', modes: ['touch'], ex: ['slam'], hint: 'Las amebas para agacharse llegan esto más abajo que tu sentadilla (y las de los lados y las de delante, algo más bajas también): obliga a agacharte más.' },
   { key: 'tchHands', g: 'toques', label: 'Diamantes para las manos', short: 'Diamantes', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['touch'], noEx: ['combo', 'pushup'], hint: 'Parte de los objetivos que se tocan con la mano (diamantes: azul la izquierda, naranja la derecha). El resto son amebas para la cabeza.' },
   { key: 'tchPushLo', g: 'toques', label: 'Flexiones: altura mínima de las amebas', short: 'Ameba más baja', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más cerca del suelo que puede llegar una ameba (altura de su centro sobre el suelo). 0 = según la «Bajada en la flexión».' },
   { key: 'tchPushHi', g: 'toques', label: 'Flexiones: altura máxima de las amebas', short: 'Ameba más alta', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más alto que puede llegar una ameba. Siempre queda algo por debajo de tu cabeza en plancha, para que haya que bajar. 0 = según la «Bajada en la flexión».' },
@@ -1396,6 +1398,12 @@ const SND = {
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
+  // orbe (Arcos): campanitas de cristal que suben, cada una con su armónico metálico, y un brillo de aire por encima
+  orb(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.85, ref: 1 });
+    [1568, 2093, 2637, 3136, 4186].forEach((f, i) => { tone(o, { f, d: 1.1 - i * 0.12, gain: 0.07 - i * 0.008, t: i * 0.05 }); tone(o, { f: f * 2.76, d: 0.4, gain: 0.018, t: i * 0.05 }); tone(o, { f: f * 5.4, d: 0.18, gain: 0.006, t: i * 0.05 }); });
+    tone(o, { type: 'triangle', f: 1046, to: 3136, a: 0.003, d: 0.22, gain: 0.04 }); noise(o, { type: 'highpass', f: 7000, d: 0.5, gain: 0.04, t: 0.05 });
+  },
   pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
   // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
   waterPop(pos, big) {
@@ -1473,7 +1481,7 @@ const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
   explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: [{ who: 2, def: 'robot' }, 0],
-  hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  orb: ['orbe', 0], hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
@@ -6095,6 +6103,25 @@ function spToggle() {
     else await spWake();
   });
 }
+// Al terminar la partida, Spotify se pausa (y vuelve a oírse el ambiente de la arena); al empezar la siguiente, sigue la
+// música que sonaba
+// (en su propia cola, y vale la última: si acabas una partida mientras aún se reanudaba la música, se pausa igual)
+function spRoundQueue(want) {
+  SP.want = want;
+  SP.roundQ = (SP.roundQ || Promise.resolve()).then(async () => {
+    if (SP.want !== want || !spConnected()) return;
+    try { await spApi('PUT', want === 'pause' ? '/me/player/pause' : '/me/player/play'); if (SP.st) SP.st.is_playing = want === 'play'; SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+    spMenuSync(); setTimeout(spRefresh, 500);
+  });
+}
+function spRoundEnd() {
+  SP.resume = spConnected() && (spPlaying() || SP.want === 'play'); if (!SP.resume) return;
+  if (SP.st) SP.st.is_playing = false; AUDM.music = false; applyVolume(); spRoundQueue('pause');
+}
+function spRoundStart() {
+  if (!SP.resume) return; SP.resume = false; if (!spConnected() || (spPlaying() && SP.want !== 'pause')) return;
+  spRoundQueue('play');
+}
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
 // Volumen. El juego lleva la cuenta: Spotify tarda en reflejar los cambios (y al volver a leerlo devolvía el
@@ -6306,7 +6333,7 @@ function sessionStep(dt) { // descanso entre bloques
 function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock(repeat ? SES.idx : SES.idx + 1); beginRun(); }
 function finishSession() {
   const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
-  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
+  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true; spRoundEnd();
   const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
@@ -8564,7 +8591,7 @@ function warmShaders() {
   } catch (e) { console.warn('No se pudieron precompilar los sombreadores:', e && e.message); }
 }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
@@ -8680,7 +8707,7 @@ function endRun(win, manual) {
   saveRun(win);
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
-  AUD.loops.forEach(l => l.stop());
+  AUD.loops.forEach(l => l.stop()); if (!SES.active) spRoundEnd(); // (en una sesión, al acabar el último bloque)
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
   const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;
@@ -8961,27 +8988,45 @@ class ArcObs {
 }
 
 /* ---------- Orbes para recoger ---------- */
-const orbGeo = new THREE.SphereGeometry(0.06, 16, 12), orbMat = new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false }), orbRingGeo = new THREE.TorusGeometry(0.1, 0.008, 6, 28);
+// Orbe: un cristal dorado que gira y late, con dos aros que se cruzan, un halo, chispitas que lo rondan y una estela
+const orbGeo = new THREE.IcosahedronGeometry(0.075, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
+const orbMat = std({ color: 0xfff0b8, emissive: 0xffb02a, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.06, flatShading: true, toneMapped: false });
+const orbRingMat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
+function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); orbRingMat.color.setHex(on ? 0xff7fc4 : 0xffd166); }
 class ArcOrb {
   constructor() {
     const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
-    this.grp = new THREE.Group(); this.grp.add(new THREE.Mesh(orbGeo, orbMat)); this.ring = new THREE.Mesh(orbRingGeo, LASER_MAT); this.grp.add(this.ring);
-    this.glow = glowSprite(0xffd166, 0.3, 0.7); this.grp.add(this.glow); this.grp.position.copy(this.pos); arena.add(this.grp);
+    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.grp.add(this.gem);
+    this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
+    this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
+    this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
+    this.trailT = 0; this.ph = rand(0, TAU); this.grp.position.copy(this.pos); arena.add(this.grp);
   }
   update(dt, t) {
-    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02; this.ring.rotation.set(t * 2, t * 3, 0);
+    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02;
+    const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
+    this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
+    this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);
+    this.motes.forEach((m, i) => { const a = tt * 3.2 + i * TAU / 3; m.position.set(Math.cos(a) * 0.17, Math.sin(a * 1.3) * 0.08, Math.sin(a) * 0.17); m.material.opacity = 0.6 + 0.4 * Math.sin(tt * 11 + i); });
+    this.trailT -= dt; if (this.trailT <= 0) { this.trailT = 0.04; fx.trail(this.grp.getWorldPosition(_ao2), ARX.fever ? [1, 0.4, 0.75] : [1, 0.82, 0.35], 0.06, 0.45); } // estela de brillo
     // se recoge con la cabeza o con cualquier mano
     _ao.copy(HL); _ao.y -= 0.05; let got = this.grp.position.distanceTo(_ao) < 0.24;
     for (const s of ['left', 'right']) if (!got && hands[s].ok) { arena.worldToLocal(_ao.copy(hands[s].wrist)); if (_ao.distanceTo(this.grp.position) < 0.17) got = true; }
     if (got && state === 'play') {
       const c = this.grp.getWorldPosition(new V3()), pts = 100 * (ARX.fever ? 2 : 1); score += pts; ARX.got++; boardDirty = true;
-      SND.pop(c, false); fx.glow(c, [1, 0.85, 0.4], 0.5, 0.15); fx.sparks(c, 14, [1, 0.8, 0.3], 1.6, 0.03); say(`+${pts} · orbe`, '#ffd166', 0.8, false); this.dispose(); return;
+      // al cogerlo: destello, un estallido de chispas doradas y turquesa, estrellitas que suben y campanitas de cristal
+      SND.orb(c); fx.glow(c, [1, 0.95, 0.75], 1.0, 0.2); fx.glow(c, ARX.fever ? [1, 0.3, 0.7] : [1, 0.75, 0.25], 0.6, 0.4, 0.7);
+      fx.sparks(c, 36, ARX.fever ? [1, 0.35, 0.75] : [1, 0.8, 0.3], 2.8, 0.035); fx.sparks(c, 18, [0.45, 1, 0.9], 2.1, 0.03);
+      for (let i = 0; i < 14; i++) PADD.add({ pos: c.clone().add(rv(0.06)), v: rv(0.7).add(new V3(0, rand(0.5, 1.2), 0)), life: rand(0.7, 1.2), c0: [1, 1, 1], c1: [1, 0.85, 0.4], s0: rand(0.04, 0.07), s1: 0.008, tile: 3, drag: 1.5, fin: 0.01 });
+      hapticBoth(0.3, 40);
+      say(`+${pts} · ¡ORBE!`, '#ffd166', 0.9, false); this.dispose(); return;
     }
     if (this.pos.z > HL.z + 1.5) this.dispose();
   }
-  dispose() { this.alive = false; arena.remove(this.grp); this.glow.material.dispose(); }
+  dispose() { this.alive = false; arena.remove(this.grp); this.glow.material.dispose(); this.motes.forEach(m => m.material.dispose()); }
 }
-const _ao = new V3();
+const _ao = new V3(), _ao2 = new V3();
 
 /* ---------- Sensación de avance: rayas en la pista y farolas que pasan a tu lado ---------- */
 const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
@@ -8993,7 +9038,7 @@ for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
   const top = new THREE.Mesh(G.box(0.16, 0.05, 0.08), postTopMat); top.position.set(-s * 0.05, 1.7, 0); g.add(top); g.position.set(s * 1.55, 0, 0); ARX_DECO.add(g); ARX_POST.push(g);
 }
 let arxScroll = 0;
-function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); }
+function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); orbFeverLook(on); }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !!settings.arcMove && !isFloor() && ['ready', 'play', 'rest'].includes(state); ARX_DECO.visible = on; if (!on) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
@@ -9534,10 +9579,10 @@ const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Slam (de pie): cada objetivo obliga a moverse de verdad, y alternan de lado: amebas muy abajo (sentadilla profunda), a un
 // lado (zancada lateral), delante y abajo (zancada) o arriba (salto); diamantes a ras de suelo (agacharse a tocarlos) o
 // por encima de la cabeza (estirarse de puntillas)
-const SLAM_HEAD = [['duck', 3], ['lside', 4], ['lfwd', 2], ['jump', 2]], SLAM_HAND = [['low', 3], ['reach', 1]];
+const SLAM_HEAD = [['duck', 3], ['lside', 4], ['lfwd', 2], ['jump', 2]], SLAM_HAND = [['floor', 3], ['low', 2], ['reach', 1]]; // floor: pulsadores en el suelo
 const pickW = L => { let r = Math.random() * L.reduce((a, x) => a + x[1], 0); for (const [m, w] of L) if ((r -= w) <= 0) return m; return L[0][0]; };
 const TCH_MOVES = { slam: [SLAM_HEAD.map(x => x[0]), SLAM_HAND.map(x => x[0])], squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
-const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'low']; // side: abdominal lateral (diamante por un costado)
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'low', 'floor']; // side: abdominal lateral (diamante por un costado)
 // Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
 // bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
 const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
@@ -9572,6 +9617,9 @@ function handIcon(side) {
 }
 const handIconTex = { left: handIcon('left'), right: handIcon('right') };
 const gemGeo = new THREE.OctahedronGeometry(1, 0);
+// pulsador del suelo (Slam): base metálica y tapa redonda
+const padBaseGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.035, 32), padTopGeo = new THREE.CylinderGeometry(0.12, 0.128, 0.024, 32), padRippleGeo = new THREE.RingGeometry(0.17, 0.2, 40);
+padBaseGeo.translate(0, 0.015, 0); const padBaseMat = std({ color: 0x24212e, metalness: 0.75, roughness: 0.35 });
 const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3(), _tu = new V3(), _ta = new V3(), _tb = new V3();
 // Ameba: un aro de agua cuyo borde ondula como un líquido (en la GPU): ondas que recorren el perímetro, el grosor
 // que se hincha y se estrecha, y el aro que se alabea. Se sombrea como agua: brillos, borde que refleja y cáusticas.
@@ -9619,11 +9667,13 @@ function moveSpec(move, sd0) {
   if (move === 'lunge') { const ld = dv('lungeDepth') / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
-  // las del Slam: muy abajo (más que una sentadilla normal), a un lado (hay que dar el paso), delante y abajo, o a ras de suelo
-  else if (move === 'duck') { const lo = rin + 0.05; o.pos = new V3(side * rand(0, 0.12), S - rand(Math.max(lo, sd * 1.05), Math.max(lo + 0.04, sd * 1.4)), -0.05); }
-  else if (move === 'lside') o.pos = new V3(side * rand(0.42, 0.62), S - rand(0.1, 0.24), -0.06);
-  else if (move === 'lfwd') { const ld = dv('lungeDepth') / 100; o.pos = new V3(side * rand(0, 0.1), S - rand(Math.max(rin + 0.05, ld * 0.8), Math.max(rin + 0.08, ld * 1.1)), -0.48); }
+  // las del Slam: muy abajo (más que una sentadilla, slamDeep cm más), a un lado (hay que dar el paso), delante y abajo, a ras
+  // de suelo o, en el suelo, un pulsador que hay que golpear con la mano; nunca por debajo de media altura
+  else if (move === 'duck') { const lo = rin + 0.05, dd = sd + settings.slamDeep / 100; o.pos = new V3(side * rand(0, 0.12), Math.max(S * 0.5, S - rand(Math.max(lo, dd), Math.max(lo + 0.04, dd + 0.1))), -0.05); }
+  else if (move === 'lside') { const dd = settings.slamDeep / 100 * 0.6; o.pos = new V3(side * rand(0.42, 0.62), S - rand(0.12, 0.24) - dd, -0.06); }
+  else if (move === 'lfwd') { const ld = dv('lungeDepth') / 100 + settings.slamDeep / 100 * 0.6; o.pos = new V3(side * rand(0, 0.1), Math.max(S * 0.5, S - rand(Math.max(rin + 0.05, ld * 0.8), Math.max(rin + 0.08, ld * 1.1))), -0.48); }
   else if (move === 'low') o.pos = new V3(side * rand(0.16, 0.34), clamp(S * 0.24, 0.3, 0.5) + rand(-0.03, 0.03), -0.42);
+  else if (move === 'floor') o.pos = new V3(side * rand(0.18, 0.34), 0.03, -rand(0.3, 0.42));
   else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
   else if (move === 'reach') o.pos = new V3(side * rand(0.2, 0.35), S + 0.5 + jh, -0.2);
   else if (move === 'push' || move === 'plank') {
@@ -9684,7 +9734,7 @@ function sampleHands(dt) {
     if (!A.armed) {
       // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
       const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
-      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'low' ? closer || w.y > P.y + 0.25 : true;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'low' || A.move === 'floor' ? closer || w.y > P.y + 0.25 : true;
       if (back) A.armed = true;
     }
   }
@@ -9726,6 +9776,16 @@ class TouchTarget {
       this.arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, color: col, transparent: true, depthWrite: false, toneMapped: false });
       const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), this.arrowMat); ar.position.z = 0.092; ar.rotation.z = this.ang; this.root.add(ar);
       this.root.rotation.y = this.yaw;
+    } else if (this.move === 'floor') { // pulsador en el suelo: una base oscura con su tapa luminosa y un aro que late alrededor
+      this.base = new THREE.Mesh(padBaseGeo, padBaseMat); this.base.castShadow = this.base.receiveShadow = true; this.root.add(this.base);
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.25, metalness: 0.2, transparent: true, toneMapped: false });
+      this.pad = new THREE.Mesh(padTopGeo, this.mat); this.pad.position.y = 0.033; this.root.add(this.pad);
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+      this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.006; this.halo.scale.setScalar(0.62); this.root.add(this.halo);
+      // y una onda de luz que sale de él por el suelo, una y otra vez
+      this.rippleMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.ripple = new THREE.Mesh(padRippleGeo, this.rippleMat); this.ripple.rotation.x = -Math.PI / 2; this.ripple.position.y = 0.008; this.root.add(this.ripple);
+      this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex[this.hand], color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.13, 0.13, 1); this.icon.position.y = 0.2; this.root.add(this.icon);
     } else {
       this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false });
       this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.085, 0.125, 0.085); this.root.add(this.gem);
@@ -9821,6 +9881,10 @@ class TouchTarget {
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
       if (this.mode !== 'pass') this.shellMat.opacity = 0.14 + pulse * 0.25 + (this.mode === 'wait' ? 0.1 : 0);
+    } else if (this.pad) { // late; esperando, la tapa sube y baja llamando a golpearla
+      const w = this.mode === 'wait' ? 0.5 + 0.5 * Math.sin(t * 9) : 0, rp = ((t + this.ph) * 0.9) % 1; this.pad.position.y = 0.033 + 0.012 * w;
+      if (this.mode !== 'pass') { this.haloMat.opacity = 0.55 + pulse * 0.3 + 0.25 * w; this.rippleMat.opacity = 0.7 * (1 - rp); } else this.rippleMat.opacity = 0;
+      this.halo.scale.setScalar(0.62 * (1 + pulse * 0.2 + 0.12 * w)); this.ripple.scale.setScalar(1 + rp * 1.6);
     } else if (this.gem) {
       this.gem.rotation.y += dt * 2.2; this.gem.rotation.x = Math.sin(t * 1.3 + this.ph) * 0.3;
       const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.085 * s, 0.125 * s, 0.085 * s);
@@ -9844,6 +9908,7 @@ class TouchTarget {
     if (this.part === 'cut') { this.split(c, rgb); return; }
     haptic(this.by || this.hand, 0.5, 50);
     const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos); A.hitD = A.hitP.distanceTo(HL);
+    if (this.pad) { SND.step(c, true); SND.pop(c, false); shockRing(c, 0.8, col); fx.sparks(c, 22, rgb, 2.4, 0.03); fx.dust(c, 6, 0.25); fx.glow(c, rgb, 0.5, 0.15); haptic(this.by || this.hand, 0.8, 70); this.dispose(); return; } // ¡golpe en el suelo!
     SND.pop(c, false); fx.droplets(c, 16, rgb, 1.6, 0.03); fx.sparks(c, 12, rgb, 1.6, 0.025); fx.glow(c, rgb, 0.4, 0.15);
     this.dispose();
   }

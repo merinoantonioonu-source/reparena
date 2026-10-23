@@ -102,27 +102,45 @@ class ArcObs {
 }
 
 /* ---------- Orbes para recoger ---------- */
-const orbGeo = new THREE.SphereGeometry(0.06, 16, 12), orbMat = new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false }), orbRingGeo = new THREE.TorusGeometry(0.1, 0.008, 6, 28);
+// Orbe: un cristal dorado que gira y late, con dos aros que se cruzan, un halo, chispitas que lo rondan y una estela
+const orbGeo = new THREE.IcosahedronGeometry(0.075, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
+const orbMat = std({ color: 0xfff0b8, emissive: 0xffb02a, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.06, flatShading: true, toneMapped: false });
+const orbRingMat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
+function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); orbRingMat.color.setHex(on ? 0xff7fc4 : 0xffd166); }
 class ArcOrb {
   constructor() {
     const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
-    this.grp = new THREE.Group(); this.grp.add(new THREE.Mesh(orbGeo, orbMat)); this.ring = new THREE.Mesh(orbRingGeo, LASER_MAT); this.grp.add(this.ring);
-    this.glow = glowSprite(0xffd166, 0.3, 0.7); this.grp.add(this.glow); this.grp.position.copy(this.pos); arena.add(this.grp);
+    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.grp.add(this.gem);
+    this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
+    this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
+    this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
+    this.trailT = 0; this.ph = rand(0, TAU); this.grp.position.copy(this.pos); arena.add(this.grp);
   }
   update(dt, t) {
-    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02; this.ring.rotation.set(t * 2, t * 3, 0);
+    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02;
+    const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
+    this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
+    this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);
+    this.motes.forEach((m, i) => { const a = tt * 3.2 + i * TAU / 3; m.position.set(Math.cos(a) * 0.17, Math.sin(a * 1.3) * 0.08, Math.sin(a) * 0.17); m.material.opacity = 0.6 + 0.4 * Math.sin(tt * 11 + i); });
+    this.trailT -= dt; if (this.trailT <= 0) { this.trailT = 0.04; fx.trail(this.grp.getWorldPosition(_ao2), ARX.fever ? [1, 0.4, 0.75] : [1, 0.82, 0.35], 0.06, 0.45); } // estela de brillo
     // se recoge con la cabeza o con cualquier mano
     _ao.copy(HL); _ao.y -= 0.05; let got = this.grp.position.distanceTo(_ao) < 0.24;
     for (const s of ['left', 'right']) if (!got && hands[s].ok) { arena.worldToLocal(_ao.copy(hands[s].wrist)); if (_ao.distanceTo(this.grp.position) < 0.17) got = true; }
     if (got && state === 'play') {
       const c = this.grp.getWorldPosition(new V3()), pts = 100 * (ARX.fever ? 2 : 1); score += pts; ARX.got++; boardDirty = true;
-      SND.pop(c, false); fx.glow(c, [1, 0.85, 0.4], 0.5, 0.15); fx.sparks(c, 14, [1, 0.8, 0.3], 1.6, 0.03); say(`+${pts} · orbe`, '#ffd166', 0.8, false); this.dispose(); return;
+      // al cogerlo: destello, un estallido de chispas doradas y turquesa, estrellitas que suben y campanitas de cristal
+      SND.orb(c); fx.glow(c, [1, 0.95, 0.75], 1.0, 0.2); fx.glow(c, ARX.fever ? [1, 0.3, 0.7] : [1, 0.75, 0.25], 0.6, 0.4, 0.7);
+      fx.sparks(c, 36, ARX.fever ? [1, 0.35, 0.75] : [1, 0.8, 0.3], 2.8, 0.035); fx.sparks(c, 18, [0.45, 1, 0.9], 2.1, 0.03);
+      for (let i = 0; i < 14; i++) PADD.add({ pos: c.clone().add(rv(0.06)), v: rv(0.7).add(new V3(0, rand(0.5, 1.2), 0)), life: rand(0.7, 1.2), c0: [1, 1, 1], c1: [1, 0.85, 0.4], s0: rand(0.04, 0.07), s1: 0.008, tile: 3, drag: 1.5, fin: 0.01 });
+      hapticBoth(0.3, 40);
+      say(`+${pts} · ¡ORBE!`, '#ffd166', 0.9, false); this.dispose(); return;
     }
     if (this.pos.z > HL.z + 1.5) this.dispose();
   }
-  dispose() { this.alive = false; arena.remove(this.grp); this.glow.material.dispose(); }
+  dispose() { this.alive = false; arena.remove(this.grp); this.glow.material.dispose(); this.motes.forEach(m => m.material.dispose()); }
 }
-const _ao = new V3();
+const _ao = new V3(), _ao2 = new V3();
 
 /* ---------- Sensación de avance: rayas en la pista y farolas que pasan a tu lado ---------- */
 const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
@@ -134,7 +152,7 @@ for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
   const top = new THREE.Mesh(G.box(0.16, 0.05, 0.08), postTopMat); top.position.set(-s * 0.05, 1.7, 0); g.add(top); g.position.set(s * 1.55, 0, 0); ARX_DECO.add(g); ARX_POST.push(g);
 }
 let arxScroll = 0;
-function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); }
+function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); orbFeverLook(on); }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !!settings.arcMove && !isFloor() && ['ready', 'play', 'rest'].includes(state); ARX_DECO.visible = on; if (!on) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;

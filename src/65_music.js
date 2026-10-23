@@ -142,6 +142,25 @@ function spToggle() {
     else await spWake();
   });
 }
+// Al terminar la partida, Spotify se pausa (y vuelve a oírse el ambiente de la arena); al empezar la siguiente, sigue la
+// música que sonaba
+// (en su propia cola, y vale la última: si acabas una partida mientras aún se reanudaba la música, se pausa igual)
+function spRoundQueue(want) {
+  SP.want = want;
+  SP.roundQ = (SP.roundQ || Promise.resolve()).then(async () => {
+    if (SP.want !== want || !spConnected()) return;
+    try { await spApi('PUT', want === 'pause' ? '/me/player/pause' : '/me/player/play'); if (SP.st) SP.st.is_playing = want === 'play'; SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+    spMenuSync(); setTimeout(spRefresh, 500);
+  });
+}
+function spRoundEnd() {
+  SP.resume = spConnected() && (spPlaying() || SP.want === 'play'); if (!SP.resume) return;
+  if (SP.st) SP.st.is_playing = false; AUDM.music = false; applyVolume(); spRoundQueue('pause');
+}
+function spRoundStart() {
+  if (!SP.resume) return; SP.resume = false; if (!spConnected() || (spPlaying() && SP.want !== 'pause')) return;
+  spRoundQueue('play');
+}
 function spNext() { spDo(() => spApi('POST', '/me/player/next')); }
 function spPrev() { spDo(() => spApi('POST', '/me/player/previous')); }
 // Volumen. El juego lleva la cuenta: Spotify tarda en reflejar los cambios (y al volver a leerlo devolvía el

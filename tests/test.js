@@ -519,13 +519,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
   // Slam: obliga a moverse de verdad (amebas a los lados, muy abajo, delante o arriba; diamantes a ras de suelo) y alterna de lado;
   // agachándose sin más (sin pasos laterales) se escapan las de los lados
-  { const P = { side: [], duck: [], low: [], fwd: [], jump: 0, sides: [] }, seen = new Set(); let lastSide = 0, alt = 0, same = 0;
+  { const P = { side: [], duck: [], low: [], fwd: [], floor: [], jump: 0, sides: [] }, seen = new Set(); let lastSide = 0, alt = 0, same = 0;
     await runConfig('Toques slam (posiciones)', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 24, tchHands: 35, tchArrive: 1.5, tchGap: 1.2 }, t => { assist(); RA.touches.forEach(x => { if (seen.has(x)) return; seen.add(x);
       const S = RA.TCH.ref; if (x.move === 'lside') P.side.push(Math.abs(x.pos.x)); if (x.move === 'duck') P.duck.push(S - x.pos.y); if (x.move === 'low') P.low.push(x.pos.y); if (x.move === 'lfwd') P.fwd.push(-x.pos.z); if (x.move === 'jump') P.jump++;
-      const sd = Math.sign(x.pos.x); if (sd && Math.abs(x.pos.x) > 0.1) { if (lastSide) (sd !== lastSide ? alt++ : same++); lastSide = sd; } }); }, 200, s => '');
+      const sd = x.hand === 'left' ? -1 : 1; if (lastSide) (sd !== lastSide ? alt++ : same++); lastSide = sd; if (x.move === 'floor') P.floor.push(x.pos.y); }); }, 200, s => '');
     const mn = a => a.length ? Math.min(...a) : 0, mx = a => a.length ? Math.max(...a) : 9;
     log(`slam: side amebas ${P.side.length} at ≥ ${mn(P.side).toFixed(2)} m · deep ones ${P.duck.length} ≥ ${mn(P.duck).toFixed(2)} m down · floor diamonds ${P.low.length} ≤ ${mx(P.low).toFixed(2)} m high · forward ${P.fwd.length} · jumps ${P.jump} · side changes ${alt} vs repeats ${same}`);
-    if (!P.side.length || mn(P.side) < 0.4 || !P.duck.length || mn(P.duck) < RA.settings.squatDepth / 100 || !P.low.length || mx(P.low) > 0.55 || alt < same) errors.push('Slam: los objetivos no obligan a moverse (a los lados, muy abajo, a ras de suelo) o no alternan de lado');
+    log(`slam floor pads: ${P.floor.length} at ${P.floor.map(y => y.toFixed(2)).join(' ')} m · deep amebas at least ${(mn(P.duck) * 100).toFixed(0)} cm below standing (squat ${RA.settings.squatDepth} + ${RA.settings.slamDeep} cm)`);
+    if (!P.side.length || mn(P.side) < 0.4 || !P.duck.length || mn(P.duck) < (RA.settings.squatDepth + RA.settings.slamDeep) / 100 - 0.005 || !P.low.length || mx(P.low) > 0.55 || alt < same * 3) errors.push('Slam: los objetivos no obligan a moverse (a los lados, muy abajo, a ras de suelo) o no alternan de lado');
+    if (!P.floor.length || mx(P.floor) > 0.05) errors.push('Slam: deberían salir pulsadores en el suelo para golpearlos con la mano');
     RA.PV.keys.KeyG = false; RA.PV.crouch = false; let missSide = 0, hm = null;
     await runConfig('Toques slam solo agachándose', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 10, tchHands: 0, tchArrive: 1.5, tchGap: 1.5 }, t => {
       if (RA.PV.home) { hm = RA.PV.home.clone(); RA.PV.home = null; } if (hm) { RA.camera.position.set(hm.x, hm.y - ((t % 2) < 1 ? 0.4 : 0), hm.z); RA.PV.y = RA.camera.position.y; } // la cabeza solo sube y baja
@@ -1088,7 +1090,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
   // minicontroles (con iconos) en el menú principal y en la pausa; usarlos en plena partida no la termina; con música, sin ambiente
-  { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2);
+  { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); SPOT.playing = true; await RA.spRefresh(); RA.startPreview(); frame(2); // (sonando: la partida anterior la pausó al acabar)
     const lw = RA.activeWidgets(), mini = ['prev', 'next', 'voldown', 'volup'].every(k => lw.some(w => w.icon === k)) && lw.some(w => w.icon === 'pause' || w.icon === 'play');
     RA.beginRun(); frame(30); RA.openPause(); frame(2); const inPause = RA.activeWidgets().some(w => w.icon === 'next');
     RA.activeWidgets().find(w => w.icon === 'next').onPress(); await sleep(20); frame(2); const st = RA.state; press('Continuar'); frame(2); const back = RA.state;
@@ -1097,6 +1099,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!mini || !inPause) errors.push('Spotify: faltan los minicontroles con iconos en el menú principal o en la pausa');
     if (st !== 'paused' || !RA.GAME_STATES.includes(back)) errors.push('Spotify: usar los minicontroles en plena partida no debería terminarla (pausa y se reanuda)');
     if (!muted) errors.push('Spotify: mientras suena, el sonido ambiente debería callarse');
+    RA.exitAll(); frame(2); }
+  // al terminar la partida, Spotify se pausa y vuelve el ambiente; al empezar la siguiente, la música sigue
+  { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); SPOT.playing = true; await RA.spRefresh(); RA.startPreview(); frame(2);
+    RA.beginRun(); frame(30); RA.endRun(true, true); await sleep(30); frame(2); const paused = !SPOT.playing, amb = !RA.ambMute();
+    RA.beginRun(); await sleep(30); frame(2); const resumed = SPOT.playing;
+    log(`spotify between games: paused at the end ${paused} · ambience back ${amb} · resumed on the next game ${resumed}`);
+    if (!paused || !amb || !resumed) errors.push('Spotify: al terminar la partida debería pausarse (y oírse el ambiente) y al empezar otra, seguir sonando');
     RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
