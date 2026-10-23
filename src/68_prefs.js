@@ -59,7 +59,7 @@ function profilesMenu(back) {
   rows.push({ t: 'btns', items: [
     ...(L.length < PROF_MAX ? [{ label: `Guardar: ${profAuto()}`, flex: 2, style: 'primary', onPress: () => { const n = profSave(); say(`Guardado como «${n}»`, '#3cf0c6', 1.8); again(); } }] : []),
     { label: 'Volver', onPress: () => { PREFS.delArm = -1; back(); } }] });
-  const m = openMenu(rows); m.rebuild = again;
+  const m = openMenu(rows, { accent: MC.prof }); m.rebuild = again;
 }
 
 // En la página

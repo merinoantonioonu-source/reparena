@@ -15,9 +15,12 @@ const STY = {
   normal: ['#211a3f', '#eeeaff', '#3cf0c6'], primary: ['#ff4fa3', '#1a0716', null], selected: ['#3cf0c6', '#0d0a1c', null],
   value: ['#120e26', '#ffd166', '#ffd166'], tab: ['#1a1530', '#a49fc8', '#30284f'], danger: ['#3a1020', '#ffb0c0', '#ff4a6a'], key: ['#2a2250', '#ffffff', '#4a3f80'], ghost: ['#1a1530', '#a49fc8', '#30284f']
 };
+// Cada parte del menú tiene su color: el botón que lleva a ella (borde y una raya a la izquierda) y el marco y el título de su
+// submenú, para saber de un vistazo dónde estás
+const MC = { ex: '#3cf0c6', foes: '#ff8a3d', arms: '#ff4fa3', sound: '#a68bff', scene: '#7ee081', set: '#ffd166', prof: '#5ab8ff', body: '#5ab8ff' };
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent;
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -26,10 +29,13 @@ class Btn {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
     c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
     c.fillStyle = this.hover ? '#ffd166' : s[0]; c.fill();
-    if (s[2] && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = s[2]; c.stroke(); }
+    const acc = this.accent && this.style === 'normal' && !this.hover;
+    if ((s[2] || acc) && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = acc ? this.accent : s[2]; c.stroke(); }
+    if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
-    fitFont(c, this.label, W - H * 0.4, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
-    c.fillText(this.label, W / 2, H / 2 + 2); this.p.tex.needsUpdate = true;
+    const ax = this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color)
+    fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
+    c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
   }
 }
 class Slider {
@@ -101,7 +107,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */
-// En las Quest el menú sale de la muñeca izquierda al girarla hacia la cara y se pulsa con el índice derecho.
+// En las Quest el menú sale de la muñeca izquierda con su botón MENÚ, se queda quieto delante de ti y se pulsa con el índice derecho.
 // Con el ajuste «Atril», o en el ordenador, queda fijo delante de ti.
 let menu = null, menuAnchor = null;
 const wristMenuOn = () => xrActive && !preview && settings.menuWhere === 'wrist';
@@ -156,7 +162,7 @@ function openMenu(rows, opts = {}) {
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
   const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
   const c = bg.ctx, sc = bg.W / MW;
-  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || '#ff4fa3'; c.stroke();
+  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.03)'; for (let y = 0; y < bg.H; y += 6) c.fillRect(6, y, bg.W - 12, 2);
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
@@ -165,7 +171,7 @@ function openMenu(rows, opts = {}) {
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
-    if (r.t === 'title') { c.fillStyle = r.color || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
+    if (r.t === 'title') { c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
     else if (r.t === 'text') {
       c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
@@ -173,7 +179,7 @@ function openMenu(rows, opts = {}) {
     }
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
@@ -210,6 +216,7 @@ function openMenu(rows, opts = {}) {
   const wrist = wristMenuOn();
   scene.add(group);
   if (wrist) { // en la muñeca: la postura la pone updateWristMenu; solo lo pulsa la mano derecha
+    if (!reuse && !recent) wristOpen(); // un menú nuevo sale solo delante de ti; el siguiente de uno abierto, en su sitio
     widgets.forEach(w => { w.only = 'right'; });
     stand.visible = false; wristPose(group, H);
   } else {
@@ -296,49 +303,58 @@ function updateWatch(dt) {
   const h = hands.left;
   let show = false;
   // con mandos, X/Y del mando izquierdo hacen de botón de menú
-  if (h.btnMenu && !watch.btnPrev) onWatch(); watch.btnPrev = h.btnMenu;
+  if (h.btnMenu && !watch.btnPrev) { if (menu && menu.wrist && WM.on && !wristFar()) { WM.on = false; SND.tick(); } else onWatch(); } watch.btnPrev = h.btnMenu; // (y lo recoge)
   const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
-  if (wristLook(h) && !(menu && menu.wrist) && !guns) { // con el menú en la muñeca, el propio panel hace de botón
+  const wristUp = menu && menu.wrist && WM.on && !wristFar(); // con el panel abierto delante, el botón sobra
+  if (wristLook(h) && !wristUp && !guns) {
     show = true;
     if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));
   }
-  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
+  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : menu && menu.wrist ? (WM.on ? 'TRAER MENÚ' : 'MENÚ') : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
   watch.mesh.visible = show; watch.armT = show ? (watch.armT || 0) + dt : 0;
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
   else if (watch.hover) { watch.hover = false; watch.draw(); }
 }
-// Panel de la muñeca: sale al mirarla (crece desde la muñeca) y, mientras está abierto, sigue a la mano izquierda (con
-// los temblores suavizados: si adelantas la mano, el panel la acompaña). Se cierra en cuanto pones la palma hacia abajo
-// o cierras el puño (y vuelve al abrir la mano mirándola), o al bajar el brazo.
+// Panel de la muñeca: se abre con el botón MENÚ de la muñeca (o solo, cuando sale un menú nuevo: el principal al entrar,
+// el resumen de la ronda…) creciendo desde la muñeca hasta quedarse quieto delante de ti, a wristDist de los ojos y de cara a
+// ti, para pulsarlo con calma con el índice derecho: ya no sigue a la mano. Se cierra con la palma hacia abajo o el puño
+// cerrado (y vuelve con el botón MENÚ). Si te alejas o te giras y lo pierdes de vista, el botón lo trae delante otra vez.
 const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
 // escala a la distancia elegida: más lejos, más grande, para que se lea igual
 const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
-const WM = { e: 0, on: false, gestT: 0, lostT: 0, shutT: 0, shut: false, near: false, init: false, hd0: 0, pos: new V3(), q: new Q4(), from: new V3() };
+const WM = { e: 0, on: false, shutT: 0, shut: false, armed: false, init: false, top: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
-const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3();
-// dt = 0: colocarlo de golpe
+const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3(), _wmu = new V3();
+// Abrir (o traer delante) el panel: sale otra vez desde la muñeca
+function wristOpen() { WM.on = true; WM.e = 0; WM.init = false; WM.armed = false; WM.shutT = 0; }
+settingHooks.push(k => { if (k === 'wristDist' || k === '*') WM.init = false; }); // otra distancia: se recoloca
+// Dónde se queda: hacia donde miras (en horizontal; mirando arriba o abajo, hacia la mano izquierda), con el borde de arriba
+// algo por debajo de los ojos, inclinado hacia ellos y siempre derecho (no se ladea aunque ladees la cabeza)
+function wristTarget(H, S) {
+  const f = fwd(); let dir = fwdH();
+  if (Math.abs(f.y) > 0.7 && hands.left.ok) { _wml.copy(hands.left.wrist).sub(head.p); _wml.y = 0; if (_wml.lengthSq() > 0.01) dir = _wml.normalize().clone(); }
+  // el centro, a wristDist en horizontal y con el borde de arriba algo por debajo de los ojos (sin bajar del suelo)
+  _wmt.copy(head.p).addScaledVector(dir, settings.wristDist / 100); _wmt.y = Math.max(head.p.y - 0.06, H * S + 0.08) - H * S / 2;
+  _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wmu);
+  WM.q.copy(_wmq); WM.top.copy(_wmt).addScaledVector(_wml.set(0, 1, 0).applyQuaternion(_wmq), H * S / 2); WM.init = true;
+}
+// dt = 0: colocarlo de golpe (al rehacer el menú: el borde de arriba se queda donde estaba)
 function wristPose(group, H, dt = 0) {
   const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
-  if (h.ok) {
-    // sale de la muñeca y se aleja en la misma dirección hasta wristDist de los ojos (contando desde donde estaba la mano al
-    // abrirlo), con el borde de abajo a la altura de la muñeca y de cara a ti; luego acompaña a la mano adonde vaya
-    _wh.copy(h.wrist).sub(head.p); _wh.y = 0; const hd = _wh.length(); if (hd < 1e-2) _wh.copy(fwdH()); _wh.normalize();
-    if (!WM.init) WM.hd0 = hd;
-    _wmt.copy(head.p).addScaledVector(_wh, hd + Math.max(0, settings.wristDist / 100 - WM.hd0));
-    _wmt.y = h.wrist.y + 0.03 + H * S / 2;
-    _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wh);
-    if (!WM.init || !dt) { WM.pos.copy(_wmt); WM.q.copy(_wmq); WM.init = true; }
-    else { // suavizado: los temblores de milímetros casi no lo mueven; un movimiento de verdad lo arrastra enseguida
-      const gap = WM.pos.distanceTo(_wmt), rate = lerp(3, 24, clamp((gap - 0.004) / 0.05, 0, 1)) * (WM.near ? 0.6 : 1), k = gap < 0.0015 ? 0 : 1 - Math.exp(-dt * rate);
-      WM.pos.lerp(_wmt, k); WM.q.slerp(_wmq, Math.max(k, 1 - Math.exp(-dt * 4)));
-    }
-    WM.from.copy(h.wrist);
-  }
-  // al salir, viaja desde la muñeca hasta su sitio mientras crece
-  group.position.lerpVectors(WM.from, WM.pos, e);
+  if (!WM.init) { if (h.ok) WM.from.copy(h.wrist); else WM.from.copy(head.p).addScaledVector(fwdH(), 0.3).add(_wmu.set(0, -0.35, 0)); wristTarget(H, S); }
+  else if (h.ok && !WM.on) WM.from.copy(h.wrist); // al cerrarse, vuelve a la muñeca
+  // el centro cuelga del borde de arriba: así, al pasar a un submenú más alto o más bajo, lo de arriba no se mueve
+  _wmt.set(0, 1, 0).applyQuaternion(WM.q); _wml.copy(WM.top).addScaledVector(_wmt, -H * S / 2);
+  group.position.lerpVectors(WM.from, _wml, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
+}
+// ¿Está abierto pero no lo ves (te giraste o te fuiste)? Entonces el botón MENÚ lo trae delante
+function wristFar() {
+  if (!menu || !menu.wrist || !WM.on) return false;
+  menu.group.getWorldPosition(_wml); const d = _wml.sub(head.p), len = d.length();
+  return len > 1.3 || d.angleTo(fwd()) > 55 * Math.PI / 180;
 }
 // Mano izquierda: normal hacia el lado de la palma, sacada de los nudillos (null si las articulaciones no cuadran)
 const _pa = new V3(), _pb = new V3(), _pc = new V3(), _pd = new V3();
@@ -356,19 +372,12 @@ function leftFist() {
 }
 const _wpn = new V3();
 function updateWristMenu(dt) {
-  // palma hacia abajo o puño cerrado: se cierra en el acto (y no vuelve a salir hasta que abras la mano)
+  // palma hacia abajo o puño cerrado: se cierra en el acto (si se abrió con la mano así, primero hay que abrirla)
   const pn = leftPalm(_wpn), shut = (!!pn && pn.y < -0.7) || leftFist();
-  WM.shutT = shut ? WM.shutT + dt : 0; WM.shut = WM.shutT > 0.05;
-  const look = wristLook(hands.left, 0.6) && !WM.shut;
-  // ¿está el índice derecho delante del panel? Entonces no se esconde (pero sigue a la mano)
-  WM.near = false;
-  if (menu && menu.wrist && !WM.shut && WM.e > 0.5 && hands.right.tipOk) { const l = menu.group.worldToLocal(_wml.copy(hands.right.tip)); WM.near = Math.abs(l.x) < MW / 2 + 0.15 && Math.abs(l.y) < menu.H / 2 + 0.15 && l.z < 0.3 && l.z > -0.15; }
-  WM.gestT = look ? WM.gestT + dt : 0; WM.lostT = look || WM.near ? 0 : WM.lostT + dt;
-  if (!WM.on && WM.gestT > 0.12) { WM.on = true; if (menu && menu.wrist) SND.tick(); }
-  if (WM.on && (WM.lostT > 0.5 || WM.shut)) WM.on = false;
+  WM.shutT = shut ? WM.shutT + dt : 0; WM.shut = WM.shutT > 0.05; if (!shut) WM.armed = true;
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
+  if (WM.on && WM.shut && WM.armed) { WM.on = false; SND.tick(); }
   WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / (WM.shut ? 0.07 : 0.22)), 0, 1);
-  if (WM.e === 0) WM.init = false; // la próxima vez sale otra vez desde la muñeca
   wristPose(menu.group, menu.H, dt);
   // aviso: un punto que late en la muñeca mientras hay un menú recogido
   const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
@@ -380,6 +389,7 @@ function onWatch() {
   if (PLACE.on) { cancelPlace(); return; }
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
   if (GAME_STATES.includes(state)) openPause();
+  else if (menu && menu.wrist) { wristOpen(); SND.tick(); } // el menú recogido (o perdido de vista) sale delante
   else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
 
@@ -400,6 +410,15 @@ const hurtPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), hurtMat); hu
 let hurtT = 0;
 const _hl = new V3();
 function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(head.p); }
+// Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura del ejercicio) siguen
+// adónde miras al girar o al subir y bajar la vista, pero nunca se ladean con la cabeza: el texto, siempre derecho. Solo
+// tumbado o en plancha (mirando al suelo o al techo) siguen, de momento, a la cabeza entera
+const _vq = new Q4(), _ve = new THREE.Euler(0, 0, 0, 'YXZ');
+function viewQ() {
+  if ((isFloor() || isSupine() || settings.exercise === 'row') && Math.abs(fwd().y) > 0.6) return _vq.copy(head.q);
+  _ve.setFromQuaternion(head.q, 'YXZ'); _ve.z = 0; return _vq.setFromEuler(_ve);
+}
+function viewLocal(off, out) { return out.copy(off).applyQuaternion(viewQ()).add(head.p); }
 /* ---------- Ningún panel tapa lo que viene hacia ti ---------- */
 // Lo que tiene que verse siempre: los objetivos (Toques y Barras) y los enemigos, con su centro y su radio en el mundo
 const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THREE.Object3D();
@@ -427,13 +446,13 @@ function panelHides(obj, w, h, always, n) {
 const HUD = { toast: { slots: [[0, -0.4], [0, 0.4], [-0.5, -0.24], [0.5, -0.24]], z: -1.2, w: 0.62, h: 0.1, slot: 0, off: new V3(0, -0.4, -1.2), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.42], [0, -0.5]], z: -1.1, w: 0.5 * CENTER_SC, h: 0.2 * CENTER_SC, slot: 0, off: new V3(0, -0.08, -1.1), fade: 1 }, board: 1 };
 function hudSlot(P, slots, n, dt) {
-  const free = i => { headLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(head.q); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
+  const free = i => { viewLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(viewQ()); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
   let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
   for (let i = 0; pick < 0 && i < slots.length; i++) if (free(i)) pick = i;
   if (pick >= 0) P.slot = pick; else P.slot = Math.min(P.slot, slots.length - 1);
   P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
-  return headLocal(P.off, new V3());
+  return viewLocal(P.off, new V3());
 }
 // Los avisos no siguen la mirada (así no hay quien los lea): salen delante de ti y se quedan quietos en el mundo. Solo se
 // recolocan, deslizándose, si dejan de verse un rato (miras más de LAZY.ang a otro lado o te mueves LAZY.move) o si
@@ -479,7 +498,7 @@ function updateWarn(dt) {
   WARN.t -= dt; if (WARN.t <= 0 || !GAME_STATES.includes(state) && state !== 'paused') { m.visible = false; WARN.text = ''; return; }
   const f = fwd(); let s;
   if (f.y > 0.35) { // mirando arriba: por encima de la cara, de cara a ti
-    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(head.q);
+    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(viewQ());
   } else { // en el suelo, delante: más lejos cuanto más alta la cabeza, tumbado y legible desde donde estás
     const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
     s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
@@ -494,12 +513,12 @@ function updateViewPanels(dt) {
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
-    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), head.q, dt);
+    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), viewQ(), dt);
     center.mesh.position.copy(L.at); center.mesh.quaternion.copy(L.q); center.mesh.material.opacity = C.fade * lazyClear(L, center.mesh, 0.5, 0.2, n, dt);
   } else LZ.center.init = false;
   if (toastP.mesh.visible) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
-    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), head.q, dt);
+    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), viewQ(), dt);
     toastP.mesh.position.copy(L.at); toastP.mesh.quaternion.copy(L.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade * lazyClear(L, toastP.mesh, toastP.w, toastP.h, n, dt);
   } else LZ.toast.init = false;
   // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
@@ -625,7 +644,7 @@ function drawBoard() {
   if (!['calib', 'ready', 'mount', 'play', 'rest', 'paused', 'end', 'between'].includes(state)) {
     c.textAlign = 'center'; c.font = `90px ${FD}`; glowText(c, 'REPARENA', W / 2, 90, BC.pink, 22);
     const t = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`; c.fillStyle = BC.ink; fitFont(c, t, W - 120, 40, '500 %px ' + FB); c.fillText(t, W / 2, 172);
-    c.fillStyle = BC.lil; fitFont(c, wristMenuOn() ? 'El menú: gira la muñeca izquierda' : 'Pulsa EMPEZAR en el menú', W - 120, 30, '500 %px ' + FB); c.fillText(wristMenuOn() ? 'El menú: gira la muñeca izquierda' : 'Pulsa EMPEZAR en el menú', W / 2, 236);
+    c.fillStyle = BC.lil; const tip = wristMenuOn() ? 'El menú: pulsa MENÚ en tu muñeca izquierda' : 'Pulsa EMPEZAR en el menú'; fitFont(c, tip, W - 120, 30, '500 %px ' + FB); c.fillText(tip, W / 2, 236);
     boardDay2(c, W, 352);
     board.tex.needsUpdate = true; return;
   }
