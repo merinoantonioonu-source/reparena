@@ -1202,7 +1202,9 @@ function armStep(kind, side, t, dt) {
   if (!h.ok) {
     d.lost += dt;
     if (press) {
-      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.45 || (d.vy > 0.35 && d.max > -0.1))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
+      // por encima de la cabeza (o junto a la cara, al empezar a empujar) las cámaras pierden la mano: si se perdió subiendo, cuenta
+      if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
+      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
     } else if (d.lost > 0.5) d.state = 'down';
     return null;
   }

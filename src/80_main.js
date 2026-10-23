@@ -21,6 +21,7 @@ function readXR(frame, t = 0) {
         if (filled) for (let i = 0; i < 25; i++) { const J = h.J[i]; _jm.fromArray(poseBuf, i * 16); _jm.decompose(J.p, J.q, _js); J.r = radBuf[i] || 0.008; J.ok = true; }
       }
       if (!filled) spaces.forEach((sp, i) => { const jp = sp && frame.getJointPose(sp, ref), J = h.J[i]; if (jp) { const p = jp.transform.position, o = jp.transform.orientation; J.p.set(p.x, p.y, p.z); J.q.set(o.x, o.y, o.z, o.w); J.r = jp.radius || 0.008; J.ok = true; } });
+      handSmooth(h, t);
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
@@ -32,6 +33,34 @@ function readXR(frame, t = 0) {
     }
   }
   anchorsFrame(frame, ref); roomFrame(frame, ref, t);
+}
+
+// Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
+// «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
+// se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
+const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+function handSmooth(h, t) {
+  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
+  const dt = t - F.t, J = h.J; F.t = t;
+  const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
+  const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
+  if (!same) F.tRaw = t;
+  for (let i = 0; i < 25; i++) {
+    const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
+    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
+    let tx, ty, tz;
+    if (same) { const k = rdt < 0.06 ? rdt : 0; tx = P.x + F.v[o] * k; ty = P.y + F.v[o + 1] * k; tz = P.z + F.v[o + 2] * k; }
+    else {
+      const ok = rdt > 0 && rdt < 0.1;
+      F.v[o] = ok ? (P.x - F.raw[o]) / rdt : 0; F.v[o + 1] = ok ? (P.y - F.raw[o + 1]) / rdt : 0; F.v[o + 2] = ok ? (P.z - F.raw[o + 2]) / rdt : 0;
+      F.raw[o] = tx = P.x; F.raw[o + 1] = ty = P.y; F.raw[o + 2] = tz = P.z;
+    }
+    const aD = hfA(HSM.dC, dt);
+    F.dx[o] += aD * ((tx - F.x[o]) / dt - F.dx[o]); F.dx[o + 1] += aD * ((ty - F.x[o + 1]) / dt - F.dx[o + 1]); F.dx[o + 2] += aD * ((tz - F.x[o + 2]) / dt - F.dx[o + 2]);
+    const a = hfA(HSM.minC + HSM.beta * Math.hypot(F.dx[o], F.dx[o + 1], F.dx[o + 2]), dt);
+    F.x[o] += a * (tx - F.x[o]); F.x[o + 1] += a * (ty - F.x[o + 1]); F.x[o + 2] += a * (tz - F.x[o + 2]);
+    J[i].s.set(F.x[o], F.x[o + 1], F.x[o + 2]);
+  }
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
@@ -215,6 +244,7 @@ renderer.setAnimationLoop((time, frame) => {
   const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
   if (!xrActive && !preview) return;
   if (frame) readXR(frame, t); else previewInput(dt);
+  for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);

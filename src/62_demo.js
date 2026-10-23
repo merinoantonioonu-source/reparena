@@ -285,9 +285,9 @@ function updateDemo(dt) {
   DEMOV.head.visible = wait;
   if (wait) {
     const [ex, mode] = demoWaitEx(); DEMOV.ex = ex; DEMOV.mode = mode;
-    const tgt = viewLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
-    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(viewQ()); DEMOV.head.userData.init = true; }
-    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(viewQ(), k);
+    const tgt = hudLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
+    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(hudQ()); DEMOV.head.userData.init = true; }
+    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(hudQ(), k);
   } else DEMOV.head.userData.init = false;
   if (!any) return;
   DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 12; // basta para que se vea fluido y no pesa en las gafas (cada dibujo se vuelve a subir a la tarjeta)

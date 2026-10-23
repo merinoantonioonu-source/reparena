@@ -1186,6 +1186,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       log(`notices with the head tilted 25° (standing): centre roll ${c.toFixed(3)} · toast roll ${t.toFixed(3)} · demo roll ${d.toFixed(3)}`);
       if (!(c >= 0 && c < 0.01) || !(t >= 0 && t < 0.01) || d > 0.01) errors.push('los avisos de la vista se ladean con la cabeza (de pie deberían ir siempre derechos)');
       RA.lobbyMenu(); frame(20, 16, xrFrame); }
+    // ---- Ya calibrado, los avisos de la partida salen en un sitio fijo: no siguen a la cabeza ----
+    { XRS.headQ = null; RA.beginRun(); frame(200, 16, xrFrame); const st = RA.state, tz = RA.settings.toasts; RA.setSetting('toasts', 1);
+      RA.showToast('COMBO ×10', '#ffd166', 3); frame(2, 16, xrFrame); const p0 = RA.toastP.mesh.position.clone();
+      XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 1.1, 0, 'YXZ')); frame(90, 16, xrFrame);
+      RA.showToast('¡PERFECTA!', '#3cf0c6', 3); frame(30, 16, xrFrame); const p1 = RA.toastP.mesh.position.clone(); RA.setSetting('toasts', tz); XRS.headQ = null;
+      log(`game notices after calibrating (${st}): toast moved ${(p0.distanceTo(p1) * 100).toFixed(1)} cm after turning the head 63°`);
+      if (!['ready', 'play'].includes(st) || p0.distanceTo(p1) > 0.03) errors.push('avisos de la partida: ya calibrado deberían salir siempre en el mismo sitio, sin seguir a la cabeza');
+      RA.lobbyMenu(); frame(20, 16, xrFrame); }
   }
   RA.setSetting('menuWhere', 'stand'); RA.exitAll(); frame(2, 16, xrFrame);
   RA.setSetting('menuWhere', 'wrist');

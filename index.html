@@ -2049,7 +2049,9 @@ const flashLight = new THREE.PointLight(0xffa050, 0, 14, 2); scene.add(flashLigh
 function makePanel(w, h, px = 1024, opts = {}) {
   const c = mkCanvas(px, Math.round(px * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
   tex.encoding = THREE.sRGBEncoding; tex.anisotropy = MAX_ANISO;
-  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: false, toneMapped: false });
+  // escriben su profundidad (lo transparente del lienzo, no): las Quest recolocan cada imagen al último movimiento de la
+  // cabeza según la profundidad de cada punto, y un panel sin ella se recolocaba como si estuviera al fondo (temblaba)
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: opts.depthWrite !== false, alphaTest: 0.04, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   if (opts.depthTest === false) m.renderOrder = 30;
   return { c, ctx, tex, mesh: m, w, h, W: c.width, H: c.height };
@@ -4316,7 +4318,9 @@ function updateGloves(dt) {
     // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
     if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
     else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
-    const show = h.isHand && h.ok, J = h.J;
+    // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
+    // viendo donde estaba en vez de parpadear
+    const held = h.isHand && !h.ok && h.lostT < 0.3, show = h.isHand && (h.ok || held), J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
       g.palm.visible = false;
@@ -4325,17 +4329,17 @@ function updateGloves(dt) {
       continue;
     }
     G_SEGS.forEach(([a, b], i) => {
-      const A = J[a], B = J[b]; if (!A.ok || !B.ok) { g.seg.setMatrixAt(i, ZERO_M); return; }
-      const r = Math.max(0.006, A.r), len = A.p.distanceTo(B.p);
-      _goff.set(0, r * 0.15, 0).applyQuaternion(A.q); _gp.copy(A.p).add(_goff);
+      const A = J[a], B = J[b]; if (!held && (!A.ok || !B.ok)) { g.seg.setMatrixAt(i, ZERO_M); return; }
+      const r = Math.max(0.006, A.r), len = A.s.distanceTo(B.s);
+      _goff.set(0, r * 0.15, 0).applyQuaternion(A.q); _gp.copy(A.s).add(_goff);
       _gm.compose(_gp, A.q, _gs.set(r * 2.25, r * 1.9, len)); g.seg.setMatrixAt(i, _gm);
     });
-    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(A.p, A.q, _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
-    G_TIPS.forEach((j, i) => { const A = J[j]; if (!A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(A.p, A.q, _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
-    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(A.q); _gp.copy(A.p).add(_goff); _gm.compose(_gp, A.q, _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
+    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(A.s, A.q, _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
+    G_TIPS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(A.s, A.q, _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
+    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(A.q); _gp.copy(A.s).add(_goff); _gm.compose(_gp, A.q, _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
     for (const m of [g.seg, g.joint, g.tip, g.guard]) { m.count = m.instanceMatrix.count; m.instanceMatrix.needsUpdate = true; }
-    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(J[0].p); g.palm.quaternion.copy(J[0].q);
-    const size = J[11].ok ? J[0].p.distanceTo(J[11].p) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
+    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(J[0].s); g.palm.quaternion.copy(J[0].q);
+    const size = J[11].ok ? J[0].s.distanceTo(J[11].s) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
   }
 }
 
@@ -4877,7 +4881,7 @@ function updateBolts(dt) {
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
-const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
+const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
 const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
@@ -5248,8 +5252,9 @@ function wristTarget(H, S) {
 // dt = 0: colocarlo de golpe (al rehacer el menú: el borde de arriba se queda donde estaba)
 function wristPose(group, H, dt = 0) {
   const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
-  if (!WM.init) { if (h.ok) WM.from.copy(h.wrist); else WM.from.copy(head.p).addScaledVector(fwdH(), 0.3).add(_wmu.set(0, -0.35, 0)); wristTarget(H, S); }
-  else if (h.ok && !WM.on) WM.from.copy(h.wrist); // al cerrarse, vuelve a la muñeca
+  const hw = h.isHand ? h.J[0].s : h.wrist; // la muñeca suavizada: el menú no tiembla con ella
+  if (!WM.init) { if (h.ok) WM.from.copy(hw); else WM.from.copy(head.p).addScaledVector(fwdH(), 0.3).add(_wmu.set(0, -0.35, 0)); wristTarget(H, S); }
+  else if (h.ok && !WM.on) WM.from.copy(hw); // al cerrarse, vuelve a la muñeca
   // el centro cuelga del borde de arriba: así, al pasar a un submenú más alto o más bajo, lo de arriba no se mueve
   _wmt.set(0, 1, 0).applyQuaternion(WM.q); _wml.copy(WM.top).addScaledVector(_wmt, -H * S / 2);
   group.position.lerpVectors(WM.from, _wml, e);
@@ -5324,6 +5329,18 @@ function viewQ() {
   _ve.setFromQuaternion(head.q, 'YXZ'); _ve.z = 0; return _vq.setFromEuler(_ve);
 }
 function viewLocal(off, out) { return out.copy(off).applyQuaternion(viewQ()).add(head.p); }
+// Una vez colocado y empezada la partida (cuenta atrás, oleadas, descansos y pausa), los avisos salen siempre en el mismo
+// sitio: delante de donde mirabas al empezar (FIXV), y ya no siguen a la cabeza. Antes (calibrarse, colocarse, cambiar
+// de bloque) sí siguen a la vista
+const FIXV = { on: false, p: new V3(), q: new Q4() }, _fxf = new V3();
+function fixvStep() {
+  const fixed = ['ready', 'play', 'rest', 'paused'].includes(state) && (xrActive || preview);
+  if (fixed && !FIXV.on) { FIXV.on = true; FIXV.p.copy(head.p); FIXV.q.copy(viewQ()); }
+  else if (!fixed) FIXV.on = false;
+}
+const hudQ = () => FIXV.on ? FIXV.q : viewQ();
+const hudFwd = () => FIXV.on ? _fxf.set(0, 0, -1).applyQuaternion(FIXV.q) : fwd();
+function hudLocal(off, out) { return FIXV.on ? out.copy(off).applyQuaternion(FIXV.q).add(FIXV.p) : viewLocal(off, out); }
 /* ---------- Ningún panel tapa lo que viene hacia ti ---------- */
 // Lo que tiene que verse siempre: los objetivos (Toques y Barras) y los enemigos, con su centro y su radio en el mundo
 const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THREE.Object3D();
@@ -5351,13 +5368,13 @@ function panelHides(obj, w, h, always, n) {
 const HUD = { toast: { slots: [[0, -0.4], [0, 0.4], [-0.5, -0.24], [0.5, -0.24]], z: -1.2, w: 0.62, h: 0.1, slot: 0, off: new V3(0, -0.4, -1.2), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.42], [0, -0.5]], z: -1.1, w: 0.5 * CENTER_SC, h: 0.2 * CENTER_SC, slot: 0, off: new V3(0, -0.08, -1.1), fade: 1 }, board: 1 };
 function hudSlot(P, slots, n, dt) {
-  const free = i => { viewLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(viewQ()); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
+  const free = i => { hudLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(hudQ()); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
   let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
   for (let i = 0; pick < 0 && i < slots.length; i++) if (free(i)) pick = i;
   if (pick >= 0) P.slot = pick; else P.slot = Math.min(P.slot, slots.length - 1);
   P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
-  return viewLocal(P.off, new V3());
+  return hudLocal(P.off, new V3());
 }
 // Los avisos no siguen la mirada (así no hay quien los lea): salen delante de ti y se quedan quietos en el mundo. Solo se
 // recolocan, deslizándose, si dejan de verse un rato (miras más de LAZY.ang a otro lado o te mueves LAZY.move) o si
@@ -5366,6 +5383,7 @@ const LAZY = { ang: 50 * Math.PI / 180, t: 0.8, move: 0.6 }, _lz = new V3();
 const mkLazy = () => ({ init: false, at: new V3(), q: new Q4(), home: new V3(), away: 0, go: false, vis: 1 });
 function lazyAt(L, want, wantQ, dt, ang = LAZY.ang) {
   if (!L.init) { Object.assign(L, { init: true, away: 0, go: false, vis: 1 }); L.at.copy(want); L.q.copy(wantQ); L.home.copy(head.p); return L; }
+  if (FIXV.on) { const k = 1 - Math.exp(-dt * 7); L.at.lerp(want, k); L.q.slerp(wantQ, k); L.go = false; return L; } // en partida, su sitio fijo (solo cambia de hueco si tapa algo)
   const off = head.p.distanceTo(L.home) > LAZY.move || _lz.subVectors(L.at, head.p).angleTo(fwd()) > ang;
   L.away = off ? L.away + dt : 0; if (L.away > LAZY.t) L.go = true;
   if (L.go) { const k = 1 - Math.exp(-dt * 7); L.at.lerp(want, k); L.q.slerp(wantQ, k); if (L.at.distanceTo(want) < 0.03) { L.go = false; L.away = 0; L.home.copy(head.p); } }
@@ -5397,15 +5415,15 @@ function warnFloor(text, color = '#ff8a3d') {
   c.font = `${fs}px ${FD}`; lines.forEach((l, i) => c.fillText(l, W / 2, H / 2 + (i - (lines.length - 1) / 2) * fs * 1.05 + 6));
   WARN.p.tex.needsUpdate = true; WARN.text = text; WARN.t = WARN_SECS; WARN.init = false; WARN.p.mesh.visible = true;
 }
-const _wf = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
+const _wf = new V3(), _wfh = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
 function updateWarn(dt) {
   const m = WARN.p.mesh; if (!m.visible) return;
   WARN.t -= dt; if (WARN.t <= 0 || !GAME_STATES.includes(state) && state !== 'paused') { m.visible = false; WARN.text = ''; return; }
-  const f = fwd(); let s;
+  const f = hudFwd(), hp = FIXV.on ? FIXV.p : head.p; let s;
   if (f.y > 0.35) { // mirando arriba: por encima de la cara, de cara a ti
-    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(viewQ());
+    _wf.copy(hp).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(hudQ());
   } else { // en el suelo, delante: más lejos cuanto más alta la cabeza, tumbado y legible desde donde estás
-    const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
+    const h = FIXV.on ? _wfh.set(f.x, 0, f.z).normalize() : fwdH(), d = clamp(hp.y * 1.1, 0.5, 2.1); _wf.copy(hp).addScaledVector(h, d); _wf.y = 0.02;
     s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
   }
   if (!WARN.init) { LZ.warn.init = false; WARN.init = true; WARN.s = s; } // cada aviso nuevo sale delante; luego se queda quieto
@@ -5414,16 +5432,16 @@ function updateWarn(dt) {
   m.material.opacity = Math.min(1, WARN.t / 0.5, (WARN_SECS - WARN.t) / 0.15 + 0.2);
 }
 function updateViewPanels(dt) {
-  updateWarn(dt);
+  fixvStep(); updateWarn(dt);
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
-    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), viewQ(), dt);
+    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), hudQ(), dt);
     center.mesh.position.copy(L.at); center.mesh.quaternion.copy(L.q); center.mesh.material.opacity = C.fade * lazyClear(L, center.mesh, 0.5, 0.2, n, dt);
   } else LZ.center.init = false;
   if (toastP.mesh.visible) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
-    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), viewQ(), dt);
+    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), hudQ(), dt);
     toastP.mesh.position.copy(L.at); toastP.mesh.quaternion.copy(L.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade * lazyClear(L, toastP.mesh, toastP.w, toastP.h, n, dt);
   } else LZ.toast.init = false;
   // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
@@ -5887,9 +5905,9 @@ function updateDemo(dt) {
   DEMOV.head.visible = wait;
   if (wait) {
     const [ex, mode] = demoWaitEx(); DEMOV.ex = ex; DEMOV.mode = mode;
-    const tgt = viewLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
-    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(viewQ()); DEMOV.head.userData.init = true; }
-    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(viewQ(), k);
+    const tgt = hudLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
+    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(hudQ()); DEMOV.head.userData.init = true; }
+    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(hudQ(), k);
   } else DEMOV.head.userData.init = false;
   if (!any) return;
   DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 12; // basta para que se vea fluido y no pesa en las gafas (cada dibujo se vuelve a subir a la tarjeta)
@@ -7616,7 +7634,9 @@ function armStep(kind, side, t, dt) {
   if (!h.ok) {
     d.lost += dt;
     if (press) {
-      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.45 || (d.vy > 0.35 && d.max > -0.1))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
+      // por encima de la cabeza (o junto a la cara, al empezar a empujar) las cámaras pierden la mano: si se perdió subiendo, cuenta
+      if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
+      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
     } else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
@@ -10178,6 +10198,7 @@ function readXR(frame, t = 0) {
         if (filled) for (let i = 0; i < 25; i++) { const J = h.J[i]; _jm.fromArray(poseBuf, i * 16); _jm.decompose(J.p, J.q, _js); J.r = radBuf[i] || 0.008; J.ok = true; }
       }
       if (!filled) spaces.forEach((sp, i) => { const jp = sp && frame.getJointPose(sp, ref), J = h.J[i]; if (jp) { const p = jp.transform.position, o = jp.transform.orientation; J.p.set(p.x, p.y, p.z); J.q.set(o.x, o.y, o.z, o.w); J.r = jp.radius || 0.008; J.ok = true; } });
+      handSmooth(h, t);
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
@@ -10189,6 +10210,34 @@ function readXR(frame, t = 0) {
     }
   }
   anchorsFrame(frame, ref); roomFrame(frame, ref, t);
+}
+
+// Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
+// «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
+// se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
+const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+function handSmooth(h, t) {
+  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
+  const dt = t - F.t, J = h.J; F.t = t;
+  const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
+  const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
+  if (!same) F.tRaw = t;
+  for (let i = 0; i < 25; i++) {
+    const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
+    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
+    let tx, ty, tz;
+    if (same) { const k = rdt < 0.06 ? rdt : 0; tx = P.x + F.v[o] * k; ty = P.y + F.v[o + 1] * k; tz = P.z + F.v[o + 2] * k; }
+    else {
+      const ok = rdt > 0 && rdt < 0.1;
+      F.v[o] = ok ? (P.x - F.raw[o]) / rdt : 0; F.v[o + 1] = ok ? (P.y - F.raw[o + 1]) / rdt : 0; F.v[o + 2] = ok ? (P.z - F.raw[o + 2]) / rdt : 0;
+      F.raw[o] = tx = P.x; F.raw[o + 1] = ty = P.y; F.raw[o + 2] = tz = P.z;
+    }
+    const aD = hfA(HSM.dC, dt);
+    F.dx[o] += aD * ((tx - F.x[o]) / dt - F.dx[o]); F.dx[o + 1] += aD * ((ty - F.x[o + 1]) / dt - F.dx[o + 1]); F.dx[o + 2] += aD * ((tz - F.x[o + 2]) / dt - F.dx[o + 2]);
+    const a = hfA(HSM.minC + HSM.beta * Math.hypot(F.dx[o], F.dx[o + 1], F.dx[o + 2]), dt);
+    F.x[o] += a * (tx - F.x[o]); F.x[o + 1] += a * (ty - F.x[o + 1]); F.x[o + 2] += a * (tz - F.x[o + 2]);
+    J[i].s.set(F.x[o], F.x[o + 1], F.x[o + 2]);
+  }
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
@@ -10372,6 +10421,7 @@ renderer.setAnimationLoop((time, frame) => {
   const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
   if (!xrActive && !preview) return;
   if (frame) readXR(frame, t); else previewInput(dt);
+  for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
