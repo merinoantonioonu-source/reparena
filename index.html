@@ -708,6 +708,11 @@ const SCHEMA = [
   { key: 'arcRight', g: 'arcos', label: 'Inclinados: hacia la derecha', short: 'A la derecha', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'De los arcos inclinados, cuántos hay que esquivar apartándose a la derecha (el resto, a la izquierda). Con el 50 %, los dos lados por igual en cada oleada.' },
   { key: 'arcShift', g: 'arcos', label: 'Desplazamiento lateral en los inclinados', short: 'Desplazamiento', type: 'num', min: 15, max: 70, step: 5, def: 40, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Hasta dónde hay que llevar la cabeza hacia el lado alto para pasar con la bajada normal; en el centro hay que bajar más.' },
   { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
+  { key: 'arcPatterns', g: 'arcos', label: 'Coreografías (en vez de al azar)', short: 'Coreografías', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Llegan en pequeñas secuencias con su ritmo: escalera (cada vez más abajo), ráfaga de tres, zigzag de inclinados, valla y arco bajo… Se aprenden y cogen ritmo.' },
+  { key: 'arcNew', g: 'arcos', label: 'Obstáculos nuevos (láser, paredes, rueda)', short: 'Obst. nuevos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['arcs'], hint: 'Un láser que barre la pista y se para cerca del centro (apártate al lado libre), dos paredes que se cierran dejando un hueco a un lado (métete en él) y una barra que gira como una rueda y se para inclinada al llegar.' },
+  { key: 'arcOrbs', g: 'arcos', label: 'Orbes para recoger', short: 'Orbes', type: 'num', min: 0, max: 100, step: 10, def: 40, unit: '%', modes: ['arcs'], hint: 'Entre arco y arco llegan orbes dorados: recógelos con la cabeza o con las manos (100 puntos; 200 en fiebre). Si se escapan, no pasa nada.' },
+  { key: 'arcFever', g: 'arcos', label: 'Modo fiebre (10 seguidos sin fallo)', short: 'Fiebre', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Tras 10 obstáculos seguidos sin que te den, todo va un 20 % más deprisa, las luces se vuelven de neón rosa y los puntos valen el doble, hasta que te dan.' },
+  { key: 'arcMove', g: 'arcos', label: 'Sensación de avance', short: 'Avance', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Rayas en la pista y farolas a los lados que pasan junto a ti a la velocidad de los arcos.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
@@ -5578,6 +5583,12 @@ function drawBoard() {
   else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
+  // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
+  if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right'; c.font = `500 34px ${FB}`;
+    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; c.fillText(t1, RX, 236);
+    if (gd !== null) { c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; c.fillText(`fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`, RX, 278); }
+  }
   let ch = null; const live = ['play', 'ready'].includes(state);
   if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ ${n}` : '⚔ 0', n ? BC.teal : '#ff8a3d']; }
   else if (throwAim() && live) { const n = throwCount(); ch = [`✋ ${n}`, n ? BC.teal : BC.lil]; }
@@ -7359,12 +7370,14 @@ function jumpTrack(dt) {
 }
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
-  constructor(drop, offset = 0, second = false, tilt = 0, jump = false) {
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0) {
     const H = arMode ? 2.25 : 2.55;
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
     this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
-    this.o = makeArcObj(this.barY, H, tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
-    Object.assign(this, { speed: dv('arcSpeed') / 3.6, judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
+    Object.assign(this, { speed: arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
+    if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
     if (!second) gates[1].openT = 1.6;
     zapLines(this.o.lines);
@@ -7372,6 +7385,7 @@ class Arc {
   barAt(x) { return this.barY + Math.tan(this.tilt) * clamp(x, -1, 1); } // altura de la barra sobre tu cabeza
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
+    if (this.spin) { const tau = Math.max(0, this.tReach - this.t); this.tilt = this.tiltEnd + this.spin * tau * Math.min(1, tau / 1.2); this.o.bar.rotation.z = this.tilt; }
     const appear = Math.min(1, this.t / 0.4); this.o.grp.scale.set(appear, 1, 1);
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); }
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
@@ -7394,16 +7408,16 @@ class Arc {
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.jump) {
       const need = settings.jumpHeight / 100;
-      if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
-      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false);
+      if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
+      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
-    registerRep(perfect, false);
+    registerRep(perfect, false); arxClean();
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);
     if (perfect) SND.perfect();
   }
@@ -7488,7 +7502,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1));
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1)); // (en fiebre, el doble)
   if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -8167,8 +8181,10 @@ function buildWave(i) {
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
+    if (settings.arcPatterns) return arxPatterns(total);
     const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100;
     for (let n = 0; n < total; n++) {
+      if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
@@ -8224,8 +8240,11 @@ function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
-    const a = new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump'); arcs.push(a);
-    if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0));
+    if (spec.kind === 'laser' || spec.kind === 'walls') arcs.push(new ArcObs(spec.kind));
+    else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
+    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
+    ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
+    if (Math.random() * 100 < settings.arcOrbs) ARX.orbT = spawnInterval * (spec.gap || 1) * 0.5; // un orbe a medio camino
     return;
   }
   let e;
@@ -8250,14 +8269,14 @@ function arcGap() {
 }
 function updateNextArc() {
   let best = null; for (const a of arcs) if (!a.judged && !a.second && (!best || a.z > best.z)) best = a;
-  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
+  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
   if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; boardDirty = true; }
 }
 
 /* =================== FLUJO =================== */
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
-  arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
+  arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear(); ARX.orbs.forEach(o => o.alive && o.dispose()); ARX.orbs = []; ARX.orbT = -1;
   projs = []; boltsClear(); rocksClear();
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
@@ -8483,7 +8502,7 @@ function warmShaders() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -8601,7 +8620,8 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
   const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;
-  const tiles = hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
+  const AX = settings.mode === 'arcs' ? arxEnd() : null; // (medalla, metros, orbes y fantasma)
+  const tiles = AX ? [[stats.perfect, 'perfectas'], [stats.taken, 'golpes'], [`${AX.dist} m`, 'recorridos']] : hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
@@ -8610,7 +8630,8 @@ function endRun(win, manual) {
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
     chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
-      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null].filter(Boolean),
+      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null,
+      AX && AX.medal ? [`Medalla de ${AX.medal[0]}`, AX.medal[1]] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
@@ -8687,7 +8708,7 @@ function summaryDraw(S, c, x, y, w, h) {
     c.fillStyle = dim; fitFont(c, l, tw - 30, Math.round(th * 0.27), '500 %px ' + FB); c.fillText(l, tx + tw / 2 + 4, ty + th * 0.78);
   });
   // logros (récord, racha, dificultad) o, si no hay, lo de hoy
-  const cy0 = y + h - 32, chips = S.chips.length ? S.chips : S.today ? [[S.today, dim]] : [];
+  const cy0 = y + h - 32, chips = (S.chips.length ? S.chips : S.today ? [[S.today, dim]] : []).slice(0, 3); // (caben tres)
   c.font = '600 26px ' + FB; const cw = chips.map(([t]) => Math.min(w - 20, c.measureText(t).width + 44)), tot = cw.reduce((a, b) => a + b, 0) + 12 * Math.max(0, chips.length - 1);
   let cx = x + (w - Math.min(w, tot)) / 2;
   chips.forEach(([t, col], k) => { rr(c, cx, cy0 - 22, cw[k], 44, 22); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); c.fillStyle = col; fitFont(c, t, cw[k] - 30, 26, '600 %px ' + FB); c.fillText(t, cx + cw[k] / 2, cy0 + 1); cx += cw[k] + 12; });
@@ -8738,7 +8759,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * arcGap(), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
@@ -8765,10 +8786,181 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
+  arxStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
   if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
+}
+
+/* =================== ARCOS: COREOGRAFÍAS, FIEBRE, ORBES, AVANCE, OBSTÁCULOS NUEVOS Y METAS =================== */
+// Para que los Arcos no aburran: en vez de salir al azar, llegan en pequeñas coreografías con su ritmo (escalera, ráfaga,
+// zigzag, valla y arco…); con 10 seguidos sin fallo entra el modo fiebre (más deprisa, luces de neón y puntos ×2) hasta
+// que te dan; entre arco y arco llegan orbes para recoger con la cabeza o las manos; el suelo y unas luces pasan a tu lado
+// (sensación de avance); hay obstáculos nuevos (un láser que barre, dos paredes que se cierran y una rueda que gira) y
+// metas: los metros recorridos, la carrera contra el fantasma de tu mejor ronda y una medalla al acabar.
+const ARX = { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, best: null, nextGap: 0 };
+const ARX_GHOST = 'reparena3-arcghost';
+// los obstáculos nuevos, por turnos (empezando por uno al azar): así salen los tres
+const ARX_NEW = ['laser', 'walls', 'wheel']; let arxNewN = Math.floor(Math.random() * 3);
+const arxNewKind = () => ARX_NEW[(arxNewN++) % 3];
+const arxMul = () => ARX.fever ? 1.2 : 1; // la fiebre acelera lo que llega
+const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul();
+function arxReset() {
+  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
+  arxFeverLook(false);
+}
+// Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
+function arxClean() {
+  ARX.streak++;
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); say('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+}
+function arxHit() { if (ARX.fever) say('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
+
+/* ---------- Coreografías ---------- */
+// Cada pieza es una lista de obstáculos con su hueco hasta el siguiente (en veces el intervalo medio); se eligen según los
+// porcentajes de Ajustes → Arcos (vallas, inclinados, dobles, obstáculos nuevos) y se encadenan hasta completar la oleada
+function arxPatterns(total) {
+  const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100, mid = (lo + hi) / 2;
+  const tiltA = () => rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180, S = (drop, gap, extra = {}) => ({ kind: 'single', drop, tilt: 0, hp: 1, gap, ...extra });
+  const pieces = [
+    [1, () => [S(lo, 0.8), S(mid, 0.8), S(hi, 1.3)]], // escalera: cada vez más abajo
+    [1, () => [S(hi, 0.8), S(mid, 0.8), S(lo, 1.3)]], // y al revés
+    [0.8, () => { const d = rand(lo, hi); return [S(d, 0.55), S(d, 0.55), S(d, 1.4)]; }], // ráfaga: tres seguidos
+    [0.6, () => [S(rand(lo, hi), 1.5)]], // un respiro
+    [settings.arcTilt / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.9, { tilt: s * tiltA() }), S(rand(lo, hi), 0.9, { tilt: -s * tiltA() }), S(rand(lo, hi), 1.3, { tilt: s * tiltA() })]; }], // zigzag
+    [settings.arcJump / 25, () => [{ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 0.7 }, S(hi, 1.3)]], // valla y, enseguida, un arco bajo
+    [settings.arcDouble / 20, () => [S(rand(lo, hi), 1.4, { kind: 'double' })]],
+    [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]]
+  ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
+  while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
+  const out = list.slice(0, total);
+  // con los obstáculos nuevos activados, en cada oleada larga salen al menos los tres (en vez de arcos sueltos)
+  if (settings.arcNew > 0 && total >= 9) for (let need = 3 - out.filter(o => ARX_NEW.includes(o.kind)).length, i = 0; need > 0 && i < 40; i++) {
+    const k = Math.floor(Math.random() * out.length); if (out[k].kind === 'single' && !out[k].tilt) { out[k] = { kind: arxNewKind(), drop: out[k].drop, tilt: 0, hp: 1, gap: 1.3 }; need--; }
+  }
+  return out;
+}
+
+/* ---------- Obstáculos nuevos: láser que barre y paredes que se cierran ---------- */
+// Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,
+// cerca del centro (apártate al lado libre); las paredes, con el hueco a un lado (métete en él)
+const LASER_MAT = new THREE.MeshBasicMaterial({ color: 0xffd0d0, toneMapped: false });
+const wallMat = () => new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2a40, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+class ArcObs {
+  constructor(kind) {
+    const D = arenaDepth(); Object.assign(this, { kind, alive: true, judged: false, second: false, checked: false, hit: false, jump: false, t: 0, warnT: 0, z: -D + 0.9, speed: arxSpeed() });
+    this.tReach = Math.max(0.5, (HL.z - this.z) / this.speed); this.grp = new THREE.Group(); this.grp.position.z = this.z; arena.add(this.grp);
+    if (kind === 'laser') {
+      this.end = rand(-0.2, 0.2); this.amp = rand(0.6, 0.85); this.ph = rand(0, TAU); const safe = this.end > 0 ? -1 : 1;
+      this.leanX = this.end + safe * 0.5; this.tilt = safe * 0.01; this.drop = 0.01; // el lado libre (para el marcador y la vista previa)
+      this.mat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0xff2a14, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.beam = new THREE.Group(); this.grp.add(this.beam);
+      const core = new THREE.Mesh(G.cylRaw(0.012, 0.012, 2.5, 6), LASER_MAT); core.position.y = 1.25; this.beam.add(core);
+      for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 2.5), this.mat); p.position.y = 1.25; p.rotation.y = i * Math.PI / 2; this.beam.add(p); }
+      for (const y of [0.03, 2.5]) { const e = new THREE.Mesh(G.box(0.12, 0.06, 0.12), M.steel); tint(e.geometry, C.gun); e.position.y = y; this.beam.add(e); }
+    } else {
+      this.gx = (Math.random() < 0.5 ? -1 : 1) * rand(0.28, 0.45); this.gap = 0.62; this.leanX = this.gx; this.tilt = Math.sign(this.gx) * 0.01; this.drop = 0.01;
+      this.walls = [-1, 1].map(s => { const g = new THREE.Group(), m = wallMat(), pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), m); pl.position.set(s * 0.7, 1.15, 0); g.add(pl);
+        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; this.grp.add(g); return g; });
+    }
+    this.hum = humLoop(arena.localToWorld(new V3(0, 1.2, this.z)));
+  }
+  // lo que queda para que llegue: se mueve mucho al principio y se asienta en su sitio al pasar por ti
+  settle() { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / 1.2); }
+  x() { return this.end + this.amp * Math.sin(this.ph + this.settle() * 2.2); }
+  update(dt, t) {
+    this.t += dt; this.z += this.speed * dt; this.grp.position.z = this.z;
+    const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, s = this.settle();
+    if (this.kind === 'laser') this.beam.position.x = this.x();
+    else { const half = this.gap / 2 + Math.min(0.9, s * 0.35); this.walls[0].position.x = this.gx - half; this.walls[1].position.x = this.gx + half; }
+    const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : Math.abs(HL.x - this.gx) > this.gap / 2 - 0.06;
+    const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && bad;
+    if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
+    if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
+    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.gx, 1.2, this.z)));
+    if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; if (bad) this.hit = true; }
+    if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
+    if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
+  }
+  resolve() {
+    if (!(state === 'play' || state === 'rest')) return;
+    const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
+    if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
+    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, true); SND.perfect();
+  }
+  dispose() {
+    arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose());
+    this.grp.traverse(o => { if (o.geometry && o.geometry.type === 'PlaneGeometry') o.geometry.dispose(); }); if (this.hum) { this.hum.stop(); this.hum = null; }
+  }
+}
+
+/* ---------- Orbes para recoger ---------- */
+const orbGeo = new THREE.SphereGeometry(0.06, 16, 12), orbMat = new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false }), orbRingGeo = new THREE.TorusGeometry(0.1, 0.008, 6, 28);
+class ArcOrb {
+  constructor() {
+    const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
+    this.grp = new THREE.Group(); this.grp.add(new THREE.Mesh(orbGeo, orbMat)); this.ring = new THREE.Mesh(orbRingGeo, LASER_MAT); this.grp.add(this.ring);
+    this.glow = glowSprite(0xffd166, 0.3, 0.7); this.grp.add(this.glow); this.grp.position.copy(this.pos); arena.add(this.grp);
+  }
+  update(dt, t) {
+    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02; this.ring.rotation.set(t * 2, t * 3, 0);
+    // se recoge con la cabeza o con cualquier mano
+    _ao.copy(HL); _ao.y -= 0.05; let got = this.grp.position.distanceTo(_ao) < 0.24;
+    for (const s of ['left', 'right']) if (!got && hands[s].ok) { arena.worldToLocal(_ao.copy(hands[s].wrist)); if (_ao.distanceTo(this.grp.position) < 0.17) got = true; }
+    if (got && state === 'play') {
+      const c = this.grp.getWorldPosition(new V3()), pts = 100 * (ARX.fever ? 2 : 1); score += pts; ARX.got++; boardDirty = true;
+      SND.pop(c, false); fx.glow(c, [1, 0.85, 0.4], 0.5, 0.15); fx.sparks(c, 14, [1, 0.8, 0.3], 1.6, 0.03); say(`+${pts} · orbe`, '#ffd166', 0.8, false); this.dispose(); return;
+    }
+    if (this.pos.z > HL.z + 1.5) this.dispose();
+  }
+  dispose() { this.alive = false; arena.remove(this.grp); this.glow.material.dispose(); }
+}
+const _ao = new V3();
+
+/* ---------- Sensación de avance: rayas en la pista y farolas que pasan a tu lado ---------- */
+const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
+const dashMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false, transparent: true, opacity: 0.7 }), postTopMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+const ARX_DASH = [], ARX_POST = [], DASH_GAP = 1.4, POST_GAP = 4;
+for (let i = 0; i < 14; i++) for (const s of [-1, 1]) { const m = new THREE.Mesh(G.box(0.05, 0.008, 0.55), dashMat); m.position.set(s * 0.95, 0.01, 0); ARX_DECO.add(m); ARX_DASH.push(m); }
+for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
+  const g = new THREE.Group(), p = new THREE.Mesh(G.cyl(0.025, 0.035, 1.7, 8), M.steel); tint(p.geometry, C.gun); p.position.y = 0.85; g.add(p);
+  const top = new THREE.Mesh(G.box(0.16, 0.05, 0.08), postTopMat); top.position.set(-s * 0.05, 1.7, 0); g.add(top); g.position.set(s * 1.55, 0, 0); ARX_DECO.add(g); ARX_POST.push(g);
+}
+let arxScroll = 0;
+function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); }
+function arxDeco(dt, t) {
+  const on = settings.mode === 'arcs' && !!settings.arcMove && !isFloor() && ['ready', 'play', 'rest'].includes(state); ARX_DECO.visible = on; if (!on) return;
+  if (state === 'play') arxScroll += arxSpeed() * dt;
+  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3;
+  ARX_DASH.forEach((m, i) => { m.position.z = z0 + ((Math.floor(i / 2) * DASH_GAP + arxScroll) % span); });
+  ARX_POST.forEach((g, i) => { g.position.z = z0 + ((Math.floor(i / 2) * POST_GAP + arxScroll) % span); });
+  if (ARX.fever) { const k = 0.6 + 0.4 * Math.sin(t * 10); dashMat.opacity = k; }
+  else dashMat.opacity = 0.7;
+}
+
+/* ---------- Cada fotograma, metas y fantasma ---------- */
+function arxStep(dt, t) {
+  arxDeco(dt, t);
+  if (settings.mode !== 'arcs') return;
+  if (ARX.orbT > 0 && state === 'play') { ARX.orbT -= dt; if (ARX.orbT <= 0) ARX.orbs.push(new ArcOrb()); }
+  for (const o of ARX.orbs) if (o.alive) o.update(dt, t); ARX.orbs = ARX.orbs.filter(o => o.alive);
+  if (state !== 'play') return;
+  ARX.dist += arxSpeed() * dt; ARX.tlT += dt;
+  if (ARX.tlT >= 2) { ARX.tlT -= 2; ARX.tl.push(score); if ((ARX.tl.length & 3) === 0) boardDirty = true; }
+}
+// El fantasma: tus puntos de entonces en tu mejor ronda (cada 2 s) frente a los de ahora
+function arxGhostDiff() {
+  const B = ARX.best; if (!B || !B.tl || !B.tl.length) return null;
+  const i = Math.min(B.tl.length - 1, ARX.tl.length), g = i < 0 ? 0 : B.tl[i] || 0; return score - g;
+}
+// Al acabar: medalla por los que pasaste sin que te dieran y, si fue tu mejor ronda, se guarda como fantasma
+function arxEnd() {
+  const n = stats.reps + stats.taken, k = n ? stats.reps / n : 0, medal = !n ? null : k >= 0.95 ? ['oro', '#ffd166'] : k >= 0.8 ? ['plata', '#d8dce6'] : k >= 0.6 ? ['bronce', '#e0975a'] : null;
+  const prev = ARX.best, rec = !prev || score > (prev.score || 0), farther = !prev || ARX.dist > (prev.dist || 0);
+  if (rec && stats.reps) store(ARX_GHOST, { score, dist: Math.round(ARX.dist), tl: ARX.tl.concat(score).slice(0, 600) });
+  return { medal, dist: Math.round(ARX.dist), orbs: ARX.got, rec: rec && !!prev && stats.reps > 0, farther: farther && !!prev && ARX.dist > 0 };
 }
 
 
@@ -10034,7 +10226,7 @@ function previewInput(dt) {
   // Arcos inclinados: al agacharte con Espacio, la cabeza se aparta hacia el lado alto (zancada lateral)
   if (settings.mode === 'arcs' && GAME_STATES.includes(state)) {
     let nx = null; for (const a of arcs) if (!a.judged && !a.second && (!nx || a.z > nx.z)) nx = a;
-    const lx = PV.crouch && !PV.noLean && nx && nx.tilt ? Math.sign(nx.tilt) * settings.arcShift / 100 : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
+    const lx = PV.crouch && !PV.noLean && nx && (nx.leanX !== undefined || nx.tilt) ? (nx.leanX !== undefined ? nx.leanX : Math.sign(nx.tilt) * settings.arcShift / 100) : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }

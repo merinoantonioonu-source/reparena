@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -144,7 +144,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('buttons: edge', edge, 'tap A', one, 'again same spot', same, 'after moving', other);
     if (edge > 1 || one !== 'A' || same !== 'A' || other !== 'AB') errors.push(`botones táctiles: pulsaciones de más o de menos (${edge}, ${one}, ${same}, ${other})`);
   }
-  const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30 };
+  const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30, arcPatterns: 0, arcNew: 0, arcFever: 0 }; // (los arcos de siempre: las coreografías y lo nuevo tienen su prueba)
   // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
   const bringMenu = () => {
     RA.camera.position.set(0.8, 1.6, 1.6); frame(2); const before = menuTop();
@@ -465,6 +465,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Arcos con vallas sin saltar', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 4, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; RA.PV.noJump = true; }, 200, s => s.reps ? 'sin saltar no deberían contar las vallas' : s.taken < 4 ? 'las vallas no golpean si no saltas' : '');
   await runConfig('Arcos con vallas de puntillas (despacio)', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 4, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; RA.PV.noJump = false; RA.PV.slowJump = true; }, 200, s => s.reps ? 'subir despacio (de puntillas) no debería contar como salto' : '');
   RA.PV.noJump = RA.PV.slowJump = false;
+  // arcos con coreografías, obstáculos nuevos (láser, paredes y rueda), orbes, fiebre y metas (metros, fantasma y medalla)
+  { const A = { kinds: new Set(), fever: false, deco: false, orbs: 0, gaps: [] }; let lastN = -1, lastT = 0; storage.delete('reparena3-arcghost');
+    await runConfig('Arcos con coreografías y obstáculos nuevos', { ...base, mode: 'arcs', exercise: 'squat', arcPatterns: 1, arcNew: 100, arcOrbs: 100, arcFever: 1, arcMove: 1, arcTilt: 30, arcJump: 0, arcDouble: 0, waves: 1, repsWave: 24, lives: 0, arcRate: 20, arcMaxGap: 6 }, t => {
+      RA.PV.crouch = true; RA.arcs.forEach(a => A.kinds.add(a.kind || (a.spin ? 'wheel' : a.jump ? 'jump' : a.tilt ? 'tilt' : 'arc')));
+      if (RA.ARX.fever) A.fever = true; if (RA.ARX_DECO.visible) A.deco = true;
+      for (const o of RA.ARX.orbs) { A.orbs = Math.max(A.orbs, RA.ARX.orbs.length); o.pos.copy(RA.HL); } // la cabeza va a por cada orbe
+      const q = RA.spawnQueue.length; if (lastN >= 0 && q < lastN) { A.gaps.push(+(t - lastT).toFixed(2)); lastT = t; } lastN = q;
+    }, 300, s => { A.txt = RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : ''; return ''; });
+    const txt = A.txt || '', ghost = JSON.parse(storage.get('reparena3-arcghost') || 'null');
+    log(`arcs+: kinds ${[...A.kinds].join(',')} · fever ${A.fever} · moving deco ${A.deco} · orbs collected ${RA.ARX.got} · gaps ${A.gaps.slice(0, 10).join(' ')} · ${Math.round(RA.ARX.dist)} m · ghost saved ${!!ghost} · taken ${RA.stats.taken} · summary medal ${/Medalla/.test(txt)} (${RA.state}: ${txt.slice(0, 160)})`);
+    if (!['laser', 'walls', 'wheel'].every(k => A.kinds.has(k))) errors.push('arcos: faltan obstáculos nuevos (láser, paredes o rueda): ' + [...A.kinds]);
+    if (RA.stats.taken > 2) errors.push(`arcos: apartándose al lado libre deberían esquivarse los obstáculos nuevos (${RA.stats.taken} golpes)`);
+    if (!A.fever || !A.deco || !RA.ARX.got || !ghost || !(RA.ARX.dist > 10) || !/Medalla/.test(txt)) errors.push('arcos: falta la fiebre, el avance, los orbes, el fantasma, los metros o la medalla');
+    if (new Set(A.gaps.map(g => Math.round(g * 2))).size < 3) errors.push('arcos: las coreografías deberían marcar huecos distintos entre obstáculos'); }
   await runConfig('Arcos sin agacharse (golpes)', { ...base, mode: 'arcs', exercise: 'squat', lives: 3, waves: 1 }, t => { RA.PV.crouch = false; }, 120);
   // ---- Pistolas: las sentadillas cargan munición y el gatillo (T) dispara donde miras ----
   const aimShoot = every => t => { RA.PV.crouch = (t % 2.6) < 1.4; const e = RA.enemies.find(x => x.alive); if (e && (t % every) < 0.04 && RA.GUN.ammo) { const c = e.center(new THREE.Vector3()); RA.camera.lookAt(c); RA.PV.keys.KeyT = true; } else RA.PV.keys.KeyT = false; };
