@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { WM, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
@@ -1026,44 +1026,65 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('menuWhere', 'wrist'); RA.setSetting('wristDist', 55); RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   XRS.headY = 1.7; await RA.startXR(false); await sleep(700); for (let i = 0; i < 8; i++) { frame(5, 16, xrFrame); if (process.env.DBG) log('WM', RA.WM.e.toFixed(2), RA.WM.on, RA.WM.near, !!RA.menu, RA.settings.wristDist, RA.menu && RA.menu.group.scale.x, RA.menu && RA.menu.wrist); }
   {
-    const m = RA.menu, g = m.group, eye = new THREE.Vector3(0, 1.7, 0), hd = Math.hypot(g.position.x, g.position.z);
-    log('wrist menu: on wrist', m.wrist, 'visible', g.visible, 'scale', g.scale.x.toFixed(2), 'horizontal distance to eyes', hd.toFixed(2), 'stand', RA.stand.visible);
+    const m = RA.menu, g = m.group, hd = Math.hypot(g.position.x, g.position.z), V = THREE.Vector3;
+    // derecho (sin ladearse) y de cara a ti: su eje x, horizontal; su normal, hacia los ojos
+    const level = () => { const q = RA.menu.group.quaternion, x = new V(1, 0, 0).applyQuaternion(q), n = new V(0, 0, 1).applyQuaternion(q), to = new V(0, 1.7, 0).sub(RA.menu.group.position).normalize(); return { roll: Math.abs(x.y), face: n.dot(to) }; };
+    const L0 = level();
+    log('wrist menu: on wrist', m.wrist, 'opens by itself', g.visible && RA.WM.on, 'scale', g.scale.x.toFixed(2), 'horizontal distance to eyes', hd.toFixed(2), 'stand', RA.stand.visible, 'roll', L0.roll.toFixed(3), 'faces eyes', L0.face.toFixed(2));
     if (!m.wrist || !g.visible || Math.abs(g.scale.x - 0.46 * 55 / 45) > 0.01 || Math.abs(hd - 0.55) > 0.03 || RA.stand.visible) errors.push('el menú de muñeca no queda a la distancia elegida');
+    if (L0.roll > 0.01 || L0.face < 0.98) errors.push('el menú de muñeca no sale derecho y de cara a ti');
     RA.setSetting('wristDist', 75); frame(60, 16, xrFrame); const hd2 = Math.hypot(RA.menu.group.position.x, RA.menu.group.position.z);
-    log('wrist menu at 75 cm:', hd2.toFixed(2)); if (Math.abs(hd2 - 0.75) > 0.03) errors.push('cambiar la distancia del menú de muñeca no lo aleja'); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
-    const w = RA.activeWidgets().find(w => /^Ajustes/.test(w.label)), wp = new THREE.Vector3(), wn = new THREE.Vector3(0, 0, 1);
-    w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new THREE.Vector3(0, 0, 1))).sub(wp).normalize();
-    const before = g.position.clone();
+    log('wrist menu at 75 cm:', hd2.toFixed(2)); if (Math.abs(hd2 - 0.75) > 0.03) errors.push('cambiar la distancia del menú de muñeca no lo aleja');
+    // con la cabeza ladeada 25°, sale igual de derecho
+    XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.44, 'YXZ')); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
+    const L1 = level(); XRS.headQ = null; frame(2, 16, xrFrame);
+    log('wrist menu with the head tilted 25°: roll', L1.roll.toFixed(3)); if (L1.roll > 0.01) errors.push('el menú de muñeca se ladea con la cabeza');
+    const w = RA.activeWidgets().find(w => /^Ajustes/.test(w.label)), wp = new V(), wn = new V(0, 0, 1);
+    w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new V(0, 0, 1))).sub(wp).normalize();
+    const top0 = RA.WM.top.clone();
     for (const d of [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]) { XRS.tip = wp.clone().addScaledVector(wn, d); frame(2, 16, xrFrame); }
     XRS.tip = null; frame(2, 16, xrFrame);
-    const pressed = RA.activeWidgets().some(x => x.label === 'Volver' || x.label === '‹ Volver' || /Volver/.test(x.label));
-    log('wrist menu poke with right index → settings opened', pressed, 'panel kept still', before.distanceTo(g.position) < 0.01);
+    const pressed = RA.activeWidgets().some(x => /Volver/.test(x.label)), kept = RA.WM.top.distanceTo(top0) < 0.002 && RA.menu.group.visible;
+    log('wrist menu poke with right index → settings opened', pressed, 'top edge kept in place', kept);
     if (!pressed) errors.push('el panel de la muñeca no se puede pulsar con el índice derecho');
-    // con una mano izquierda de verdad: la palma hacia la cara lo abre; palma abajo o puño lo cierran en el acto; sigue a la mano
-    { const V = THREE.Vector3, p0 = new V(-0.15, 1.3, -0.32), toFace = new V(0, 1.7, 0).sub(p0).normalize();
+    if (!kept) errors.push('el submenú de la muñeca no sale en el mismo sitio');
+    // con una mano izquierda de verdad: el panel ya no sigue a la mano; palma abajo o puño lo cierran; solo MENÚ lo vuelve a abrir
+    { const p0 = new V(-0.15, 1.3, -0.32), toFace = new V(0, 1.7, 0).sub(p0).normalize();
       const pose = (p, n, fist) => { XRS.left = { p, n, f: new V(0.3, 0.6, -0.75), fist }; };
+      const pressWatch = async () => { frame(30, 16, xrFrame); await sleep(500); if (!RA.watch.mesh.visible) return false; const p = RA.watch.mesh.getWorldPosition(new V()), n = RA.watch.mesh.getWorldDirection(new V()); XRS.tip = p.clone().addScaledVector(n, 0.04); frame(2, 16, xrFrame); XRS.tip = p.clone().addScaledVector(n, -0.005); frame(2, 16, xrFrame); XRS.tip = null; frame(30, 16, xrFrame); return true; };
+      const g0 = RA.menu.group.position.clone();
       pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const open1 = RA.menu.group.visible && RA.WM.e > 0.9;
+      let worst = 0; for (let i = 0; i < 40; i++) { pose(p0.clone().add(new V(Math.sin(i * 2.1), Math.cos(i * 1.7), Math.sin(i * 1.3)).multiplyScalar(0.003)), toFace, false); frame(1, 16, xrFrame); worst = Math.max(worst, RA.menu.group.position.distanceTo(g0)); }
+      const ahead = p0.clone().add(new V(0.1, -0.2, -0.15)); pose(ahead, new V(0, 1.7, 0).sub(ahead).normalize(), false); frame(30, 16, xrFrame);
+      const still = RA.menu.group.position.distanceTo(g0);
+      XRS.left = null; XRS.noLeft = true; frame(60, 16, xrFrame); const noHand = RA.menu.group.visible; XRS.noLeft = false;
       pose(p0.clone(), new V(0.05, -1, 0.1), false); frame(12, 16, xrFrame); const palmDown = !RA.menu.group.visible;
-      frame(40, 16, xrFrame); const stays = !RA.menu.group.visible;
-      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const back = RA.menu.group.visible;
+      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const stays = !RA.menu.group.visible;
+      const watchOk = await pressWatch(), back = RA.menu.group.visible && RA.WM.e > 0.9;
       pose(p0.clone(), toFace, true); frame(12, 16, xrFrame); const fist = !RA.menu.group.visible;
-      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const back2 = RA.menu.group.visible;
-      // temblor de 3 mm: casi no se mueve; adelantar la mano 15 cm: el panel la acompaña
-      const g0 = RA.menu.group.position.clone(); let worst = 0;
-      for (let i = 0; i < 40; i++) { pose(p0.clone().add(new V(Math.sin(i * 2.1), Math.cos(i * 1.7), Math.sin(i * 1.3)).multiplyScalar(0.003)), toFace, false); frame(1, 16, xrFrame); worst = Math.max(worst, RA.menu.group.position.distanceTo(g0)); }
-      const ahead = p0.clone().add(new V(0, 0, -0.15)); pose(ahead, new V(0, 1.7, 0).sub(ahead).normalize(), false); frame(30, 16, xrFrame);
-      const moved = RA.menu.group.position.clone().sub(g0), follow = -moved.z;
-      log(`wrist menu with a real hand: opens ${open1} · palm down closes ${palmDown}, stays closed ${stays}, palm to face reopens ${back} · fist closes ${fist}, reopens ${back2} · 3 mm jitter moves it ${(worst * 1000).toFixed(1)} mm · hand 15 cm forward → panel ${(follow * 100).toFixed(1)} cm`);
-      if (!open1) errors.push('menú de muñeca: no sale con la palma hacia la cara');
-      if (!palmDown || !stays || !back) errors.push('menú de muñeca: la palma hacia abajo debería cerrarlo en el acto (y volver al girarla hacia la cara)');
-      if (!fist || !back2) errors.push('menú de muñeca: el puño cerrado debería cerrarlo en el acto (y volver al abrir la mano)');
-      if (worst > 0.0025) errors.push(`menú de muñeca: tiembla con la mano (${(worst * 1000).toFixed(1)} mm con 3 mm de temblor)`);
-      if (follow < 0.12) errors.push(`menú de muñeca: no acompaña a la mano al adelantarla (${(follow * 100).toFixed(1)} cm de 15)`);
-      XRS.left = null; frame(40, 16, xrFrame); }
-    XRS.noLeft = true; frame(60, 16, xrFrame); log('left hand away: panel hidden', !RA.menu.group.visible);
-    if (RA.menu.group.visible) errors.push('el panel de la muñeca no se recoge al bajar la mano');
-    XRS.noLeft = false; frame(40, 16, xrFrame);
-    if (!RA.menu.group.visible) errors.push('el panel de la muñeca no vuelve a salir');
+      pose(p0.clone(), toFace, false); const back2 = (await pressWatch()) && RA.menu.group.visible;
+      log(`wrist menu with a real hand: open ${open1} · moves ${(worst * 1000).toFixed(1)} mm with hand jitter, ${(still * 100).toFixed(1)} cm when the hand moves 25 cm, stays without the hand ${noHand} · palm down closes ${palmDown}, stays closed looking at the wrist ${stays} · MENÚ button shown ${watchOk}, reopens ${back} · fist closes ${fist}, MENÚ reopens ${back2}`);
+      if (!open1) errors.push('menú de muñeca: no está abierto');
+      if (worst > 0.0005 || still > 0.001 || !noHand) errors.push('menú de muñeca: debería quedarse quieto delante aunque muevas o bajes la mano');
+      if (!palmDown || !stays) errors.push('menú de muñeca: la palma hacia abajo debería cerrarlo (y no volver solo al mirar la muñeca)');
+      if (!watchOk || !back) errors.push('menú de muñeca: cerrado, el botón MENÚ de la muñeca debería volver a abrirlo');
+      if (!fist || !back2) errors.push('menú de muñeca: el puño cerrado debería cerrarlo (y MENÚ, volver a abrirlo)');
+      XRS.left = null; frame(10, 16, xrFrame); }
+    // girado de espaldas, el botón lo trae delante otra vez
+    XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'YXZ')); frame(20, 16, xrFrame);
+    const far = RA.wristFar(); RA.onWatch(); frame(40, 16, xrFrame); const gp = RA.menu.group.position;
+    log('turned around: panel out of sight', far, '→ MENÚ brings it to z =', gp.z.toFixed(2)); XRS.headQ = null;
+    if (!far || !(gp.z > 0.4) || !RA.menu.group.visible) errors.push('menú de muñeca: girado de espaldas, el botón debería traerlo delante');
+    frame(20, 16, xrFrame);
+    // ---- Los avisos de la vista no se ladean con la cabeza (de pie): ni el del centro, ni PERFECTA, ni la caricatura ----
+    { const roll = m => Math.abs(new V(1, 0, 0).applyQuaternion(m.quaternion).y); // (están sueltos en la escena)
+      XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2, 0.3, 0.44, 'YXZ')); RA.beginRun(); frame(20, 16, xrFrame);
+      const c = RA.center.mesh.visible ? roll(RA.center.mesh) : -1; const tz = RA.settings.toasts; RA.setSetting('toasts', 1); RA.showToast('PERFECTA', '#ffd166', 2); RA.setSetting('toasts', tz); frame(1, 16, xrFrame);
+      const t = RA.toastP.mesh.visible ? roll(RA.toastP.mesh) : -1, d = RA.DEMOV ? roll(RA.DEMOV.head) : 0;
+      XRS.headQ = null;
+      log(`notices with the head tilted 25° (standing): centre roll ${c.toFixed(3)} · toast roll ${t.toFixed(3)} · demo roll ${d.toFixed(3)}`);
+      if (!(c >= 0 && c < 0.01) || !(t >= 0 && t < 0.01) || d > 0.01) errors.push('los avisos de la vista se ladean con la cabeza (de pie deberían ir siempre derechos)');
+      RA.lobbyMenu(); frame(20, 16, xrFrame); }
   }
   RA.setSetting('menuWhere', 'stand'); RA.exitAll(); frame(2, 16, xrFrame);
   RA.setSetting('menuWhere', 'wrist');

@@ -1900,7 +1900,7 @@ function foesMenu(back) {
     { t: 'field', key: 'foesGate', after: () => foesMenu(back) }, { t: 'field', key: 'foesHatch', after: () => foesMenu(back) }, { t: 'field', key: 'foesFly', after: () => foesMenu(back) },
     { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') },
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = () => foesMenu(back);
+  const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
 // Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
 const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
@@ -1915,7 +1915,7 @@ function armsMenu(back) {
   const rows = [{ t: 'title', text: 'ARMAS' },
     ...SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true, after: f.relayout ? again : undefined })),
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = again;
+  const m = openMenu(rows, { accent: MC.arms }); m.rebuild = again;
 }
 function lobbyMenu() {
   endSession();
@@ -1929,9 +1929,11 @@ function lobbyMenu() {
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, onPress: () => exerciseMenu(lobbyMenu) }] },
-    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, onPress: () => foesMenu(lobbyMenu) }] }] : []),
-    ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, onPress: () => armsMenu(lobbyMenu) }] }] : []),
+    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
+    // enemigos y armas, juntos en una fila (el menú queda más corto y al alcance)
+    ...(isCombat() || armsAny() ? [{ t: 'btns', items: [
+      ...(isCombat() ? [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] : []),
+      ...(armsAny() ? [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] : [])] }] : []),
     { t: 'field', key: speedKey() },
     ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
     settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
@@ -1952,8 +1954,8 @@ function lobbyMenu() {
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
-  sub.push({ label: 'Sonido  ▸', onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
-    { label: 'Ajustes  ▸', onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
+  sub.push({ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', accent: MC.scene, style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
+    { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
   rows.push({ t: 'btns', items: sub });
   if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
   const m = openMenu(rows);
@@ -1962,7 +1964,7 @@ function lobbyMenu() {
 // Submenús del principal: elegir ejercicio, sonido y música, y entorno y vista; «Volver» deja el principal en el mismo sitio
 function exerciseMenu(back) {
   const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = () => exerciseMenu(back); demoAttach(m);
+  const m = openMenu(rows, { accent: MC.ex }); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
 // Todo lo que suena: Spotify, el ritmo (al compás o el de Spotify, en Toques y Combate) y los volúmenes
 function soundMenu(back) {
@@ -1970,7 +1972,7 @@ function soundMenu(back) {
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
     ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = again;
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneMenu(back, inGame) {
@@ -1978,7 +1980,7 @@ function sceneMenu(back, inGame) {
   const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
     ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true })),
     ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows); m.rebuild = again;
+  const m = openMenu(rows, { accent: MC.scene }); m.rebuild = again;
 }
 let settingsTab = uiPrefs().tab || 'partida'; // se recuerda la última pestaña
 function settingsMenu(back, tab = settingsTab) {
@@ -1993,10 +1995,10 @@ function settingsMenu(back, tab = settingsTab) {
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
   rows.push({ t: 'btns', items: [
-    ...(inGame ? [] : [{ label: 'Perfiles  ▸', onPress: () => profilesMenu(() => settingsMenu(back, tab)) }]),
+    ...(inGame ? [] : [{ label: 'Perfiles  ▸', accent: MC.prof, onPress: () => profilesMenu(() => settingsMenu(back, tab)) }]),
     { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; settingsMenu(back, tab); } },
     { label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] });
-  const m = openMenu(rows); m.rebuild = () => settingsMenu(back, tab);
+  const m = openMenu(rows, { accent: MC.set }); m.rebuild = () => settingsMenu(back, tab);
 }
 function openPause() {
   if (!GAME_STATES.includes(state)) return;
@@ -2023,8 +2025,8 @@ function pauseMenu() {
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
-    { t: 'btns', items: [{ label: 'Sonido  ▸', onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', onPress: () => settingsMenu(() => pauseMenu()) }] },
-    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : [])] },
+    { t: 'btns', items: [{ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', accent: MC.scene, onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(() => pauseMenu()) }] },
+    { t: 'btns', items: [{ label: bars ? 'Volver a colgarme' : 'Recalibrar', accent: MC.body, onPress: recal }, ...(bars ? [{ label: `Ajustar ${eqName().name}`, onPress: () => { PLACE.note = ''; adjustMenu(() => pauseMenu()); } }] : [])] },
     ...(SES.active ? [{ t: 'btns', items: [{ label: 'Terminar bloque', onPress: () => { hideMenu(); endRun(false, true); } }, { label: 'Terminar sesión', style: 'danger', onPress: () => { hideMenu(); SES.stop = true; endRun(false, true); } }] }] : []),
     { t: 'btns', items: [{ label: SES.active ? 'Saltar al menú' : 'Terminar ronda', onPress: () => { hideMenu(); if (SES.active) { saveRun(false); lobbyMenu(); } else endRun(false, true); } }, { label: 'Menú principal', onPress: () => { saveRun(false); lobbyMenu(); } }, { label: 'Salir del juego', style: 'danger', onPress: () => { saveRun(false); exitAll(); } }] }
   ], { border: '#ffd166' });
