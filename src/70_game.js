@@ -1904,14 +1904,15 @@ function exerciseRows(back) {
 }
 // Qué enemigos salen, en pocas palabras (para el botón del menú principal)
 function foesSummary() {
-  const n = (k, src) => foeList(k).map(v => src.find(o => o[0] === v)).filter(Boolean).map(o => o[1]);
+  const n = (l, src) => l.map(v => src.find(o => o[0] === v)).filter(Boolean).map(o => o[1]);
   if (oneArm()) return 'de las trampillas'; if (settings.exercise === 'superman') return 'voladores';
-  const g = n(isTiny() ? 'foesHatch' : 'foesGate', isTiny() ? FOE_HATCH : FOE_GATE), f = n('foesFly', FOE_FLY), all = [...g, ...f];
-  return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : `${all.length} clases`;
+  const g = n(groundList(), isTiny() ? FOE_HATCH : FOE_GATE), f = n(flyList(), FOE_FLY), all = [...g, ...f];
+  return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : foeOnly() === 'fly' ? 'solo voladores' : foeOnly() === 'ground' ? 'solo los que andan' : `${all.length} clases`;
 }
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
 function foesMenu(back) {
   const rows = [{ t: 'title', text: 'ENEMIGOS' },
+    { t: 'field', key: 'foeKind', after: () => foesMenu(back) },
     { t: 'text', text: 'Marca los que quieres. Los de las compuertas salen de pie; los de las trampillas, en flexiones y planchas sobre una mano.' },
     { t: 'field', key: 'foesGate', after: () => foesMenu(back) }, { t: 'field', key: 'foesHatch', after: () => foesMenu(back) }, { t: 'field', key: 'foesFly', after: () => foesMenu(back) },
     { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') },
@@ -1924,7 +1925,7 @@ const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
 function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], own[k] !== undefined ? own[k] : RANK_VALS[k][i]); return o; } // (al paso de cada ajuste)
-function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; }
+function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; comboPatchAll(v); } // (en todos los modos y ejercicios)
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
 const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
 function rankSave() { const all = store(RANK_STORE) || {}; all[settings.rank] = Object.fromEntries(Object.keys(RANK_VALS).map(k => [k, settings[k]])); store(RANK_STORE, all); }

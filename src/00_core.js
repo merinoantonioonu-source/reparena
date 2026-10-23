@@ -136,9 +136,10 @@ const SCHEMA = [
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
   { key: 'pistol', g: 'armas', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], relayout: true, ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman'), relayout: true, hint: 'Los que vienen andando desde las compuertas (el lanzador, un diablillo, se queda lejos y te tira piedras: apártate o párala con la mano o la espada). Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase; con el capitán Barbarroja marcado, el jefe es él.' },
-  { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny(), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
-  { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm(), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
+  { key: 'foeKind', g: 'enemigos', label: 'Qué enemigos salen', short: 'Salen', type: 'choice', opts: [['both', 'Los dos'], ['ground', 'Los que andan'], ['fly', 'Los voladores']], def: 'both', modes: ['combat'], cond: () => !oneArm() && settings.exercise !== 'superman', relayout: true, hint: 'De una vez, sin marcarlos uno a uno: solo los que andan (de las compuertas o, en el suelo, de las trampillas), solo los voladores o los dos. Lo que tengas marcado en cada grupo se guarda.' },
+  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman') && settings.foeKind !== 'fly', relayout: true, hint: 'Los que vienen andando desde las compuertas (el lanzador, un diablillo, se queda lejos y te tira piedras: apártate o párala con la mano o la espada). Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase; con el capitán Barbarroja marcado, el jefe es él.' },
+  { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny() && (settings.foeKind !== 'fly' || oneArm()), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
+  { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm() && (settings.foeKind !== 'ground' || settings.exercise === 'superman'), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
   { key: 'aim', g: 'armas', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'throwPick', g: 'armas', label: 'Lanzando con las manos, el rayo va', short: 'El rayo va', type: 'choice', opts: [['gaze', 'Al que miras'], ['hand', 'Hacia donde lanzas']], def: 'gaze', modes: ['combat'], cond: () => !pistolOn() && settings.aim === 'hands' && !aimForced(), hint: 'Al que miras (recomendado): mira al enemigo y lanza hacia él; el gesto dispara y la mirada elige a cuál (sale un aro sobre él). Hacia donde lanzas: solo cuenta la dirección de la mano, que las gafas miden con menos precisión; con enemigos juntos puede irse a otro.' },
   { key: 'assist', g: 'armas', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
@@ -252,20 +253,39 @@ function fmtVal(f, v = settings[f.key]) {
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
-function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
+function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
+// Cada modo con cada ejercicio guarda sus ajustes de juego (la partida, el ejercicio, los enemigos, las armas, los arcos,
+// los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil, el rango y
+// las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
+const COMBO_KEY = 'reparena3-combos', COMBO_G = new Set(['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras']);
+const COMBO_SKIP = new Set(['rank', 'doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
+let _comboKeys = null;
+const comboKeys = () => _comboKeys || (_comboKeys = SCHEMA.filter(f => COMBO_G.has(f.g) && !COMBO_SKIP.has(f.key)).map(f => f.key));
+const comboId = () => settings.mode + '|' + settings.exercise;
+function comboSave(id = comboId()) { const all = store(COMBO_KEY) || {}; all[id] = Object.fromEntries(comboKeys().map(k => [k, settings[k]])); store(COMBO_KEY, all); }
+// Carga los de este modo y ejercicio; devuelve los ajustes que cambian
+function comboLoad(id = comboId()) {
+  const o = (store(COMBO_KEY) || {})[id], ch = []; if (!o) return ch;
+  for (const k of comboKeys()) if (o[k] !== undefined) { const v = clampSetting(FIELD[k], o[k]); if (v !== settings[k]) { settings[k] = v; ch.push(k); } }
+  return ch;
+}
+// Al cambiar de rango, sus valores pasan a todos los modos y ejercicios
+function comboPatchAll(vals) { const all = store(COMBO_KEY) || {}; for (const id in all) Object.assign(all[id], vals); store(COMBO_KEY, all); }
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
-  const f = FIELD[key];
+  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active ? comboId() : null;
+  if (prev) comboSave(prev); // lo que dejas, guardado
   settings[key] = f ? clampSetting(f, v) : v;
   // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
   if (key === 'mode') settings.exercise = exFor(v, settings.exercise);
   if (key === 'exercise' && !exOk(settings.mode, v)) settings.mode = modeFor(v);
+  const ch = prev && comboId() !== prev ? comboLoad() : []; // y lo de este modo y ejercicio, como lo dejaste
   saveSettings();
-  onSettingChanged(key);
+  onSettingChanged(key); ch.forEach(onSettingChanged);
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -294,8 +314,10 @@ const isCombat = () => settings.mode === 'combat';
 // Los elegidos de cada grupo (foeList), si alguno de ellos sale en esta partida (foeOn) y, de ahí, el reparto: solo por
 // tierra, solo voladores o mezcla
 function foeList(k) { return String(settings[k] || '').split(',').filter(Boolean); } // (función: se usa ya al cargar los ajustes)
-const groundList = () => { const l = foeList(isTiny() ? 'foesHatch' : 'foesGate'); return l.length || !oneArm() ? l : ['spider']; };
-const flyList = () => { const l = foeList('foesFly'); return l.length || settings.exercise !== 'superman' ? l : ['drone', 'hornet']; };
+// «Qué enemigos salen» (foeKind) quita un grupo entero sin tocar lo marcado en él; si el que queda está vacío, los de siempre
+const foeOnly = () => oneArm() || settings.exercise === 'superman' ? 'both' : settings.foeKind;
+const groundList = () => { const k = isTiny() ? 'foesHatch' : 'foesGate', l = foeList(k); if (foeOnly() === 'fly') return []; return l.length ? l : oneArm() ? ['spider'] : foeOnly() === 'ground' ? FIELD[k].def.split(',') : l; };
+const flyList = () => { const l = foeList('foesFly'); if (foeOnly() === 'ground') return []; return l.length ? l : settings.exercise === 'superman' || foeOnly() === 'fly' ? FIELD.foesFly.def.split(',') : l; };
 const foes = () => { if (oneArm()) return 'robots'; if (settings.exercise === 'superman') return 'flyers'; const g = groundList().length, f = flyList().length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
 const foeOn = (...ks) => isCombat() && !isTiny() && foesHas('robots') && ks.some(k => groundList().includes(k));
 // El atajo (robots, voladores o mezcla) → los ajustes de cada grupo: deja vacío lo que no sale y, si lo que sí sale está
