@@ -1,6 +1,7 @@
 // Minimal functional THREE subset for headless logic testing (real math, no rendering)
 'use strict';
 class Vector2 { constructor(x = 0, y = 0) { this.x = x; this.y = y; } set(x, y) { this.x = x; this.y = y; return this; } }
+class Vector4 { constructor(x = 0, y = 0, z = 0, w = 0) { this.set(x, y, z, w); } set(x, y, z, w) { this.x = x; this.y = y; this.z = z; this.w = w; return this; } }
 class Vector3 {
   constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
   set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
@@ -313,7 +314,7 @@ class WebGLRenderer {
   render(scene, cam) { this.renders++; scene.updateMatrixWorld(true); }
 }
 module.exports = {
-  Vector2, Vector3, Euler, Quaternion, Matrix4, Color, Object3D, Group, Scene, Bone, Mesh, SkinnedMesh, Skeleton, InstancedMesh, Sprite, Line, LineSegments, Points,
+  Vector2, Vector4, Vector3, Euler, Quaternion, Matrix4, Color, Object3D, Group, Scene, Bone, Mesh, SkinnedMesh, Skeleton, InstancedMesh, Sprite, Line, LineSegments, Points,
   PerspectiveCamera, DirectionalLight, PointLight, HemisphereLight, Fog, FogExp2, BufferAttribute, Float32BufferAttribute, Uint16BufferAttribute, InstancedBufferAttribute,
   BufferGeometry, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, OctahedronGeometry, DodecahedronGeometry, TorusGeometry, TubeGeometry, PlaneGeometry, CircleGeometry, RingGeometry, InstancedBufferGeometry, CatmullRomCurve3,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, SpriteMaterial, LineBasicMaterial, PointsMaterial, ShadowMaterial, CanvasTexture, Texture, PMREMGenerator, Plane, Raycaster, WebGLRenderer,
