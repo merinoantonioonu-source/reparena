@@ -32,9 +32,19 @@ function drawIcon(c, k, x, y, S, col) {
   }
   c.restore();
 }
+// Galones del rango: del recluta al sargento, galones (uno, dos, tres; el sargento con su arco debajo); el teniente, el capitán y
+// el general, estrellas (una, dos y tres, las del general doradas)
+function drawRank(c, i, x, y, S, col) {
+  c.save(); c.translate(x, y); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = S * 0.14; c.lineJoin = 'round'; c.lineCap = 'round';
+  const chev = dy => { c.beginPath(); c.moveTo(-S * 0.44, dy + S * 0.17); c.lineTo(0, dy - S * 0.17); c.lineTo(S * 0.44, dy + S * 0.17); c.stroke(); };
+  const star = (sx, r) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.45 : r; c.lineTo(sx + Math.cos(a) * rad, Math.sin(a) * rad); } c.closePath(); c.fill(); };
+  if (i <= 3) { const n = Math.min(3, i + 1), up = i === 3 ? S * 0.14 : 0; for (let k = 0; k < n; k++) chev((k - (n - 1) / 2) * S * 0.3 - up); if (i === 3) { c.beginPath(); c.arc(0, -S * 0.32, S * 0.6, 0.28 * Math.PI, 0.72 * Math.PI); c.stroke(); } }
+  else { const n = i - 3; if (n === 3) c.fillStyle = '#ffd166'; for (let k = 0; k < n; k++) star((k - (n - 1) / 2) * S * 0.46, S * 0.24); }
+  c.restore();
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge;
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -48,7 +58,8 @@ class Btn {
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
-    const ax = this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color)
+    if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
+    const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
     c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
   }
@@ -195,7 +206,7 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon, badge: it.badge }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
@@ -221,9 +232,11 @@ function openMenu(rows, opts = {}) {
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
         }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
       } else {
-        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
+        // una opción entre varias; con f.grid, en rejilla (y, con f.badges, cada una con sus galones: los rangos)
+        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h;
         const row = { f, btns: [] };
-        opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: 0.38 }), x + w / 2, cy)); x += w + GAP; });
+        opts.forEach(([v, lab], i) => { const x = X0 + LABW + (i % cols) * (w + GAP), yy = f.grid ? cy + h / 2 - bh / 2 - Math.floor(i / cols) * (bh + GAP) : cy;
+          row.btns.push(addW(new Btn(lab, w, bh, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.38, badge: f.badges ? i : undefined }), x + w / 2, yy)); });
       }
     }
     y -= h + GAP;

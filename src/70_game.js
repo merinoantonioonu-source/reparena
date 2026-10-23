@@ -1891,6 +1891,36 @@ function foesMenu(back) {
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
+// Rangos: elegir uno pone sus valores (los suyos de serie o los que guardaste en él); si luego retocas algo, se ve
+// «retocado» y puedes guardarlo en ese rango o volver a sus valores
+const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
+const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
+const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
+function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = own[k] !== undefined ? own[k] : RANK_VALS[k][i]; return o; }
+function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; }
+settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
+const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
+function rankSave() { const all = store(RANK_STORE) || {}; all[settings.rank] = Object.fromEntries(Object.keys(RANK_VALS).map(k => [k, settings[k]])); store(RANK_STORE, all); }
+function rankReset() { const all = store(RANK_STORE) || {}; delete all[settings.rank]; store(RANK_STORE, all); applyRank(); }
+// Lo que el rango cambia en el modo elegido, en pocas palabras
+function rankSummary() {
+  const v = settings, L = [v.lives ? `${v.lives} ${v.lives === 1 ? 'vida' : 'vidas'}` : 'vidas infinitas'];
+  if (isCombat()) L.push(`llegan en ${fmtNum(v.walkTime)} s`, `${v.maxAlive} a la vez`, `vuelo a ${fmtNum(v.flySpeed)} km/h`);
+  else if (settings.mode === 'arcs') L.push(`${v.arcRate} arcos/min a ${fmtNum(v.arcSpeed)} km/h`, `espera máx. ${fmtNum(v.arcMaxGap)} s`);
+  else if (settings.mode === 'touch') L.push(`llegan en ${fmtNum(v.tchArrive)} s`, `${fmtNum(v.tchWindow)} s para tocar`);
+  else L.push(`llegan en ${fmtNum(v.barArrive)} s`, v.barWait ? `${v.barWait} s para reventar` : 'sin límite para reventar');
+  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente'); return L.join(' · ');
+}
+function rankMenu(back) {
+  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), own = !!(store(RANK_STORE) || {})[cur];
+  const pickRow = list => ({ t: 'btns', h: 0.066, items: list.map(([k, lab]) => ({ label: lab, badge: rankIdx(k), style: k === cur ? 'selected' : 'normal', onPress: () => { setSetting('rank', k); again(); } })) });
+  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: 'Del recluta (un galón, lo más fácil) al general (tres estrellas): cada rango pone toda la dificultad de una vez.' },
+    pickRow(RANKS.slice(0, 4)), pickRow(RANKS.slice(4)),
+    { t: 'text', text: `${n}${touched ? ' (retocado)' : own ? ' (tuyo)' : ''}: ${rankSummary()}`, color: '#ffd166' },
+    { t: 'btns', items: [{ label: `Guardar mis ajustes en ${n}`, onPress: () => { rankSave(); say(`${n}: guardado con tus ajustes`, '#3cf0c6', 1.4); again(); } }, ...(touched || own ? [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] : [])] },
+    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows, { accent: '#ffd166' }); m.rebuild = again;
+}
 // Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
 const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
 function armsSummary() {
@@ -1918,6 +1948,7 @@ function lobbyMenu() {
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
+    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
     // enemigos y armas, juntos en una fila (el menú queda más corto y al alcance)
     ...(isCombat() || armsAny() ? [{ t: 'btns', items: [
@@ -2147,7 +2178,7 @@ function endRun(win, manual) {
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
-  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode],
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName() + (rankTouched() ? ' (retocado)' : ''),
     sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],

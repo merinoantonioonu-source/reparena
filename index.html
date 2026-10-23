@@ -487,9 +487,19 @@ function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', '
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
+// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): cada uno pone de una vez las vidas, lo que
+// tardan y cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente y el ritmo de los arcos, los toques y los
+// objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
+const RANKS = [['recluta', 'Recluta'], ['soldado', 'Soldado'], ['cabo', 'Cabo'], ['sargento', 'Sargento'], ['teniente', 'Teniente'], ['capitan', 'Capitán'], ['general', 'General']];
+const RANK_VALS = {
+  lives: [0, 5, 3, 3, 2, 2, 1], walkTime: [22, 17, 14, 11, 9, 7, 5], maxAlive: [2, 3, 5, 6, 7, 8, 10], flySpeed: [2, 2.8, 3.5, 4.5, 5.5, 7, 9], erratic: [50, 70, 100, 115, 130, 150, 180],
+  ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3],
+  tchArrive: [4.5, 3.8, 3, 2.6, 2.2, 1.8, 1.5], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4]
+};
 // Con las piernas (sentadillas, zancadas, peso muerto…): aguantar abajo carga el disparo, y bajar mucho, la recarga profunda
 const DEEP_EX = ['squat', 'lunge', 'jsquat', 'thruster', 'frontsq', 'dlrow'];
 const SCHEMA = [
+  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'Pone de una vez la dificultad de todo: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Luego puedes retocar lo que quieras y guardarlo en tu rango.' },
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
@@ -683,7 +693,7 @@ function setSetting(key, v) {
   onSettingChanged(key);
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -4763,9 +4773,19 @@ function drawIcon(c, k, x, y, S, col) {
   }
   c.restore();
 }
+// Galones del rango: del recluta al sargento, galones (uno, dos, tres; el sargento con su arco debajo); el teniente, el capitán y
+// el general, estrellas (una, dos y tres, las del general doradas)
+function drawRank(c, i, x, y, S, col) {
+  c.save(); c.translate(x, y); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = S * 0.14; c.lineJoin = 'round'; c.lineCap = 'round';
+  const chev = dy => { c.beginPath(); c.moveTo(-S * 0.44, dy + S * 0.17); c.lineTo(0, dy - S * 0.17); c.lineTo(S * 0.44, dy + S * 0.17); c.stroke(); };
+  const star = (sx, r) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.45 : r; c.lineTo(sx + Math.cos(a) * rad, Math.sin(a) * rad); } c.closePath(); c.fill(); };
+  if (i <= 3) { const n = Math.min(3, i + 1), up = i === 3 ? S * 0.14 : 0; for (let k = 0; k < n; k++) chev((k - (n - 1) / 2) * S * 0.3 - up); if (i === 3) { c.beginPath(); c.arc(0, -S * 0.32, S * 0.6, 0.28 * Math.PI, 0.72 * Math.PI); c.stroke(); } }
+  else { const n = i - 3; if (n === 3) c.fillStyle = '#ffd166'; for (let k = 0; k < n; k++) star((k - (n - 1) / 2) * S * 0.46, S * 0.24); }
+  c.restore();
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge;
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -4779,7 +4799,8 @@ class Btn {
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
-    const ax = this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color)
+    if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
+    const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
     c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
   }
@@ -4926,7 +4947,7 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon, badge: it.badge }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
@@ -4952,9 +4973,11 @@ function openMenu(rows, opts = {}) {
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
         }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
       } else {
-        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, avail = CW - LABW - GAP * (n - 1), w = avail / n; let x = X0 + LABW;
+        // una opción entre varias; con f.grid, en rejilla (y, con f.badges, cada una con sus galones: los rangos)
+        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h;
         const row = { f, btns: [] };
-        opts.forEach(([v, lab]) => { row.btns.push(addW(new Btn(lab, w, h, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: 0.38 }), x + w / 2, cy)); x += w + GAP; });
+        opts.forEach(([v, lab], i) => { const x = X0 + LABW + (i % cols) * (w + GAP), yy = f.grid ? cy + h / 2 - bh / 2 - Math.floor(i / cols) * (bh + GAP) : cy;
+          row.btns.push(addW(new Btn(lab, w, bh, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.38, badge: f.badges ? i : undefined }), x + w / 2, yy)); });
       }
     }
     y -= h + GAP;
@@ -8140,6 +8163,36 @@ function foesMenu(back) {
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
+// Rangos: elegir uno pone sus valores (los suyos de serie o los que guardaste en él); si luego retocas algo, se ve
+// «retocado» y puedes guardarlo en ese rango o volver a sus valores
+const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
+const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
+const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
+function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = own[k] !== undefined ? own[k] : RANK_VALS[k][i]; return o; }
+function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; }
+settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
+const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
+function rankSave() { const all = store(RANK_STORE) || {}; all[settings.rank] = Object.fromEntries(Object.keys(RANK_VALS).map(k => [k, settings[k]])); store(RANK_STORE, all); }
+function rankReset() { const all = store(RANK_STORE) || {}; delete all[settings.rank]; store(RANK_STORE, all); applyRank(); }
+// Lo que el rango cambia en el modo elegido, en pocas palabras
+function rankSummary() {
+  const v = settings, L = [v.lives ? `${v.lives} ${v.lives === 1 ? 'vida' : 'vidas'}` : 'vidas infinitas'];
+  if (isCombat()) L.push(`llegan en ${fmtNum(v.walkTime)} s`, `${v.maxAlive} a la vez`, `vuelo a ${fmtNum(v.flySpeed)} km/h`);
+  else if (settings.mode === 'arcs') L.push(`${v.arcRate} arcos/min a ${fmtNum(v.arcSpeed)} km/h`, `espera máx. ${fmtNum(v.arcMaxGap)} s`);
+  else if (settings.mode === 'touch') L.push(`llegan en ${fmtNum(v.tchArrive)} s`, `${fmtNum(v.tchWindow)} s para tocar`);
+  else L.push(`llegan en ${fmtNum(v.barArrive)} s`, v.barWait ? `${v.barWait} s para reventar` : 'sin límite para reventar');
+  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente'); return L.join(' · ');
+}
+function rankMenu(back) {
+  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), own = !!(store(RANK_STORE) || {})[cur];
+  const pickRow = list => ({ t: 'btns', h: 0.066, items: list.map(([k, lab]) => ({ label: lab, badge: rankIdx(k), style: k === cur ? 'selected' : 'normal', onPress: () => { setSetting('rank', k); again(); } })) });
+  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: 'Del recluta (un galón, lo más fácil) al general (tres estrellas): cada rango pone toda la dificultad de una vez.' },
+    pickRow(RANKS.slice(0, 4)), pickRow(RANKS.slice(4)),
+    { t: 'text', text: `${n}${touched ? ' (retocado)' : own ? ' (tuyo)' : ''}: ${rankSummary()}`, color: '#ffd166' },
+    { t: 'btns', items: [{ label: `Guardar mis ajustes en ${n}`, onPress: () => { rankSave(); say(`${n}: guardado con tus ajustes`, '#3cf0c6', 1.4); again(); } }, ...(touched || own ? [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] : [])] },
+    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const m = openMenu(rows, { accent: '#ffd166' }); m.rebuild = again;
+}
 // Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
 const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
 function armsSummary() {
@@ -8167,6 +8220,7 @@ function lobbyMenu() {
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
+    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
     // enemigos y armas, juntos en una fila (el menú queda más corto y al alcance)
     ...(isCombat() || armsAny() ? [{ t: 'btns', items: [
@@ -8396,7 +8450,7 @@ function endRun(win, manual) {
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
-  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode],
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName() + (rankTouched() ? ' (retocado)' : ''),
     sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],

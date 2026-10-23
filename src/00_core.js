@@ -50,9 +50,19 @@ function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', '
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
+// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): cada uno pone de una vez las vidas, lo que
+// tardan y cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente y el ritmo de los arcos, los toques y los
+// objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
+const RANKS = [['recluta', 'Recluta'], ['soldado', 'Soldado'], ['cabo', 'Cabo'], ['sargento', 'Sargento'], ['teniente', 'Teniente'], ['capitan', 'Capitán'], ['general', 'General']];
+const RANK_VALS = {
+  lives: [0, 5, 3, 3, 2, 2, 1], walkTime: [22, 17, 14, 11, 9, 7, 5], maxAlive: [2, 3, 5, 6, 7, 8, 10], flySpeed: [2, 2.8, 3.5, 4.5, 5.5, 7, 9], erratic: [50, 70, 100, 115, 130, 150, 180],
+  ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3],
+  tchArrive: [4.5, 3.8, 3, 2.6, 2.2, 1.8, 1.5], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4]
+};
 // Con las piernas (sentadillas, zancadas, peso muerto…): aguantar abajo carga el disparo, y bajar mucho, la recarga profunda
 const DEEP_EX = ['squat', 'lunge', 'jsquat', 'thruster', 'frontsq', 'dlrow'];
 const SCHEMA = [
+  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'Pone de una vez la dificultad de todo: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Luego puedes retocar lo que quieras y guardarlo en tu rango.' },
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
@@ -246,7 +256,7 @@ function setSetting(key, v) {
   onSettingChanged(key);
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
