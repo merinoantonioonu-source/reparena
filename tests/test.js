@@ -475,7 +475,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
-  for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
+  for (const [name, ex, extra] of [['slam', 'slam', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
     const parts = new Set(); let fromSide = true;
     await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => { parts.add(x.part + ':' + x.move); if (x.move === 'side' && Math.abs(x.from.x) < 2) fromSide = false; }); }), 200,
@@ -483,10 +483,25 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('   movimientos:', [...parts].join(' '));
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+  // Slam: obliga a moverse de verdad (amebas a los lados, muy abajo, delante o arriba; diamantes a ras de suelo) y alterna de lado;
+  // agachándose sin más (sin pasos laterales) se escapan las de los lados
+  { const P = { side: [], duck: [], low: [], fwd: [], jump: 0, sides: [] }, seen = new Set(); let lastSide = 0, alt = 0, same = 0;
+    await runConfig('Toques slam (posiciones)', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 24, tchHands: 35, tchArrive: 1.5, tchGap: 1.2 }, t => { assist(); RA.touches.forEach(x => { if (seen.has(x)) return; seen.add(x);
+      const S = RA.TCH.ref; if (x.move === 'lside') P.side.push(Math.abs(x.pos.x)); if (x.move === 'duck') P.duck.push(S - x.pos.y); if (x.move === 'low') P.low.push(x.pos.y); if (x.move === 'lfwd') P.fwd.push(-x.pos.z); if (x.move === 'jump') P.jump++;
+      const sd = Math.sign(x.pos.x); if (sd && Math.abs(x.pos.x) > 0.1) { if (lastSide) (sd !== lastSide ? alt++ : same++); lastSide = sd; } }); }, 200, s => '');
+    const mn = a => a.length ? Math.min(...a) : 0, mx = a => a.length ? Math.max(...a) : 9;
+    log(`slam: side amebas ${P.side.length} at ≥ ${mn(P.side).toFixed(2)} m · deep ones ${P.duck.length} ≥ ${mn(P.duck).toFixed(2)} m down · floor diamonds ${P.low.length} ≤ ${mx(P.low).toFixed(2)} m high · forward ${P.fwd.length} · jumps ${P.jump} · side changes ${alt} vs repeats ${same}`);
+    if (!P.side.length || mn(P.side) < 0.4 || !P.duck.length || mn(P.duck) < RA.settings.squatDepth / 100 || !P.low.length || mx(P.low) > 0.55 || alt < same) errors.push('Slam: los objetivos no obligan a moverse (a los lados, muy abajo, a ras de suelo) o no alternan de lado');
+    RA.PV.keys.KeyG = false; RA.PV.crouch = false; let missSide = 0, hm = null;
+    await runConfig('Toques slam solo agachándose', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 10, tchHands: 0, tchArrive: 1.5, tchGap: 1.5 }, t => {
+      if (RA.PV.home) { hm = RA.PV.home.clone(); RA.PV.home = null; } if (hm) { RA.camera.position.set(hm.x, hm.y - ((t % 2) < 1 ? 0.4 : 0), hm.z); RA.PV.y = RA.camera.position.y; } // la cabeza solo sube y baja
+      RA.touches.forEach(x => { if (x.move === 'lside' && x.judged && !x._c) { x._c = 1; if (x.mode === 'pass') missSide++; } }); }, 200, s => '');
+    log(`slam just squatting: side amebas missed ${missSide}`);
+    if (!missSide) errors.push('Slam: sin paso lateral no deberían poder tocarse las amebas de los lados'); }
   // se pueden tocar mientras viajan: la cabeza va a buscar la ameba (o la mano el diamante) a mitad de camino,
   // y entre un toque y el siguiente vuelve a su postura de partida
   const midway = new Set(); let home = null;
-  await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
+  await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'approach' && RA.TCH.clock > o.spawnT + 1.5);
     const ready = x && (x.part === 'head' ? RA.TCH.headArm.armed : RA.TCH.arm[x.hand].armed);
@@ -496,7 +511,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }, 120, s => s.reps < 4 ? `tocando a mitad de camino solo cuenta ${s.reps}` : midway.size < 4 ? 'no se tocaron a mitad de camino' : '');
   // la ameba se mueve mucho mientras llega (serpentea y sube y baja) y casi nada esperando delante de ti
   { let far = 0, near = 0;
-    await runConfig('Toques ameba que se mueve', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 3, lives: 0, tchArrive: 3, tchGap: 3, tchHands: 0 }, () => {
+    await runConfig('Toques ameba que se mueve', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 3, lives: 0, tchArrive: 3, tchGap: 3, tchHands: 0 }, () => {
       for (const x of RA.touches) { if (!x.alive || !x.ring) continue; const p = x.root.position, d = Math.hypot(p.x - (x.mode === 'wait' ? x.pos.x : p.x), p.y - (x.mode === 'wait' ? x.pos.y : p.y));
         if (x.mode === 'approach') { const k = (p.z - x.from.z) / (x.pos.z - x.from.z), lx = x.from.x + (x.pos.x - x.from.x) * k; far = Math.max(far, Math.abs(p.x - lx)); }
         else if (x.mode === 'wait') near = Math.max(near, d); }
@@ -504,7 +519,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`ameba sway: off its path while coming ${(far * 100).toFixed(0)} cm · waiting ${(near * 100).toFixed(1)} cm`);
     if (far < 0.15 || near > 0.04) errors.push('Toques: la ameba no se mueve lo bastante al llegar, o se mueve demasiado esperando'); }
   // sin volver a la postura de partida, solo cuenta el primero: la cabeza se queda abajo y va de ameba en ameba
-  await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+  await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'combo', comboBase: 'stand', comboStand: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged), w = x ? RA.arena.localToWorld(x.pos.clone()) : home.clone().add(new THREE.Vector3(0, -0.2, 0)); // (adonde llega, sin su bamboleo)
     RA.camera.position.set(w.x, Math.min(w.y, home.y - 0.15), w.z); RA.PV.y = RA.camera.position.y;
@@ -512,7 +527,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // diamantes: solo vale la mano que piden, y entre uno y otro esa mano tiene que volver
   let flip = 1;
   for (const [name, mode, want] of [['con la otra mano', 'wrong', 0], ['sin retirar la mano', 'stay', 1], ['retirando la mano', 'back', 4], ['con un puñetazo rápido que la atraviesa', 'fast', 4]]) {
-    await runConfig('Toques diamantes ' + name, { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 100 }, () => {
+    await runConfig('Toques diamantes ' + name, { ...base, mode: 'touch', exercise: 'combo', comboBase: 'stand', comboStand: 'punch', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 100 }, () => {
       if (RA.PV.home) RA.PV.home = null;
       const x = RA.touches.find(o => o.alive && !o.judged); if (!x) { if (mode === 'back') RA.PV.handAt = null; return; }
       const armed = RA.TCH.arm[x.hand].armed, w = x.center(new THREE.Vector3());
@@ -525,7 +540,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   RA.PV.handSide = null;
   // en la vida real la cabeza no pasa justo por el centro ni vuelve exactamente a su altura: también tiene que contar
-  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'wait'), w = x && RA.TCH.headArm.armed ? RA.arena.localToWorld(x.pos.clone()).add(new THREE.Vector3(0.12, 0.02, 0.05)) : home.clone().add(new THREE.Vector3(0.05, -0.07, 0));
     RA.camera.position.copy(w); RA.PV.y = w.y;
@@ -535,9 +550,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Toques flexiones hacia los hombros', { ...base, mode: 'touch', exercise: 'pushup', waves: 1, repsWave: 12, lives: 0, tchArrive: 2, tchGap: 1.5, tchHands: 100 }, t => { RA.PV.crouch = true; RA.touches.forEach(x => { maxX = Math.max(maxX, Math.abs(x.pos.x)); if (x.part === 'hand') gems++; }); }, 60,
     s => gems ? 'en flexiones no debería haber diamantes' : maxX < 0.06 ? 'las amebas de las flexiones siempre van al centro' : '');
   RA.PV.handAt = null;
-  await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
+  await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
-  await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
+  await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
     const a = [...arr].sort((x, y) => x - y), off = a.slice(1).map((x, i) => (x - a[i]) / 0.5).filter(k => Math.abs(k - Math.round(k)) > 0.04 || Math.round(k) < 1);
     return a.length < 5 ? 'no llegan objetivos' : off.length ? 'los objetivos no llegan en el pulso: ' + a.join(' ') : '';
   });
@@ -717,8 +732,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (aw.includes('Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
   // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
   press('Toques'); frame(1); const tw = exLabels();
-  log('Toques exercises:', ['Sentadillas', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'));
-  if (!['Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl')) errors.push('el menú de Toques no ofrece sus ejercicios');
+  log('Toques exercises:', ['Slam', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'), 'squats only as Slam', !tw.includes('Sentadillas'));
+  if (!['Slam', 'Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl') || tw.includes('Sentadillas')) errors.push('el menú de Toques no ofrece sus ejercicios (con el Slam en lugar de sentadillas y zancadas)');
   RA.setSetting('comboFloor', 'push'); press('Combinado'); frame(1); press('Plancha'); frame(1); RA.activeWidgets().filter(w => w.label === 'Plancha')[1].onPress(); frame(1); press('Toque'); frame(1);
   log('combo floor moves:', RA.settings.comboBase, RA.settings.comboFloor);
   if (RA.settings.comboBase !== 'floor' || RA.settings.comboFloor !== 'push,plank,tap') errors.push('no se eligen los movimientos del combinado: ' + RA.settings.comboFloor);
@@ -1220,7 +1235,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('pistol', 0);
   // Toques con espada: bloques que se cortan en la dirección de su flecha, en la postura que piden
   for (const [name, mode, want] of [['bien', 'ok', 6], ['al revés de la flecha', 'reverse', 0], ['sin agacharse ni inclinarse', 'pose', 0], ['con una estocada recta', 'stab', 0]]) {
-    for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
+    for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'slam', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
     const moves = new Set(); let maxDeb = 0, deb0 = RA.debris.length; // la base baja si desaparecen restos de antes
@@ -1228,10 +1243,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
     for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
       const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
-      XRS.headY = 1.7; XRS.headX = 0;
+      XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0;
       if (t) {
         moves.add(t.move);
-        if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; }
+        if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; if (t.move === 'cutFwd') XRS.headZ = -0.22; if (t.move === 'cutHigh') XRS.headY = 1.7 + RA.settings.jumpHeight / 100 * 0.7 + 0.03; }
         frame(1, 16, xrFrame);
         const c = RA.arena.localToWorld(t.pos.clone()), dir = t.normal.clone().negate(), sw = t.cutDir.clone().multiplyScalar(mode === 'reverse' ? -1 : 1);
         holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, -0.3); FR('prep', t); // se prepara delante, lejos del bloque (al venir de la retirada, la hoja se mueve en la dirección de la flecha)
