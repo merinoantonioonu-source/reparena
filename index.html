@@ -299,9 +299,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-plank1" value="plank1">
         <span class="tag">Combate · visor y muñecas</span><b>Plancha con un brazo</b>
         <small>En plancha sobre las manos, levanta un brazo para disparar a las arañas de ese lado. Llegan por los dos costados.</small></label>
-      <label class="card"><input type="radio" name="exercise" id="ex-plankrow" value="plankrow">
-        <span class="tag">Mancuernas · visor y muñecas</span><b>Remo en plancha</b>
-        <small>En plancha sobre las mancuernas, tira de una hacia la cadera (el codo hacia atrás) para disparar a las arañas de ese lado.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-splank" value="splank">
         <span class="tag">Combate · altura del visor</span><b>Plancha lateral</b>
         <small>De lado sobre el antebrazo, con la cadera arriba: cada pocos segundos aguantados, un disparo. Si cae la cadera, vuelve a empezar. Cambia de lado en cada descanso.</small></label>
@@ -576,7 +573,7 @@ const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen 
 const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
@@ -585,7 +582,7 @@ const BODY_ZONES = [
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
-  ['Espalda y agarre', ['plankrow', 'row', 'pullup', 'hang']],
+  ['Espalda y agarre', ['row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
 ];
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
@@ -626,7 +623,6 @@ const SCHEMA = [
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
   { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
-  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
@@ -718,8 +714,8 @@ const SCHEMA = [
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
-  { key: 'barSides', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'toggle', def: 0, modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Las pompas y los bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en cada repetición trabaje más un brazo. Se alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo.' },
-  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => !!settings.barSides },
+  { key: 'barMix', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'num', min: 0, max: 100, step: 10, def: 0, unit: '%', zero: 'No', modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Cuántas pompas y bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en esa repetición trabaje más un brazo; los demás llegan al centro. Se reparten por igual a lo largo de la oleada y los de los lados alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo. 100 % = todos por los lados.' },
+  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => settings.barMix > 0 },
   { key: 'hangPit', g: 'barras', label: 'Debajo de ti, colgado', short: 'Debajo', type: 'choice', opts: [['pool', 'Charco'], ['vortex', 'Remolino']], def: 'pool', modes: ['bars'], ex: ['hang'], hint: 'Charco con tentáculos, o un remolino que quiere engullirte y se va cerrando hasta cerrarse justo al cumplir el tiempo de la oleada. Si te sueltas antes, te engulle y la oleada termina.' },
   { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, te has soltado. También cuenta ver las manos por debajo de la barra.' },
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
@@ -788,6 +784,7 @@ function fmtVal(f, v = settings[f.key]) {
   }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  if (s.barMix === undefined && s.barSides) settings.barMix = 50; // antes, todos por los lados o ninguno: ahora se mezclan
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
   if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
   // la dificultad creciente subía un 3 % por oleada y apenas se notaba: a quien la tenía así (lo de antes) se le pasa a 6 % una vez
@@ -829,9 +826,9 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 // Con pesas en las manos (no se abre la pausa juntando los dedos)
-const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
+const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
-const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'plankrow';
+const oneArm = () => settings.exercise === 'plank1';
 const deepOn = () => settings.deepDrop > 0 && DEEP_EX.includes(settings.exercise) && isCombat();
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
 const isCombat = () => settings.mode === 'combat';
@@ -4686,7 +4683,7 @@ const fx = {
   droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
   // Un aro de agua que revienta: el agua sale despedida hacia fuera desde todo el borde, con gotas grandes, rocío y un destello
-  waterBurst(pos, n, rad, color) {
+  waterBurst(pos, n, rad, color, face = null) {
     const u = _wdd.set(0, 1, 0); if (Math.abs(n.dot(u)) > 0.9) u.set(1, 0, 0); u.addScaledVector(n, -u.dot(n)).normalize();
     const w = new V3().crossVectors(n, u), r = new V3(), pale = [lerp(color[0], 1, 0.5), lerp(color[1], 1, 0.5), lerp(color[2], 1, 0.5)];
     for (let i = 0; i < 44; i++) {
@@ -4697,6 +4694,14 @@ const fx = {
     for (let i = 0; i < 26; i++) { const a = rand(0, TAU); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)); PNORM.add({ pos: pos.clone().addScaledVector(r, rad), v: r.clone().multiplyScalar(rand(0.6, 2.4)).add(new V3(0, rand(0, 1.2), 0)), life: rand(0.35, 0.8), c0: pale, c1: [0.6, 0.9, 1], a: 0.8, s0: rand(0.01, 0.025), s1: 0.006, tile: 0, g: 6, floor: true, fin: 0.01 }); }
     for (let i = 0; i < 8; i++) PNORM.add({ pos: pos.clone().add(rv(rad * 0.6)), v: rv(0.25), life: rand(0.5, 0.9), c0: [0.85, 0.95, 1], c1: [0.7, 0.85, 0.9], a: 0.25, s0: rad * 0.6, s1: rad * 1.8, tile: 1, drag: 2, fin: 0.05 }); // rocío
     fx.glow(pos, pale, rad * 3, 0.12);
+    if (face) { // la reventaste con la cabeza: el agua salta también por delante de la cara y cae a través de la vista
+      const f = fwd(), sd = new V3(f.z, 0, -f.x).normalize();
+      for (let i = 0; i < 56; i++) {
+        const p = face.clone().addScaledVector(f, rand(0.12, 0.4)).addScaledVector(sd, rand(-0.22, 0.22)).add(new V3(0, rand(-0.05, 0.2), 0));
+        waterDrop(p, sd.clone().multiplyScalar(rand(-0.5, 0.5)).addScaledVector(f, rand(-0.1, 0.4)).add(new V3(0, rand(0.2, 1.4), 0)), rand(0.004, i % 3 ? 0.009 : 0.016), rand(0.6, 1.1));
+      }
+      for (let i = 0; i < 10; i++) PNORM.add({ pos: face.clone().addScaledVector(f, rand(0.18, 0.35)).addScaledVector(sd, rand(-0.15, 0.15)).add(new V3(0, rand(-0.06, 0.1), 0)), v: new V3(rand(-0.1, 0.1), rand(-0.25, 0.05), rand(-0.1, 0.1)), life: rand(0.5, 0.9), c0: [0.85, 0.97, 1], c1: [0.7, 0.88, 0.92], a: 0.22, s0: rand(0.05, 0.09), s1: rand(0.14, 0.22), tile: 1, drag: 2, fin: 0.05 }); // rocío
+    }
   },
   trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
@@ -5491,7 +5496,7 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
+    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
@@ -5684,7 +5689,6 @@ const DEMO = {
   chop: { P: 2.6, high: 2.3, ball: true, keys: [[0, P_(STAND, ST_ARMS([150, 160], [146, 156]))], [0.4, P_(SQUAT, { hip: [-0.14, 0.66], torso: 34, ...ST_ARMS([40, 30], [36, 26]) })], [0.55, P_(SQUAT, { hip: [-0.14, 0.66], torso: 34, ...ST_ARMS([40, 30], [36, 26]) })], [1, P_(STAND, ST_ARMS([150, 160], [146, 156]))]], fire: 0.42, src: 'armF', desc: 'Con la pesa arriba a un lado, bájala en diagonal hasta la rodilla contraria girando el tronco, como un leñador.' },
   dlrow: { P: 3.0, bar: true, keys: [[0, STAND], [0.35, HINGE], [0.5, HINGE], [0.85, STAND], [1, STAND]], fire: 0.84, low: 0.42, desc: 'Baja la barra pegada a las piernas, con la cadera atrás y la espalda recta, y ponte de pie. Al subir, disparas; aguantar abajo da más fuerza.' },
   plank1: { P: 2.6, keys: [[0, PLANK_UP], [0.3, P_(PLANK_UP, { armF: { ang: [100, 100] } })], [0.55, P_(PLANK_UP, { armF: { ang: [100, 100] } })], [0.8, PLANK_UP], [1, PLANK_UP]], fire: 0.35, src: 'armF', tiny: true, spider: true, desc: 'En plancha sobre las dos manos, cuerpo recto: levanta un brazo al frente para disparar a las arañas de ese lado.' },
-  plankrow: { P: 2.6, dumb: true, keys: [[0, PLANK_UP], [0.35, P_(PLANK_UP, { armF: { to: [0.0, 0.42], b: -1 } })], [0.5, P_(PLANK_UP, { armF: { to: [0.0, 0.42], b: -1 } })], [0.85, PLANK_UP], [1, PLANK_UP]], fire: 0.38, src: 'armF', tiny: true, desc: 'En plancha con una mancuerna en cada mano: sube una hacia las costillas con el codo pegado, sin girar la cadera.' },
   splank: { P: 3.2, keys: [[0, { hip: [-0.36, 0.18], torso: 76, head: -6, legF: { to: [-1.23, 0.04], b: 1 }, legB: { to: [-1.25, 0.06], b: 1 }, armF: { ang: [5, 90] }, armB: { ang: [178, 180] } }], [0.5, { hip: [-0.36, 0.2], torso: 76, head: -6, legF: { to: [-1.23, 0.04], b: 1 }, legB: { to: [-1.25, 0.06], b: 1 }, armF: { ang: [5, 90] }, armB: { ang: [178, 180] } }], [1, { hip: [-0.36, 0.18], torso: 76, head: -6, legF: { to: [-1.23, 0.04], b: 1 }, legB: { to: [-1.25, 0.06], b: 1 }, armF: { ang: [5, 90] }, armB: { ang: [178, 180] } }]], fire: 0.9, src: 'armB', low: 0.5, desc: 'De lado sobre el antebrazo, cadera arriba y cuerpo recto: cada pocos segundos aguantados, un disparo.' },
   superman: { P: 3.2, keys: [[0, { hip: [-0.3, 0.12], torso: 90, head: 0, legF: { to: [-1.18, 0.05], b: 1 }, legB: { to: [-1.2, 0.05], b: 1 }, armF: { ang: [92, 92] }, armB: { ang: [92, 92] } }], [0.3, { hip: [-0.3, 0.13], torso: 72, head: -10, legF: { to: [-1.16, 0.16], b: 1 }, legB: { to: [-1.18, 0.16], b: 1 }, armF: { ang: [120, 122] }, armB: { ang: [118, 120] } }], [0.75, { hip: [-0.3, 0.13], torso: 72, head: -10, legF: { to: [-1.16, 0.16], b: 1 }, legB: { to: [-1.18, 0.16], b: 1 }, armF: { ang: [120, 122] }, armB: { ang: [118, 120] } }], [1, { hip: [-0.3, 0.12], torso: 90, head: 0, legF: { to: [-1.18, 0.05], b: 1 }, legB: { to: [-1.2, 0.05], b: 1 }, armF: { ang: [92, 92] }, armB: { ang: [92, 92] } }]], fire: 0.72, low: 0.5, lowFly: true, desc: 'Boca abajo con los brazos estirados: sube el tronco (y las piernas) y aguanta arriba los segundos que pidas.' },
   row: { P: 2.8, dip: 0.95, dipX: 0.11, keys: [[0, { hip: [-0.346, 0.253], torso: 76, head: 40, legF: { to: [-1.2, 0.04], b: 1 }, legB: { to: [-1.22, 0.04], b: 1 }, armF: { to: [0.11, 0.95], b: -1 }, armB: { to: [0.09, 0.95], b: -1 } }], [0.42, { hip: [-0.46, 0.517], torso: 57, head: 40, legF: { to: [-1.2, 0.04], b: 1 }, legB: { to: [-1.22, 0.04], b: 1 }, armF: { to: [0.11, 0.95], b: -1 }, armB: { to: [0.09, 0.95], b: -1 } }], [0.55, { hip: [-0.46, 0.517], torso: 57, head: 40, legF: { to: [-1.2, 0.04], b: 1 }, legB: { to: [-1.22, 0.04], b: 1 }, armF: { to: [0.11, 0.95], b: -1 }, armB: { to: [0.09, 0.95], b: -1 } }], [1, { hip: [-0.346, 0.253], torso: 76, head: 40, legF: { to: [-1.2, 0.04], b: 1 }, legB: { to: [-1.22, 0.04], b: 1 }, armF: { to: [0.11, 0.95], b: -1 }, armB: { to: [0.09, 0.95], b: -1 } }]], fire: 0.45, low: 0.48, desc: 'Colgado bajo las paralelas, cuerpo recto y talones en el suelo: tira hasta acercar el pecho a la barra.' },
@@ -7264,8 +7268,11 @@ function beastFlyer(kind) {
   const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
   model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
-  model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); root.add(model); // (los pies, abajo: el centro del bicho queda donde vuela)
-  return { root, model, mat, bones: { body: model }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
+  // (los pies, abajo: el centro del bicho queda donde vuela). El balanceo y el alabeo del vuelo van en un grupo aparte: si
+  // movieran el modelo, le quitarían ese desplazamiento y el cuerpo volaría por encima de la diana
+  const body = new THREE.Group(); root.add(body);
+  model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); body.add(model);
+  return { root, model, mat, bones: { body }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
 }
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
@@ -7292,9 +7299,13 @@ class Flyer {
       // en el superman y la plancha lateral vuelan bajo, a la altura de tu cabeza (nunca por encima de 0,8 m)
       const tgt = tmpA.set(0, low ? lowFlyY() : Math.max(push ? 0.2 : 1.0, HL.y - (push ? 0.05 : 0.12)), 0);
       tgt.x = HL.x * 0.6; tgt.z = HL.z * 0.6;
-      const to = tmpB.subVectors(tgt, this.base), d = to.length(), reach = push ? 0.32 : 0.85;
+      // en el superman el disparo se carga aguantando arriba: se quedan esperando algo más lejos, a la vista, y solo pican
+      // después de dar tiempo a una repetición entera y nunca mientras aguantas arriba
+      const sup = settings.exercise === 'superman', to = tmpB.subVectors(tgt, this.base), d = to.length(), reach = push ? 0.32 : sup ? 1.4 : 0.85;
+      if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up')) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
@@ -7637,7 +7648,8 @@ function armStep(kind, side, t, dt) {
       // por encima de la cabeza (o junto a la cara, al empezar a empujar) las cámaras pierden la mano: si se perdió subiendo, cuenta
       if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
       if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
-    } else if (d.lost > 0.5) d.state = 'down';
+    } else if (d.state === 'hold' && d.lost > 0.25) { d.state = 'top'; return { top: true, ...d.ev, pow: d.pow }; } // junto a la cara la mano se pierde a menudo: sale con la carga que llevaba
+    else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
   const r = h.wrist.y - head.p.y;
@@ -7649,10 +7661,20 @@ function armStep(kind, side, t, dt) {
   }
   d.lost = 0;
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
+  // curl: aguantando la pesa a la altura del hombro (el brazo doblado, haciendo fuerza) el disparo se carga, como abajo en
+  // la sentadilla: un nivel cada POW_STEP s, hasta ×4; sale al empezar a bajarla
+  if (d.state === 'hold') {
+    if (r >= d.bottom + range * 0.75) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } return null; }
+    d.state = 'top'; return { top: true, ...d.ev, pow: d.pow };
+  }
   if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; d.lostUp = false; if (press) onCharge(); } }
   else if (d.state === 'rising') {
     d.max = Math.max(d.max, r);
-    if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) { const dur = t - d.t0; d.state = 'top'; return { top: true, perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }; }
+    if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) {
+      const dur = t - d.t0, ev = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
+      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); return null; }
+      d.state = 'top'; return { top: true, ...ev };
+    }
     if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
   } else if (r < d.bottom + 0.08) d.state = 'down';
   return null;
@@ -7665,12 +7687,12 @@ function pairStep(kind, t, dt) {
   for (const side of ['left', 'right']) {
     const ev = armStep(kind, side, t, dt); if (!ev) continue;
     if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
-    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast }); P.side = null; }
-    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast });
+    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
+    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
   }
   if (P.side) {
     const other = P.side === 'left' ? 'right' : 'left', lost = hands[other].ok ? 0 : (kind === 'press' ? DET.pr : DET.curl)[other].lost;
-    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast }); P.side = null; } // la otra mano no se ve: vale con una
+    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast, pow: P.pow }); P.side = null; } // la otra mano no se ve: vale con una
     else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
   }
 }
@@ -7695,18 +7717,17 @@ function chainStep(kind, t, dt) {
   if (t < T.quiet) return; // recién aterrizado: la caída del salto no es otra sentadilla
   T.hold = null;
   if (!T.pending) vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: K.low || '¡Baja más!', defer: o => { T.hold = o; }, power: isCombat() && !pistolOn() && !swordActive() });
-  if (S.state === 'down' && S.charged && !T.armed && !T.pending) { T.armed = true; T.ref = S.ref; for (const s of ['left', 'right']) { T.seen[s] = false; T.low[s] = 9; T.lostT[s] = 0; } }
+  if (S.state === 'down' && S.charged && !T.armed && !T.pending) { T.armed = true; T.ref = S.ref; for (const s of ['left', 'right']) { T.seen[s] = false; T.lostT[s] = 0; } }
   if (T.hold) { T.pending = T.hold; T.t0 = t; T.armed = false; }
   if (!T.pending && !T.armed) return;
   if (K.jump) { if (head.p.y - T.ref >= settings.jsqJump / 100 && JUMP.fastT < 0.3) T.seen.left = T.seen.right = true; }
   else for (const s of ['left', 'right']) {
-    const h = hands[s], rr = settings.rowLift / 100;
+    const h = hands[s];
     if (h.ok) {
       const r = h.wrist.y - head.p.y;
-      if (K.row) { T.low[s] = Math.min(T.low[s], r); if (r - T.low[s] >= rr) T.seen[s] = true; }
-      else { arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; } // f: cuánto está por delante de los ojos
+      arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; // f: cuánto está por delante de los ojos
       T.last[s] = r; T.lostT[s] = 0;
-    } else { T.lostT[s] += dt; if (T.lostT[s] > 0.15 && (K.row ? T.last[s] - T.low[s] >= rr * 0.6 : K.lostOk(T.last[s]))) T.seen[s] = true; }
+    } else { T.lostT[s] += dt; if (T.lostT[s] > 0.15 && K.lostOk(T.last[s])) T.seen[s] = true; }
   }
   if (!T.pending) return;
   const L = T.seen.left, R = T.seen.right, one = !K.both || T.lostT.left > 0.3 || T.lostT.right > 0.3;
@@ -7931,7 +7952,7 @@ function runDetectors(t, dt) {
   } else if (oneArm()) {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado.
     // En el remo en plancha, la mancuerna tiene que subir el recorrido del remo
-    const P = DET.pl, y = head.p.y, LIFT = settings.exercise === 'plankrow' ? settings.rowLift / 100 : 0.18;
+    const P = DET.pl, y = head.p.y, LIFT = 0.18;
     if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
     // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
@@ -9177,7 +9198,13 @@ function barLat(out) {
   return out.applyAxisAngle(_up, -arena.rotation.y);
 }
 // Por los lados: cada objetivo se para apartado barOffset cm hacia su lado (y el que espera detrás, más allá de ese lado)
-const barSidesOn = () => !!settings.barSides && settings.exercise !== 'hang';
+const barSidesOn = () => settings.barMix > 0 && settings.exercise !== 'hang';
+// ¿Este llega por un lado? Se reparten por igual (los del centro, entre medias) y los de los lados alternan izquierda y derecha
+function barNextSide() {
+  if (!barSidesOn()) return 0;
+  BAR.acc = (BAR.acc === undefined ? 0.5 : BAR.acc) + settings.barMix / 100; if (BAR.acc < 1 - 1e-6) return 0;
+  BAR.acc -= 1; return (BAR.side = -(BAR.side || 1));
+}
 function barSlot(idx, out, side = 0) {
   barTopPoint(out);
   if (barSidesOn() && side) { out.addScaledVector(barLat(_bq), side * (settings.barOffset / 100 + 0.42 * idx)); if (idx) out.y += 0.06; return out; }
@@ -9211,7 +9238,7 @@ class HeadTarget {
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
-    this.side = barSidesOn() ? (BAR.side = -(BAR.side || 1)) : 0; // izquierda y derecha, por turnos (los dos brazos por igual)
+    this.side = barNextSide(); // por un lado (izquierda y derecha, por turnos: los dos brazos por igual) o al centro
     barSlot(this.slotIndex(), this.slot, this.side);
     if (this.side) { // por los lados: entra por su lado, algo por encima, y se para apartado del centro
       this.pos.copy(this.slot).addScaledVector(barLat(_ba), this.side * 2.6); this.pos.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.4, 0.7);
@@ -9788,7 +9815,7 @@ class TouchTarget {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
       SND.waterPop(c, !!this.hold);
-      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
+      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb, head.p);
       this.mode = 'burst'; this.popT = 0; return;
     }
     if (this.part === 'cut') { this.split(c, rgb); return; }

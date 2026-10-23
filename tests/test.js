@@ -165,6 +165,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }, 420, s => s.kills < 4 ? 'la plancha con un brazo no mata arañas' : sides.size < 2 ? 'las arañas no llegan por los dos lados' : '');
   RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
   const supCfg = { ...base, mode: 'flyers', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 8 };
+  // a ritmo normal (subir, aguantar 2 s y bajar: una cada 4,5 s) los voladores no deben picar antes de dar tiempo a cargar
+  { let A = null; await runConfig('superman: tiempo para cargar', { ...base, mode: 'combat', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 7, maxAlive: 5, waves: 1, repsWave: 14, lives: 0 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 4.5) < 3.2; }, 300, s => { A = { ...s }; });
+    if (A && (A.taken > 2 || A.reps < 6)) errors.push(`superman: los voladores pican antes de que dé tiempo a cargar el disparo (${A.taken} picotazos en ${A.reps} repeticiones)`); }
   await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, watchPanels(t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }), 420, panelCheck('superman', s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : ''));
   await runConfig('Enjambre+superman demasiado corto', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; }, 30, s => s.reps ? 'subir y bajar rápido no debería disparar' : !s.partial ? 'debería avisar de que hay que aguantar' : '', true);
   await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
@@ -217,8 +220,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
   for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
-    await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex, rowLift: 16 }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
-    await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1, rowLift: 16 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
+    await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
+    await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
   }
   // dificultad creciente: en cada oleada superada, enemigos antes y más a la vez y algo más de recorrido; sin ella, igual
@@ -367,12 +370,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('inchworm sin las huellas del medio', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
     s => s.reps ? 'inchworm: sin pasar por todas las huellas no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que faltan huellas' : '', true);
   RA.PV.iwAuto = RA.PV.iwSkip = false; RA.PV.iwT = 0;
-  const rsides = new Set();
-  await runConfig('Combate remo en plancha', { ...base, mode: 'combat', foes: 'flyers', exercise: 'plankrow', walkTime: 10 }, t => {
-    RA.PV.keys.KeyQ = (t % 3) > 0.2 && (t % 3) < 1.0; RA.PV.keys.KeyE = (t % 3) > 1.5 && (t % 3) < 2.3;
-    RA.enemies.forEach(e => rsides.add(e.pos.x < 0 ? 'izq' : 'der'));
-  }, 420, s => s.kills < 4 ? 'el remo en plancha no mata arañas' : rsides.size < 2 ? 'en el remo en plancha las arañas no llegan por los dos lados' : '');
-  RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
   // las compuertas son sólidas: ningún robot se mete en sus pilares o en los bloques de los lados, ni cruza el hueco con las puertas cerradas
   { let inSolid = 0, closedPass = 0, frames = 0;
     await runConfig('Robots y compuertas sólidas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', maxAlive: 6, spawnGap: 0.4, walkTime: 8, waves: 2, repsWave: 6 }, t => {
@@ -613,9 +610,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('dipBars', '2');
   // por los lados: llegan por un lado y se paran apartados del centro, alternando (los dos brazos por igual); y nunca dos
   // a la vez: espaciados una repetición (±15 %)
-  for (const [ex, target, sides] of [['pullup', 'bubbles', 1], ['row', 'bugs', 1], ['pullup', 'bubbles', 0]]) {
+  for (const [ex, target, sides] of [['pullup', 'bubbles', 100], ['row', 'bugs', 100], ['pullup', 'bubbles', 0], ['row', 'bubbles', 50]]) {
     const B = { lat: [], from: [], arr: [], seen: new Set(), arrived: new Set() };
-    await runConfig(`Barras ${ex} ${target}${sides ? ' por los lados' : ''}`, { ...bars, exercise: ex, barTarget: target, barSides: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
+    await runConfig(`Barras ${ex} ${target}${sides ? ` por los lados ${sides} %` : ''}`, { ...bars, exercise: ex, barTarget: target, barMix: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
       pullSim(4.2)(t); // (más despacio que el hueco entre objetivos: así llegan todos y esperan)
       const ax = new THREE.Vector3(); { const e = RA.eqPose(); const c = Math.cos(e.yaw), s_ = Math.sin(e.yaw); ax.set(c, 0, -s_).applyAxisAngle(new THREE.Vector3(0, 1, 0), -RA.arena.rotation.y); }
       for (const e of RA.enemies) { if (e.type !== 'target') continue;
@@ -624,11 +621,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }, 420, s => '');
     const gaps = B.arr.slice(1).map((x, i) => x - B.arr[i]), G = ex === 'row' ? 2.6 : 3.2, L = B.lat.filter(x => x < -0.1).length, R = B.lat.filter(x => x > 0.1).length;
     log(`bars ${ex} ${target} sides ${sides}: stops ${B.lat.map(x => x.toFixed(2)).join(' ')} (left ${L}, right ${R}) · came from ${B.from.slice(0, 4).map(x => x.toFixed(1)).join(' ')} m to the side · gaps between arrivals ${gaps.map(x => x.toFixed(1)).join(' ')}`);
-    if (sides && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
+    const Cn = B.lat.filter(x => Math.abs(x) < 0.05).length;
+    if (sides === 100 && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
+    const nLat = B.from.filter(x => x > 2).length, nMid = B.from.filter(x => x < 1).length;
+    if (sides === 50 && (nLat < 3 || Math.abs(nLat - nMid) > 1 || Math.abs(L - R) > 1 || B.lat.some(x => Math.abs(x) >= 0.05 && Math.abs(Math.abs(x) - 0.2) > 0.03))) errors.push(`barras (${ex}): con el 50 % por los lados deberían mezclarse los del centro con los de los lados (por los lados ${nLat}, al centro ${nMid}; paradas a la izquierda ${L}, a la derecha ${R})`);
     if (!sides && B.lat.some(x => Math.abs(x) > 0.05)) errors.push('barras: sin «por los lados» deberían pararse en el centro');
     if (gaps.length < 3 || Math.min(...gaps) < G * 0.7) errors.push(`barras (${ex}): llegan dos casi a la vez (huecos ${gaps.map(x => x.toFixed(1)).join(' ')})`);
   }
-  RA.setSetting('barSides', 0);
+  RA.setSetting('barMix', 0);
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -1502,6 +1502,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('curl con barra XR: solo la izquierda', oneArm, 'reps', oneMsg, 'avisos · las dos', twoArms, 'reps');
   if (oneArm || !oneMsg) errors.push('curl con barra: subiendo un solo brazo no debería contar (y debería avisar)');
   if (twoArms < 4) errors.push('curl con barra: subiendo las dos manos juntas no cuenta');
+  // aguantando la barra a la altura de los hombros, el disparo se carga (como abajo en la sentadilla) y sale al bajarla
+  { const r0 = RA.stats.reps; let pow = 0, early = false;
+    for (let i = 0; i < 240; i++) { const up = i >= 10 && i < 180; for (const sd of ['left', 'right']) XRS.hands[sd].y = up ? 1.42 : 0.95; frame(1, 16, xrFrame);
+      if (up && RA.stats.reps > r0) early = true; const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); }
+    log(`curl con barra XR aguantando 2,7 s arriba: disparo ×${pow} · ${RA.stats.reps - r0} rep · salió antes de bajar ${early}`);
+    if (pow < 3 || early || RA.stats.reps - r0 !== 1) errors.push('curl: aguantar la pesa a la altura de los hombros debería cargar el disparo (×3 o más) y dispararlo al bajarla'); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
   // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la

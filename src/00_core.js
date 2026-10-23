@@ -31,7 +31,7 @@ const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen 
 const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
@@ -40,7 +40,7 @@ const BODY_ZONES = [
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
-  ['Espalda y agarre', ['plankrow', 'row', 'pullup', 'hang']],
+  ['Espalda y agarre', ['row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
 ];
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
@@ -81,7 +81,6 @@ const SCHEMA = [
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
   { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
-  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
@@ -173,8 +172,8 @@ const SCHEMA = [
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
-  { key: 'barSides', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'toggle', def: 0, modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Las pompas y los bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en cada repetición trabaje más un brazo. Se alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo.' },
-  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => !!settings.barSides },
+  { key: 'barMix', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'num', min: 0, max: 100, step: 10, def: 0, unit: '%', zero: 'No', modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Cuántas pompas y bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en esa repetición trabaje más un brazo; los demás llegan al centro. Se reparten por igual a lo largo de la oleada y los de los lados alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo. 100 % = todos por los lados.' },
+  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => settings.barMix > 0 },
   { key: 'hangPit', g: 'barras', label: 'Debajo de ti, colgado', short: 'Debajo', type: 'choice', opts: [['pool', 'Charco'], ['vortex', 'Remolino']], def: 'pool', modes: ['bars'], ex: ['hang'], hint: 'Charco con tentáculos, o un remolino que quiere engullirte y se va cerrando hasta cerrarse justo al cumplir el tiempo de la oleada. Si te sueltas antes, te engulle y la oleada termina.' },
   { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, te has soltado. También cuenta ver las manos por debajo de la barra.' },
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
@@ -243,6 +242,7 @@ function fmtVal(f, v = settings[f.key]) {
   }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  if (s.barMix === undefined && s.barSides) settings.barMix = 50; // antes, todos por los lados o ninguno: ahora se mezclan
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
   if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
   // la dificultad creciente subía un 3 % por oleada y apenas se notaba: a quien la tenía así (lo de antes) se le pasa a 6 % una vez
@@ -284,9 +284,9 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 // Con pesas en las manos (no se abre la pausa juntando los dedos)
-const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
+const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
-const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'plankrow';
+const oneArm = () => settings.exercise === 'plank1';
 const deepOn = () => settings.deepDrop > 0 && DEEP_EX.includes(settings.exercise) && isCombat();
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
 const isCombat = () => settings.mode === 'combat';

@@ -322,7 +322,7 @@ class TouchTarget {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
       SND.waterPop(c, !!this.hold);
-      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
+      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb, head.p);
       this.mode = 'burst'; this.popT = 0; return;
     }
     if (this.part === 'cut') { this.split(c, rgb); return; }

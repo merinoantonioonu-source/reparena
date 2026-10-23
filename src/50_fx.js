@@ -137,7 +137,7 @@ const fx = {
   droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
   // Un aro de agua que revienta: el agua sale despedida hacia fuera desde todo el borde, con gotas grandes, rocío y un destello
-  waterBurst(pos, n, rad, color) {
+  waterBurst(pos, n, rad, color, face = null) {
     const u = _wdd.set(0, 1, 0); if (Math.abs(n.dot(u)) > 0.9) u.set(1, 0, 0); u.addScaledVector(n, -u.dot(n)).normalize();
     const w = new V3().crossVectors(n, u), r = new V3(), pale = [lerp(color[0], 1, 0.5), lerp(color[1], 1, 0.5), lerp(color[2], 1, 0.5)];
     for (let i = 0; i < 44; i++) {
@@ -148,6 +148,14 @@ const fx = {
     for (let i = 0; i < 26; i++) { const a = rand(0, TAU); r.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)); PNORM.add({ pos: pos.clone().addScaledVector(r, rad), v: r.clone().multiplyScalar(rand(0.6, 2.4)).add(new V3(0, rand(0, 1.2), 0)), life: rand(0.35, 0.8), c0: pale, c1: [0.6, 0.9, 1], a: 0.8, s0: rand(0.01, 0.025), s1: 0.006, tile: 0, g: 6, floor: true, fin: 0.01 }); }
     for (let i = 0; i < 8; i++) PNORM.add({ pos: pos.clone().add(rv(rad * 0.6)), v: rv(0.25), life: rand(0.5, 0.9), c0: [0.85, 0.95, 1], c1: [0.7, 0.85, 0.9], a: 0.25, s0: rad * 0.6, s1: rad * 1.8, tile: 1, drag: 2, fin: 0.05 }); // rocío
     fx.glow(pos, pale, rad * 3, 0.12);
+    if (face) { // la reventaste con la cabeza: el agua salta también por delante de la cara y cae a través de la vista
+      const f = fwd(), sd = new V3(f.z, 0, -f.x).normalize();
+      for (let i = 0; i < 56; i++) {
+        const p = face.clone().addScaledVector(f, rand(0.12, 0.4)).addScaledVector(sd, rand(-0.22, 0.22)).add(new V3(0, rand(-0.05, 0.2), 0));
+        waterDrop(p, sd.clone().multiplyScalar(rand(-0.5, 0.5)).addScaledVector(f, rand(-0.1, 0.4)).add(new V3(0, rand(0.2, 1.4), 0)), rand(0.004, i % 3 ? 0.009 : 0.016), rand(0.6, 1.1));
+      }
+      for (let i = 0; i < 10; i++) PNORM.add({ pos: face.clone().addScaledVector(f, rand(0.18, 0.35)).addScaledVector(sd, rand(-0.15, 0.15)).add(new V3(0, rand(-0.06, 0.1), 0)), v: new V3(rand(-0.1, 0.1), rand(-0.25, 0.05), rand(-0.1, 0.1)), life: rand(0.5, 0.9), c0: [0.85, 0.97, 1], c1: [0.7, 0.88, 0.92], a: 0.22, s0: rand(0.05, 0.09), s1: rand(0.14, 0.22), tile: 1, drag: 2, fin: 0.05 }); // rocío
+    }
   },
   trail(pos, color, size, life = 0.25) { PADD.add({ pos: pos.clone(), v: rv(0.05), life, c0: color, c1: [color[0] * 0.3, color[1] * 0.3, color[2] * 0.3], s0: size, s1: size * 0.2, tile: 0, fin: 0.01 }); },
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
