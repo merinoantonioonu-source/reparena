@@ -678,6 +678,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · main menu badge ${badge} · ${picks} ranks with insignia · sargento llegan en ${sg} s · retocado ${touched} · saved ${kept} · back to stock ${back}`);
     if (!(g.walk < r.walk && g.max > r.max && g.lives === 1 && r.lives === 0)) errors.push('rangos: el general debería ser más difícil que el recluta');
     if (badge !== 0 || picks !== 7 || sg !== 11 || !touched || kept !== 30 || back !== 11) errors.push('rangos: no se eligen, no se guardan en el rango o no vuelven a como venían');
+    const dirty = ['recluta', 'soldado', 'cabo', 'sargento', 'teniente', 'capitan', 'general'].filter(k => { RA.setSetting('rank', k); return RA.rankTouched(); });
+    if (dirty.length) errors.push('rangos: recién elegidos ya salen como retocados: ' + dirty.join(', '));
     RA.setSetting('rank', 'cabo'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
   // sonido y entorno, cada uno en su submenú (y sin nada de sonido en Ajustes)
   press('Sonido'); frame(1); { const ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('sound menu sliders:', ks.join(', '));

@@ -1896,7 +1896,7 @@ function foesMenu(back) {
 const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
-function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = own[k] !== undefined ? own[k] : RANK_VALS[k][i]; return o; }
+function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], own[k] !== undefined ? own[k] : RANK_VALS[k][i]); return o; } // (al paso de cada ajuste)
 function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; }
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
 const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
