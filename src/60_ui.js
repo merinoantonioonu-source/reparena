@@ -707,6 +707,12 @@ function drawBoard() {
   else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
+  // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
+  if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right'; c.font = `500 34px ${FB}`;
+    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; c.fillText(t1, RX, 236);
+    if (gd !== null) { c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; c.fillText(`fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`, RX, 278); }
+  }
   let ch = null; const live = ['play', 'ready'].includes(state);
   if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ ${n}` : '⚔ 0', n ? BC.teal : '#ff8a3d']; }
   else if (throwAim() && live) { const n = throwCount(); ch = [`✋ ${n}`, n ? BC.teal : BC.lil]; }

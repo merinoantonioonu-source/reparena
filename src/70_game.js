@@ -956,12 +956,14 @@ function jumpTrack(dt) {
 }
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
-  constructor(drop, offset = 0, second = false, tilt = 0, jump = false) {
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0) {
     const H = arMode ? 2.25 : 2.55;
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
     this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
-    this.o = makeArcObj(this.barY, H, tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
-    Object.assign(this, { speed: dv('arcSpeed') / 3.6, judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
+    Object.assign(this, { speed: arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
+    if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
     if (!second) gates[1].openT = 1.6;
     zapLines(this.o.lines);
@@ -969,6 +971,7 @@ class Arc {
   barAt(x) { return this.barY + Math.tan(this.tilt) * clamp(x, -1, 1); } // altura de la barra sobre tu cabeza
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
+    if (this.spin) { const tau = Math.max(0, this.tReach - this.t); this.tilt = this.tiltEnd + this.spin * tau * Math.min(1, tau / 1.2); this.o.bar.rotation.z = this.tilt; }
     const appear = Math.min(1, this.t / 0.4); this.o.grp.scale.set(appear, 1, 1);
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); }
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
@@ -991,16 +994,16 @@ class Arc {
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.jump) {
       const need = settings.jumpHeight / 100;
-      if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
-      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false);
+      if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
+      const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
-    registerRep(perfect, false);
+    registerRep(perfect, false); arxClean();
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);
     if (perfect) SND.perfect();
   }
@@ -1085,7 +1088,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1));
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1)); // (en fiebre, el doble)
   if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -1764,8 +1767,10 @@ function buildWave(i) {
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
+    if (settings.arcPatterns) return arxPatterns(total);
     const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100;
     for (let n = 0; n < total; n++) {
+      if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
@@ -1821,8 +1826,11 @@ function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
-    const a = new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump'); arcs.push(a);
-    if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0));
+    if (spec.kind === 'laser' || spec.kind === 'walls') arcs.push(new ArcObs(spec.kind));
+    else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
+    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
+    ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
+    if (Math.random() * 100 < settings.arcOrbs) ARX.orbT = spawnInterval * (spec.gap || 1) * 0.5; // un orbe a medio camino
     return;
   }
   let e;
@@ -1847,14 +1855,14 @@ function arcGap() {
 }
 function updateNextArc() {
   let best = null; for (const a of arcs) if (!a.judged && !a.second && (!best || a.z > best.z)) best = a;
-  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
+  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
   if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; boardDirty = true; }
 }
 
 /* =================== FLUJO =================== */
 function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
-  arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear();
+  arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear(); ARX.orbs.forEach(o => o.alive && o.dispose()); ARX.orbs = []; ARX.orbT = -1;
   projs = []; boltsClear(); rocksClear();
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
@@ -2054,10 +2062,33 @@ function pauseMenu() {
   ], { border: '#ffd166' });
   m.rebuild = () => pauseMenu();
 }
+// Antes de cada ronda (mientras calibras) se compilan los sombreadores de todo lo que puede salir: si no, el primer robot,
+// el primer monstruo o la primera pompa se compilan en plena partida y la imagen da un tirón en las gafas. Las copias se
+// guardan (sin pintarse): así sus programas no se borran y no hay que volver a compilarlos
+const WARM = { done: new Set(), keep: [] };
+function warmShaders() {
+  if (!renderer.compile) return;
+  try {
+    ensureRigs(); const g = new THREE.Group(); g.position.set(0, -80, 0); let n = 0;
+    const add = (key, mk) => { if (WARM.done.has(key)) return; const o = mk(); if (!o) return; WARM.done.add(key); g.add(o.root || o); n++; };
+    for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
+    for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
+    if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
+    add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
+    if (!n) return; g.traverse(o => { o.frustumCulled = false; });
+    scene.add(g); renderer.compile(scene, camera); scene.remove(g); WARM.keep.push(g);
+    // las sombras de lo que tiene esqueleto usan otro sombreador, que solo se compila al pintar la sombra: un dibujo
+    // diminuto, fuera de la vista, con las copias bajo la luz
+    if (renderer.shadowMap.enabled && renderer.setRenderTarget && THREE.WebGLRenderTarget) {
+      const rt = WARM.rt || (WARM.rt = new THREE.WebGLRenderTarget(16, 16)), prev = renderer.getRenderTarget(), xr = renderer.xr.enabled;
+      g.position.set(0, 0, -2); arena.add(g); renderer.xr.enabled = false; renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(prev); renderer.xr.enabled = xr; arena.remove(g); g.position.set(0, -80, 0);
+    }
+  } catch (e) { console.warn('No se pudieron precompilar los sombreadores:', e && e.message); }
+}
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -2066,6 +2097,7 @@ function beginRun() {
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
+  warmShaders(); // (mientras calibras: nada se compila ya en plena partida)
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
 // arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
@@ -2174,7 +2206,8 @@ function endRun(win, manual) {
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
   const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;
-  const tiles = hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
+  const AX = settings.mode === 'arcs' ? arxEnd() : null; // (medalla, metros, orbes y fantasma)
+  const tiles = AX ? [[stats.perfect, 'perfectas'], [stats.taken, 'golpes'], [`${AX.dist} m`, 'recorridos']] : hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
@@ -2183,7 +2216,8 @@ function endRun(win, manual) {
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
     chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
-      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null].filter(Boolean),
+      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null,
+      AX && AX.medal ? [`Medalla de ${AX.medal[0]}`, AX.medal[1]] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
@@ -2260,7 +2294,7 @@ function summaryDraw(S, c, x, y, w, h) {
     c.fillStyle = dim; fitFont(c, l, tw - 30, Math.round(th * 0.27), '500 %px ' + FB); c.fillText(l, tx + tw / 2 + 4, ty + th * 0.78);
   });
   // logros (récord, racha, dificultad) o, si no hay, lo de hoy
-  const cy0 = y + h - 32, chips = S.chips.length ? S.chips : S.today ? [[S.today, dim]] : [];
+  const cy0 = y + h - 32, chips = (S.chips.length ? S.chips : S.today ? [[S.today, dim]] : []).slice(0, 3); // (caben tres)
   c.font = '600 26px ' + FB; const cw = chips.map(([t]) => Math.min(w - 20, c.measureText(t).width + 44)), tot = cw.reduce((a, b) => a + b, 0) + 12 * Math.max(0, chips.length - 1);
   let cx = x + (w - Math.min(w, tot)) / 2;
   chips.forEach(([t, col], k) => { rr(c, cx, cy0 - 22, cw[k], 44, 22); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); c.fillStyle = col; fitFont(c, t, cw[k] - 30, 26, '600 %px ' + FB); c.fillText(t, cx + cw[k] / 2, cy0 + 1); cx += cw[k] + 12; });
@@ -2311,7 +2345,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * arcGap(), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
@@ -2338,6 +2372,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
+  arxStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

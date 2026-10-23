@@ -174,7 +174,21 @@ const poolTex = texFrom((() => {
   return c;
 })());
 poolTex.wrapS = poolTex.wrapT = THREE.ClampToEdgeWrapping;
-const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, toneMapped: false }));
+// El agua del charco: ondas que salen de donde asoma cada tentáculo, suaves mientras se mecen y fuertes cuando se lanzan
+// o barren (y un rizado leve de fondo); desplazan el dibujo del charco y le sacan brillos
+const POOL_FS = `uniform sampler2D map; uniform float uTime; uniform vec4 uSrc[5]; varying vec2 vUv;
+void main() {
+  vec2 p = vUv * 2.0 - 1.0; float w = 0.0; vec2 g = vec2(0.0);
+  for (int i = 0; i < 5; i++) { vec2 d = p - uSrc[i].xy; float r = length(d) + 1e-4, s = uSrc[i].z;
+    float k = sin(r * 34.0 - uTime * (6.0 + 6.0 * uSrc[i].w) + float(i) * 1.7) * exp(-r * 2.6) * s; w += k; g += d / r * k; }
+  w += 0.12 * sin(p.x * 9.0 + uTime * 1.3) * sin(p.y * 8.0 - uTime * 1.1);
+  vec4 c = texture2D(map, vUv + g * 0.02);
+  vec3 col = c.rgb + vec3(0.1, 0.7, 0.42) * max(0.0, w) * 0.45 * (1.0 - length(p) * 0.35) + vec3(0.6, 1.0, 0.8) * pow(max(0.0, w), 2.0) * 0.3;
+  gl_FragColor = vec4(col, c.a);
+}`;
+const poolSrc = [0, 1, 2, 3, 4].map(() => new THREE.Vector4(0, 0, 0, 0));
+const poolWater = new THREE.ShaderMaterial({ uniforms: { map: { value: poolTex }, uTime: { value: 0 }, uSrc: { value: poolSrc } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: POOL_FS, transparent: true, depthWrite: false });
+const poolDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), poolWater);
 poolDisc.rotation.x = -Math.PI / 2; poolDisc.position.y = 0.004; poolDisc.renderOrder = 1; pool.add(poolDisc);
 const poolRimMat = new THREE.MeshBasicMaterial({ color: 0x2cff9a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 const poolRim = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.0, 64), poolRimMat); poolRim.rotation.x = -Math.PI / 2; poolRim.position.y = 0.006; pool.add(poolRim);
@@ -264,6 +278,10 @@ function updatePool(dt, t) {
   POOL.bubbleT -= dt;
   if (POOL.bubbleT <= 0) { POOL.bubbleT = rand(0.15, 0.5); const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 0.85; const p = pool.localToWorld(_pt2.set(Math.cos(a) * r * POOL.rx, 0.02, Math.sin(a) * r * POOL.rz)); fx.glow(p, [0.2, 0.8, 0.45], rand(0.04, 0.1), 0.35, 0.6); if (Math.random() < 0.3) fx.droplets(p, 3, [0.2, 0.7, 0.4], 0.5, 0.015); }
   for (const E of POOL.eyes) { E.t -= dt; const open = E.t > 0.15 || E.t < 0; if (E.t <= 0) E.t = rand(2, 6); E.g.visible = open; E.a += dt * 0.12; E.g.position.set(Math.cos(E.a) * E.r * POOL.rx, 0, Math.sin(E.a) * E.r * POOL.rz); }
+  // el agua se mueve con ellos: cada tentáculo hace ondas desde donde asoma (más fuertes al lanzarse o al barrer)
+  poolWater.uniforms.uTime.value = t;
+  poolSrc.forEach((v, i) => { const T = POOL.tents[i]; if (!T) { v.z = 0; return; } const k = T.mdl ? T.k : Math.max(T.lunge, POOL.grabT > 0 ? Math.min(1, POOL.grabT) : 0);
+    v.set(T.root.position.x / POOL.rx, -T.root.position.z / POOL.rz, 0.25 + 1.1 * k + 0.5 * ex, k + ex); });
   // tentáculos: ondulación, embestida hacia los pies y agarrón
   const feet = eqLocal(e, head.p, _pt2);
   for (const T of POOL.tents) {

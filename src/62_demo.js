@@ -290,7 +290,7 @@ function updateDemo(dt) {
     const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(viewQ(), k);
   } else DEMOV.head.userData.init = false;
   if (!any) return;
-  DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 18; // basta para que se vea fluido y no pesa en las gafas
+  DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 12; // basta para que se vea fluido y no pesa en las gafas (cada dibujo se vuelve a subir a la tarjeta)
   demoDraw(DEMOP.ctx, DEMOP.W, DEMOP.H, DEMOV.ex || settings.exercise, DEMOV.mode || settings.mode, DEMOV.t); DEMOP.tex.needsUpdate = true;
 }
 

@@ -69,7 +69,7 @@ function previewInput(dt) {
   // Arcos inclinados: al agacharte con Espacio, la cabeza se aparta hacia el lado alto (zancada lateral)
   if (settings.mode === 'arcs' && GAME_STATES.includes(state)) {
     let nx = null; for (const a of arcs) if (!a.judged && !a.second && (!nx || a.z > nx.z)) nx = a;
-    const lx = PV.crouch && !PV.noLean && nx && nx.tilt ? Math.sign(nx.tilt) * settings.arcShift / 100 : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
+    const lx = PV.crouch && !PV.noLean && nx && (nx.leanX !== undefined || nx.tilt) ? (nx.leanX !== undefined ? nx.leanX : Math.sign(nx.tilt) * settings.arcShift / 100) : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
@@ -230,10 +230,36 @@ renderer.setAnimationLoop((time, frame) => {
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
-  centerT += dt; if (center.mesh.visible && centerT > 0.1) { centerT = 0; drawCenter(); }
+  centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
+  perfStep(t, dt);
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   renderer.render(scene, camera);
 });
+
+/* =================== FLUIDEZ =================== */
+// Frecuencia de las gafas: a 72 Hz el juego llega siempre y la imagen no da saltos; a 90 o 120, si no llega, sí
+function xrRate(session = renderer.xr.getSession()) {
+  if (!session || !session.updateTargetFrameRate || !session.supportedFrameRates) return;
+  const want = +settings.xrHz || 72, rates = [...session.supportedFrameRates], r = rates.includes(want) ? want : rates.reduce((a, b) => Math.abs(b - want) < Math.abs(a - want) ? b : a, rates[0]);
+  session.updateTargetFrameRate(r).catch(() => {});
+}
+settingHooks.push(k => { if (k === 'xrHz') xrRate(); });
+// Medidor (Ajustes → Menú y avisos): fotogramas por segundo, el peor de cada medio segundo y cuántos se pierden
+const PERF = { n: 0, t0: 0, worst: 0, lost: 0, txt: '' }, perfP = makePanel(0.26, 0.06, 256, { depthTest: false }); perfP.mesh.visible = false; scene.add(perfP.mesh);
+function perfStep(t, dt) {
+  const on = !!settings.perfHud && (xrActive || preview); perfP.mesh.visible = on; if (!on) return;
+  const hz = (renderer.xr.getSession() && renderer.xr.getSession().frameRate) || +settings.xrHz || 72;
+  PERF.n++; PERF.worst = Math.max(PERF.worst, dt); if (dt > 1.5 / hz) PERF.lost++;
+  if (t - PERF.t0 >= 0.5) {
+    const fps = PERF.n / Math.max(1e-3, t - PERF.t0), c = perfP.ctx, W = perfP.W, H = perfP.H, bad = PERF.lost > 0;
+    c.clearRect(0, 0, W, H); rr(c, 2, 2, W - 4, H - 4, 10); c.fillStyle = 'rgba(10,8,20,0.8)'; c.fill();
+    c.fillStyle = bad ? '#ff8a3d' : '#3cf0c6'; c.font = '600 26px ' + FB; c.textBaseline = 'middle'; c.textAlign = 'left';
+    c.fillText(`${Math.round(fps)} fps · peor ${Math.round(PERF.worst * 1000)} ms · perdidos ${PERF.lost}`, 10, H / 2); perfP.tex.needsUpdate = true;
+    Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0 });
+  }
+  perfP.mesh.position.copy(head.p).add(_pfo.set(-0.17, -0.13, -0.5).applyQuaternion(head.q)); perfP.mesh.quaternion.copy(head.q); // pegado a la vista, abajo a la izquierda
+}
+const _pfo = new V3();
 
 /* =================== ENTRAR EN XR =================== */
 let rigsBuilt = false;
@@ -259,7 +285,7 @@ async function startXR(ar) {
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session);
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session);
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
