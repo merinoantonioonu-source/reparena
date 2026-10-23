@@ -1,7 +1,7 @@
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
-const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false });
+const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
 const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
@@ -372,8 +372,9 @@ function wristTarget(H, S) {
 // dt = 0: colocarlo de golpe (al rehacer el menú: el borde de arriba se queda donde estaba)
 function wristPose(group, H, dt = 0) {
   const h = hands.left, S = wristScale(), e = 1 - Math.pow(1 - WM.e, 3), s = S * e;
-  if (!WM.init) { if (h.ok) WM.from.copy(h.wrist); else WM.from.copy(head.p).addScaledVector(fwdH(), 0.3).add(_wmu.set(0, -0.35, 0)); wristTarget(H, S); }
-  else if (h.ok && !WM.on) WM.from.copy(h.wrist); // al cerrarse, vuelve a la muñeca
+  const hw = h.isHand ? h.J[0].s : h.wrist; // la muñeca suavizada: el menú no tiembla con ella
+  if (!WM.init) { if (h.ok) WM.from.copy(hw); else WM.from.copy(head.p).addScaledVector(fwdH(), 0.3).add(_wmu.set(0, -0.35, 0)); wristTarget(H, S); }
+  else if (h.ok && !WM.on) WM.from.copy(hw); // al cerrarse, vuelve a la muñeca
   // el centro cuelga del borde de arriba: así, al pasar a un submenú más alto o más bajo, lo de arriba no se mueve
   _wmt.set(0, 1, 0).applyQuaternion(WM.q); _wml.copy(WM.top).addScaledVector(_wmt, -H * S / 2);
   group.position.lerpVectors(WM.from, _wml, e);
@@ -448,6 +449,18 @@ function viewQ() {
   _ve.setFromQuaternion(head.q, 'YXZ'); _ve.z = 0; return _vq.setFromEuler(_ve);
 }
 function viewLocal(off, out) { return out.copy(off).applyQuaternion(viewQ()).add(head.p); }
+// Una vez colocado y empezada la partida (cuenta atrás, oleadas, descansos y pausa), los avisos salen siempre en el mismo
+// sitio: delante de donde mirabas al empezar (FIXV), y ya no siguen a la cabeza. Antes (calibrarse, colocarse, cambiar
+// de bloque) sí siguen a la vista
+const FIXV = { on: false, p: new V3(), q: new Q4() }, _fxf = new V3();
+function fixvStep() {
+  const fixed = ['ready', 'play', 'rest', 'paused'].includes(state) && (xrActive || preview);
+  if (fixed && !FIXV.on) { FIXV.on = true; FIXV.p.copy(head.p); FIXV.q.copy(viewQ()); }
+  else if (!fixed) FIXV.on = false;
+}
+const hudQ = () => FIXV.on ? FIXV.q : viewQ();
+const hudFwd = () => FIXV.on ? _fxf.set(0, 0, -1).applyQuaternion(FIXV.q) : fwd();
+function hudLocal(off, out) { return FIXV.on ? out.copy(off).applyQuaternion(FIXV.q).add(FIXV.p) : viewLocal(off, out); }
 /* ---------- Ningún panel tapa lo que viene hacia ti ---------- */
 // Lo que tiene que verse siempre: los objetivos (Toques y Barras) y los enemigos, con su centro y su radio en el mundo
 const _ocP = [], _ocR = [], _ocH = new V3(), _ocT = new V3(), _ocDummy = new THREE.Object3D();
@@ -475,13 +488,13 @@ function panelHides(obj, w, h, always, n) {
 const HUD = { toast: { slots: [[0, -0.4], [0, 0.4], [-0.5, -0.24], [0.5, -0.24]], z: -1.2, w: 0.62, h: 0.1, slot: 0, off: new V3(0, -0.4, -1.2), fade: 1 },
   center: { slots: [[0, -0.08], [0, 0.42], [0, -0.5]], z: -1.1, w: 0.5 * CENTER_SC, h: 0.2 * CENTER_SC, slot: 0, off: new V3(0, -0.08, -1.1), fade: 1 }, board: 1 };
 function hudSlot(P, slots, n, dt) {
-  const free = i => { viewLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(viewQ()); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
+  const free = i => { hudLocal(_hl.set(slots[i][0], slots[i][1], P.z), _ocDummy.position); _ocDummy.quaternion.copy(hudQ()); return !n || !panelHides(_ocDummy, P.w, P.h, true, n); };
   let pick = slots[P.slot] && free(P.slot) ? P.slot : -1;
   for (let i = 0; pick < 0 && i < slots.length; i++) if (free(i)) pick = i;
   if (pick >= 0) P.slot = pick; else P.slot = Math.min(P.slot, slots.length - 1);
   P.off.lerp(_hl.set(slots[P.slot][0], slots[P.slot][1], P.z), 1 - Math.exp(-dt * 10));
   P.fade += ((pick >= 0 ? 1 : 0.15) - P.fade) * Math.min(1, dt * 8);
-  return viewLocal(P.off, new V3());
+  return hudLocal(P.off, new V3());
 }
 // Los avisos no siguen la mirada (así no hay quien los lea): salen delante de ti y se quedan quietos en el mundo. Solo se
 // recolocan, deslizándose, si dejan de verse un rato (miras más de LAZY.ang a otro lado o te mueves LAZY.move) o si
@@ -490,6 +503,7 @@ const LAZY = { ang: 50 * Math.PI / 180, t: 0.8, move: 0.6 }, _lz = new V3();
 const mkLazy = () => ({ init: false, at: new V3(), q: new Q4(), home: new V3(), away: 0, go: false, vis: 1 });
 function lazyAt(L, want, wantQ, dt, ang = LAZY.ang) {
   if (!L.init) { Object.assign(L, { init: true, away: 0, go: false, vis: 1 }); L.at.copy(want); L.q.copy(wantQ); L.home.copy(head.p); return L; }
+  if (FIXV.on) { const k = 1 - Math.exp(-dt * 7); L.at.lerp(want, k); L.q.slerp(wantQ, k); L.go = false; return L; } // en partida, su sitio fijo (solo cambia de hueco si tapa algo)
   const off = head.p.distanceTo(L.home) > LAZY.move || _lz.subVectors(L.at, head.p).angleTo(fwd()) > ang;
   L.away = off ? L.away + dt : 0; if (L.away > LAZY.t) L.go = true;
   if (L.go) { const k = 1 - Math.exp(-dt * 7); L.at.lerp(want, k); L.q.slerp(wantQ, k); if (L.at.distanceTo(want) < 0.03) { L.go = false; L.away = 0; L.home.copy(head.p); } }
@@ -521,15 +535,15 @@ function warnFloor(text, color = '#ff8a3d') {
   c.font = `${fs}px ${FD}`; lines.forEach((l, i) => c.fillText(l, W / 2, H / 2 + (i - (lines.length - 1) / 2) * fs * 1.05 + 6));
   WARN.p.tex.needsUpdate = true; WARN.text = text; WARN.t = WARN_SECS; WARN.init = false; WARN.p.mesh.visible = true;
 }
-const _wf = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
+const _wf = new V3(), _wfh = new V3(), _we = new THREE.Euler(0, 0, 0, 'YXZ');
 function updateWarn(dt) {
   const m = WARN.p.mesh; if (!m.visible) return;
   WARN.t -= dt; if (WARN.t <= 0 || !GAME_STATES.includes(state) && state !== 'paused') { m.visible = false; WARN.text = ''; return; }
-  const f = fwd(); let s;
+  const f = hudFwd(), hp = FIXV.on ? FIXV.p : head.p; let s;
   if (f.y > 0.35) { // mirando arriba: por encima de la cara, de cara a ti
-    _wf.copy(head.p).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(viewQ());
+    _wf.copy(hp).addScaledVector(f, 1.0); s = 0.75; WARN.q.copy(hudQ());
   } else { // en el suelo, delante: más lejos cuanto más alta la cabeza, tumbado y legible desde donde estás
-    const h = fwdH(), d = clamp(head.p.y * 1.1, 0.5, 2.1); _wf.copy(head.p).addScaledVector(h, d); _wf.y = 0.02;
+    const h = FIXV.on ? _wfh.set(f.x, 0, f.z).normalize() : fwdH(), d = clamp(hp.y * 1.1, 0.5, 2.1); _wf.copy(hp).addScaledVector(h, d); _wf.y = 0.02;
     s = clamp(d * 0.85, 0.42, 1.7); _we.set(-Math.PI / 2, Math.atan2(-h.x, -h.z), 0); WARN.q.setFromEuler(_we);
   }
   if (!WARN.init) { LZ.warn.init = false; WARN.init = true; WARN.s = s; } // cada aviso nuevo sale delante; luego se queda quieto
@@ -538,16 +552,16 @@ function updateWarn(dt) {
   m.material.opacity = Math.min(1, WARN.t / 0.5, (WARN_SECS - WARN.t) / 0.15 + 0.2);
 }
 function updateViewPanels(dt) {
-  updateWarn(dt);
+  fixvStep(); updateWarn(dt);
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
-    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), viewQ(), dt);
+    const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), hudQ(), dt);
     center.mesh.position.copy(L.at); center.mesh.quaternion.copy(L.q); center.mesh.material.opacity = C.fade * lazyClear(L, center.mesh, 0.5, 0.2, n, dt);
   } else LZ.center.init = false;
   if (toastP.mesh.visible) {
     toastT -= dt; if (toastT <= 0) toastP.mesh.visible = false;
-    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), viewQ(), dt);
+    const L = lazyAt(LZ.toast, hudSlot(HUD.toast, HUD.toast.slots, n, dt), hudQ(), dt);
     toastP.mesh.position.copy(L.at); toastP.mesh.quaternion.copy(L.q); toastP.mesh.material.opacity = Math.min(1, toastT * 3) * HUD.toast.fade * lazyClear(L, toastP.mesh, toastP.w, toastP.h, n, dt);
   } else LZ.toast.init = false;
   // el marcador está fijo y siempre se ve (opaco): no se aclara aunque algo pase por detrás
@@ -597,7 +611,7 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], plankrow: ['En plancha sobre las mancuernas,', 'cuerpo recto. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
+    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();

@@ -31,7 +31,7 @@ const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen 
 const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'plankrow', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
@@ -40,7 +40,7 @@ const BODY_ZONES = [
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
-  ['Espalda y agarre', ['plankrow', 'row', 'pullup', 'hang']],
+  ['Espalda y agarre', ['row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
 ];
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
@@ -81,7 +81,6 @@ const SCHEMA = [
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
   { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
-  { key: 'rowLift', g: 'ejercicio', label: 'Recorrido del remo', short: 'Recorrido remo', type: 'num', min: 8, max: 45, step: 1, def: 16, unit: 'cm', ex: ['plankrow'], hint: 'Cuánto sube la muñeca al tirar del codo hacia atrás (en la plancha, desde el suelo).' },
   { key: 'jsqJump', g: 'ejercicio', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 8, unit: 'cm', ex: ['jsquat'], hint: 'Cuánto sube la cabeza por encima de tu altura de pie al saltar, y deprisa: ponerse de puntillas despacio no vale.' },
   { key: 'splHold', g: 'ejercicio', label: 'Segundos de plancha lateral por disparo', short: 'Segundos', type: 'num', min: 1, max: 15, step: 0.5, def: 3, unit: 's', ex: ['splank'], hint: 'Cada vez que aguantas este tiempo con la cadera arriba, disparas.' },
   { key: 'splDrop', g: 'ejercicio', label: 'Bajada de cadera que corta el aguante', short: 'Tolerancia', type: 'num', min: 4, max: 25, step: 1, def: 9, unit: 'cm', ex: ['splank'], hint: 'Si la cabeza baja esto desde tu postura, la cadera ha caído y el tiempo vuelve a empezar.' },
@@ -121,6 +120,7 @@ const SCHEMA = [
   { key: 'tchArrive', g: 'toques', label: 'Tiempo que tardan en llegar', short: 'Llegada', type: 'num', min: 1, max: 8, step: 0.5, def: 3, unit: 's', modes: ['touch'], hint: 'Desde que aparecen al fondo hasta que llegan a ti. Menos = más rápidos.' },
   { key: 'tchWindow', g: 'toques', label: 'Tiempo para tocarlos', short: 'Para tocar', type: 'num', min: 0.4, max: 3, step: 0.1, def: 1.2, unit: 's', modes: ['touch'], hint: 'Lo que esperan quietos delante de ti antes de pasar de largo.' },
   { key: 'tchGap', g: 'toques', label: 'Separación entre objetivos', short: 'Separación', type: 'num', min: 0.8, max: 6, step: 0.1, def: 2.4, unit: 's', modes: ['touch'], hint: 'Con ritmo (BPM), se redondea a pulsos enteros.' },
+  { key: 'slamDeep', g: 'toques', label: 'Amebas del Slam: cuánto más abajo', short: 'Más abajo', type: 'num', min: 0, max: 40, step: 2, def: 12, unit: 'cm', modes: ['touch'], ex: ['slam'], hint: 'Las amebas para agacharse llegan esto más abajo que tu sentadilla (y las de los lados y las de delante, algo más bajas también): obliga a agacharte más.' },
   { key: 'tchHands', g: 'toques', label: 'Diamantes para las manos', short: 'Diamantes', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['touch'], noEx: ['combo', 'pushup'], hint: 'Parte de los objetivos que se tocan con la mano (diamantes: azul la izquierda, naranja la derecha). El resto son amebas para la cabeza.' },
   { key: 'tchPushLo', g: 'toques', label: 'Flexiones: altura mínima de las amebas', short: 'Ameba más baja', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más cerca del suelo que puede llegar una ameba (altura de su centro sobre el suelo). 0 = según la «Bajada en la flexión».' },
   { key: 'tchPushHi', g: 'toques', label: 'Flexiones: altura máxima de las amebas', short: 'Ameba más alta', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más alto que puede llegar una ameba. Siempre queda algo por debajo de tu cabeza en plancha, para que haya que bajar. 0 = según la «Bajada en la flexión».' },
@@ -137,9 +137,10 @@ const SCHEMA = [
   { key: 'comboOrder', g: 'toques', label: 'Orden de los movimientos', short: 'Orden', type: 'choice', opts: [['seq', 'En orden'], ['random', 'Al azar']], def: 'seq', modes: ['touch'], ex: ['combo'] },
   { key: 'plankHold', g: 'toques', label: 'Segundos en las amebas de plancha', short: 'Plancha', type: 'num', min: 2, max: 30, step: 1, def: 5, unit: 's', modes: ['touch'], ex: ['combo'], cond: () => settings.comboBase === 'floor', hint: 'Mantén la cabeza dentro de la ameba este tiempo.' },
   { key: 'pistol', g: 'armas', label: 'Pistolas (sentadillas y zancadas)', short: 'Pistolas', type: 'toggle', def: 0, modes: ['combat'], relayout: true, ex: ['squat', 'lunge'], hint: 'Cada sentadilla carga munición y disparas tú con el gatillo de los mandos (o pellizcando con la mano) donde apuntes.' },
-  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman'), relayout: true, hint: 'Los que vienen andando desde las compuertas (el lanzador, un diablillo, se queda lejos y te tira piedras: apártate o párala con la mano o la espada). Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase; con el capitán Barbarroja marcado, el jefe es él.' },
-  { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny(), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
-  { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm(), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
+  { key: 'foeKind', g: 'enemigos', label: 'Qué enemigos salen', short: 'Salen', type: 'choice', opts: [['both', 'Los dos'], ['ground', 'Los que andan'], ['fly', 'Los voladores']], def: 'both', modes: ['combat'], cond: () => !oneArm() && settings.exercise !== 'superman', relayout: true, hint: 'De una vez, sin marcarlos uno a uno: solo los que andan (de las compuertas o, en el suelo, de las trampillas), solo los voladores o los dos. Lo que tengas marcado en cada grupo se guarda.' },
+  { key: 'foesGate', g: 'enemigos', label: 'De las compuertas (andando)', short: 'Compuertas', type: 'multi', grid: 4, empty: true, opts: FOE_GATE, def: 'robot,imp,puglin,zombie,raptor', modes: ['combat'], cond: () => !isTiny() && !(settings.exercise === 'superman') && settings.foeKind !== 'fly', relayout: true, hint: 'Los que vienen andando desde las compuertas (el lanzador, un diablillo, se queda lejos y te tira piedras: apártate o párala con la mano o la espada). Salen repartidos entre los que marques; sin ninguno (y con algún volador), solo voladores. Si solo marcas uno, el jefe es de esa clase; con el capitán Barbarroja marcado, el jefe es él.' },
+  { key: 'foesHatch', g: 'enemigos', label: 'De las trampillas (en el suelo)', short: 'Trampillas', type: 'multi', grid: 4, empty: true, opts: FOE_HATCH, def: 'spider', modes: ['combat'], cond: () => isTiny() && (settings.foeKind !== 'fly' || oneArm()), relayout: true, hint: 'En las flexiones y las planchas sobre una mano, los que salen de las trampillas del suelo, pequeños, y saltan a por ti. Sin ninguno (y con algún volador), solo voladores. La plancha con un brazo siempre trae alguno.' },
+  { key: 'foesFly', g: 'enemigos', label: 'Voladores', short: 'Voladores', type: 'multi', grid: 3, empty: true, opts: FOE_FLY, def: 'drone,hornet', modes: ['combat'], cond: () => !oneArm() && (settings.foeKind !== 'ground' || settings.exercise === 'superman'), relayout: true, hint: 'Drones y bombarderos (se estrellan contra ti), avispones, abejas, murciélagos y Cthulhus (te pican o te muerden). El dragón es el jefe de los voladores (si no, la nodriza). Sin ninguno, nadie vuela; en el superman siempre vienen voladores.' },
   { key: 'aim', g: 'armas', cond: () => !pistolOn() && !aimForced(), label: 'Puntería', type: 'choice', opts: [['auto', 'Automática'], ['hands', 'Con las manos'], ['gaze', 'Con la mirada']], def: 'hands', modes: ['combat'], relayout: true, hint: 'Automática: cada repetición dispara sola al enemigo más cercano (y si aguantas abajo, el disparo se carga). Con la mirada, dispara a donde miras. Con las manos, en sentadillas y zancadas, la repetición carga las dos manos y cada una lanza su rayo: llévala atrás, junto al cuerpo, y adelante deprisa hacia el enemigo; el rayo busca al más cercano a esa dirección (en el resto de ejercicios se apunta con la mirada).' },
   { key: 'throwPick', g: 'armas', label: 'Lanzando con las manos, el rayo va', short: 'El rayo va', type: 'choice', opts: [['gaze', 'Al que miras'], ['hand', 'Hacia donde lanzas']], def: 'gaze', modes: ['combat'], cond: () => !pistolOn() && settings.aim === 'hands' && !aimForced(), hint: 'Al que miras (recomendado): mira al enemigo y lanza hacia él; el gesto dispara y la mirada elige a cuál (sale un aro sobre él). Hacia donde lanzas: solo cuenta la dirección de la mano, que las gafas miden con menos precisión; con enemigos juntos puede irse a otro.' },
   { key: 'assist', g: 'armas', label: 'Ayuda de puntería', short: 'Ayuda puntería', type: 'num', min: 0, max: 25, step: 1, def: 9, unit: '°', modes: ['combat'], cond: () => aimManual() },
@@ -173,8 +174,8 @@ const SCHEMA = [
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
-  { key: 'barSides', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'toggle', def: 0, modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Las pompas y los bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en cada repetición trabaje más un brazo. Se alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo.' },
-  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => !!settings.barSides },
+  { key: 'barMix', g: 'barras', label: 'Llegan por los lados (un brazo cada vez)', short: 'Por los lados', type: 'num', min: 0, max: 100, step: 10, def: 0, unit: '%', zero: 'No', modes: ['bars'], ex: ['row', 'pullup'], relayout: true, hint: 'Cuántas pompas y bichos llegan por un lado y se paran algo apartados de tu cabeza, para que en esa repetición trabaje más un brazo; los demás llegan al centro. Se reparten por igual a lo largo de la oleada y los de los lados alternan izquierda y derecha: al final, los dos brazos han trabajado lo mismo. 100 % = todos por los lados.' },
+  { key: 'barOffset', g: 'barras', label: 'Cuánto se apartan del centro', short: 'Apartados', type: 'num', min: 5, max: 40, step: 1, def: 15, unit: 'cm', modes: ['bars'], ex: ['row', 'pullup'], cond: () => settings.barMix > 0 },
   { key: 'hangPit', g: 'barras', label: 'Debajo de ti, colgado', short: 'Debajo', type: 'choice', opts: [['pool', 'Charco'], ['vortex', 'Remolino']], def: 'pool', modes: ['bars'], ex: ['hang'], hint: 'Charco con tentáculos, o un remolino que quiere engullirte y se va cerrando hasta cerrarse justo al cumplir el tiempo de la oleada. Si te sueltas antes, te engulle y la oleada termina.' },
   { key: 'fallMargin', g: 'barras', label: 'Bajada que cuenta como caída', short: 'Margen caída', type: 'num', min: 4, max: 40, step: 1, def: 12, unit: 'cm', modes: ['bars'], hint: 'Si la cabeza baja esto por debajo de tu posición colgado, te has soltado. También cuenta ver las manos por debajo de la barra.' },
   { key: 'doorH', g: 'barras', label: 'Altura de la barra de dominadas', short: 'Altura barra', type: 'num', min: 150, max: 260, step: 1, def: 220, unit: 'cm', modes: ['bars'], ex: ['pullup', 'hang'], hint: 'Se ajusta sola al colocarla con las manos.' },
@@ -243,6 +244,7 @@ function fmtVal(f, v = settings[f.key]) {
   }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  if (s.barMix === undefined && s.barSides) settings.barMix = 50; // antes, todos por los lados o ninguno: ahora se mezclan
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
   if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
   // la dificultad creciente subía un 3 % por oleada y apenas se notaba: a quien la tenía así (lo de antes) se le pasa a 6 % una vez
@@ -252,20 +254,39 @@ function fmtVal(f, v = settings[f.key]) {
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
-function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); }
+function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
+// Cada modo con cada ejercicio guarda sus ajustes de juego (la partida, el ejercicio, los enemigos, las armas, los arcos,
+// los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil, el rango y
+// las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
+const COMBO_KEY = 'reparena3-combos', COMBO_G = new Set(['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras']);
+const COMBO_SKIP = new Set(['rank', 'doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
+let _comboKeys = null;
+const comboKeys = () => _comboKeys || (_comboKeys = SCHEMA.filter(f => COMBO_G.has(f.g) && !COMBO_SKIP.has(f.key)).map(f => f.key));
+const comboId = () => settings.mode + '|' + settings.exercise;
+function comboSave(id = comboId()) { const all = store(COMBO_KEY) || {}; all[id] = Object.fromEntries(comboKeys().map(k => [k, settings[k]])); store(COMBO_KEY, all); }
+// Carga los de este modo y ejercicio; devuelve los ajustes que cambian
+function comboLoad(id = comboId()) {
+  const o = (store(COMBO_KEY) || {})[id], ch = []; if (!o) return ch;
+  for (const k of comboKeys()) if (o[k] !== undefined) { const v = clampSetting(FIELD[k], o[k]); if (v !== settings[k]) { settings[k] = v; ch.push(k); } }
+  return ch;
+}
+// Al cambiar de rango, sus valores pasan a todos los modos y ejercicios
+function comboPatchAll(vals) { const all = store(COMBO_KEY) || {}; for (const id in all) Object.assign(all[id], vals); store(COMBO_KEY, all); }
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
-  const f = FIELD[key];
+  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active ? comboId() : null;
+  if (prev) comboSave(prev); // lo que dejas, guardado
   settings[key] = f ? clampSetting(f, v) : v;
   // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
   if (key === 'mode') settings.exercise = exFor(v, settings.exercise);
   if (key === 'exercise' && !exOk(settings.mode, v)) settings.mode = modeFor(v);
+  const ch = prev && comboId() !== prev ? comboLoad() : []; // y lo de este modo y ejercicio, como lo dejaste
   saveSettings();
-  onSettingChanged(key);
+  onSettingChanged(key); ch.forEach(onSettingChanged);
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -284,9 +305,9 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 // Con pesas en las manos (no se abre la pausa juntando los dedos)
-const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plankrow'].includes(settings.exercise);
+const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
-const oneArm = () => settings.exercise === 'plank1' || settings.exercise === 'plankrow';
+const oneArm = () => settings.exercise === 'plank1';
 const deepOn = () => settings.deepDrop > 0 && DEEP_EX.includes(settings.exercise) && isCombat();
 const pistolOn = () => !!settings.pistol && handsFree() && settings.mode === 'combat';
 const isCombat = () => settings.mode === 'combat';
@@ -294,8 +315,10 @@ const isCombat = () => settings.mode === 'combat';
 // Los elegidos de cada grupo (foeList), si alguno de ellos sale en esta partida (foeOn) y, de ahí, el reparto: solo por
 // tierra, solo voladores o mezcla
 function foeList(k) { return String(settings[k] || '').split(',').filter(Boolean); } // (función: se usa ya al cargar los ajustes)
-const groundList = () => { const l = foeList(isTiny() ? 'foesHatch' : 'foesGate'); return l.length || !oneArm() ? l : ['spider']; };
-const flyList = () => { const l = foeList('foesFly'); return l.length || settings.exercise !== 'superman' ? l : ['drone', 'hornet']; };
+// «Qué enemigos salen» (foeKind) quita un grupo entero sin tocar lo marcado en él; si el que queda está vacío, los de siempre
+const foeOnly = () => oneArm() || settings.exercise === 'superman' ? 'both' : settings.foeKind;
+const groundList = () => { const k = isTiny() ? 'foesHatch' : 'foesGate', l = foeList(k); if (foeOnly() === 'fly') return []; return l.length ? l : oneArm() ? ['spider'] : foeOnly() === 'ground' ? FIELD[k].def.split(',') : l; };
+const flyList = () => { const l = foeList('foesFly'); if (foeOnly() === 'ground') return []; return l.length ? l : settings.exercise === 'superman' || foeOnly() === 'fly' ? FIELD.foesFly.def.split(',') : l; };
 const foes = () => { if (oneArm()) return 'robots'; if (settings.exercise === 'superman') return 'flyers'; const g = groundList().length, f = flyList().length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
 const foeOn = (...ks) => isCombat() && !isTiny() && foesHas('robots') && ks.some(k => groundList().includes(k));
 // El atajo (robots, voladores o mezcla) → los ajustes de cada grupo: deja vacío lo que no sale y, si lo que sí sale está

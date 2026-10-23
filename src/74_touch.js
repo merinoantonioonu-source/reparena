@@ -18,10 +18,10 @@ const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // Slam (de pie): cada objetivo obliga a moverse de verdad, y alternan de lado: amebas muy abajo (sentadilla profunda), a un
 // lado (zancada lateral), delante y abajo (zancada) o arriba (salto); diamantes a ras de suelo (agacharse a tocarlos) o
 // por encima de la cabeza (estirarse de puntillas)
-const SLAM_HEAD = [['duck', 3], ['lside', 4], ['lfwd', 2], ['jump', 2]], SLAM_HAND = [['low', 3], ['reach', 1]];
+const SLAM_HEAD = [['duck', 3], ['lside', 4], ['lfwd', 2], ['jump', 2]], SLAM_HAND = [['floor', 3], ['low', 2], ['reach', 1]]; // floor: pulsadores en el suelo
 const pickW = L => { let r = Math.random() * L.reduce((a, x) => a + x[1], 0); for (const [m, w] of L) if ((r -= w) <= 0) return m; return L[0][0]; };
 const TCH_MOVES = { slam: [SLAM_HEAD.map(x => x[0]), SLAM_HAND.map(x => x[0])], squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
-const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'low']; // side: abdominal lateral (diamante por un costado)
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'low', 'floor']; // side: abdominal lateral (diamante por un costado)
 // Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
 // bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
 const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
@@ -56,6 +56,9 @@ function handIcon(side) {
 }
 const handIconTex = { left: handIcon('left'), right: handIcon('right') };
 const gemGeo = new THREE.OctahedronGeometry(1, 0);
+// pulsador del suelo (Slam): base metálica y tapa redonda
+const padBaseGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.035, 32), padTopGeo = new THREE.CylinderGeometry(0.12, 0.128, 0.024, 32), padRippleGeo = new THREE.RingGeometry(0.17, 0.2, 40);
+padBaseGeo.translate(0, 0.015, 0); const padBaseMat = std({ color: 0x24212e, metalness: 0.75, roughness: 0.35 });
 const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3(), _tu = new V3(), _ta = new V3(), _tb = new V3();
 // Ameba: un aro de agua cuyo borde ondula como un líquido (en la GPU): ondas que recorren el perímetro, el grosor
 // que se hincha y se estrecha, y el aro que se alabea. Se sombrea como agua: brillos, borde que refleja y cáusticas.
@@ -103,11 +106,13 @@ function moveSpec(move, sd0) {
   if (move === 'lunge') { const ld = dv('lungeDepth') / 100, lo = rin + 0.05; o.pos = new V3(rand(-0.06, 0.06), S - rand(Math.max(lo, ld * 0.55), Math.max(lo + 0.03, ld)), -0.3); } // un paso por delante
   else if (move === 'squat') { const lo = rin + 0.05; o.pos = new V3(rand(-0.08, 0.08), S - rand(Math.max(lo, sd * 0.55), Math.max(lo + 0.03, sd)), -0.05); }
   else if (move === 'jump') o.pos = new V3(rand(-0.06, 0.06), S + jh + rin, -0.08);
-  // las del Slam: muy abajo (más que una sentadilla normal), a un lado (hay que dar el paso), delante y abajo, o a ras de suelo
-  else if (move === 'duck') { const lo = rin + 0.05; o.pos = new V3(side * rand(0, 0.12), S - rand(Math.max(lo, sd * 1.05), Math.max(lo + 0.04, sd * 1.4)), -0.05); }
-  else if (move === 'lside') o.pos = new V3(side * rand(0.42, 0.62), S - rand(0.1, 0.24), -0.06);
-  else if (move === 'lfwd') { const ld = dv('lungeDepth') / 100; o.pos = new V3(side * rand(0, 0.1), S - rand(Math.max(rin + 0.05, ld * 0.8), Math.max(rin + 0.08, ld * 1.1)), -0.48); }
+  // las del Slam: muy abajo (más que una sentadilla, slamDeep cm más), a un lado (hay que dar el paso), delante y abajo, a ras
+  // de suelo o, en el suelo, un pulsador que hay que golpear con la mano; nunca por debajo de media altura
+  else if (move === 'duck') { const lo = rin + 0.05, dd = sd + settings.slamDeep / 100; o.pos = new V3(side * rand(0, 0.12), Math.max(S * 0.5, S - rand(Math.max(lo, dd), Math.max(lo + 0.04, dd + 0.1))), -0.05); }
+  else if (move === 'lside') { const dd = settings.slamDeep / 100 * 0.6; o.pos = new V3(side * rand(0.42, 0.62), S - rand(0.12, 0.24) - dd, -0.06); }
+  else if (move === 'lfwd') { const ld = dv('lungeDepth') / 100 + settings.slamDeep / 100 * 0.6; o.pos = new V3(side * rand(0, 0.1), Math.max(S * 0.5, S - rand(Math.max(rin + 0.05, ld * 0.8), Math.max(rin + 0.08, ld * 1.1))), -0.48); }
   else if (move === 'low') o.pos = new V3(side * rand(0.16, 0.34), clamp(S * 0.24, 0.3, 0.5) + rand(-0.03, 0.03), -0.42);
+  else if (move === 'floor') o.pos = new V3(side * rand(0.18, 0.34), 0.03, -rand(0.3, 0.42));
   else if (move === 'punch') o.pos = new V3(side * rand(0.15, 0.3), S - 0.3 + rand(-0.05, 0.05), -0.45);
   else if (move === 'reach') o.pos = new V3(side * rand(0.2, 0.35), S + 0.5 + jh, -0.2);
   else if (move === 'push' || move === 'plank') {
@@ -168,7 +173,7 @@ function sampleHands(dt) {
     if (!A.armed) {
       // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
       const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
-      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'low' ? closer || w.y > P.y + 0.25 : true;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'low' || A.move === 'floor' ? closer || w.y > P.y + 0.25 : true;
       if (back) A.armed = true;
     }
   }
@@ -210,6 +215,16 @@ class TouchTarget {
       this.arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, color: col, transparent: true, depthWrite: false, toneMapped: false });
       const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), this.arrowMat); ar.position.z = 0.092; ar.rotation.z = this.ang; this.root.add(ar);
       this.root.rotation.y = this.yaw;
+    } else if (this.move === 'floor') { // pulsador en el suelo: una base oscura con su tapa luminosa y un aro que late alrededor
+      this.base = new THREE.Mesh(padBaseGeo, padBaseMat); this.base.castShadow = this.base.receiveShadow = true; this.root.add(this.base);
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.25, metalness: 0.2, transparent: true, toneMapped: false });
+      this.pad = new THREE.Mesh(padTopGeo, this.mat); this.pad.position.y = 0.033; this.root.add(this.pad);
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+      this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.006; this.halo.scale.setScalar(0.62); this.root.add(this.halo);
+      // y una onda de luz que sale de él por el suelo, una y otra vez
+      this.rippleMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.ripple = new THREE.Mesh(padRippleGeo, this.rippleMat); this.ripple.rotation.x = -Math.PI / 2; this.ripple.position.y = 0.008; this.root.add(this.ripple);
+      this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex[this.hand], color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.13, 0.13, 1); this.icon.position.y = 0.2; this.root.add(this.icon);
     } else {
       this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false });
       this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.085, 0.125, 0.085); this.root.add(this.gem);
@@ -305,6 +320,10 @@ class TouchTarget {
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
       if (this.mode !== 'pass') this.shellMat.opacity = 0.14 + pulse * 0.25 + (this.mode === 'wait' ? 0.1 : 0);
+    } else if (this.pad) { // late; esperando, la tapa sube y baja llamando a golpearla
+      const w = this.mode === 'wait' ? 0.5 + 0.5 * Math.sin(t * 9) : 0, rp = ((t + this.ph) * 0.9) % 1; this.pad.position.y = 0.033 + 0.012 * w;
+      if (this.mode !== 'pass') { this.haloMat.opacity = 0.55 + pulse * 0.3 + 0.25 * w; this.rippleMat.opacity = 0.7 * (1 - rp); } else this.rippleMat.opacity = 0;
+      this.halo.scale.setScalar(0.62 * (1 + pulse * 0.2 + 0.12 * w)); this.ripple.scale.setScalar(1 + rp * 1.6);
     } else if (this.gem) {
       this.gem.rotation.y += dt * 2.2; this.gem.rotation.x = Math.sin(t * 1.3 + this.ph) * 0.3;
       const s = 1 + pulse * 0.25 + (this.mode === 'wait' ? 0.12 * Math.sin(t * 9) : 0); this.gem.scale.set(0.085 * s, 0.125 * s, 0.085 * s);
@@ -322,12 +341,13 @@ class TouchTarget {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
       SND.waterPop(c, !!this.hold);
-      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb);
+      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb, head.p);
       this.mode = 'burst'; this.popT = 0; return;
     }
     if (this.part === 'cut') { this.split(c, rgb); return; }
     haptic(this.by || this.hand, 0.5, 50);
     const A = TCH.arm[this.by || this.hand]; A.armed = false; A.move = this.move; A.hitP.copy(A.cur[0] || this.pos); A.hitD = A.hitP.distanceTo(HL);
+    if (this.pad) { SND.step(c, true); SND.pop(c, false); shockRing(c, 0.8, col); fx.sparks(c, 22, rgb, 2.4, 0.03); fx.dust(c, 6, 0.25); fx.glow(c, rgb, 0.5, 0.15); haptic(this.by || this.hand, 0.8, 70); this.dispose(); return; } // ¡golpe en el suelo!
     SND.pop(c, false); fx.droplets(c, 16, rgb, 1.6, 0.03); fx.sparks(c, 12, rgb, 1.6, 0.025); fx.glow(c, rgb, 0.4, 0.15);
     this.dispose();
   }

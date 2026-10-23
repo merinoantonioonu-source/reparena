@@ -18,7 +18,7 @@ const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.m
 // En Combate el bloque guarda sus enemigos (y, si venía de Enjambre o Asalto, su puntería)
 // (foes: por tierra, voladores o mezcla, sobre los enemigos elegidos en Ajustes → Enemigos; por defecto, lo que haya ahí)
 const foeCat = v => FOE_CATS.some(o => o[0] === v) ? v : null;
-const foeCatNow = () => { const g = foeList('foesGate').length || foeList('foesHatch').length, f = foeList('foesFly').length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
+const foeCatNow = () => { const k = settings.foeKind, g = k !== 'fly' && (foeList('foesGate').length || foeList('foesHatch').length), f = k !== 'ground' && foeList('foesFly').length; return g && f ? 'mix' : f ? 'flyers' : 'robots'; };
 function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: foeCat(b.foes) || foeCatNow() }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
 // Lo que el bloque cambia en los ajustes mientras se juega
 function blockSettings(b) { const { foes: c, ...o } = blockExtra(b); return c ? Object.assign(o, foeCatPatch(c)) : o; }
@@ -75,7 +75,7 @@ function sessionStep(dt) { // descanso entre bloques
 function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock(repeat ? SES.idx : SES.idx + 1); beginRun(); }
 function finishSession() {
   const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
-  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true;
+  endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true; spRoundEnd();
   const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);

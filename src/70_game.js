@@ -832,8 +832,11 @@ function beastFlyer(kind) {
   const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
   model.traverse(m => { if (m.isMesh) { m.material = mat; m.castShadow = true; m.frustumCulled = false; } });
-  model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); root.add(model); // (los pies, abajo: el centro del bicho queda donde vuela)
-  return { root, model, mat, bones: { body: model }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
+  // (los pies, abajo: el centro del bicho queda donde vuela). El balanceo y el alabeo del vuelo van en un grupo aparte: si
+  // movieran el modelo, le quitarían ese desplazamiento y el cuerpo volaría por encima de la diana
+  const body = new THREE.Group(); root.add(body);
+  model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); body.add(model);
+  return { root, model, mat, bones: { body }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
 }
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
@@ -860,9 +863,13 @@ class Flyer {
       // en el superman y la plancha lateral vuelan bajo, a la altura de tu cabeza (nunca por encima de 0,8 m)
       const tgt = tmpA.set(0, low ? lowFlyY() : Math.max(push ? 0.2 : 1.0, HL.y - (push ? 0.05 : 0.12)), 0);
       tgt.x = HL.x * 0.6; tgt.z = HL.z * 0.6;
-      const to = tmpB.subVectors(tgt, this.base), d = to.length(), reach = push ? 0.32 : 0.85;
+      // en el superman el disparo se carga aguantando arriba: se quedan esperando algo más lejos, a la vista, y solo pican
+      // después de dar tiempo a una repetición entera y nunca mientras aguantas arriba
+      const sup = settings.exercise === 'superman', to = tmpB.subVectors(tgt, this.base), d = to.length(), reach = push ? 0.32 : sup ? 1.4 : 0.85;
+      if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up')) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
@@ -1202,8 +1209,11 @@ function armStep(kind, side, t, dt) {
   if (!h.ok) {
     d.lost += dt;
     if (press) {
-      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.45 || (d.vy > 0.35 && d.max > -0.1))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
-    } else if (d.lost > 0.5) d.state = 'down';
+      // por encima de la cabeza (o junto a la cara, al empezar a empujar) las cámaras pierden la mano: si se perdió subiendo, cuenta
+      if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
+      if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
+    } else if (d.state === 'hold' && d.lost > 0.25) { d.state = 'top'; return { top: true, ...d.ev, pow: d.pow }; } // junto a la cara la mano se pierde a menudo: sale con la carga que llevaba
+    else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
   const r = h.wrist.y - head.p.y;
@@ -1215,10 +1225,20 @@ function armStep(kind, side, t, dt) {
   }
   d.lost = 0;
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
+  // curl: aguantando la pesa a la altura del hombro (el brazo doblado, haciendo fuerza) el disparo se carga, como abajo en
+  // la sentadilla: un nivel cada POW_STEP s, hasta ×4; sale al empezar a bajarla
+  if (d.state === 'hold') {
+    if (r >= d.bottom + range * 0.75) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } return null; }
+    d.state = 'top'; return { top: true, ...d.ev, pow: d.pow };
+  }
   if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; d.lostUp = false; if (press) onCharge(); } }
   else if (d.state === 'rising') {
     d.max = Math.max(d.max, r);
-    if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) { const dur = t - d.t0; d.state = 'top'; return { top: true, perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }; }
+    if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) {
+      const dur = t - d.t0, ev = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
+      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); return null; }
+      d.state = 'top'; return { top: true, ...ev };
+    }
     if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
   } else if (r < d.bottom + 0.08) d.state = 'down';
   return null;
@@ -1231,12 +1251,12 @@ function pairStep(kind, t, dt) {
   for (const side of ['left', 'right']) {
     const ev = armStep(kind, side, t, dt); if (!ev) continue;
     if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
-    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast }); P.side = null; }
-    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast });
+    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
+    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
   }
   if (P.side) {
     const other = P.side === 'left' ? 'right' : 'left', lost = hands[other].ok ? 0 : (kind === 'press' ? DET.pr : DET.curl)[other].lost;
-    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast }); P.side = null; } // la otra mano no se ve: vale con una
+    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast, pow: P.pow }); P.side = null; } // la otra mano no se ve: vale con una
     else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
   }
 }
@@ -1261,18 +1281,17 @@ function chainStep(kind, t, dt) {
   if (t < T.quiet) return; // recién aterrizado: la caída del salto no es otra sentadilla
   T.hold = null;
   if (!T.pending) vertDetector(S, head.p.y, t, dt, { start: Math.min(0.08, req * 0.5), req, back: 0.05, partial: req * 0.4, perfectDur: settings.perfectTime, partialMsg: K.low || '¡Baja más!', defer: o => { T.hold = o; }, power: isCombat() && !pistolOn() && !swordActive() });
-  if (S.state === 'down' && S.charged && !T.armed && !T.pending) { T.armed = true; T.ref = S.ref; for (const s of ['left', 'right']) { T.seen[s] = false; T.low[s] = 9; T.lostT[s] = 0; } }
+  if (S.state === 'down' && S.charged && !T.armed && !T.pending) { T.armed = true; T.ref = S.ref; for (const s of ['left', 'right']) { T.seen[s] = false; T.lostT[s] = 0; } }
   if (T.hold) { T.pending = T.hold; T.t0 = t; T.armed = false; }
   if (!T.pending && !T.armed) return;
   if (K.jump) { if (head.p.y - T.ref >= settings.jsqJump / 100 && JUMP.fastT < 0.3) T.seen.left = T.seen.right = true; }
   else for (const s of ['left', 'right']) {
-    const h = hands[s], rr = settings.rowLift / 100;
+    const h = hands[s];
     if (h.ok) {
       const r = h.wrist.y - head.p.y;
-      if (K.row) { T.low[s] = Math.min(T.low[s], r); if (r - T.low[s] >= rr) T.seen[s] = true; }
-      else { arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; } // f: cuánto está por delante de los ojos
+      arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; // f: cuánto está por delante de los ojos
       T.last[s] = r; T.lostT[s] = 0;
-    } else { T.lostT[s] += dt; if (T.lostT[s] > 0.15 && (K.row ? T.last[s] - T.low[s] >= rr * 0.6 : K.lostOk(T.last[s]))) T.seen[s] = true; }
+    } else { T.lostT[s] += dt; if (T.lostT[s] > 0.15 && K.lostOk(T.last[s])) T.seen[s] = true; }
   }
   if (!T.pending) return;
   const L = T.seen.left, R = T.seen.right, one = !K.both || T.lostT.left > 0.3 || T.lostT.right > 0.3;
@@ -1497,7 +1516,7 @@ function runDetectors(t, dt) {
   } else if (oneArm()) {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado.
     // En el remo en plancha, la mancuerna tiene que subir el recorrido del remo
-    const P = DET.pl, y = head.p.y, LIFT = settings.exercise === 'plankrow' ? settings.rowLift / 100 : 0.18;
+    const P = DET.pl, y = head.p.y, LIFT = 0.18;
     if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
     // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
@@ -1885,14 +1904,15 @@ function exerciseRows(back) {
 }
 // Qué enemigos salen, en pocas palabras (para el botón del menú principal)
 function foesSummary() {
-  const n = (k, src) => foeList(k).map(v => src.find(o => o[0] === v)).filter(Boolean).map(o => o[1]);
+  const n = (l, src) => l.map(v => src.find(o => o[0] === v)).filter(Boolean).map(o => o[1]);
   if (oneArm()) return 'de las trampillas'; if (settings.exercise === 'superman') return 'voladores';
-  const g = n(isTiny() ? 'foesHatch' : 'foesGate', isTiny() ? FOE_HATCH : FOE_GATE), f = n('foesFly', FOE_FLY), all = [...g, ...f];
-  return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : `${all.length} clases`;
+  const g = n(groundList(), isTiny() ? FOE_HATCH : FOE_GATE), f = n(flyList(), FOE_FLY), all = [...g, ...f];
+  return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : foeOnly() === 'fly' ? 'solo voladores' : foeOnly() === 'ground' ? 'solo los que andan' : `${all.length} clases`;
 }
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
 function foesMenu(back) {
   const rows = [{ t: 'title', text: 'ENEMIGOS' },
+    { t: 'field', key: 'foeKind', after: () => foesMenu(back) },
     { t: 'text', text: 'Marca los que quieres. Los de las compuertas salen de pie; los de las trampillas, en flexiones y planchas sobre una mano.' },
     { t: 'field', key: 'foesGate', after: () => foesMenu(back) }, { t: 'field', key: 'foesHatch', after: () => foesMenu(back) }, { t: 'field', key: 'foesFly', after: () => foesMenu(back) },
     { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') },
@@ -1905,7 +1925,7 @@ const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
 function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], own[k] !== undefined ? own[k] : RANK_VALS[k][i]); return o; } // (al paso de cada ajuste)
-function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; }
+function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; comboPatchAll(v); } // (en todos los modos y ejercicios)
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
 const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
 function rankSave() { const all = store(RANK_STORE) || {}; all[settings.rank] = Object.fromEntries(Object.keys(RANK_VALS).map(k => [k, settings[k]])); store(RANK_STORE, all); }
@@ -2086,7 +2106,7 @@ function warmShaders() {
   } catch (e) { console.warn('No se pudieron precompilar los sombreadores:', e && e.message); }
 }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; // al acabar, el resumen sale delante de donde estés
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
@@ -2202,7 +2222,7 @@ function endRun(win, manual) {
   saveRun(win);
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
-  AUD.loops.forEach(l => l.stop());
+  AUD.loops.forEach(l => l.stop()); if (!SES.active) spRoundEnd(); // (en una sesión, al acabar el último bloque)
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
   const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
   const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;

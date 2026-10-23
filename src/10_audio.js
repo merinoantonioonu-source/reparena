@@ -252,6 +252,12 @@ const SND = {
     tone(shaper(o, true), { type: 'sawtooth', f: 50, d: 0.45, gain: 0.5 });
     for (let i = 0; i < 14; i++) noise(o, { t: Math.random() * 0.4, type: 'highpass', f: 2000, d: 0.01 + Math.random() * 0.03, gain: 0.3 });
   },
+  // orbe (Arcos): campanitas de cristal que suben, cada una con su armónico metálico, y un brillo de aire por encima
+  orb(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.8, gain: 0.85, ref: 1 });
+    [1568, 2093, 2637, 3136, 4186].forEach((f, i) => { tone(o, { f, d: 1.1 - i * 0.12, gain: 0.07 - i * 0.008, t: i * 0.05 }); tone(o, { f: f * 2.76, d: 0.4, gain: 0.018, t: i * 0.05 }); tone(o, { f: f * 5.4, d: 0.18, gain: 0.006, t: i * 0.05 }); });
+    tone(o, { type: 'triangle', f: 1046, to: 3136, a: 0.003, d: 0.22, gain: 0.04 }); noise(o, { type: 'highpass', f: 7000, d: 0.5, gain: 0.04, t: 0.05 });
+  },
   pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
   // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
   waterPop(pos, big) {
@@ -329,7 +335,7 @@ const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
   combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
   explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: [{ who: 2, def: 'robot' }, 0],
-  hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
+  orb: ['orbe', 0], hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]

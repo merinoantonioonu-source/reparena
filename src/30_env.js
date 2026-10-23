@@ -3,7 +3,9 @@
 function makePanel(w, h, px = 1024, opts = {}) {
   const c = mkCanvas(px, Math.round(px * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
   tex.encoding = THREE.sRGBEncoding; tex.anisotropy = MAX_ANISO;
-  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: false, toneMapped: false });
+  // escriben su profundidad (lo transparente del lienzo, no): las Quest recolocan cada imagen al último movimiento de la
+  // cabeza según la profundidad de cada punto, y un panel sin ella se recolocaba como si estuviera al fondo (temblaba)
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: opts.depthWrite !== false, alphaTest: 0.04, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   if (opts.depthTest === false) m.renderOrder = 30;
   return { c, ctx, tex, mesh: m, w, h, W: c.width, H: c.height };

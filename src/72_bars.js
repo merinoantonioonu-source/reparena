@@ -192,7 +192,13 @@ function barLat(out) {
   return out.applyAxisAngle(_up, -arena.rotation.y);
 }
 // Por los lados: cada objetivo se para apartado barOffset cm hacia su lado (y el que espera detrás, más allá de ese lado)
-const barSidesOn = () => !!settings.barSides && settings.exercise !== 'hang';
+const barSidesOn = () => settings.barMix > 0 && settings.exercise !== 'hang';
+// ¿Este llega por un lado? Se reparten por igual (los del centro, entre medias) y los de los lados alternan izquierda y derecha
+function barNextSide() {
+  if (!barSidesOn()) return 0;
+  BAR.acc = (BAR.acc === undefined ? 0.5 : BAR.acc) + settings.barMix / 100; if (BAR.acc < 1 - 1e-6) return 0;
+  BAR.acc -= 1; return (BAR.side = -(BAR.side || 1));
+}
 function barSlot(idx, out, side = 0) {
   barTopPoint(out);
   if (barSidesOn() && side) { out.addScaledVector(barLat(_bq), side * (settings.barOffset / 100 + 0.42 * idx)); if (idx) out.y += 0.06; return out; }
@@ -226,7 +232,7 @@ class HeadTarget {
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
-    this.side = barSidesOn() ? (BAR.side = -(BAR.side || 1)) : 0; // izquierda y derecha, por turnos (los dos brazos por igual)
+    this.side = barNextSide(); // por un lado (izquierda y derecha, por turnos: los dos brazos por igual) o al centro
     barSlot(this.slotIndex(), this.slot, this.side);
     if (this.side) { // por los lados: entra por su lado, algo por encima, y se para apartado del centro
       this.pos.copy(this.slot).addScaledVector(barLat(_ba), this.side * 2.6); this.pos.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.4, 0.7);
