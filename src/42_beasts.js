@@ -34,7 +34,7 @@ Object.assign(BEAST_DEF, { skeleton: { ...PIRATE, file: 'piratas/esqueleto', h: 
 // Los monstruitos andan dando saltitos (sus animaciones son en el sitio: más deprisa cuanto más corren) y muerden lanzándose
 const CUTE = { own: true, ownTex: true, lazy: true, walk: 0.7, jog: 1.4, run: 2.2, minTs: 0.7, maxTs: 2.4, prefix: '', taunt: 'Dance_Loop', hit: 'Hit',
   alias: { Idle_Loop: 'Idle', Walk_Loop: 'Walk', Jog_Fwd_Loop: 'Walk', Sprint_Loop: 'Walk', Bite: 'Bite_Front', Death01: 'Death', Hit: 'HitRecieve', Dance_Loop: 'Jump', Fly: 'Flying' }, atk: ['Bite', 0.12, 0.28],
-  bones: { chest: 'Body', head: 'Head', handR: 'Head' } };
+  bones: { chest: 'Body', head: 'Head', handR: 'Head' }, ctr: 0.5 }; // (su hueso Body está a ras de suelo: el centro, a media altura)
 // [archivo, alto del modelo, metros que mide al andar]; los de las trampillas y los voladores, a su tamaño en su clase
 [['demon', 1.62, 1.15], ['greendemon', 1.62, 1.15], ['cyclops', 1.67, 1.25], ['yeti', 1.67, 1.3], ['skull', 1.55, 1.0], ['alien', 2.06, 1.2], ['alientall', 2.11, 1.35],
   ['crab', 1.57, 0.18], ['mushroom', 2.07, 0.2], ['bee', 1.9, 0.5], ['bat', 1.75, 0.45], ['cthulhu', 1.56, 0.55], ['dragon', 1.65, 0.5]].forEach(([k, nat, h]) => {

@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -185,6 +185,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   for (const aim of ['auto', 'hands']) { let maxPow = 1;
     await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]); }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
     log(`  squat held low (${aim}): charge up to ×${maxPow}`); }
+  // zancadas: también cargan aguantando abajo; y bajando mucho más de lo pedido, la recarga profunda (×4 al instante)
+  { let lunge = 1, deep = 0, deepOff = 0, quick = 1;
+    await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
+    await runConfig('Combate sentadilla con recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 6 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; const tx = RA.msg.text || ''; if (/PROFUNDA/.test(tx)) deep++; const m = /DISPARO ×(\d)/.exec(tx); if (m) quick = Math.max(quick, +m[1]); }, 200, s => '', true);
+    await runConfig('Combate sentadilla sin llegar a la recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; if (/PROFUNDA/.test(RA.msg.text || '')) deepOff++; }, 200, s => '', true);
+    log(`  lunge held low: charge up to ×${lunge} · deep squat (6 cm extra): deep reloads seen ${deep}, quick squat shot up to ×${quick} · not deep enough (30 cm): ${deepOff}`);
+    if (lunge < 4) errors.push(`zancadas: aguantar abajo no carga el disparo (×${lunge})`);
+    if (!deep || quick < 4 || deepOff) errors.push('recarga profunda: bajando mucho el disparo debería salir ×4 al instante (y sin bajar tanto, no)'); }
   // press de hombro: las cámaras pierden la mano en cuanto pasa por encima de los ojos (subiendo deprisa): cuenta igual
   await runConfig('Combate press de hombro, la mano se pierde arriba', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press', waves: 2, repsWave: 6 }, t => { squatSim(1.8)(t); RA.PV.lostAbove = 0; }, 200, s => s.reps < 10 ? `el press no cuenta si la mano se pierde arriba (${s.reps} reps)` : s.partial > 1 ? 'el press da medias de más al perder la mano arriba' : '');
   RA.PV.lostAbove = null;
@@ -204,9 +212,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Combate sentadilla con press', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster' }, squatSim(3.0), 420, s => s.reps < 9 ? 'la sentadilla con press no dispara' : s.partial > 2 ? 'la sentadilla con press da medias de más' : '');
   await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.noArms = true; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
   RA.PV.noArms = false;
+  // peso muerto: bajar y subir dispara, sin necesidad de ver las manos
+  await runConfig('Combate peso muerto (sin manos)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'dlrow' }, t => { squatSim(3.0)(t); RA.hands.left.ok = RA.hands.right.ok = false; }, 420, s => s.reps < 6 || !s.kills ? 'el peso muerto no dispara (sin manos)' : s.partial > 2 ? 'el peso muerto da medias de más' : '');
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
-  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['dlrow', 'peso muerto con remo', 3.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
+  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
     await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex, rowLift: 16 }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
     await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1, rowLift: 16 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
@@ -241,9 +251,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const clips = {}; for (const a in D.alias) clips[a] = { name: D.alias[a], duration: 0.5, tracks: [] }; return { scene: g, clips, map: null }; };
     const NEW = ['zgreen', 'zchubby', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall', 'crab', 'mushroom', 'bee', 'bat', 'cthulhu', 'dragon', 'skeleton', 'captain', 'sharky', 'mako'];
     for (const k of NEW) RA.BEAST.kinds[k] = fakeKind(k);
-    const seen = new Set(), cls = new Set();
+    const seen = new Set(), cls = new Set(), ctrY = [];
     await runConfig('enemigos elegidos: zombis, monstruitos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', foesGate: 'zgreen,zchubby,demon,yeti,alientall', foesFly: 'bee,bat,cthulhu,dragon', waves: 2, repsWave: 26, maxAlive: 4, walkTime: 6, flySpeed: 6 },
-      t => { squatSim(2.6)(t); RA.enemies.forEach(e => { seen.add(e.kind); cls.add(e.constructor.name); }); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+      t => { squatSim(2.6)(t); RA.enemies.forEach(e => { seen.add(e.kind); cls.add(e.constructor.name); if (e.kind === 'demon' && e.alive) ctrY.push(e.center(new THREE.Vector3()).y - e.root.position.y); }); }, 420, s => s.kills < 6 ? `pocos derribados (${s.kills})` : '');
+    { const h = RA.BEAST_DEF.demon.h, m = ctrY.length ? Math.min(...ctrY) : -1; log(`cute monster aim centre: ${m.toFixed(2)} m above its feet (height ${h} m)`); if (!(m > h * 0.35)) errors.push('monstruitos: la diana y los disparos deberían ir al cuerpo, no a sus pies'); }
     const want = ['zgreen', 'zchubby', 'demon', 'yeti', 'alientall', 'bee', 'bat', 'cthulhu', 'dragon'], miss = want.filter(k => k !== 'dragon' && !seen.has(k) && !seen.has(k + 'boss')), extra = [...seen].filter(k => !want.some(w => k === w || k === w + 'boss'));
     log(`chosen enemies: seen ${[...seen].join(',')} · classes ${[...cls].join(',')} · missing ${miss.join(',') || 'none'} · not chosen ${extra.join(',') || 'none'}`);
     if (miss.length || extra.length) errors.push(`enemigos elegidos: no salen justo los marcados (faltan ${miss}, sobran ${extra})`);
@@ -397,7 +408,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · behind it solid black ${solid} (radius ${R.toFixed(2)}, menu inside ${menuIn}) · enemies left ${RA.enemies.length}`);
     if (RA.state !== 'end' || dark < 0.99 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
     if (!solid || !menuIn || RA.enemies.length) errors.push('derrota: el negro no es total y definitivo detrás del resumen');
-    press('Menú principal'); frame(3); if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
+    // si no pulsas nada, el resumen da paso solo al menú principal
+    { let k = 0; for (; k < 60 * 20 && RA.state === 'end'; k++) frame(1); log(`summary card: ${RA.menu ? 'menu' : 'none'} · opened the main menu by itself after ${(k / 60).toFixed(1)} s (state ${RA.state})`);
+      if (RA.state !== 'lobby') errors.push('resumen: debería abrirse solo el menú principal al cabo de unos segundos'); }
+    if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
     // terminarla tú: también a negro, y el resumen enseguida
     RA.setSetting('lives', 3); RA.startPreview(); frame(3); press('EMPEZAR'); for (let k = 0; k < 600 && RA.state !== 'play'; k++) frame(1);
     RA.endRun(false, true); frame(10); const early = !!RA.menu; frame(20); const mBlack = O.black.visible, mMenu = !!RA.menu && RA.activeWidgets().some(w => w.label === 'Otra ronda');
@@ -437,6 +451,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const spread = g => g.length ? Math.max(...g) - Math.min(...g) : 0;
   log('arc gaps spread: regular', spread(gaps.regular).toFixed(2), 'irregular', spread(gaps.irregular).toFixed(2), 'irregular mean', (gaps.irregular.reduce((a, b) => a + b, 0) / gaps.irregular.length).toFixed(2));
   if (spread(gaps.regular) > 0.1 || spread(gaps.irregular) < 1.0) errors.push('la aparición regular/irregular de los arcos no se nota');
+  // espera máxima: con pocos arcos por minuto (uno cada 20 s), nunca más de lo pedido entre uno y el siguiente
+  { const G = []; let last = -1, n = -1;
+    await runConfig('Arcos con espera máxima', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTiming: 'irregular', arcTilt: 0, waves: 1, repsWave: 6, arcRate: 3, arcMaxGap: 4 }, t => { RA.PV.crouch = true; const q = RA.spawnQueue.length; if (n >= 0 && q < n) { if (last >= 0) G.push(t - last); last = t; } n = q; }, 200);
+    log('arc max wait 4 s at 3 arcs/min: gaps', G.map(g => g.toFixed(1)).join(' '));
+    if (!G.length || Math.max(...G) > 4.15) errors.push('arcos: la espera máxima entre uno y el siguiente no se respeta'); }
   await runConfig('Arcos inclinados (apartándose)', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, waves: 1, repsWave: 8, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken ? `golpes al apartarse hacia el lado alto: ${s.taken}` : '');
   RA.PV.noLean = true;
   await runConfig('Arcos inclinados sin apartarse', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, arcMin: 30, arcMax: 30, waves: 1, repsWave: 6, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken < 4 ? `sin apartarse deberían golpear casi todos (${s.taken})` : '');
@@ -456,7 +475,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
-  for (const [name, ex, extra] of [['zancadas', 'lunge', {}], ['sentadillas', 'squat', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
+  for (const [name, ex, extra] of [['slam', 'slam', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
     const parts = new Set(); let fromSide = true;
     await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => { parts.add(x.part + ':' + x.move); if (x.move === 'side' && Math.abs(x.from.x) < 2) fromSide = false; }); }), 200,
@@ -464,10 +483,25 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('   movimientos:', [...parts].join(' '));
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+  // Slam: obliga a moverse de verdad (amebas a los lados, muy abajo, delante o arriba; diamantes a ras de suelo) y alterna de lado;
+  // agachándose sin más (sin pasos laterales) se escapan las de los lados
+  { const P = { side: [], duck: [], low: [], fwd: [], jump: 0, sides: [] }, seen = new Set(); let lastSide = 0, alt = 0, same = 0;
+    await runConfig('Toques slam (posiciones)', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 24, tchHands: 35, tchArrive: 1.5, tchGap: 1.2 }, t => { assist(); RA.touches.forEach(x => { if (seen.has(x)) return; seen.add(x);
+      const S = RA.TCH.ref; if (x.move === 'lside') P.side.push(Math.abs(x.pos.x)); if (x.move === 'duck') P.duck.push(S - x.pos.y); if (x.move === 'low') P.low.push(x.pos.y); if (x.move === 'lfwd') P.fwd.push(-x.pos.z); if (x.move === 'jump') P.jump++;
+      const sd = Math.sign(x.pos.x); if (sd && Math.abs(x.pos.x) > 0.1) { if (lastSide) (sd !== lastSide ? alt++ : same++); lastSide = sd; } }); }, 200, s => '');
+    const mn = a => a.length ? Math.min(...a) : 0, mx = a => a.length ? Math.max(...a) : 9;
+    log(`slam: side amebas ${P.side.length} at ≥ ${mn(P.side).toFixed(2)} m · deep ones ${P.duck.length} ≥ ${mn(P.duck).toFixed(2)} m down · floor diamonds ${P.low.length} ≤ ${mx(P.low).toFixed(2)} m high · forward ${P.fwd.length} · jumps ${P.jump} · side changes ${alt} vs repeats ${same}`);
+    if (!P.side.length || mn(P.side) < 0.4 || !P.duck.length || mn(P.duck) < RA.settings.squatDepth / 100 || !P.low.length || mx(P.low) > 0.55 || alt < same) errors.push('Slam: los objetivos no obligan a moverse (a los lados, muy abajo, a ras de suelo) o no alternan de lado');
+    RA.PV.keys.KeyG = false; RA.PV.crouch = false; let missSide = 0, hm = null;
+    await runConfig('Toques slam solo agachándose', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 1, repsWave: 10, tchHands: 0, tchArrive: 1.5, tchGap: 1.5 }, t => {
+      if (RA.PV.home) { hm = RA.PV.home.clone(); RA.PV.home = null; } if (hm) { RA.camera.position.set(hm.x, hm.y - ((t % 2) < 1 ? 0.4 : 0), hm.z); RA.PV.y = RA.camera.position.y; } // la cabeza solo sube y baja
+      RA.touches.forEach(x => { if (x.move === 'lside' && x.judged && !x._c) { x._c = 1; if (x.mode === 'pass') missSide++; } }); }, 200, s => '');
+    log(`slam just squatting: side amebas missed ${missSide}`);
+    if (!missSide) errors.push('Slam: sin paso lateral no deberían poder tocarse las amebas de los lados'); }
   // se pueden tocar mientras viajan: la cabeza va a buscar la ameba (o la mano el diamante) a mitad de camino,
   // y entre un toque y el siguiente vuelve a su postura de partida
   const midway = new Set(); let home = null;
-  await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
+  await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'approach' && RA.TCH.clock > o.spawnT + 1.5);
     const ready = x && (x.part === 'head' ? RA.TCH.headArm.armed : RA.TCH.arm[x.hand].armed);
@@ -477,7 +511,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }, 120, s => s.reps < 4 ? `tocando a mitad de camino solo cuenta ${s.reps}` : midway.size < 4 ? 'no se tocaron a mitad de camino' : '');
   // la ameba se mueve mucho mientras llega (serpentea y sube y baja) y casi nada esperando delante de ti
   { let far = 0, near = 0;
-    await runConfig('Toques ameba que se mueve', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 3, lives: 0, tchArrive: 3, tchGap: 3, tchHands: 0 }, () => {
+    await runConfig('Toques ameba que se mueve', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 3, lives: 0, tchArrive: 3, tchGap: 3, tchHands: 0 }, () => {
       for (const x of RA.touches) { if (!x.alive || !x.ring) continue; const p = x.root.position, d = Math.hypot(p.x - (x.mode === 'wait' ? x.pos.x : p.x), p.y - (x.mode === 'wait' ? x.pos.y : p.y));
         if (x.mode === 'approach') { const k = (p.z - x.from.z) / (x.pos.z - x.from.z), lx = x.from.x + (x.pos.x - x.from.x) * k; far = Math.max(far, Math.abs(p.x - lx)); }
         else if (x.mode === 'wait') near = Math.max(near, d); }
@@ -485,7 +519,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`ameba sway: off its path while coming ${(far * 100).toFixed(0)} cm · waiting ${(near * 100).toFixed(1)} cm`);
     if (far < 0.15 || near > 0.04) errors.push('Toques: la ameba no se mueve lo bastante al llegar, o se mueve demasiado esperando'); }
   // sin volver a la postura de partida, solo cuenta el primero: la cabeza se queda abajo y va de ameba en ameba
-  await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+  await runConfig('Toques sin volver a la postura', { ...base, mode: 'touch', exercise: 'combo', comboBase: 'stand', comboStand: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged), w = x ? RA.arena.localToWorld(x.pos.clone()) : home.clone().add(new THREE.Vector3(0, -0.2, 0)); // (adonde llega, sin su bamboleo)
     RA.camera.position.set(w.x, Math.min(w.y, home.y - 0.15), w.z); RA.PV.y = RA.camera.position.y;
@@ -493,7 +527,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // diamantes: solo vale la mano que piden, y entre uno y otro esa mano tiene que volver
   let flip = 1;
   for (const [name, mode, want] of [['con la otra mano', 'wrong', 0], ['sin retirar la mano', 'stay', 1], ['retirando la mano', 'back', 4], ['con un puñetazo rápido que la atraviesa', 'fast', 4]]) {
-    await runConfig('Toques diamantes ' + name, { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 100 }, () => {
+    await runConfig('Toques diamantes ' + name, { ...base, mode: 'touch', exercise: 'combo', comboBase: 'stand', comboStand: 'punch', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 100 }, () => {
       if (RA.PV.home) RA.PV.home = null;
       const x = RA.touches.find(o => o.alive && !o.judged); if (!x) { if (mode === 'back') RA.PV.handAt = null; return; }
       const armed = RA.TCH.arm[x.hand].armed, w = x.center(new THREE.Vector3());
@@ -506,7 +540,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   }
   RA.PV.handSide = null;
   // en la vida real la cabeza no pasa justo por el centro ni vuelve exactamente a su altura: también tiene que contar
-  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
+  await runConfig('Toques descentrado y volviendo casi del todo', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 5, lives: 0, tchArrive: 2, tchGap: 2.2, tchHands: 0 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'wait'), w = x && RA.TCH.headArm.armed ? RA.arena.localToWorld(x.pos.clone()).add(new THREE.Vector3(0.12, 0.02, 0.05)) : home.clone().add(new THREE.Vector3(0.05, -0.07, 0));
     RA.camera.position.copy(w); RA.PV.y = w.y;
@@ -516,9 +550,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Toques flexiones hacia los hombros', { ...base, mode: 'touch', exercise: 'pushup', waves: 1, repsWave: 12, lives: 0, tchArrive: 2, tchGap: 1.5, tchHands: 100 }, t => { RA.PV.crouch = true; RA.touches.forEach(x => { maxX = Math.max(maxX, Math.abs(x.pos.x)); if (x.part === 'hand') gems++; }); }, 60,
     s => gems ? 'en flexiones no debería haber diamantes' : maxX < 0.06 ? 'las amebas de las flexiones siempre van al centro' : '');
   RA.PV.handAt = null;
-  await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
+  await runConfig('Toques sin moverse', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 4, lives: 0, tchArrive: 2, tchGap: 2 }, () => { RA.PV.crouch = false; }, 60, s => s.reps ? 'sin moverse no debería tocar nada' : s.taken < 4 ? 'los objetivos no tocados no cuentan como fallo' : '');
   const arr = new Set();
-  await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'squat', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
+  await runConfig('Toques al ritmo (120 BPM)', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 6, lives: 0, tchArrive: 2, tchGap: 1.3, bpm: 120 }, t => { assist(); RA.touches.forEach(x => arr.add(+x.arriveAt.toFixed(4))); }, 120, s => {
     const a = [...arr].sort((x, y) => x - y), off = a.slice(1).map((x, i) => (x - a[i]) / 0.5).filter(k => Math.abs(k - Math.round(k)) > 0.04 || Math.round(k) < 1);
     return a.length < 5 ? 'no llegan objetivos' : off.length ? 'los objetivos no llegan en el pulso: ' + a.join(' ') : '';
   });
@@ -555,14 +589,32 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       for (const e of RA.enemies) if (e.alive && e.K && e.K.wasp && e.mode === 'wait' && e.slotIndex() === 0) { // la primera: las demás esperan detrás
         const w = RA.arena.localToWorld(e.slot.clone()), l = RA.eqLocal(RA.eqPose('dip'), w, new THREE.Vector3()), m = RA.eqLocal(RA.eqPose('dip'), RA.BAR.mountXZ.clone(), new THREE.Vector3());
         const H = RA.settings.dipH / 100, L = RA.settings.dipLen / 200;
-        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + 0.1, H * 0.75)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
+        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + RA.settings.rowRange / 100 + 0.04, H * 0.75 + 0.05)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
         if (!(okY && okXZ)) W.bad.push(`${l.x.toFixed(2)},${w.y.toFixed(2)},${l.z.toFixed(2)}`);
         W.maxPitch = Math.max(W.maxPitch, Math.abs(e.root.rotation.x)); W.n++;
       }
     }, 420, s => { log(`   avispas: ${W.n} fotogramas esperando, fuera de sitio ${W.bad.length} ${W.bad.slice(0, 2).join(' ')}, inclinación máx. ${W.maxPitch.toFixed(2)} rad`);
-      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
+      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra (algo más arriba) pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
   }
   RA.setSetting('dipBars', '2');
+  // por los lados: llegan por un lado y se paran apartados del centro, alternando (los dos brazos por igual); y nunca dos
+  // a la vez: espaciados una repetición (±15 %)
+  for (const [ex, target, sides] of [['pullup', 'bubbles', 1], ['row', 'bugs', 1], ['pullup', 'bubbles', 0]]) {
+    const B = { lat: [], from: [], arr: [], seen: new Set(), arrived: new Set() };
+    await runConfig(`Barras ${ex} ${target}${sides ? ' por los lados' : ''}`, { ...bars, exercise: ex, barTarget: target, barSides: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
+      pullSim(4.2)(t); // (más despacio que el hueco entre objetivos: así llegan todos y esperan)
+      const ax = new THREE.Vector3(); { const e = RA.eqPose(); const c = Math.cos(e.yaw), s_ = Math.sin(e.yaw); ax.set(c, 0, -s_).applyAxisAngle(new THREE.Vector3(0, 1, 0), -RA.arena.rotation.y); }
+      for (const e of RA.enemies) { if (e.type !== 'target') continue;
+        if (!B.seen.has(e)) { B.seen.add(e); B.from.push(Math.abs(e.pos.clone().sub(e.slot).dot(ax))); }
+        if (e.mode === 'wait' && !B.arrived.has(e)) { B.arrived.add(e); B.arr.push(t); if (e.slotIndex() === 0) { const top = new THREE.Vector3(); RA.barTopPoint(top); B.lat.push(e.slot.clone().sub(top).dot(ax)); } } }
+    }, 420, s => '');
+    const gaps = B.arr.slice(1).map((x, i) => x - B.arr[i]), G = ex === 'row' ? 2.6 : 3.2, L = B.lat.filter(x => x < -0.1).length, R = B.lat.filter(x => x > 0.1).length;
+    log(`bars ${ex} ${target} sides ${sides}: stops ${B.lat.map(x => x.toFixed(2)).join(' ')} (left ${L}, right ${R}) · came from ${B.from.slice(0, 4).map(x => x.toFixed(1)).join(' ')} m to the side · gaps between arrivals ${gaps.map(x => x.toFixed(1)).join(' ')}`);
+    if (sides && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
+    if (!sides && B.lat.some(x => Math.abs(x) > 0.05)) errors.push('barras: sin «por los lados» deberían pararse en el centro');
+    if (gaps.length < 3 || Math.min(...gaps) < G * 0.7) errors.push(`barras (${ex}): llegan dos casi a la vez (huecos ${gaps.map(x => x.toFixed(1)).join(' ')})`);
+  }
+  RA.setSetting('barSides', 0);
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -634,6 +686,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
     if (!btn || mainHas) errors.push('armas: el menú principal debería llevar el botón Armas ▸ en lugar de los ajustes sueltos');
     RA.setSetting('foesGate', fg); RA.setSetting('foesFly', ff); RA.setSetting('aim', 'auto'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
+  // rangos: cada uno pone toda la dificultad; retocado se nota; se puede guardar en el rango y volver a como venía
+  { RA.setSetting('mode', 'combat'); RA.setSetting('rank', 'general'); const g = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive };
+    RA.setSetting('rank', 'recluta'); const r = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive };
+    RA.lobbyMenu(); frame(1); const btn = RA.activeWidgets().find(w => /^Rango: /.test(w.label)); const badge = btn && btn.badge;
+    btn.onPress(); frame(1); const picks = RA.activeWidgets().filter(w => w.badge !== undefined).length; press('Sargento'); frame(1); const sg = RA.settings.walkTime;
+    RA.setSetting('walkTime', 30); const touched = RA.rankTouched(); press('Guardar mis ajustes en Sargento'); frame(1); RA.setSetting('rank', 'cabo'); RA.setSetting('rank', 'sargento'); const kept = RA.settings.walkTime;
+    press('Volver a Sargento de serie'); frame(1); const back = RA.settings.walkTime; press('Volver'); frame(1);
+    log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · main menu badge ${badge} · ${picks} ranks with insignia · sargento llegan en ${sg} s · retocado ${touched} · saved ${kept} · back to stock ${back}`);
+    if (!(g.walk < r.walk && g.max > r.max && g.lives === 1 && r.lives === 0)) errors.push('rangos: el general debería ser más difícil que el recluta');
+    if (badge !== 0 || picks !== 7 || sg !== 11 || !touched || kept !== 30 || back !== 11) errors.push('rangos: no se eligen, no se guardan en el rango o no vuelven a como venían');
+    const dirty = ['recluta', 'soldado', 'cabo', 'sargento', 'teniente', 'capitan', 'general'].filter(k => { RA.setSetting('rank', k); return RA.rankTouched(); });
+    if (dirty.length) errors.push('rangos: recién elegidos ya salen como retocados: ' + dirty.join(', '));
+    RA.setSetting('rank', 'cabo'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
   // sonido y entorno, cada uno en su submenú (y sin nada de sonido en Ajustes)
   press('Sonido'); frame(1); { const ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('sound menu sliders:', ks.join(', '));
     if (!ks.includes('volume') || !ks.includes('ambient')) errors.push('menú: el submenú de sonido no tiene los volúmenes'); }
@@ -687,8 +752,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (aw.includes('Flexiones') || RA.settings.exercise !== 'squat') errors.push('Arcos debería ofrecer solo sentadillas');
   // Toques: ejercicios propios, combinado con movimientos a elegir y ritmo marcado al compás
   press('Toques'); frame(1); const tw = exLabels();
-  log('Toques exercises:', ['Sentadillas', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'));
-  if (!['Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl')) errors.push('el menú de Toques no ofrece sus ejercicios');
+  log('Toques exercises:', ['Slam', 'Saltos', 'Abdominales', 'Flexiones', 'Combinado'].every(l => tw.includes(l)), 'curl hidden', !tw.includes('Curl'), 'squats only as Slam', !tw.includes('Sentadillas'));
+  if (!['Slam', 'Saltos', 'Abdominales', 'Combinado'].every(l => tw.includes(l)) || tw.includes('Curl') || tw.includes('Sentadillas')) errors.push('el menú de Toques no ofrece sus ejercicios (con el Slam en lugar de sentadillas y zancadas)');
   RA.setSetting('comboFloor', 'push'); press('Combinado'); frame(1); press('Plancha'); frame(1); RA.activeWidgets().filter(w => w.label === 'Plancha')[1].onPress(); frame(1); press('Toque'); frame(1);
   log('combo floor moves:', RA.settings.comboBase, RA.settings.comboFloor);
   if (RA.settings.comboBase !== 'floor' || RA.settings.comboFloor !== 'push,plank,tap') errors.push('no se eligen los movimientos del combinado: ' + RA.settings.comboFloor);
@@ -926,7 +991,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (RA.stats.falls) errors.push('remo XR: estirar los brazos tras colgarse con ellos doblados cuenta como soltarse');
     for (let i = 0; i < 1600 && RA.state !== 'end'; i++) { XRS.headY = (i % 120) < 60 ? 0.38 + 0.36 : 0.38; frame(1, 16, xrFrame); }
     log('row XR reps', RA.stats.reps, 'state', RA.state, 'falls', RA.stats.falls);
-    if (RA.stats.reps < 4 || RA.stats.falls) errors.push(`remo XR: ${RA.stats.reps} repeticiones, ${RA.stats.falls} caídas`);
+    if (RA.stats.reps < 3 || RA.state !== 'end' || RA.stats.falls) errors.push(`remo XR: ${RA.stats.reps} repeticiones, ${RA.stats.falls} caídas, ${RA.state}`); // (la última oleada trae una pompa jefe: con perfectas cae en menos)
     XRS.headQ = null; XRS.grip = null; RA.setSetting('dipBars', '2'); RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Al calibrar, el entorno se coloca según tu posición y hacia dónde mira tu cuerpo (en plancha, mirando al suelo) ----
@@ -938,6 +1003,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('calib follows body: state', RA.state, 'arena pos', RA.arena.position.x.toFixed(2), RA.arena.position.z.toFixed(2), 'yaw', RA.arena.rotation.y.toFixed(2));
   if (RA.state !== 'ready' || Math.abs(RA.arena.position.x - 1) > 0.02 || Math.abs(RA.arena.position.z - 0.3) > 0.02 || Math.abs(RA.arena.rotation.y + Math.PI / 2) > 0.05) errors.push('al calibrar el entorno no se coloca según el cuerpo');
   XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
+  // de pie, las compuertas no acompañan a la cabeza mientras calibras; al calibrar, el entorno se desliza hasta quedar delante
+  { for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'squat', lives: 0, waves: 1, repsWave: 4 })) RA.setSetting(k, v);
+    XRS.headY = 1.7; await RA.startXR(true); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); const y0 = RA.arena.rotation.y, p0 = RA.arena.position.clone(); let drift = 0, i = 0;
+    XRS.headX = 0.5; XRS.headZ = -0.2; XRS.headY = 1.7;
+    for (; i < 400 && RA.state === 'calib'; i++) { XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.8 + 0.5 * Math.sin(i / 9), 0, 'YXZ')); if (i > 150) XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.8, 0, 'YXZ')); frame(1, 16, xrFrame); if (RA.state === 'calib') drift = Math.max(drift, Math.abs(RA.arena.rotation.y - y0), RA.arena.position.distanceTo(p0)); }
+    const atCal = RA.arena.rotation.y; frame(70, 16, xrFrame);
+    log(`standing calib: arena moved while calibrating ${drift.toFixed(3)} · at calibration yaw ${atCal.toFixed(2)} → after the glide ${RA.arena.rotation.y.toFixed(2)} pos ${RA.arena.position.x.toFixed(2)},${RA.arena.position.z.toFixed(2)} · state ${RA.state}`);
+    if (drift > 0.01) errors.push('de pie, las compuertas no deberían moverse con la cabeza mientras calibras');
+    if (Math.abs(RA.arena.rotation.y - 0.8) > 0.05 || Math.abs(RA.arena.position.x - 0.5) > 0.03 || Math.abs(RA.arena.position.z + 0.2) > 0.03) errors.push('de pie, al calibrar el entorno debería colocarse delante de ti');
+    XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Flexiones en XR: calibrar un poco alto o mirar al suelo no debe impedir el disparo ----
   for (const [k, v] of Object.entries({ mode: 'walkers', exercise: 'pushup', lives: 0, waves: 1, repsWave: 6, rest: 0, walkTime: 30, pushDepth: 13 })) RA.setSetting(k, v);
@@ -974,6 +1050,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await sleep(50);
   log('spotify: connected', !!RA.SP.cfg.refresh, 'url cleaned', global.location.replaced, 'now:', RA.spNowText());
   if (!RA.SP.cfg.refresh || !/Eye of the Tiger/.test(RA.spNowText())) errors.push('Spotify: no se conecta con el código de vuelta');
+  // minicontroles (con iconos) en el menú principal y en la pausa; usarlos en plena partida no la termina; con música, sin ambiente
+  { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(2);
+    const lw = RA.activeWidgets(), mini = ['prev', 'next', 'voldown', 'volup'].every(k => lw.some(w => w.icon === k)) && lw.some(w => w.icon === 'pause' || w.icon === 'play');
+    RA.beginRun(); frame(30); RA.openPause(); frame(2); const inPause = RA.activeWidgets().some(w => w.icon === 'next');
+    RA.activeWidgets().find(w => w.icon === 'next').onPress(); await sleep(20); frame(2); const st = RA.state; press('Continuar'); frame(2); const back = RA.state;
+    const muted = RA.AUDM.music && RA.ambMute();
+    log(`spotify mini controls: main menu ${mini} · pause ${inPause} · state after «next» in the pause ${st} → after Continuar ${back} · ambience muted while it plays ${muted}`);
+    if (!mini || !inPause) errors.push('Spotify: faltan los minicontroles con iconos en el menú principal o en la pausa');
+    if (st !== 'paused' || !RA.GAME_STATES.includes(back)) errors.push('Spotify: usar los minicontroles en plena partida no debería terminarla (pausa y se reanuda)');
+    if (!muted) errors.push('Spotify: mientras suena, el sonido ambiente debería callarse');
+    RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);
@@ -1168,7 +1255,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('pistol', 0);
   // Toques con espada: bloques que se cortan en la dirección de su flecha, en la postura que piden
   for (const [name, mode, want] of [['bien', 'ok', 6], ['al revés de la flecha', 'reverse', 0], ['sin agacharse ni inclinarse', 'pose', 0], ['con una estocada recta', 'stab', 0]]) {
-    for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
+    for (const [k, v] of Object.entries({ mode: 'touch', exercise: 'slam', sword: 'one', swordHand: 'right', swordKind: 'laser', swordSpeed: 1.6, tchHands: 100, lives: 0, waves: 1, repsWave: 6, tchArrive: 2, tchGap: 4.5, tchWindow: 2, squatDepth: 25 })) RA.setSetting(k, v); // bloques espaciados: al barrer no hay otro cerca (también valen de camino, y se cortaría ese)
     XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; XRS.headX = 0; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
     RA.beginRun(); frame(250, 16, xrFrame);
     const moves = new Set(); let maxDeb = 0, deb0 = RA.debris.length; // la base baja si desaparecen restos de antes
@@ -1176,10 +1263,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const FR = (ph, t) => { const r0 = RA.stats.reps; frame(1, 16, xrFrame); deb0 = Math.min(deb0, RA.debris.length); maxDeb = Math.max(maxDeb, RA.debris.length - deb0); if (mode === 'reverse' && RA.stats.reps > r0) log('REVCUT', ph, t && t.move, 'vel', ['x', 'y', 'z'].map(k => RA.SWD.s.right.vel[k].toFixed(2)).join(','), 'cutDir', t && ['x', 'y', 'z'].map(k => t.cutDir[k].toFixed(2)).join(','), 'normal', t && ['x', 'y', 'z'].map(k => t.normal[k].toFixed(2)).join(','), 'arenaYaw', RA.arena.rotation.y.toFixed(3), RA.touches.filter(x => x.alive && x.part === 'cut').map(x => x.mode + (x === t ? '*' : '') + ':' + [x.pos.x, x.pos.y, x.pos.z].map(v => v.toFixed(2)).join(',')).join(' ')); };
     for (let i = 0; i < 3000 && RA.state !== 'end'; i++) {
       const t = RA.touches.find(x => x.alive && !x.judged && x.part === 'cut' && x.mode === 'wait');
-      XRS.headY = 1.7; XRS.headX = 0;
+      XRS.headY = 1.7; XRS.headX = 0; XRS.headZ = 0;
       if (t) {
         moves.add(t.move);
-        if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; }
+        if (mode !== 'pose') { if (t.move === 'cutLow') XRS.headY = 1.48; if (t.move === 'cutSide') XRS.headX = Math.sign(t.pos.x) * 0.16; if (t.move === 'cutFwd') XRS.headZ = -0.22; if (t.move === 'cutHigh') XRS.headY = 1.7 + RA.settings.jumpHeight / 100 * 0.7 + 0.03; }
         frame(1, 16, xrFrame);
         const c = RA.arena.localToWorld(t.pos.clone()), dir = t.normal.clone().negate(), sw = t.cutDir.clone().multiplyScalar(mode === 'reverse' ? -1 : 1);
         holdSword('right', c.clone().addScaledVector(t.normal, 1.5), dir, sw, -0.3); FR('prep', t); // se prepara delante, lejos del bloque (al venir de la retirada, la hoja se mueve en la dirección de la flecha)

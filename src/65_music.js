@@ -223,6 +223,16 @@ function musicRows() {
     ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
 }
+// Minicontroles para el menú de muñeca o el atril (principal y pausa): lo que suena y anterior, pausa/play, siguiente y
+// volumen, con iconos. Pulsarlos en plena partida no la termina: la pausa sigue ahí y «Continuar» la reanuda
+function spMiniRows() {
+  if (!spConnected()) return [];
+  if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
+  const it = SP.st && SP.st.item, now = SP.err || (it ? `♪ ${it.name}${it.artists ? ' — ' + it.artists.map(a => a.name).join(', ') : ''}` : 'Spotify: no suena nada');
+  return [{ t: 'text', text: now, color: SP.err ? '#ff8a3d' : '#a68bff', music: true },
+    { t: 'btns', h: 0.058, items: [{ label: 'Anterior', icon: 'prev', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', icon: spPlaying() ? 'pause' : 'play', style: 'primary', flex: 1.3, onPress: spToggle },
+      { label: 'Siguiente', icon: 'next', onPress: spNext }, { label: 'Vol −', icon: 'voldown', onPress: () => spVol(-10) }, { label: 'Vol +', icon: 'volup', onPress: () => spVol(10) }] }];
+}
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
 // Con el menú de música abierto, se pregunta a Spotify cada 5 s; si no, cada 8 s (para callar el ambiente mientras
 // suena y para seguir el ritmo de cada canción)
