@@ -132,7 +132,7 @@ function barRep(opts) {
   if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   let tg = frontTarget();
-  if (!tg && spawnQueue.length) { spawnFromQueue(); spawnTimer = spawnInterval; tg = frontTarget(); } // ninguna repetición se pierde
+  if (!tg && spawnQueue.length) { spawnFromQueue(); spawnTimer = barGap(); tg = frontTarget(); } // ninguna repetición se pierde
   if (!tg) return;
   // si todavía no ha llegado, la onda del cabezazo lo alcanza igual
   const c = tg.center(new V3()), h = head.p.clone().add(_ba.set(0, 0.08, 0));
@@ -167,6 +167,9 @@ const BUBBLE_SPLASH = [[1, 0.45, 0.85], [0.45, 0.85, 1], [1, 0.95, 0.45], [0.55,
 const guideGeo = G.cylRaw(0.003, 0.003, 0.4, 6); guideGeo.translate(0, -0.2, 0);
 const guideMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 const eyeWhite = std({ color: 0xf2eee6, roughness: 0.25 }), eyeIris = new THREE.MeshBasicMaterial({ color: 0xff3020, toneMapped: false }), eyePupil = new THREE.MeshBasicMaterial({ color: 0x050303 });
+// Entre un objetivo y el siguiente, lo que dura una repetición (±15 %): nunca llegan dos a la vez, y llegan espaciados
+// de forma pareja sin ser un metrónomo (todos tardan lo mismo en llegar desde que salen)
+const barGap = () => repTimeOf(settings.exercise, 'bars') * rand(0.85, 1.15);
 const frontTarget = () => enemies.find(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait'));
 // Punto más alto previsto de la cabeza (coordenadas de la arena) y hueco de espera del siguiente
 // En el remo: un cuarto de la altura de la barra por debajo de ella y pasado su borde hacia tu cabeza (con una paralela,
@@ -174,7 +177,7 @@ const frontTarget = () => enemies.find(e => e.type === 'target' && e.alive && (e
 const _bt = new V3();
 function barTopPoint(out) {
   if (settings.exercise === 'row') {
-    const e = eqPose(), L = settings.dipLen / 200, l = eqLocal(e, _bt.copy(BAR.mountXZ), _bt), y = Math.max(BAR.ref + 0.1, settings.dipH / 100 * 0.75);
+    const e = eqPose(), L = settings.dipLen / 200, l = eqLocal(e, _bt.copy(BAR.mountXZ), _bt), y = Math.max(BAR.ref + barReq() + 0.04, settings.dipH / 100 * 0.75 + 0.05); // (un poco más arriba que antes: hay que subir más)
     if (dipOne()) eqWorld(e, (Math.sign(l.x) || 1) * 0.12, y, clamp(l.z, -L, L), out); else eqWorld(e, l.x, y, (Math.sign(l.z) || 1) * (L + 0.1), out);
     return arena.worldToLocal(out);
   }
@@ -182,8 +185,18 @@ function barTopPoint(out) {
   if (settings.exercise !== 'row') out.y = Math.min(out.y, settings.doorH / 100 - 0.06);
   return out;
 }
-function barSlot(idx, out) {
-  barTopPoint(out); if (!idx) return out;
+// Hacia los lados del cuerpo (coordenadas de la arena, en horizontal): a lo largo de la barra de dominadas; en el remo,
+// de una paralela a la otra (con una sola, a lo largo de ella: estás tumbado cruzado debajo)
+function barLat(out) {
+  const e = eqPose(); if (eqKind() === 'dip' && dipOne()) eqAxes(e, null, out); else eqAxes(e, out);
+  return out.applyAxisAngle(_up, -arena.rotation.y);
+}
+// Por los lados: cada objetivo se para apartado barOffset cm hacia su lado (y el que espera detrás, más allá de ese lado)
+const barSidesOn = () => !!settings.barSides && settings.exercise !== 'hang';
+function barSlot(idx, out, side = 0) {
+  barTopPoint(out);
+  if (barSidesOn() && side) { out.addScaledVector(barLat(_bq), side * (settings.barOffset / 100 + 0.42 * idx)); if (idx) out.y += 0.06; return out; }
+  if (!idx) return out;
   const e = eqPose(), w = arena.localToWorld(_bw.copy(out));
   if (eqKind() === 'door') eqAxes(e, _ba); else { _ba.set(w.x - e.x, 0, w.z - e.z); if (_ba.lengthSq() < 1e-4) eqAxes(e, null, _ba); _ba.normalize(); }
   w.addScaledVector(_ba, 0.42 * idx); w.y += 0.06;
@@ -213,8 +226,12 @@ class HeadTarget {
     if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
-    barSlot(this.slotIndex(), this.slot);
-    if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
+    this.side = barSidesOn() ? (BAR.side = -(BAR.side || 1)) : 0; // izquierda y derecha, por turnos (los dos brazos por igual)
+    barSlot(this.slotIndex(), this.slot, this.side);
+    if (this.side) { // por los lados: entra por su lado, algo por encima, y se para apartado del centro
+      this.pos.copy(this.slot).addScaledVector(barLat(_ba), this.side * 2.6); this.pos.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.4, 0.7);
+      if (!this.bubble) { this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos))); if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9, 'wasp'); }
+    } else if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
       const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
       if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
       else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
@@ -233,7 +250,7 @@ class HeadTarget {
   slotIndex() { let i = 0; for (const o of enemies) { if (o === this) break; if (o.type === 'target' && o.alive && (o.mode === 'approach' || o.mode === 'wait')) i++; } return i; }
   update(dt, t) {
     this.t += dt; const play = state === 'play', idx = this.slotIndex();
-    if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot);
+    if (this.mode === 'approach' || this.mode === 'wait') barSlot(idx, this.slot, this.side);
     // si la cabeza lo alcanza mientras subes, revienta aunque no haya llegado a su sitio y esa subida cuenta como
     // repetición. Solo subiendo: colgado o bajando, un roce no regala nada
     if (play && this.alive && (this.mode === 'approach' || this.mode === 'wait') && !BAR.contact && BAR.det === 'rising' && arena.localToWorld(_bw.copy(this.pos)).distanceTo(head.p) < this.radius + 0.09) {

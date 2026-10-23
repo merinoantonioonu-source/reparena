@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -589,14 +589,32 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       for (const e of RA.enemies) if (e.alive && e.K && e.K.wasp && e.mode === 'wait' && e.slotIndex() === 0) { // la primera: las demás esperan detrás
         const w = RA.arena.localToWorld(e.slot.clone()), l = RA.eqLocal(RA.eqPose('dip'), w, new THREE.Vector3()), m = RA.eqLocal(RA.eqPose('dip'), RA.BAR.mountXZ.clone(), new THREE.Vector3());
         const H = RA.settings.dipH / 100, L = RA.settings.dipLen / 200;
-        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + 0.1, H * 0.75)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
+        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + RA.settings.rowRange / 100 + 0.04, H * 0.75 + 0.05)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
         if (!(okY && okXZ)) W.bad.push(`${l.x.toFixed(2)},${w.y.toFixed(2)},${l.z.toFixed(2)}`);
         W.maxPitch = Math.max(W.maxPitch, Math.abs(e.root.rotation.x)); W.n++;
       }
     }, 420, s => { log(`   avispas: ${W.n} fotogramas esperando, fuera de sitio ${W.bad.length} ${W.bad.slice(0, 2).join(' ')}, inclinación máx. ${W.maxPitch.toFixed(2)} rad`);
-      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
+      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra (algo más arriba) pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
   }
   RA.setSetting('dipBars', '2');
+  // por los lados: llegan por un lado y se paran apartados del centro, alternando (los dos brazos por igual); y nunca dos
+  // a la vez: espaciados una repetición (±15 %)
+  for (const [ex, target, sides] of [['pullup', 'bubbles', 1], ['row', 'bugs', 1], ['pullup', 'bubbles', 0]]) {
+    const B = { lat: [], from: [], arr: [], seen: new Set(), arrived: new Set() };
+    await runConfig(`Barras ${ex} ${target}${sides ? ' por los lados' : ''}`, { ...bars, exercise: ex, barTarget: target, barSides: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
+      pullSim(4.2)(t); // (más despacio que el hueco entre objetivos: así llegan todos y esperan)
+      const ax = new THREE.Vector3(); { const e = RA.eqPose(); const c = Math.cos(e.yaw), s_ = Math.sin(e.yaw); ax.set(c, 0, -s_).applyAxisAngle(new THREE.Vector3(0, 1, 0), -RA.arena.rotation.y); }
+      for (const e of RA.enemies) { if (e.type !== 'target') continue;
+        if (!B.seen.has(e)) { B.seen.add(e); B.from.push(Math.abs(e.pos.clone().sub(e.slot).dot(ax))); }
+        if (e.mode === 'wait' && !B.arrived.has(e)) { B.arrived.add(e); B.arr.push(t); if (e.slotIndex() === 0) { const top = new THREE.Vector3(); RA.barTopPoint(top); B.lat.push(e.slot.clone().sub(top).dot(ax)); } } }
+    }, 420, s => '');
+    const gaps = B.arr.slice(1).map((x, i) => x - B.arr[i]), G = ex === 'row' ? 2.6 : 3.2, L = B.lat.filter(x => x < -0.1).length, R = B.lat.filter(x => x > 0.1).length;
+    log(`bars ${ex} ${target} sides ${sides}: stops ${B.lat.map(x => x.toFixed(2)).join(' ')} (left ${L}, right ${R}) · came from ${B.from.slice(0, 4).map(x => x.toFixed(1)).join(' ')} m to the side · gaps between arrivals ${gaps.map(x => x.toFixed(1)).join(' ')}`);
+    if (sides && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
+    if (!sides && B.lat.some(x => Math.abs(x) > 0.05)) errors.push('barras: sin «por los lados» deberían pararse en el centro');
+    if (gaps.length < 3 || Math.min(...gaps) < G * 0.7) errors.push(`barras (${ex}): llegan dos casi a la vez (huecos ${gaps.map(x => x.toFixed(1)).join(' ')})`);
+  }
+  RA.setSetting('barSides', 0);
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -973,7 +991,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (RA.stats.falls) errors.push('remo XR: estirar los brazos tras colgarse con ellos doblados cuenta como soltarse');
     for (let i = 0; i < 1600 && RA.state !== 'end'; i++) { XRS.headY = (i % 120) < 60 ? 0.38 + 0.36 : 0.38; frame(1, 16, xrFrame); }
     log('row XR reps', RA.stats.reps, 'state', RA.state, 'falls', RA.stats.falls);
-    if (RA.stats.reps < 4 || RA.stats.falls) errors.push(`remo XR: ${RA.stats.reps} repeticiones, ${RA.stats.falls} caídas`);
+    if (RA.stats.reps < 3 || RA.state !== 'end' || RA.stats.falls) errors.push(`remo XR: ${RA.stats.reps} repeticiones, ${RA.stats.falls} caídas, ${RA.state}`); // (la última oleada trae una pompa jefe: con perfectas cae en menos)
     XRS.headQ = null; XRS.grip = null; RA.setSetting('dipBars', '2'); RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Al calibrar, el entorno se coloca según tu posición y hacia dónde mira tu cuerpo (en plancha, mirando al suelo) ----

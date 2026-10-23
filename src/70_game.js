@@ -2118,7 +2118,7 @@ function rampWaveEnd(ok) {
 }
 function startWave(i) {
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
-  if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = 0.9; }
+  if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = repTimeOf(settings.exercise, 'bars'); }
   else if (settings.mode === 'arcs') spawnInterval = 60 / dv('arcRate');
   else if (settings.mode === 'touch') touchStartWave();
   else {
@@ -2311,7 +2311,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt;
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * arcGap(), settings.arcMaxGap) : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * arcGap(), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
