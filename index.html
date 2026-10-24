@@ -5002,49 +5002,79 @@ class Slider {
   commit() { if (this.pending) { this.pending = false; if (this.onDrag) this.onDrag(this.value, true); } }
 }
 const fingers = [];
-const _wl = new V3();
-// Para que no se pulsen botones sin querer: tras una pulsación, ese dedo no pulsa nada más hasta que se aleja un poco
-// (POKE_MOVE) del sitio donde pulsó, y entre dos pulsaciones pasa un momento. En cada fotograma cuenta como mucho una
-// pulsación, la del botón en cuyo centro está más metido el dedo (con el dedo entre dos botones no se pulsan los dos).
-// Tras pulsar (o al abrirse un menú), ese dedo no vuelve a pulsar ni a arrastrar hasta que se retira un poco del menú
-// (POKE_BACK por delante de los botones o fuera de ellos): así la misma pulsación no toca el menú que se abre
-const POKE = { lock: { left: null, right: null }, need: { left: false, right: false }, until: 0 }, POKE_MOVE = 0.04, POKE_GAP = 0.45, POKE_BACK = 0.02;
+const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = new V3(), _pkP = new V3();
+// Pulsar con el dedo como un botón de verdad (el índice; medidas en metros reales, también en el menú de muñeca, que va
+// a escala):
+//  · el dedo tiene que llegar por delante: el botón que tiene delante (hasta POKE_HOVER) se ilumina y es el único que ese
+//    dedo puede pulsar; entrar de lado o por detrás no pulsa nada
+//  · al tocarlo, la cara del botón se hunde con el dedo (hasta POKE_TRAVEL) y pulsa al hundirse POKE_DEPTH, yendo hacia
+//    dentro (un barrido de lado no cuenta)
+//  · mientras está hundido, ese botón no cambia aunque el dedo resbale sobre los vecinos (si se sale más de POKE_SLIDE,
+//    se anula); para volver a pulsar hay que sacar el dedo por delante (POKE_OUT), y entre dos pulsaciones pasa POKE_GAP
+//  · tras pulsar (o al abrirse un menú), ese dedo no pulsa en el menú nuevo hasta retirarse (POKE_BACK por delante o fuera)
+const POKE = { st: {}, need: { left: false, right: false }, until: 0 };
+const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
+function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
+const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
-  const now = performance.now() / 1000;
-  for (const f of fingers) { const L = POKE.lock[f.side]; if (L && f.p.distanceTo(L) > POKE_MOVE) POKE.lock[f.side] = null; }
-  let best = null, bestD = Infinity; const near = { left: false, right: false };
-  for (const w of list) {
-    if (!w.mesh.visible) continue;
-    w.cool = Math.max(0, (w.cool || 0) - dt);
-    let hover = false, touching = false, drag = null;
-    for (const f of fingers) {
-      if (w.only && w.only !== f.side) continue;
-      const l = w.mesh.worldToLocal(_wl.copy(f.p));
-      const inX = Math.abs(l.x) < w.w / 2 + 0.006, inY = Math.abs(l.y) < w.h / 2 + 0.006, prev = w.prevZ[f.side], held = isMenu && POKE.need[f.side];
-      if (Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.03 && l.z < POKE_BACK && l.z > -0.15) near[f.side] = true;
-      if (inX && inY && l.z < 0.07 && l.z > -0.05) hover = true;
-      if (w.kind === 'slider') {
-        if (!held && Math.abs(l.x) < w.w / 2 + 0.03 && Math.abs(l.y) < w.h / 2 + 0.02 && l.z < 0.02 && l.z > -0.07) { drag = clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1); touching = true; }
-      } else if (inX && inY && l.z < 0.012 && l.z > -0.07) {
-        touching = true;
-        // pulsa al cruzar la superficie desde delante, con el dedo ya dentro del botón (no en su borde)
-        const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2));
-        if (!held && prev !== undefined && prev >= 0.012 && d < 0.97 && !POKE.lock[f.side] && d < bestD) { bestD = d; best = { w, f }; }
-      }
-      w.prevZ[f.side] = l.z;
+  const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
+  const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
+  for (const w of vis) w.cool = Math.max(0, (w.cool || 0) - dt);
+  for (const side of ['left', 'right']) {
+    const f = fingers.find(x => x.side === side), S = pokeSt(key, side);
+    if (!f) { Object.assign(S, { cand: null, push: false, done: false, has: false }); continue; }
+    if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
+    S.prev.copy(f.p); S.has = true;
+    // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
+    let best = null, cur = null, behind = false;
+    for (const w of vis) {
+      if (w.only && w.only !== side) continue;
+      w.mesh.updateMatrixWorld(); const e = w.mesh.matrixWorld.elements, sc = Math.hypot(e[0], e[1], e[2]) || 1;
+      const l = w.mesh.worldToLocal(_pkL.copy(f.p)), z = (l.z - (w.baseZ - w.mesh.position.z)) * sc;
+      const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2)), R = { w, l: l.clone(), z, d, sc };
+      if (d < 1 && z > 0 && z < POKE_HOVER && (!best || d < best.d - 0.05 || (d < best.d + 0.05 && z < best.z))) best = R;
+      if (d < 1.1 && z <= POKE_BACK && z > -0.15) behind = true;
+      if (w === S.cand) cur = R;
     }
-    if (hover !== w.hover) { w.hover = hover; w.draw(); }
-    w.mesh.position.z = w.baseZ - (touching ? 0.004 : 0);
-    if (w.kind === 'slider') { if (drag !== null && ready) w.drag(drag); else w.commit(); }
+    if (isMenu && POKE.need[side]) { // menú recién abierto: hasta que el dedo se retire, no hace nada
+      let near = behind;
+      if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
+      if (!near) POKE.need[side] = false;
+      Object.assign(S, { cand: null, push: false, done: false }); continue;
+    }
+    if (S.push) {
+      const w = S.cand, slide = cur && (Math.abs(cur.l.x) > w.w / 2 + POKE_SLIDE / cur.sc || Math.abs(cur.l.y) > w.h / 2 + POKE_SLIDE / cur.sc);
+      if (!cur || slide) { Object.assign(S, { cand: null, push: false, done: false }); continue; } // se fue de lado: anulado
+      if (cur.z > POKE_OUT) { S.push = false; S.done = false; } // fuera, por delante: lista para otra
+      else {
+        const depth = Math.max(0, -cur.z);
+        if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
+        else {
+          push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
+          if (!S.done && depth >= POKE_DEPTH && S.n >= 2) {
+            // hacia dentro y no de lado: la velocidad, en los ejes del botón
+            w.mesh.matrixWorld.decompose(_pkP, _pkQ, _pkS); _pkV.copy(S.v).applyQuaternion(_pkQ.invert());
+            const lat = Math.hypot(_pkV.x, _pkV.y), into = -_pkV.z;
+            S.done = true;
+            if (!(lat > 0.35 && lat > 1.5 * Math.max(0, into)) && !press) press = { w, side };
+          }
+        }
+        hov.add(w); continue;
+      }
+    }
+    // delante de un botón: ese es el candidato; si toca su superficie viniendo de delante, empieza a hundirlo
+    if (cur && cur.z <= 0 && cur.d < 1 && !S.push) { S.push = true; S.done = false; hov.add(S.cand); if (S.cand.kind === 'slider') drags.set(S.cand, pokeU(S.cand, cur.l)); continue; }
+    if (best) { if (best.w !== S.cand) { S.cand = best.w; S.n = 0; } S.n++; hov.add(best.w); }
+    else S.cand = null;
   }
-  if (isMenu) for (const f of fingers) {
-    // retirado (más de POKE_BACK por delante del menú, o lejos de él): ya puede volver a pulsar
-    if (!near[f.side] && menu && menu.group) { const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near[f.side] = true; }
-    if (!near[f.side]) POKE.need[f.side] = false;
+  for (const w of vis) {
+    const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; w.draw(); }
+    if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
+    else w.mesh.position.z = w.baseZ - (push.get(w) || 0);
   }
-  if (!best || !ready || best.w.cool > 0 || now < POKE.until) return false;
-  POKE.lock[best.f.side] = best.f.p.clone(); POKE.until = now + POKE_GAP; best.w.cool = 0.35; if (isMenu) POKE.need[best.f.side] = true;
-  SND.click(); haptic(best.f.side, 0.15, 15); best.w.onPress(); return true;
+  if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
+  POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
+  SND.click(); haptic(press.side, 0.15, 15); press.w.onPress(); return true;
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */

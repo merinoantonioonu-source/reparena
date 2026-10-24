@@ -133,19 +133,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // la dificultad creciente sube poco a poco: un 4 % por oleada por defecto (quien tenía el 6 % de antes pasa al 4 %)
   log(`ramp by default ${RA.settings.ramp} % (version ${RA.settings.rampV})`); if (RA.settings.ramp !== 4) errors.push('la dificultad creciente debería subir un 4 % por oleada por defecto');
   { const simpleDef = RA.settings.menuLevel; RA.setSetting('menuLevel', 'full'); log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
-  // ---- Botones táctiles: un toque pulsa un solo botón, y para pulsar otra vez hay que mover el dedo ----
+  // ---- Botones táctiles: como un botón de verdad (llegar por delante, hundirlo y sacar el dedo para otra) ----
   {
     const hits = [], a = new RA.Btn('A', 0.1, 0.06, () => hits.push('A')), b = new RA.Btn('B', 0.1, 0.06, () => hits.push('B'));
     a.mesh.position.set(-0.05, 1.5, -0.5); b.mesh.position.set(0.051, 1.5, -0.5); a.baseZ = b.baseZ = -0.5;
     const poke = (x, z, n = 1) => { for (let i = 0; i < n; i++) { a.mesh.updateMatrixWorld(); b.mesh.updateMatrixWorld(); RA.fingers.length = 0; RA.fingers.push({ side: 'right', p: new THREE.Vector3(x, 1.5, -0.5 + z) }); RA.pokeWidgets([a, b], 0.016); } };
     const tap = x => { poke(x, 0.04, 3); for (let k = 0; k <= 10; k++) poke(x, 0.04 - k * 0.006); poke(x, -0.02, 5); poke(x, 0.04, 5); };
     tap(0.0005); const edge = hits.length;            // justo entre los dos
-    await sleep(500); tap(-0.05); const one = hits.join('');
-    await sleep(500); tap(-0.05 + 0.01); const same = hits.join(''); // otra vez casi en el mismo sitio: no cuenta
-    poke(0.05, 0.05, 3); await sleep(500); tap(0.05); const other = hits.join(''); // tras mover el dedo, sí
+    await sleep(300); tap(-0.05); const one = hits.join('');
+    // hundido, temblando sin salir por delante: no vuelve a pulsar; ni resbalando hasta el vecino
+    await sleep(300); poke(-0.05, 0.04, 3); for (let k = 0; k <= 8; k++) poke(-0.05, 0.04 - k * 0.006); const hits1 = hits.join('');
+    for (const z of [-0.004, -0.015, -0.002, -0.012, 0.004, -0.01]) poke(-0.05, z, 2); const jitter = hits.join('');
+    for (let x = -0.05; x <= 0.06; x += 0.01) poke(x, -0.012); poke(0.05, -0.012, 4); const slid = hits.join('');
+    poke(0.05, 0.05, 5);
+    // un barrido de lado que roza B por delante y se mete: no cuenta
+    await sleep(300); for (let k = 0; k < 8; k++) poke(0.01 + k * 0.012, 0.02 - k * 0.0045); poke(0.12, 0.06, 4); const swipe = hits.join('');
+    // sacando el dedo, el mismo botón se puede pulsar otra vez (los + y −)
+    await sleep(300); tap(-0.05); const again = hits.join('');
+    await sleep(300); tap(0.05); const other = hits.join('');
     RA.fingers.length = 0;
-    log('buttons: edge', edge, 'tap A', one, 'again same spot', same, 'after moving', other);
-    if (edge > 1 || one !== 'A' || same !== 'A' || other !== 'AB') errors.push(`botones táctiles: pulsaciones de más o de menos (${edge}, ${one}, ${same}, ${other})`);
+    log('buttons: edge', edge, '· tap A', one, '· first push', hits1, '· jitter while pressed', jitter, '· slide onto B', slid, '· side swipe', swipe, '· again after pulling back', again, '· B', other);
+    if (edge || one !== 'A' || hits1 !== 'AA' || jitter !== 'AA' || slid !== 'AA' || swipe !== 'AA' || again !== 'AAA' || other !== 'AAAB') errors.push(`botones táctiles: pulsaciones de más o de menos (${edge}, ${one}, ${hits1}, ${jitter}, ${slid}, ${swipe}, ${again}, ${other})`);
   }
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30, arcPatterns: 0, arcNew: 0, arcFever: 0 }; // (los arcos de siempre: las coreografías y lo nuevo tienen su prueba)
   // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
