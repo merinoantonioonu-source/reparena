@@ -1189,27 +1189,30 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('wrist menu poke with right index → settings opened', pressed, 'top edge kept in place', kept);
     if (!pressed) errors.push('el panel de la muñeca no se puede pulsar con el índice derecho');
     if (!kept) errors.push('el submenú de la muñeca no sale en el mismo sitio');
-    // con una mano izquierda de verdad: el panel ya no sigue a la mano; palma abajo o puño lo cierran; solo MENÚ lo vuelve a abrir
+    // con una mano izquierda de verdad: el panel ya no sigue a la mano; ningún gesto lo cierra, solo «✕ Cerrar»; solo MENÚ lo vuelve a abrir
     { const p0 = new V(-0.15, 1.3, -0.32), toFace = new V(0, 1.7, 0).sub(p0).normalize();
       const pose = (p, n, fist) => { XRS.left = { p, n, f: new V(0.3, 0.6, -0.75), fist }; };
-      const pressWatch = async () => { frame(30, 16, xrFrame); await sleep(500); if (!RA.watch.mesh.visible) return false; const p = RA.watch.mesh.getWorldPosition(new V()), n = RA.watch.mesh.getWorldDirection(new V()); XRS.tip = p.clone().addScaledVector(n, 0.04); frame(2, 16, xrFrame); XRS.tip = p.clone().addScaledVector(n, -0.005); frame(2, 16, xrFrame); XRS.tip = null; frame(30, 16, xrFrame); return true; };
+      const pressWatch = async () => { frame(30, 16, xrFrame); await sleep(500); if (!RA.watch.mesh.visible) return false; const p = RA.watch.mesh.getWorldPosition(new V()), n = RA.watch.mesh.getWorldDirection(new V()); for (const d of [0.04, 0.02, 0.0, -0.012]) { XRS.tip = p.clone().addScaledVector(n, d); frame(2, 16, xrFrame); } XRS.tip = null; frame(30, 16, xrFrame); return true; };
+      const pressClose = async () => { await sleep(300); const w = RA.activeWidgets().find(x => /Cerrar/.test(x.label)); if (!w) return false; const p = w.mesh.getWorldPosition(new V()), n = w.mesh.localToWorld(new V(0, 0, 1)).sub(p).normalize();
+        for (const d of [0.05, 0.03, 0.015, 0.0, -0.012]) { XRS.tip = p.clone().addScaledVector(n, d); frame(2, 16, xrFrame); } XRS.tip = null; frame(30, 16, xrFrame); return true; };
       const g0 = RA.menu.group.position.clone();
       pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const open1 = RA.menu.group.visible && RA.WM.e > 0.9;
       let worst = 0; for (let i = 0; i < 40; i++) { pose(p0.clone().add(new V(Math.sin(i * 2.1), Math.cos(i * 1.7), Math.sin(i * 1.3)).multiplyScalar(0.003)), toFace, false); frame(1, 16, xrFrame); worst = Math.max(worst, RA.menu.group.position.distanceTo(g0)); }
       const ahead = p0.clone().add(new V(0.1, -0.2, -0.15)); pose(ahead, new V(0, 1.7, 0).sub(ahead).normalize(), false); frame(30, 16, xrFrame);
       const still = RA.menu.group.position.distanceTo(g0);
       XRS.left = null; XRS.noLeft = true; frame(60, 16, xrFrame); const noHand = RA.menu.group.visible; XRS.noLeft = false;
-      pose(p0.clone(), new V(0.05, -1, 0.1), false); frame(12, 16, xrFrame); const palmDown = !RA.menu.group.visible;
-      pose(p0.clone(), toFace, false); frame(40, 16, xrFrame); const stays = !RA.menu.group.visible;
+      pose(p0.clone(), new V(0.05, -1, 0.1), false); frame(12, 16, xrFrame); const palmDown = RA.menu.group.visible;
+      pose(p0.clone(), toFace, true); frame(12, 16, xrFrame); const fist = RA.menu.group.visible;
+      pose(p0.clone(), toFace, false); frame(10, 16, xrFrame);
+      const closeBtn = await pressClose(); frame(20, 16, xrFrame); const closed = !RA.menu.group.visible;
+      frame(40, 16, xrFrame); const stays = !RA.menu.group.visible;
       const watchOk = await pressWatch(), back = RA.menu.group.visible && RA.WM.e > 0.9;
-      pose(p0.clone(), toFace, true); frame(12, 16, xrFrame); const fist = !RA.menu.group.visible;
-      pose(p0.clone(), toFace, false); const back2 = (await pressWatch()) && RA.menu.group.visible;
-      log(`wrist menu with a real hand: open ${open1} · moves ${(worst * 1000).toFixed(1)} mm with hand jitter, ${(still * 100).toFixed(1)} cm when the hand moves 25 cm, stays without the hand ${noHand} · palm down closes ${palmDown}, stays closed looking at the wrist ${stays} · MENÚ button shown ${watchOk}, reopens ${back} · fist closes ${fist}, MENÚ reopens ${back2}`);
+      log(`wrist menu with a real hand: open ${open1} · moves ${(worst * 1000).toFixed(1)} mm with hand jitter, ${(still * 100).toFixed(1)} cm when the hand moves 25 cm, stays without the hand ${noHand} · stays open with the palm down ${palmDown} and with a fist ${fist} · «✕ Cerrar» ${closeBtn} closes ${closed}, stays closed looking at the wrist ${stays} · MENÚ button shown ${watchOk}, reopens ${back}`);
       if (!open1) errors.push('menú de muñeca: no está abierto');
       if (worst > 0.0005 || still > 0.001 || !noHand) errors.push('menú de muñeca: debería quedarse quieto delante aunque muevas o bajes la mano');
-      if (!palmDown || !stays) errors.push('menú de muñeca: la palma hacia abajo debería cerrarlo (y no volver solo al mirar la muñeca)');
+      if (!palmDown || !fist) errors.push('menú de muñeca: ningún gesto de la mano debería cerrarlo (solo «✕ Cerrar»)');
+      if (!closeBtn || !closed || !stays) errors.push('menú de muñeca: «✕ Cerrar» debería cerrarlo (y no volver solo al mirar la muñeca)');
       if (!watchOk || !back) errors.push('menú de muñeca: cerrado, el botón MENÚ de la muñeca debería volver a abrirlo');
-      if (!fist || !back2) errors.push('menú de muñeca: el puño cerrado debería cerrarlo (y MENÚ, volver a abrirlo)');
       XRS.left = null; frame(10, 16, xrFrame); }
     // girado de espaldas, el botón lo trae delante otra vez
     XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'YXZ')); frame(20, 16, xrFrame);

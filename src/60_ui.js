@@ -203,13 +203,17 @@ function wrapLines(text, maxPx) {
   if (cur) lines.push(cur); return lines;
 }
 function openMenu(rows, opts = {}) {
+  rows = rows.slice();
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
-  const reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
+  const wasClosed = !!(menu && menuAnchor && menu.closed), reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
   hideMenu(true);
   if (recent) menuAnchor = lastAnchor;
   else if (!reuse) menuAnchor = opts.anchor || placeAnchor(0.75 * (opts.dist || settings.menuDist) / 100);
   POKE.need.left = POKE.need.right = true; // en el menú nuevo, el dedo que acaba de pulsar tiene que retirarse antes de pulsar otra vez
+  // en las gafas, todo menú lleva «✕ Cerrar» arriba a la derecha (salvo mientras colocas algo: ahí el botón de la muñeca cancela)
+  const closable = xrActive && !preview && !opts.noClose && !(RPL.on || PLACE.on || PLACE.wait);
+  if (closable && (!rows.length || rows[0].t !== 'title')) rows = [{ t: 'title', text: '' }, ...rows];
   // las selecciones con muchas opciones (Enemigos) van en rejilla: f.grid por fila
   rows.forEach(r => { const f = r.t === 'field' && FIELD[r.key]; if (f && f.grid && !r.h) r.h = Math.ceil(f.opts.length / f.grid) * (GRID_H + GAP) - GAP; });
   const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
@@ -227,7 +231,10 @@ function openMenu(rows, opts = {}) {
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
-    if (r.t === 'title') { c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4); }
+    if (r.t === 'title') {
+      c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - (closable && !i ? CLOSE_W * 2 : 0)) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4);
+      if (closable && !i) addW(new Btn('✕ Cerrar', CLOSE_W, Math.min(h, 0.052), menuClose, { style: 'ghost', font: 0.42 }), X0 + CW - CLOSE_W / 2, cy);
+    }
     else if (r.t === 'text') {
       c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
@@ -290,8 +297,16 @@ function openMenu(rows, opts = {}) {
       stand.strip.position.applyAxisAngle(_up, menuAnchor.yaw);
     }
   }
-  menu = { group, widgets, fieldRows, rows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null };
+  menu = { group, widgets, fieldRows, rows, H, wrist, age: reuse ? 0.4 : 0, keypad: null, music: rows.some(r => r.music) ? spNowText() : null, closed: false };
+  if (wasClosed && !wrist) { menu.closed = true; group.visible = false; stand.visible = false; } // cerrado sigue cerrado (lo trae el botón de la muñeca)
   return menu;
+}
+// «✕ Cerrar»: el menú se recoge en la muñeca (o, en el atril, desaparece) y vuelve con el botón MENÚ de la muñeca
+const CLOSE_W = 0.15;
+function menuClose() {
+  if (!menu) return; closeKeypad(); SND.tick();
+  if (menu.wrist) WM.on = false;
+  else { menu.closed = true; menu.group.visible = false; stand.visible = false; }
 }
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
 
@@ -344,7 +359,7 @@ function closeKeypad() {
   const kp = menu && menu.keypad; if (!kp) return;
   menu.group.remove(kp.grp); disposeTree(kp.grp); menu.keypad = null;
 }
-function activeWidgets() { if (!menu) return []; return menu.keypad ? menu.keypad.widgets : menu.widgets; }
+function activeWidgets() { if (!menu || menu.closed) return []; return menu.keypad ? menu.keypad.widgets : menu.widgets; }
 
 /* ---------- Botón de muñeca ---------- */
 const watch = new Btn('MENÚ', 0.09, 0.042, () => onWatch(), { depthTest: false, style: 'primary', font: 0.5 });
@@ -362,7 +377,7 @@ function updateWatch(dt) {
   const h = hands.left;
   let show = false;
   // con mandos, X/Y del mando izquierdo hacen de botón de menú
-  if (h.btnMenu && !watch.btnPrev) { if (menu && menu.wrist && WM.on && !wristFar()) { WM.on = false; SND.tick(); } else onWatch(); } watch.btnPrev = h.btnMenu; // (y lo recoge)
+  if (h.btnMenu && !watch.btnPrev) onWatch(); watch.btnPrev = h.btnMenu; // (se cierra con «✕ Cerrar», como con las manos)
   const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
   const wristUp = menu && menu.wrist && WM.on && !wristFar(); // con el panel abierto delante, el botón sobra
   if (wristLook(h) && !wristUp && !guns) {
@@ -370,7 +385,7 @@ function updateWatch(dt) {
     if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));
   }
-  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : menu && menu.wrist ? (WM.on ? 'TRAER MENÚ' : 'MENÚ') : state === 'lobby' || state === 'end' ? 'TRAER MENÚ' : 'MENÚ';
+  const lab = PLACE.on ? 'CANCELAR' : PLACE.wait ? 'AJUSTAR' : menu && menu.wrist ? (WM.on ? 'TRAER MENÚ' : 'MENÚ') : menu && !menu.closed && (state === 'lobby' || state === 'end') ? 'TRAER MENÚ' : 'MENÚ';
   watch.setLabel(lab);
   watch.mesh.visible = show; watch.armT = show ? (watch.armT || 0) + dt : 0;
   if (show) { watch.mesh.lookAt(head.p); watch.baseZ = watch.mesh.position.z; pokeWidgets([watch], dt, watch.armT > 0.35); watch.mesh.position.z = watch.baseZ; }
@@ -378,16 +393,16 @@ function updateWatch(dt) {
 }
 // Panel de la muñeca: se abre con el botón MENÚ de la muñeca (o solo, cuando sale un menú nuevo: el principal al entrar,
 // el resumen de la ronda…) creciendo desde la muñeca hasta quedarse quieto delante de ti, a wristDist de los ojos y de cara a
-// ti, para pulsarlo con calma con el índice derecho: ya no sigue a la mano. Se cierra con la palma hacia abajo o el puño
-// cerrado (y vuelve con el botón MENÚ). Si te alejas o te giras y lo pierdes de vista, el botón lo trae delante otra vez.
+// ti, para pulsarlo con calma con el índice derecho: ya no sigue a la mano. Solo se cierra con su botón «✕ Cerrar» (ningún
+// gesto de la mano lo cierra) y vuelve con el botón MENÚ. Si te alejas o te giras y lo pierdes de vista, el botón lo trae delante.
 const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
 // escala a la distancia elegida: más lejos, más grande, para que se lea igual
 const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
-const WM = { e: 0, on: false, shutT: 0, shut: false, armed: false, init: false, top: new V3(), q: new Q4(), from: new V3() };
+const WM = { e: 0, on: false, init: false, top: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
 const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3(), _wmu = new V3();
 // Abrir (o traer delante) el panel: sale otra vez desde la muñeca
-function wristOpen() { WM.on = true; WM.e = 0; WM.init = false; WM.armed = false; WM.shutT = 0; }
+function wristOpen() { WM.on = true; WM.e = 0; WM.init = false; }
 settingHooks.push(k => { if (k === 'wristDist' || k === '*') WM.init = false; }); // otra distancia: se recoloca
 // Dónde se queda: hacia donde miras (en horizontal; mirando arriba o abajo, hacia la mano izquierda), con el borde de arriba
 // algo por debajo de los ojos, inclinado hacia ellos y siempre derecho (no se ladea aunque ladees la cabeza)
@@ -416,28 +431,9 @@ function wristFar() {
   menu.group.getWorldPosition(_wml); const d = _wml.sub(head.p), len = d.length();
   return len > 1.3 || d.angleTo(fwd()) > 55 * Math.PI / 180;
 }
-// Mano izquierda: normal hacia el lado de la palma, sacada de los nudillos (null si las articulaciones no cuadran)
-const _pa = new V3(), _pb = new V3(), _pc = new V3(), _pd = new V3();
-function leftPalm(out) {
-  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok || !J[6].ok || !J[11].ok || !J[21].ok) return null;
-  _pa.subVectors(J[6].p, J[0].p); _pb.subVectors(J[21].p, J[0].p); _pc.subVectors(J[11].p, J[0].p).normalize(); _pd.subVectors(J[6].p, J[21].p);
-  if (_pd.length() < 0.03 || Math.abs(_pd.normalize().dot(_pc)) > 0.5) return null; // los nudillos, de través respecto a la mano
-  return out.crossVectors(_pb, _pa).normalize(); // en la izquierda, (meñique × índice) sale por la palma
-}
-// Puño cerrado: al menos tres dedos con la punta más cerca de la muñeca que su nudillo
-function leftFist() {
-  const h = hands.left, J = h.J; if (!h.ok || !h.isHand || !J[0].ok) return false; let n = 0;
-  for (const b of [5, 10, 15, 20]) { const k = J[b + 1], t = J[b + 4]; if (k.ok && t.ok && t.p.distanceTo(J[0].p) < k.p.distanceTo(J[0].p) * 1.05) n++; }
-  return n >= 3;
-}
-const _wpn = new V3();
 function updateWristMenu(dt) {
-  // palma hacia abajo o puño cerrado: se cierra en el acto (si se abrió con la mano así, primero hay que abrirla)
-  const pn = leftPalm(_wpn), shut = (!!pn && pn.y < -0.7) || leftFist();
-  WM.shutT = shut ? WM.shutT + dt : 0; WM.shut = WM.shutT > 0.05; if (!shut) WM.armed = true;
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
-  if (WM.on && WM.shut && WM.armed) { WM.on = false; SND.tick(); }
-  WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / (WM.shut ? 0.07 : 0.22)), 0, 1);
+  WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / 0.22), 0, 1);
   wristPose(menu.group, menu.H, dt);
   // aviso: un punto que late en la muñeca mientras hay un menú recogido
   const h = hands.left; wristHint.visible = h.ok && WM.e < 0.05;
@@ -450,7 +446,7 @@ function onWatch() {
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
   if (GAME_STATES.includes(state)) openPause();
   else if (menu && menu.wrist) { wristOpen(); SND.tick(); } // el menú recogido (o perdido de vista) sale delante
-  else if (menu) { menuAnchor = placeAnchor(0.45); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
+  else if (menu) { menu.closed = false; menu.group.visible = true; menuAnchor = placeAnchor(0.45); SND.tick(); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
 }
 
 /* =================== PANELES DE VISTA =================== */
