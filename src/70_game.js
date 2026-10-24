@@ -842,6 +842,7 @@ const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, roto
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
 const lowFly = () => settings.exercise === 'superman' || settings.exercise === 'splank';
 const lowFlyY = () => clamp(settings.exercise === 'splank' ? DET.sp.ref + 0.03 : DET.su.ref + settings.supRange / 100 + 0.08, 0.3, 0.8);
+const SUP_ATK = { next: 0 }; // superman: cuándo puede lanzarse el siguiente volador
 class Flyer {
   constructor(spec) {
     const K = FLYER_KIND[spec.kind], push = isTiny(), low = lowFly(); this.K = K; this.type = 'flyer'; this.kind = spec.kind;
@@ -869,11 +870,12 @@ class Flyer {
       if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
-      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up')) { /* esperando */ }
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
       }
+      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 2.5; // y el siguiente, otra repetición después (nunca dos seguidos)
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
@@ -2108,7 +2110,7 @@ function warmShaders() {
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); SUP_ATK.next = 0; gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
