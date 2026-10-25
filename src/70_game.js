@@ -2087,26 +2087,35 @@ function pauseMenu() {
 // Antes de cada ronda (mientras calibras) se compilan los sombreadores de todo lo que puede salir: si no, el primer robot,
 // el primer monstruo o la primera pompa se compilan en plena partida y la imagen da un tirón en las gafas. Las copias se
 // guardan (sin pintarse): así sus programas no se borran y no hay que volver a compilarlos
-const WARM = { done: new Set(), keep: [] };
-function warmShaders() {
-  if (!renderer.compile) return;
+const WARM = { done: new Set(), keep: [], q: [], rt: null };
+// Lo que hay que precompilar: cada clase de enemigo (con sus materiales), las pompas y las amebas. Se hace poco a poco,
+// uno por fotograma, desde que entras (en el menú y mientras calibras): todo de golpe al pulsar Empezar dejaba la imagen
+// congelada unos segundos en las gafas. Los monstruos que aún se están descargando se añaden cuando llegan
+function warmQueue() {
+  if (!renderer.compile) return; ensureRigs();
+  const add = (key, mk) => { if (!WARM.done.has(key) && !WARM.q.some(x => x.key === key)) WARM.q.push({ key, mk }); };
+  for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
+  for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
+  if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
+  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
+}
+// Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
+// tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)
+function warmStep() {
+  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true;
   try {
-    ensureRigs(); const g = new THREE.Group(); g.position.set(0, -80, 0); let n = 0;
-    const add = (key, mk) => { if (WARM.done.has(key)) return; const o = mk(); if (!o) return; WARM.done.add(key); g.add(o.root || o); n++; };
-    for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
-    for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
-    if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
-    add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
-    if (!n) return; g.traverse(o => { o.frustumCulled = false; });
+    const o = it.mk(); WARM.done.add(it.key); if (!o) return true;
+    const g = new THREE.Group(); g.add(o.root || o); g.traverse(n => { n.frustumCulled = false; }); g.position.set(0, -80, 0);
     scene.add(g); renderer.compile(scene, camera); scene.remove(g); WARM.keep.push(g);
-    // las sombras de lo que tiene esqueleto usan otro sombreador, que solo se compila al pintar la sombra: un dibujo
-    // diminuto, fuera de la vista, con las copias bajo la luz
     if (renderer.shadowMap.enabled && renderer.setRenderTarget && THREE.WebGLRenderTarget) {
       const rt = WARM.rt || (WARM.rt = new THREE.WebGLRenderTarget(16, 16)), prev = renderer.getRenderTarget(), xr = renderer.xr.enabled;
-      g.position.set(0, 0, -2); arena.add(g); renderer.xr.enabled = false; renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(prev); renderer.xr.enabled = xr; arena.remove(g); g.position.set(0, -80, 0);
+      g.position.set(0, 0, -2); arena.add(g); renderer.xr.enabled = false; renderer.setRenderTarget(rt); renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera); renderer.setRenderTarget(prev); renderer.xr.enabled = xr; arena.remove(g); g.position.set(0, -80, 0);
     }
-  } catch (e) { console.warn('No se pudieron precompilar los sombreadores:', e && e.message); }
+  } catch (e) { console.warn('No se pudo precompilar', it.key, e && e.message); }
+  return true;
 }
+// todo lo que quede, de una vez (si empieza la partida antes de acabar la cola)
+function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
@@ -2119,7 +2128,7 @@ function beginRun() {
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
-  warmShaders(); // (mientras calibras: nada se compila ya en plena partida)
+  warmQueue(); // (lo que falte se compila poco a poco mientras calibras; nada en plena partida)
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
 // arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
@@ -2181,6 +2190,7 @@ function startWave(i) {
     spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.35); // con espada, uno detrás de otro; con la dificultad creciente, algo más seguidos
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
+  if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {

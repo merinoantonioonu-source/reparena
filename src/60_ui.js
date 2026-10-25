@@ -52,7 +52,10 @@ class Btn {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
     c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
-    c.fillStyle = this.hover ? '#ffd166' : s[0]; c.fill();
+    c.fillStyle = this.hover ? (this.down ? '#e0b44e' : '#ffd166') : s[0]; c.fill();
+    // relieve: arriba con luz y abajo en sombra (en relieve); hundido, al revés
+    { const g = c.createLinearGradient(0, 4, 0, H - 4), a = this.down ? 'rgba(0,0,0,0.32)' : 'rgba(255,255,255,0.2)', b = this.down ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.34)';
+      g.addColorStop(0, a); g.addColorStop(0.18, 'rgba(0,0,0,0)'); g.addColorStop(0.8, 'rgba(0,0,0,0)'); g.addColorStop(1, b); c.fillStyle = g; c.fill(); }
     const acc = this.accent && this.style === 'normal' && !this.hover;
     if ((s[2] || acc) && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = acc ? this.accent : s[2]; c.stroke(); }
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
@@ -155,7 +158,10 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   for (const w of vis) {
     const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; w.draw(); }
     if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
-    else w.mesh.position.z = w.baseZ - (push.get(w) || 0);
+    else {
+      const p = Math.min(push.get(w) || 0, w.maxPush !== undefined ? w.maxPush : Infinity), dn = p > 0;
+      w.mesh.position.z = w.baseZ - p; if (dn !== !!w.down) { w.down = dn; w.draw(); }
+    }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
   POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
@@ -192,7 +198,7 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
-const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+const RELIEF = 0.008, GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
 function wrapLines(text, maxPx) {
@@ -227,7 +233,14 @@ function openMenu(rows, opts = {}) {
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
+  // los botones sobresalen RELIEF del panel (en metros reales, también en la muñeca) sobre un hueco oscuro dibujado en el
+  // fondo: al pulsarlos se hunden hasta el fondo del hueco, como una tecla
+  const RZ = RELIEF / (wristMenuOn() ? wristScale() : 1);
+  const addW = (w, cx, cy) => {
+    const z = w.kind === 'btn' ? RZ : 0.003; w.mesh.position.set(cx, cy, z); w.baseZ = z; w.maxPush = z - 0.0006; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
+    if (w.kind === 'btn') { const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc, o = 3; rr(c, px - o, py - o + 2, w.w * sc + o * 2, w.h * sc + o * 2, Math.min(w.h * sc * 0.3, 30)); c.fillStyle = 'rgba(0,0,0,0.6)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.07)'; c.stroke(); }
+    return w;
+  };
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
@@ -322,7 +335,7 @@ function openKeypad(f, row) {
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.maxPush = 0.0025; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });

@@ -735,6 +735,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
+  { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'Automática: si el juego no llega a la frecuencia de las gafas (72 imágenes por segundo), baja la resolución por pasos y recalcula las sombras menos a menudo, y la vuelve a subir si sobra. Con menos de 72, lo cercano (manos y paneles) se ve a saltos.' },
   { key: 'xrHz', g: 'entorno', label: 'Fotogramas por segundo en las gafas', short: 'Fotogramas', type: 'choice', opts: [['72', '72 (estable)'], ['90', '90'], ['120', '120']], def: '72', hint: 'A 72 la imagen va siempre fluida (como en muchos juegos de las Quest); a 90 o 120 es más suave si las gafas llegan, pero si no llegan da tirones.' },
   { key: 'perfHud', g: 'sistema', label: 'Medidor de fotogramas', short: 'Medidor', type: 'toggle', def: 0, hint: 'Muestra abajo a la izquierda de la vista los fotogramas por segundo y los que se pierden: si ves pérdidas, baja la frecuencia o quita las sombras.' },
   { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
@@ -831,7 +832,7 @@ function setSetting(key, v) {
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
+  'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 const isBasic = f => f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
 // Lo que se enseña en los menús y en la página: lo que vale para lo elegido y, con el menú sencillo, lo básico
@@ -1654,6 +1655,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+// sin comprobar cada sombreador al compilarlo (esa comprobación espera a que termine: compilar era mucho más lento en las
+// gafas); y las sombras se recalculan cuando toca (ver qualStep)
+if (renderer.debug) renderer.debug.checkShaderErrors = false; renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.enabled = !!settings.shadows; renderer.shadowMap.type = THREE.PCFShadowMap; // (la suave pedía muchas más muestras por píxel: en las gafas, tirones)
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
@@ -4967,7 +4971,10 @@ class Btn {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
     c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
-    c.fillStyle = this.hover ? '#ffd166' : s[0]; c.fill();
+    c.fillStyle = this.hover ? (this.down ? '#e0b44e' : '#ffd166') : s[0]; c.fill();
+    // relieve: arriba con luz y abajo en sombra (en relieve); hundido, al revés
+    { const g = c.createLinearGradient(0, 4, 0, H - 4), a = this.down ? 'rgba(0,0,0,0.32)' : 'rgba(255,255,255,0.2)', b = this.down ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.34)';
+      g.addColorStop(0, a); g.addColorStop(0.18, 'rgba(0,0,0,0)'); g.addColorStop(0.8, 'rgba(0,0,0,0)'); g.addColorStop(1, b); c.fillStyle = g; c.fill(); }
     const acc = this.accent && this.style === 'normal' && !this.hover;
     if ((s[2] || acc) && !this.hover) { c.lineWidth = Math.max(3, H * 0.04); c.strokeStyle = acc ? this.accent : s[2]; c.stroke(); }
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
@@ -5070,7 +5077,10 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   for (const w of vis) {
     const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; w.draw(); }
     if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
-    else w.mesh.position.z = w.baseZ - (push.get(w) || 0);
+    else {
+      const p = Math.min(push.get(w) || 0, w.maxPush !== undefined ? w.maxPush : Infinity), dn = p > 0;
+      w.mesh.position.z = w.baseZ - p; if (dn !== !!w.down) { w.down = dn; w.draw(); }
+    }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
   POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
@@ -5107,7 +5117,7 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
-const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+const RELIEF = 0.008, GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
 function wrapLines(text, maxPx) {
@@ -5142,7 +5152,14 @@ function openMenu(rows, opts = {}) {
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  const addW = (w, cx, cy) => { w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w); return w; };
+  // los botones sobresalen RELIEF del panel (en metros reales, también en la muñeca) sobre un hueco oscuro dibujado en el
+  // fondo: al pulsarlos se hunden hasta el fondo del hueco, como una tecla
+  const RZ = RELIEF / (wristMenuOn() ? wristScale() : 1);
+  const addW = (w, cx, cy) => {
+    const z = w.kind === 'btn' ? RZ : 0.003; w.mesh.position.set(cx, cy, z); w.baseZ = z; w.maxPush = z - 0.0006; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
+    if (w.kind === 'btn') { const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc, o = 3; rr(c, px - o, py - o + 2, w.w * sc + o * 2, w.h * sc + o * 2, Math.min(w.h * sc * 0.3, 30)); c.fillStyle = 'rgba(0,0,0,0.6)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.07)'; c.stroke(); }
+    return w;
+  };
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
   rows.forEach((r, i) => {
     const h = heights[i], cy = y - h / 2;
@@ -5237,7 +5254,7 @@ function openKeypad(f, row) {
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.maxPush = 0.0025; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
@@ -8598,26 +8615,35 @@ function pauseMenu() {
 // Antes de cada ronda (mientras calibras) se compilan los sombreadores de todo lo que puede salir: si no, el primer robot,
 // el primer monstruo o la primera pompa se compilan en plena partida y la imagen da un tirón en las gafas. Las copias se
 // guardan (sin pintarse): así sus programas no se borran y no hay que volver a compilarlos
-const WARM = { done: new Set(), keep: [] };
-function warmShaders() {
-  if (!renderer.compile) return;
+const WARM = { done: new Set(), keep: [], q: [], rt: null };
+// Lo que hay que precompilar: cada clase de enemigo (con sus materiales), las pompas y las amebas. Se hace poco a poco,
+// uno por fotograma, desde que entras (en el menú y mientras calibras): todo de golpe al pulsar Empezar dejaba la imagen
+// congelada unos segundos en las gafas. Los monstruos que aún se están descargando se añaden cuando llegan
+function warmQueue() {
+  if (!renderer.compile) return; ensureRigs();
+  const add = (key, mk) => { if (!WARM.done.has(key) && !WARM.q.some(x => x.key === key)) WARM.q.push({ key, mk }); };
+  for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
+  for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
+  if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
+  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
+}
+// Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
+// tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)
+function warmStep() {
+  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true;
   try {
-    ensureRigs(); const g = new THREE.Group(); g.position.set(0, -80, 0); let n = 0;
-    const add = (key, mk) => { if (WARM.done.has(key)) return; const o = mk(); if (!o) return; WARM.done.add(key); g.add(o.root || o); n++; };
-    for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
-    for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
-    if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
-    add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
-    if (!n) return; g.traverse(o => { o.frustumCulled = false; });
+    const o = it.mk(); WARM.done.add(it.key); if (!o) return true;
+    const g = new THREE.Group(); g.add(o.root || o); g.traverse(n => { n.frustumCulled = false; }); g.position.set(0, -80, 0);
     scene.add(g); renderer.compile(scene, camera); scene.remove(g); WARM.keep.push(g);
-    // las sombras de lo que tiene esqueleto usan otro sombreador, que solo se compila al pintar la sombra: un dibujo
-    // diminuto, fuera de la vista, con las copias bajo la luz
     if (renderer.shadowMap.enabled && renderer.setRenderTarget && THREE.WebGLRenderTarget) {
       const rt = WARM.rt || (WARM.rt = new THREE.WebGLRenderTarget(16, 16)), prev = renderer.getRenderTarget(), xr = renderer.xr.enabled;
-      g.position.set(0, 0, -2); arena.add(g); renderer.xr.enabled = false; renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(prev); renderer.xr.enabled = xr; arena.remove(g); g.position.set(0, -80, 0);
+      g.position.set(0, 0, -2); arena.add(g); renderer.xr.enabled = false; renderer.setRenderTarget(rt); renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera); renderer.setRenderTarget(prev); renderer.xr.enabled = xr; arena.remove(g); g.position.set(0, -80, 0);
     }
-  } catch (e) { console.warn('No se pudieron precompilar los sombreadores:', e && e.message); }
+  } catch (e) { console.warn('No se pudo precompilar', it.key, e && e.message); }
+  return true;
 }
+// todo lo que quede, de una vez (si empieza la partida antes de acabar la cola)
+function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
@@ -8630,7 +8656,7 @@ function beginRun() {
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
-  warmShaders(); // (mientras calibras: nada se compila ya en plena partida)
+  warmQueue(); // (lo que falte se compila poco a poco mientras calibras; nada en plena partida)
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
 // arriba de la cabeza apunta hacia delante; tumbado boca arriba, hacia atrás
@@ -8692,6 +8718,7 @@ function startWave(i) {
     spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.35); // con espada, uno detrás de otro; con la dificultad creciente, algo más seguidos
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
+  if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
@@ -10563,6 +10590,7 @@ const AMBX = { clank: 6 };
 renderer.setAnimationLoop((time, frame) => {
   const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
   if (!xrActive && !preview) return;
+  const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
   for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
@@ -10581,12 +10609,43 @@ renderer.setAnimationLoop((time, frame) => {
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
-  perfStep(t, dt);
+  if (WARM.q.length && !['play', 'rest'].includes(state)) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
-  renderer.render(scene, camera);
+  qualStep(dt);
+  const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();
+  perfStep(t, dt, t1 - t0, t2 - t1);
 });
 
 /* =================== FLUIDEZ =================== */
+// Calidad automática: si el juego no llega a la frecuencia de las gafas, baja la resolución por pasos (y las sombras se
+// recalculan menos a menudo); si sobra, la vuelve a subir. Siempre con foveación (menos detalle en los bordes de la
+// vista, donde no se nota). La resolución se cambia en plena sesión poniendo una capa nueva (three.js la lee cada fotograma)
+const QLV = [{ sc: 1, sh: 1 }, { sc: 0.85, sh: 2 }, { sc: 0.72, sh: 2 }, { sc: 0.6, sh: 3 }], QFIX = { alta: 0, media: 1, baja: 3 };
+const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
+function qualApply(lv, session = renderer.xr.getSession()) {
+  QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+  try {
+    const gl = renderer.getContext(), a = gl.getContextAttributes();
+    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: QLV[lv].sc });
+    if ('fixedFoveation' in L) L.fixedFoveation = 1;
+    session.updateRenderState({ baseLayer: L });
+  } catch (e) { console.warn('calidad', e && e.message); }
+}
+function qualStep(dt) {
+  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
+  const s = renderer.xr.getSession(); if (!s || preview) return;
+  if (settings.quality !== 'auto') { qualApply(QFIX[settings.quality] || 0, s); return; }
+  if (QUAL.applied < 0) qualApply(QUAL.lv, s);
+  const hz = s.frameRate || +settings.xrHz || 72; QUAL.now += dt; QUAL.t += dt; QUAL.n++; QUAL.cool -= dt; QUAL.block -= dt;
+  if (QUAL.t < 1) return;
+  const fps = QUAL.n / QUAL.t; QUAL.t = 0; QUAL.n = 0;
+  if (fps < hz * 0.9) { QUAL.slow++; QUAL.ok = 0; } else if (fps > hz * 0.97) { QUAL.ok++; QUAL.slow = 0; } else { QUAL.slow = QUAL.ok = 0; }
+  if (QUAL.slow >= 2 && QUAL.lv < QLV.length - 1 && QUAL.cool <= 0) { // va lento 2 s seguidos: un paso abajo
+    if (QUAL.now - QUAL.upT < 10) QUAL.block = 90; // acababa de subir y no aguantó: no lo vuelve a intentar en un rato
+    qualApply(QUAL.lv + 1, s); QUAL.slow = 0; QUAL.cool = 3;
+  } else if (QUAL.ok >= 8 && QUAL.lv > 0 && QUAL.cool <= 0 && QUAL.block <= 0) { qualApply(QUAL.lv - 1, s); QUAL.ok = 0; QUAL.cool = 10; QUAL.upT = QUAL.now; } // sobra: un paso arriba
+}
+settingHooks.push(k => { if (k === 'quality') { QUAL.applied = -1; if (settings.quality !== 'auto') QUAL.lv = QFIX[settings.quality] || 0; } });
 // Frecuencia de las gafas: a 72 Hz el juego llega siempre y la imagen no da saltos; a 90 o 120, si no llega, sí
 function xrRate(session = renderer.xr.getSession()) {
   if (!session || !session.updateTargetFrameRate || !session.supportedFrameRates) return;
@@ -10595,19 +10654,24 @@ function xrRate(session = renderer.xr.getSession()) {
 }
 settingHooks.push(k => { if (k === 'xrHz') xrRate(); });
 // Medidor (Ajustes → Menú y avisos): fotogramas por segundo, el peor de cada medio segundo y cuántos se pierden
-const PERF = { n: 0, t0: 0, worst: 0, lost: 0, txt: '' }, perfP = makePanel(0.26, 0.06, 256, { depthTest: false }); perfP.mesh.visible = false; scene.add(perfP.mesh);
-function perfStep(t, dt) {
+const PERF = { n: 0, t0: 0, worst: 0, lost: 0, txt: '', js: 0, rd: 0 }, perfP = makePanel(0.36, 0.11, 1024, { depthTest: false }); perfP.mesh.visible = false; scene.add(perfP.mesh);
+function perfStep(t, dt, jsMs = 0, rdMs = 0) {
   const on = !!settings.perfHud && (xrActive || preview); perfP.mesh.visible = on; if (!on) return;
   const hz = (renderer.xr.getSession() && renderer.xr.getSession().frameRate) || +settings.xrHz || 72;
-  PERF.n++; PERF.worst = Math.max(PERF.worst, dt); if (dt > 1.5 / hz) PERF.lost++;
+  PERF.n++; PERF.worst = Math.max(PERF.worst, dt); if (dt > 1.5 / hz) PERF.lost++; PERF.js = Math.max(PERF.js, jsMs); PERF.rd = Math.max(PERF.rd, rdMs);
   if (t - PERF.t0 >= 0.5) {
     const fps = PERF.n / Math.max(1e-3, t - PERF.t0), c = perfP.ctx, W = perfP.W, H = perfP.H, bad = PERF.lost > 0;
     c.clearRect(0, 0, W, H); rr(c, 2, 2, W - 4, H - 4, 10); c.fillStyle = 'rgba(10,8,20,0.8)'; c.fill();
-    c.fillStyle = bad ? '#ff8a3d' : '#3cf0c6'; c.font = '600 26px ' + FB; c.textBaseline = 'middle'; c.textAlign = 'left';
-    c.fillText(`${Math.round(fps)} fps · peor ${Math.round(PERF.worst * 1000)} ms · perdidos ${PERF.lost}`, 10, H / 2); perfP.tex.needsUpdate = true;
-    Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0 });
+    c.fillStyle = bad ? '#ff8a3d' : '#3cf0c6'; c.font = '600 64px ' + FB; c.textBaseline = 'middle'; c.textAlign = 'left';
+    c.fillText(`${Math.round(fps)} fps · peor ${Math.round(PERF.worst * 1000)} ms · perdidos ${PERF.lost}`, 24, H * 0.22);
+    // lo que tarda el juego en pensar (JS) y en mandar el dibujo; si son poco y aun así va lento, lo que no llega es la gráfica
+    c.fillStyle = '#eeeaff'; c.font = '500 52px ' + FB; const ri = renderer.info.render;
+    c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
+    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
+    perfP.tex.needsUpdate = true;
+    Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }
-  perfP.mesh.position.copy(head.p).add(_pfo.set(-0.17, -0.13, -0.5).applyQuaternion(head.q)); perfP.mesh.quaternion.copy(head.q); // pegado a la vista, abajo a la izquierda
+  perfP.mesh.position.copy(head.p).add(_pfo.set(-0.15, -0.13, -0.5).applyQuaternion(head.q)); perfP.mesh.quaternion.copy(head.q); // pegado a la vista, abajo a la izquierda
 }
 const _pfo = new V3();
 
@@ -10635,7 +10699,7 @@ async function startXR(ar) {
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session);
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });

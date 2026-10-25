@@ -309,7 +309,7 @@ class AnimationMixer { constructor(root) { this.root = root; this.acts = new Map
 class WebGLRenderer {
   constructor() { this.domElement = global.document.createElement('canvas'); this.shadowMap = { enabled: false, type: 0 }; this.capabilities = { getMaxAnisotropy: () => 16 }; this.toneMappingExposure = 1;
     const self = this; this.xr = { enabled: false, _session: null, setReferenceSpaceType() {}, setFoveation() {}, getSession() { return this._session; }, async setSession(s) { this._session = s; s._renderer = self; }, getReferenceSpace() { return this._session ? {} : null; } };
-    this.renders = 0; }
+    this.renders = 0; this.info = { render: { calls: 0, triangles: 0 }, programs: [], memory: { textures: 0, geometries: 0 } }; }
   setPixelRatio() {} setSize() {} setClearColor() {}
   setAnimationLoop(cb) { this.loop = cb; }
   render(scene, cam) { this.renders++; scene.updateMatrixWorld(true); }
