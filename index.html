@@ -5003,10 +5003,11 @@ class Slider {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, pad = this.pad / this.w * W, y = H / 2, x0 = pad, x1 = W - pad, x = x0 + (x1 - x0) * this.frac();
     c.clearRect(0, 0, W, H);
-    rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#30284f'; c.stroke();
+    rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = this.knob ? 'rgba(255,255,255,0.14)' : '#30284f'; c.stroke(); // (ranura hundida: el filo de abajo con luz)
     rr(c, x0 - H * 0.12, y - H * 0.12, Math.max(H * 0.24, x - x0 + H * 0.12), H * 0.24, H * 0.12); c.fillStyle = '#ff4fa3'; c.fill();
     c.fillStyle = 'rgba(238,234,255,0.35)'; for (let i = 0; i <= 10; i++) { const tx = x0 + (x1 - x0) * i / 10; c.fillRect(tx - 1, y + H * 0.2, 2, H * 0.1); }
-    if (this.knob) { this.knob.position.x = -this.w / 2 + this.pad + (this.w - 2 * this.pad) * this.frac(); this.knob.material.color.setHex(this.hover ? 0xffd166 : 0xf2f4ff); } // la bolita de verdad, que se arrastra
+    if (this.knob) { c.save(); c.filter = 'blur(5px)'; c.fillStyle = 'rgba(0,0,0,0.7)'; c.beginPath(); c.ellipse(x + H * 0.08, y + H * 0.12, H * 0.32, H * 0.3, 0, 0, TAU); c.fill(); c.restore(); } // la sombra de la bolita en la ranura
+    if (this.knob) { this.knob.position.x = -this.w / 2 + this.pad + (this.w - 2 * this.pad) * this.frac(); this.knob.material.color.setHex(this.hover ? 0xffd166 : 0xffffff); } // la bolita de verdad, que se arrastra
     else { c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke(); }
     this.p.tex.needsUpdate = true;
   }
@@ -5022,34 +5023,65 @@ class Slider {
 // canto biselado, con la luz ya pintada (arriba claras, los laterales más oscuros y el de abajo aún más) sobre una bandeja
 // oscura con grosor. Todas las de un menú van en una sola malla (un solo dibujo); al pulsar una se mueven sus vértices y,
 // con el dedo encima, se aclara (sin volver a pintar su etiqueta)
-const KEY_H = 0.01; // alto de las teclas, en metros reales
+const KEY_H = 0.012; // alto de las teclas, en metros reales
 const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
   danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
+// la luz con la que se pintan las teclas (en el plano del menú: x a la derecha, y arriba, z hacia ti): de arriba a la izquierda
+const KEY_L = new V3(-0.42, 0.62, 0.66).normalize(), KEY_HV = KEY_L.clone().add(new V3(0, 0, 1)).normalize();
 // anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
 function keyRing(P, cx, cy, a, b, r, z) {
   const n = 3;
   for (const [sx, sy, a0] of [[1, 1, 0], [-1, 1, 0.5], [-1, -1, 1], [1, -1, 1.5]]) for (let i = 0; i <= n; i++) { const t = (a0 + i / n * 0.5) * Math.PI; P.push(cx + sx * (a - r) + Math.cos(t) * r, cy + sy * (b - r) + Math.sin(t) * r, z); }
 }
-const KRING = 16, _kc = new THREE.Color(), _kc2 = new THREE.Color(), knobGeo = (() => { const g = new THREE.CylinderGeometry(1, 1, 1, 20); g.rotateX(Math.PI / 2); return g; })();
-// list: botones y deslizadores ya colocados (su cara a la altura de la tecla); tray: { w, h, d } la bandeja bajo todo
+// normales de cada vértice (media de las caras que lo tocan, pesada por su área)
+function vNormals(P, I) {
+  const N = new Float32Array(P.length);
+  for (let k = 0; k < I.length; k += 3) {
+    const a = I[k] * 3, b = I[k + 1] * 3, c = I[k + 2] * 3, ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const o of [a, b, c]) { N[o] += nx; N[o + 1] += ny; N[o + 2] += nz; }
+  }
+  for (let o = 0; o < N.length; o += 3) { const l = Math.hypot(N[o], N[o + 1], N[o + 2]) || 1; N[o] /= l; N[o + 1] /= l; N[o + 2] /= l; }
+  return N;
+}
+// un color con su luz: difusa desde KEY_L, un brillo donde la superficie refleja hacia ti y oscurecido abajo (ao)
+function shadeInto(C, i, col, N, ao, spec = 0.32) {
+  const o = i * 3, d = Math.max(0, N[o] * KEY_L.x + N[o + 1] * KEY_L.y + N[o + 2] * KEY_L.z), h = Math.max(0, N[o] * KEY_HV.x + N[o + 1] * KEY_HV.y + N[o + 2] * KEY_HV.z);
+  const f = (0.34 + 0.78 * d) * ao, sp = spec * Math.pow(h, 28);
+  C[o] = Math.min(1, col.r * f + sp); C[o + 1] = Math.min(1, col.g * f + sp); C[o + 2] = Math.min(1, col.b * f + sp);
+}
+const KRING = 16, _kc = new THREE.Color(), _kc2 = new THREE.Color();
+// la bolita de los deslizadores: un cilindro bajo con la cara de arriba abombada y el canto redondeado, con su luz pintada
+const knobGeo = (() => {
+  const prof = [[1, 0], [1, 0.5], [0.97, 0.72], [0.88, 0.86], [0.7, 0.95], [0.42, 1.0], [0, 1.03]], n = 24, P = [], I = [];
+  prof.forEach(([r, z]) => { for (let i = 0; i < n; i++) { const a = i / n * TAU; P.push(Math.cos(a) * r, Math.sin(a) * r, z - 0.5); } });
+  for (let k = 0; k + 1 < prof.length; k++) for (let i = 0; i < n; i++) { const A = k * n + i, B = k * n + (i + 1) % n; I.push(A, B, B + n, A, B + n, A + n); }
+  const N = vNormals(P, I), C = new Float32Array(P.length), col = new THREE.Color(0xf2f4ff); if (col.convertSRGBToLinear) col.convertSRGBToLinear();
+  for (let i = 0; i < P.length / 3; i++) shadeInto(C, i, col, N, i < n ? 0.6 : 1, 0.5);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.setIndex(I); return g;
+})();
+// list: botones y deslizadores ya colocados; tray: { w, h, d } la bandeja bajo todo
 function buildKeys(group, list, kh, tray) {
-  const P = [], C = [], I = [], R = [];
+  const P = [], I = [], R = [];
   const shapeOf = (cx, cy, w, h, z0, top, colHex, flat) => {
-    const start = P.length / 3, a = w / 2, b = h / 2, t = Math.min(0.006, Math.min(w, h) * 0.12), r0 = Math.min(a, b) * 0.32;
-    const rings = flat ? [[0, z0, 0.55], [0, top, 0.8]] : [[0, z0, 0.42], [t * 0.35, z0 + (top - z0) * 0.78, 0.68], [t, top, 0.9]];
-    rings.forEach(([ins, z]) => keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), z));
+    const start = P.length / 3, a = w / 2, b = h / 2, t = Math.min(0.007, Math.min(w, h) * 0.14), r0 = Math.min(a, b) * 0.34, H = top - z0, ao = [];
+    // de abajo arriba: la base, el lateral (que se estrecha), el hombro redondeado y el canto; la bandeja, recta
+    const rings = flat ? [[0, z0, 1], [0, top, 1]] : [[0, z0, 0.55], [t * 0.15, z0 + H * 0.45, 0.85], [t * 0.5, z0 + H * 0.8, 1], [t * 0.82, z0 + H * 0.95, 1], [t, top, 1]];
+    rings.forEach(([ins, z, o]) => { keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), z); for (let i = 0; i < KRING; i++) ao.push(o); });
     for (let k = 0; k + 1 < rings.length; k++) for (let i = 0; i < KRING; i++) { const A = start + k * KRING + i, B = start + k * KRING + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); }
-    let cap = -1;
-    if (!flat) { const ins = t; cap = P.length / 3; keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), top); P.push(cx, cy, top); for (let i = 0; i < KRING; i++) I.push(cap + KRING, cap + i, cap + (i + 1) % KRING); }
-    const count = P.length / 3 - start, rg = { start, count, rings: rings.map(x => x[2]), cap, cy, b, col: colHex };
-    keyColors(rg, C, colHex, false); return rg;
+    if (!flat) { // la cara de arriba, algo cóncava (como las teclas de verdad): su borde, un anillo más adentro algo más hondo y el centro
+      const c0 = P.length / 3, dish = H * 0.1;
+      keyRing(P, cx, cy, a - t, b - t, Math.max(0.002, r0 - t * 0.5), top); keyRing(P, cx, cy, (a - t) * 0.72, (b - t) * 0.6, Math.max(0.002, (r0 - t * 0.5) * 0.7), top - dish * 0.75); P.push(cx, cy, top - dish);
+      for (let i = 0; i < KRING * 2 + 1; i++) ao.push(1);
+      for (let i = 0; i < KRING; i++) { const A = c0 + i, B = c0 + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); I.push(c0 + KRING * 2, c0 + KRING + i, c0 + KRING + (i + 1) % KRING); }
+    }
+    return { start, count: P.length / 3 - start, ao, col: colHex };
   };
   if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, KEYC.tray[0], true) });
-  for (const w of list) {
-    const cx = w.mesh.position.x, cy = w.mesh.position.y, slider = w.kind === 'slider';
-    R.push({ w, ...shapeOf(cx, cy, w.w, w.h, 0, kh, slider ? KEYC.slider[0] : (KEYC[w.style] || KEYC.normal)[0], false) });
-  }
-  const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(new Float32Array(C), 3);
+  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, w.kind === 'slider' ? KEYC.slider[0] : (KEYC[w.style] || KEYC.normal)[0], false) });
+  const N = vNormals(P, I), C = new Float32Array(P.length);
+  for (const rg of R) { rg.N = N; keyColors(rg, C, rg.col, false); }
+  const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(C, 3);
   if (pos.setUsage) { pos.setUsage(THREE.DynamicDrawUsage); col.setUsage(THREE.DynamicDrawUsage); }
   g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
   const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; group.add(mesh);
@@ -5060,8 +5092,8 @@ function buildKeys(group, list, kh, tray) {
     const w = rg.w; if (!w) continue;
     w.cap = true; w.draw();
     w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
-    if (w.kind === 'slider') { // la bolita: un disco blanco sobre la ranura, que se arrastra
-      const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ color: 0xf2f4ff, toneMapped: false })), r = w.h * 0.3;
+    if (w.kind === 'slider') { // la bolita: se arrastra por la ranura
+      const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
       m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; w.mesh.add(m); w.knob = m; w.draw(); continue;
     }
     w.setPush = p => { w.mesh.position.z = w.baseZ - p; const a = pos.array; for (let i = rg.start; i < rg.start + rg.count; i++) a[i * 3 + 2] = base[i * 3 + 2] - p; touch(pos, rg); };
@@ -5069,13 +5101,11 @@ function buildKeys(group, list, kh, tray) {
   }
   return K;
 }
-// los colores de una tecla, con la luz pintada: cada anillo más claro hacia arriba y el lateral de abajo más oscuro
+// los colores de una tecla con su luz (ver shadeInto); con el dedo encima, más clara
 function keyColors(rg, C, hex, hover) {
   _kc.setHex(hex); if (hover) _kc.lerp(_kc2.setHex(0xffffff), 0.28);
   if (_kc.convertSRGBToLinear) _kc.convertSRGBToLinear(); // (los colores de los vértices van en lineal: si no, salen lavados)
-  const put = (i, f) => { if (Array.isArray(C) && C.length < (i + 1) * 3) C.length = (i + 1) * 3; C[i * 3] = Math.min(1, _kc.r * f); C[i * 3 + 1] = Math.min(1, _kc.g * f); C[i * 3 + 2] = Math.min(1, _kc.b * f); };
-  rg.rings.forEach((f, k) => { for (let i = 0; i < KRING; i++) { const idx = rg.start + k * KRING + i, q = (i / KRING) * TAU + Math.PI / 6, up = Math.sin(q); put(idx, f * (0.86 + 0.14 * up)); } });
-  if (rg.cap >= 0) { for (let i = 0; i <= KRING; i++) put(rg.cap + i, i === KRING ? 1.04 : 1); }
+  for (let i = 0; i < rg.count; i++) shadeInto(C, rg.start + i, _kc, rg.N, rg.ao[i], rg.w === null ? 0.1 : 0.32);
 }
 
 const fingers = [];
@@ -5226,7 +5256,9 @@ function openMenu(rows, opts = {}) {
   // cada botón y deslizador es una tecla (buildKeys, al final) con una sombra suave en la bandeja
   const addW = (w, cx, cy) => {
     w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
-    const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc, o = 4; rr(c, px - o * 0.5, py + o * 0.6, w.w * sc + o, w.h * sc + o, Math.min(w.h * sc * 0.32, 30)); c.fillStyle = 'rgba(0,0,0,0.45)'; c.fill();
+    // sombra difuminada hacia abajo a la derecha (la luz viene de arriba a la izquierda)
+    const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc;
+    c.save(); c.shadowColor = 'rgba(0,0,0,0.75)'; c.shadowBlur = 16; c.shadowOffsetX = 6; c.shadowOffsetY = 9; rr(c, px + 2, py + 2, w.w * sc - 4, w.h * sc - 4, Math.min(w.h * sc * 0.32, 30)); c.fillStyle = '#1d2029'; c.fill(); c.restore();
     return w;
   };
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
