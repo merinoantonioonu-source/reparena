@@ -870,12 +870,12 @@ class Flyer {
       if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
-      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 3 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
       }
-      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 2.5; // y el siguiente, otra repetición después (nunca dos seguidos)
+      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 3.5; // y el siguiente, otra repetición después (nunca dos seguidos)
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));

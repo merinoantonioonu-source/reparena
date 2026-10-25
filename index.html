@@ -1015,7 +1015,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -4967,9 +4967,17 @@ class Btn {
     this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
-  setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { this.label = l; if (style) this.style = style; this.draw(); } }
+  setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { const rec = style && style !== this.style; this.label = l; if (style) this.style = style; this.draw(); if (rec && this.setHover) this.setHover(this.hover, true); } }
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
+    if (this.cap) { // tecla de verdad (buildKeys): el cuerpo es la tecla; aquí solo lo que va impreso encima
+      const tc = (KEYC[this.style] || KEYC.normal)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
+      if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
+      if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
+      if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, tc);
+      const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
+      fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
+    }
     c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
     c.fillStyle = this.hover ? (this.down ? '#e0b44e' : '#ffd166') : s[0]; c.fill();
     // relieve: arriba con luz y abajo en sombra (en relieve); hundido, al revés
@@ -4998,7 +5006,8 @@ class Slider {
     rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#30284f'; c.stroke();
     rr(c, x0 - H * 0.12, y - H * 0.12, Math.max(H * 0.24, x - x0 + H * 0.12), H * 0.24, H * 0.12); c.fillStyle = '#ff4fa3'; c.fill();
     c.fillStyle = 'rgba(238,234,255,0.35)'; for (let i = 0; i <= 10; i++) { const tx = x0 + (x1 - x0) * i / 10; c.fillRect(tx - 1, y + H * 0.2, 2, H * 0.1); }
-    c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke();
+    if (this.knob) { this.knob.position.x = -this.w / 2 + this.pad + (this.w - 2 * this.pad) * this.frac(); this.knob.material.color.setHex(this.hover ? 0xffd166 : 0xf2f4ff); } // la bolita de verdad, que se arrastra
+    else { c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke(); }
     this.p.tex.needsUpdate = true;
   }
   set(v) { if (v !== this.value) { this.value = v; this.draw(); } }
@@ -5008,6 +5017,67 @@ class Slider {
   }
   commit() { if (this.pending) { this.pending = false; if (this.onDrag) this.onDrag(this.value, true); } }
 }
+/* ---------- Teclas de verdad ---------- */
+// Los botones de los menús son teclas como las de un teclado: base redondeada, laterales que se estrechan hacia arriba y
+// canto biselado, con la luz ya pintada (arriba claras, los laterales más oscuros y el de abajo aún más) sobre una bandeja
+// oscura con grosor. Todas las de un menú van en una sola malla (un solo dibujo); al pulsar una se mueven sus vértices y,
+// con el dedo encima, se aclara (sin volver a pintar su etiqueta)
+const KEY_H = 0.01; // alto de las teclas, en metros reales
+const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
+  danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
+// anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
+function keyRing(P, cx, cy, a, b, r, z) {
+  const n = 3;
+  for (const [sx, sy, a0] of [[1, 1, 0], [-1, 1, 0.5], [-1, -1, 1], [1, -1, 1.5]]) for (let i = 0; i <= n; i++) { const t = (a0 + i / n * 0.5) * Math.PI; P.push(cx + sx * (a - r) + Math.cos(t) * r, cy + sy * (b - r) + Math.sin(t) * r, z); }
+}
+const KRING = 16, _kc = new THREE.Color(), _kc2 = new THREE.Color(), knobGeo = (() => { const g = new THREE.CylinderGeometry(1, 1, 1, 20); g.rotateX(Math.PI / 2); return g; })();
+// list: botones y deslizadores ya colocados (su cara a la altura de la tecla); tray: { w, h, d } la bandeja bajo todo
+function buildKeys(group, list, kh, tray) {
+  const P = [], C = [], I = [], R = [];
+  const shapeOf = (cx, cy, w, h, z0, top, colHex, flat) => {
+    const start = P.length / 3, a = w / 2, b = h / 2, t = Math.min(0.006, Math.min(w, h) * 0.12), r0 = Math.min(a, b) * 0.32;
+    const rings = flat ? [[0, z0, 0.55], [0, top, 0.8]] : [[0, z0, 0.42], [t * 0.35, z0 + (top - z0) * 0.78, 0.68], [t, top, 0.9]];
+    rings.forEach(([ins, z]) => keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), z));
+    for (let k = 0; k + 1 < rings.length; k++) for (let i = 0; i < KRING; i++) { const A = start + k * KRING + i, B = start + k * KRING + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); }
+    let cap = -1;
+    if (!flat) { const ins = t; cap = P.length / 3; keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), top); P.push(cx, cy, top); for (let i = 0; i < KRING; i++) I.push(cap + KRING, cap + i, cap + (i + 1) % KRING); }
+    const count = P.length / 3 - start, rg = { start, count, rings: rings.map(x => x[2]), cap, cy, b, col: colHex };
+    keyColors(rg, C, colHex, false); return rg;
+  };
+  if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, KEYC.tray[0], true) });
+  for (const w of list) {
+    const cx = w.mesh.position.x, cy = w.mesh.position.y, slider = w.kind === 'slider';
+    R.push({ w, ...shapeOf(cx, cy, w.w, w.h, 0, kh, slider ? KEYC.slider[0] : (KEYC[w.style] || KEYC.normal)[0], false) });
+  }
+  const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(new Float32Array(C), 3);
+  if (pos.setUsage) { pos.setUsage(THREE.DynamicDrawUsage); col.setUsage(THREE.DynamicDrawUsage); }
+  g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
+  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; group.add(mesh);
+  const base = new Float32Array(P), K = { mesh, pos, col, base };
+  const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
+  mesh.onAfterRender = () => { for (const a of [pos, col]) if (a.updateRange) a.updateRange.count = -1; };
+  for (const rg of R) {
+    const w = rg.w; if (!w) continue;
+    w.cap = true; w.draw();
+    w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
+    if (w.kind === 'slider') { // la bolita: un disco blanco sobre la ranura, que se arrastra
+      const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ color: 0xf2f4ff, toneMapped: false })), r = w.h * 0.3;
+      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; w.mesh.add(m); w.knob = m; w.draw(); continue;
+    }
+    w.setPush = p => { w.mesh.position.z = w.baseZ - p; const a = pos.array; for (let i = rg.start; i < rg.start + rg.count; i++) a[i * 3 + 2] = base[i * 3 + 2] - p; touch(pos, rg); };
+    w.setHover = (h, restyle) => { if (restyle) rg.col = (KEYC[w.style] || KEYC.normal)[0]; keyColors(rg, col.array, rg.col, h); touch(col, rg); };
+  }
+  return K;
+}
+// los colores de una tecla, con la luz pintada: cada anillo más claro hacia arriba y el lateral de abajo más oscuro
+function keyColors(rg, C, hex, hover) {
+  _kc.setHex(hex); if (hover) _kc.lerp(_kc2.setHex(0xffffff), 0.28);
+  if (_kc.convertSRGBToLinear) _kc.convertSRGBToLinear(); // (los colores de los vértices van en lineal: si no, salen lavados)
+  const put = (i, f) => { if (Array.isArray(C) && C.length < (i + 1) * 3) C.length = (i + 1) * 3; C[i * 3] = Math.min(1, _kc.r * f); C[i * 3 + 1] = Math.min(1, _kc.g * f); C[i * 3 + 2] = Math.min(1, _kc.b * f); };
+  rg.rings.forEach((f, k) => { for (let i = 0; i < KRING; i++) { const idx = rg.start + k * KRING + i, q = (i / KRING) * TAU + Math.PI / 6, up = Math.sin(q); put(idx, f * (0.86 + 0.14 * up)); } });
+  if (rg.cap >= 0) { for (let i = 0; i <= KRING; i++) put(rg.cap + i, i === KRING ? 1.04 : 1); }
+}
+
 const fingers = [];
 const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = new V3(), _pkP = new V3();
 // Pulsar con el dedo como un botón de verdad (el índice; medidas en metros reales, también en el menú de muñeca, que va
@@ -5075,11 +5145,12 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     else S.cand = null;
   }
   for (const w of vis) {
-    const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; w.draw(); }
+    const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; if (w.setHover) w.setHover(hover); else w.draw(); }
     if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
     else {
       const p = Math.min(push.get(w) || 0, w.maxPush !== undefined ? w.maxPush : Infinity), dn = p > 0;
-      w.mesh.position.z = w.baseZ - p; if (dn !== !!w.down) { w.down = dn; w.draw(); }
+      if (w.setPush) { if (p !== (w.pushed || 0)) { w.pushed = p; w.setPush(p); } } // la tecla entera se hunde
+      else { w.mesh.position.z = w.baseZ - p; if (dn !== !!w.down) { w.down = dn; w.draw(); } }
     }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
@@ -5117,7 +5188,7 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
-const RELIEF = 0.008, GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
+const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
 function wrapLines(text, maxPx) {
@@ -5147,17 +5218,15 @@ function openMenu(rows, opts = {}) {
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
   const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
   const c = bg.ctx, sc = bg.W / MW;
-  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = 'rgba(14,10,28,0.95)'; c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke();
-  c.fillStyle = 'rgba(255,255,255,0.03)'; for (let y = 0; y < bg.H; y += 6) c.fillRect(6, y, bg.W - 12, 2);
+  // la bandeja de las teclas: gris muy oscuro, con un filo del color de la sección
+  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); { const gr = c.createLinearGradient(0, 0, 0, bg.H); gr.addColorStop(0, '#262a34'); gr.addColorStop(1, '#1a1d25'); c.fillStyle = gr; } c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke();
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  // los botones sobresalen RELIEF del panel (en metros reales, también en la muñeca) sobre un hueco oscuro dibujado en el
-  // fondo: al pulsarlos se hunden hasta el fondo del hueco, como una tecla
-  const RZ = RELIEF / (wristMenuOn() ? wristScale() : 1);
+  // cada botón y deslizador es una tecla (buildKeys, al final) con una sombra suave en la bandeja
   const addW = (w, cx, cy) => {
-    const z = w.kind === 'btn' ? RZ : 0.003; w.mesh.position.set(cx, cy, z); w.baseZ = z; w.maxPush = z - 0.0006; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
-    if (w.kind === 'btn') { const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc, o = 3; rr(c, px - o, py - o + 2, w.w * sc + o * 2, w.h * sc + o * 2, Math.min(w.h * sc * 0.3, 30)); c.fillStyle = 'rgba(0,0,0,0.6)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.07)'; c.stroke(); }
+    w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
+    const px = (cx - w.w / 2 + MW / 2) * sc, py = (H / 2 - cy - w.h / 2) * sc, o = 4; rr(c, px - o * 0.5, py + o * 0.6, w.w * sc + o, w.h * sc + o, Math.min(w.h * sc * 0.32, 30)); c.fillStyle = 'rgba(0,0,0,0.45)'; c.fill();
     return w;
   };
   const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
@@ -5211,7 +5280,8 @@ function openMenu(rows, opts = {}) {
     y -= h + GAP;
   });
   bg.tex.needsUpdate = true;
-  const wrist = wristMenuOn();
+  const wrist = wristMenuOn(), ksc = wrist ? wristScale() : 1;
+  buildKeys(group, widgets.filter(w => w.kind === 'btn' || w.kind === 'slider'), KEY_H / ksc, { w: MW, h: H, d: 0.014 / ksc });
   scene.add(group);
   if (wrist) { // en la muñeca: la postura la pone updateWristMenu; solo lo pulsa la mano derecha
     if (!reuse && !recent) wristOpen(); // un menú nuevo sale solo delante de ti; el siguiente de uno abierto, en su sitio
@@ -5247,20 +5317,22 @@ function openKeypad(f, row) {
   if (!menu) return; closeKeypad();
   const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
-  const grp = new THREE.Group(); grp.position.set(0, 0, 0.03); menu.group.add(grp);
+  const ksc = menu.wrist ? wristScale() : 1, kkh = KEY_H / ksc, kd = 0.01 / ksc;
+  const grp = new THREE.Group(); grp.position.set(0, 0, kkh + kd + 0.004 / ksc); menu.group.add(grp); // (por encima de las teclas del menú)
   const bg = makePanel(KW, KH, 640); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
   const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
   const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.maxPush = 0.0025; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
   if (menu.wrist) cancel.only = ok.only = 'right';
   cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
+  buildKeys(grp, kp.widgets, kkh, { w: KW, h: KH, d: kd });
   menu.keypad = kp; drawKeypad();
 }
 function drawKeypad() {
@@ -7398,12 +7470,12 @@ class Flyer {
       if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
-      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 3 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
       }
-      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 2.5; // y el siguiente, otra repetición después (nunca dos seguidos)
+      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 3.5; // y el siguiente, otra repetición después (nunca dos seguidos)
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
@@ -10620,13 +10692,16 @@ renderer.setAnimationLoop((time, frame) => {
 // Calidad automática: si el juego no llega a la frecuencia de las gafas, baja la resolución por pasos (y las sombras se
 // recalculan menos a menudo); si sobra, la vuelve a subir. Siempre con foveación (menos detalle en los bordes de la
 // vista, donde no se nota). La resolución se cambia en plena sesión poniendo una capa nueva (three.js la lee cada fotograma)
-const QLV = [{ sc: 1, sh: 1 }, { sc: 0.85, sh: 2 }, { sc: 0.72, sh: 2 }, { sc: 0.6, sh: 3 }], QFIX = { alta: 0, media: 1, baja: 3 };
+// (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
+const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
 function qualApply(lv, session = renderer.xr.getSession()) {
   QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+  const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
+  if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
-    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: QLV[lv].sc });
+    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
     if ('fixedFoveation' in L) L.fixedFoveation = 1;
     session.updateRenderState({ baseLayer: L });
   } catch (e) { console.warn('calidad', e && e.message); }
@@ -10667,7 +10742,7 @@ function perfStep(t, dt, jsMs = 0, rdMs = 0) {
     // lo que tarda el juego en pensar (JS) y en mandar el dibujo; si son poco y aun así va lento, lo que no llega es la gráfica
     c.fillStyle = '#eeeaff'; c.font = '500 52px ' + FB; const ri = renderer.info.render;
     c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
-    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
+    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %${QLV[QUAL.lv].aa ? '' : ', sin suavizado'}) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
     perfP.tex.needsUpdate = true;
     Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }
