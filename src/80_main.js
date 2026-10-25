@@ -273,13 +273,16 @@ renderer.setAnimationLoop((time, frame) => {
 // Calidad automática: si el juego no llega a la frecuencia de las gafas, baja la resolución por pasos (y las sombras se
 // recalculan menos a menudo); si sobra, la vuelve a subir. Siempre con foveación (menos detalle en los bordes de la
 // vista, donde no se nota). La resolución se cambia en plena sesión poniendo una capa nueva (three.js la lee cada fotograma)
-const QLV = [{ sc: 1, sh: 1 }, { sc: 0.85, sh: 2 }, { sc: 0.72, sh: 2 }, { sc: 0.6, sh: 3 }], QFIX = { alta: 0, media: 1, baja: 3 };
+// (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
+const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
 function qualApply(lv, session = renderer.xr.getSession()) {
   QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+  const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
+  if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
-    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: QLV[lv].sc });
+    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
     if ('fixedFoveation' in L) L.fixedFoveation = 1;
     session.updateRenderState({ baseLayer: L });
   } catch (e) { console.warn('calidad', e && e.message); }
@@ -320,7 +323,7 @@ function perfStep(t, dt, jsMs = 0, rdMs = 0) {
     // lo que tarda el juego en pensar (JS) y en mandar el dibujo; si son poco y aun así va lento, lo que no llega es la gráfica
     c.fillStyle = '#eeeaff'; c.font = '500 52px ' + FB; const ri = renderer.info.render;
     c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
-    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
+    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %${QLV[QUAL.lv].aa ? '' : ', sin suavizado'}) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
     perfP.tex.needsUpdate = true;
     Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }
