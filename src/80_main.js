@@ -243,6 +243,7 @@ const AMBX = { clank: 6 };
 renderer.setAnimationLoop((time, frame) => {
   const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
   if (!xrActive && !preview) return;
+  const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
   for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
@@ -261,12 +262,43 @@ renderer.setAnimationLoop((time, frame) => {
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
-  perfStep(t, dt);
+  if (WARM.q.length && !['play', 'rest'].includes(state)) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
-  renderer.render(scene, camera);
+  qualStep(dt);
+  const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();
+  perfStep(t, dt, t1 - t0, t2 - t1);
 });
 
 /* =================== FLUIDEZ =================== */
+// Calidad automática: si el juego no llega a la frecuencia de las gafas, baja la resolución por pasos (y las sombras se
+// recalculan menos a menudo); si sobra, la vuelve a subir. Siempre con foveación (menos detalle en los bordes de la
+// vista, donde no se nota). La resolución se cambia en plena sesión poniendo una capa nueva (three.js la lee cada fotograma)
+const QLV = [{ sc: 1, sh: 1 }, { sc: 0.85, sh: 2 }, { sc: 0.72, sh: 2 }, { sc: 0.6, sh: 3 }], QFIX = { alta: 0, media: 1, baja: 3 };
+const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
+function qualApply(lv, session = renderer.xr.getSession()) {
+  QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+  try {
+    const gl = renderer.getContext(), a = gl.getContextAttributes();
+    const L = new XRWebGLLayer(session, gl, { antialias: a.antialias, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: QLV[lv].sc });
+    if ('fixedFoveation' in L) L.fixedFoveation = 1;
+    session.updateRenderState({ baseLayer: L });
+  } catch (e) { console.warn('calidad', e && e.message); }
+}
+function qualStep(dt) {
+  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
+  const s = renderer.xr.getSession(); if (!s || preview) return;
+  if (settings.quality !== 'auto') { qualApply(QFIX[settings.quality] || 0, s); return; }
+  if (QUAL.applied < 0) qualApply(QUAL.lv, s);
+  const hz = s.frameRate || +settings.xrHz || 72; QUAL.now += dt; QUAL.t += dt; QUAL.n++; QUAL.cool -= dt; QUAL.block -= dt;
+  if (QUAL.t < 1) return;
+  const fps = QUAL.n / QUAL.t; QUAL.t = 0; QUAL.n = 0;
+  if (fps < hz * 0.9) { QUAL.slow++; QUAL.ok = 0; } else if (fps > hz * 0.97) { QUAL.ok++; QUAL.slow = 0; } else { QUAL.slow = QUAL.ok = 0; }
+  if (QUAL.slow >= 2 && QUAL.lv < QLV.length - 1 && QUAL.cool <= 0) { // va lento 2 s seguidos: un paso abajo
+    if (QUAL.now - QUAL.upT < 10) QUAL.block = 90; // acababa de subir y no aguantó: no lo vuelve a intentar en un rato
+    qualApply(QUAL.lv + 1, s); QUAL.slow = 0; QUAL.cool = 3;
+  } else if (QUAL.ok >= 8 && QUAL.lv > 0 && QUAL.cool <= 0 && QUAL.block <= 0) { qualApply(QUAL.lv - 1, s); QUAL.ok = 0; QUAL.cool = 10; QUAL.upT = QUAL.now; } // sobra: un paso arriba
+}
+settingHooks.push(k => { if (k === 'quality') { QUAL.applied = -1; if (settings.quality !== 'auto') QUAL.lv = QFIX[settings.quality] || 0; } });
 // Frecuencia de las gafas: a 72 Hz el juego llega siempre y la imagen no da saltos; a 90 o 120, si no llega, sí
 function xrRate(session = renderer.xr.getSession()) {
   if (!session || !session.updateTargetFrameRate || !session.supportedFrameRates) return;
@@ -275,19 +307,24 @@ function xrRate(session = renderer.xr.getSession()) {
 }
 settingHooks.push(k => { if (k === 'xrHz') xrRate(); });
 // Medidor (Ajustes → Menú y avisos): fotogramas por segundo, el peor de cada medio segundo y cuántos se pierden
-const PERF = { n: 0, t0: 0, worst: 0, lost: 0, txt: '' }, perfP = makePanel(0.26, 0.06, 256, { depthTest: false }); perfP.mesh.visible = false; scene.add(perfP.mesh);
-function perfStep(t, dt) {
+const PERF = { n: 0, t0: 0, worst: 0, lost: 0, txt: '', js: 0, rd: 0 }, perfP = makePanel(0.36, 0.11, 1024, { depthTest: false }); perfP.mesh.visible = false; scene.add(perfP.mesh);
+function perfStep(t, dt, jsMs = 0, rdMs = 0) {
   const on = !!settings.perfHud && (xrActive || preview); perfP.mesh.visible = on; if (!on) return;
   const hz = (renderer.xr.getSession() && renderer.xr.getSession().frameRate) || +settings.xrHz || 72;
-  PERF.n++; PERF.worst = Math.max(PERF.worst, dt); if (dt > 1.5 / hz) PERF.lost++;
+  PERF.n++; PERF.worst = Math.max(PERF.worst, dt); if (dt > 1.5 / hz) PERF.lost++; PERF.js = Math.max(PERF.js, jsMs); PERF.rd = Math.max(PERF.rd, rdMs);
   if (t - PERF.t0 >= 0.5) {
     const fps = PERF.n / Math.max(1e-3, t - PERF.t0), c = perfP.ctx, W = perfP.W, H = perfP.H, bad = PERF.lost > 0;
     c.clearRect(0, 0, W, H); rr(c, 2, 2, W - 4, H - 4, 10); c.fillStyle = 'rgba(10,8,20,0.8)'; c.fill();
-    c.fillStyle = bad ? '#ff8a3d' : '#3cf0c6'; c.font = '600 26px ' + FB; c.textBaseline = 'middle'; c.textAlign = 'left';
-    c.fillText(`${Math.round(fps)} fps · peor ${Math.round(PERF.worst * 1000)} ms · perdidos ${PERF.lost}`, 10, H / 2); perfP.tex.needsUpdate = true;
-    Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0 });
+    c.fillStyle = bad ? '#ff8a3d' : '#3cf0c6'; c.font = '600 64px ' + FB; c.textBaseline = 'middle'; c.textAlign = 'left';
+    c.fillText(`${Math.round(fps)} fps · peor ${Math.round(PERF.worst * 1000)} ms · perdidos ${PERF.lost}`, 24, H * 0.22);
+    // lo que tarda el juego en pensar (JS) y en mandar el dibujo; si son poco y aun así va lento, lo que no llega es la gráfica
+    c.fillStyle = '#eeeaff'; c.font = '500 52px ' + FB; const ri = renderer.info.render;
+    c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
+    c.fillText(`calidad ${QUAL.lv} (resolución ${Math.round(QLV[QUAL.lv].sc * 100)} %) · ${ri.calls} llamadas · ${Math.round(ri.triangles / 1000)} k triángulos`, 24, H * 0.83);
+    perfP.tex.needsUpdate = true;
+    Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }
-  perfP.mesh.position.copy(head.p).add(_pfo.set(-0.17, -0.13, -0.5).applyQuaternion(head.q)); perfP.mesh.quaternion.copy(head.q); // pegado a la vista, abajo a la izquierda
+  perfP.mesh.position.copy(head.p).add(_pfo.set(-0.15, -0.13, -0.5).applyQuaternion(head.q)); perfP.mesh.quaternion.copy(head.q); // pegado a la vista, abajo a la izquierda
 }
 const _pfo = new V3();
 
@@ -315,7 +352,7 @@ async function startXR(ar) {
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session);
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
     session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });

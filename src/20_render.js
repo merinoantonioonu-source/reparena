@@ -9,6 +9,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+// sin comprobar cada sombreador al compilarlo (esa comprobación espera a que termine: compilar era mucho más lento en las
+// gafas); y las sombras se recalculan cuando toca (ver qualStep)
+if (renderer.debug) renderer.debug.checkShaderErrors = false; renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.enabled = !!settings.shadows; renderer.shadowMap.type = THREE.PCFShadowMap; // (la suave pedía muchas más muestras por píxel: en las gafas, tirones)
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
