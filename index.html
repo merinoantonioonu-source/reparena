@@ -1015,7 +1015,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 2, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -7470,12 +7470,12 @@ class Flyer {
       if (d > reach || this.retreat > 0) this.waitT = 0; else this.waitT = (this.waitT || 0) + dt;
       if (this.retreat > 0) { this.retreat -= dt; this.base.addScaledVector(to.normalize(), -this.speed * 1.6 * dt); }
       else if (d > reach) this.base.addScaledVector(to.normalize(), Math.min(d, this.speed * dt));
-      else if (sup && !this.windT && (this.waitT < settings.supHold + 2.5 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
+      else if (sup && !this.windT && (this.waitT < settings.supHold + 3 || DET.su.state === 'up' || stats.time < SUP_ATK.next)) { /* esperando */ }
       else if (state === 'play') {
         if (this.K.kamikaze) { hurtPlayer(this); const c = this.center(new V3()); fx.explosion(c, 0.45 * (push ? 0.5 : 1), false); SND.explosion(c, false); spawnQueue.push({ kind: this.kind, hp: this.hp }); this.alive = false; this.dispose(); return; }
         if (!this.windT) { this.windT = 1e-3; if (this.K.beast) SND.roar(this.center(tmpC), BEAST_PITCH[this.K.beast] || 1.6, this.K.beast); else SND.hiss(this.center(tmpC), 0.8, 'wasp'); } // el avispón carga antes de picar (y te da un momento para dispararle); los monstruitos, con su voz
       }
-      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 2.5; // y el siguiente, otra repetición después (nunca dos seguidos)
+      if (sup && this.windT === 1e-3) SUP_ATK.next = stats.time + settings.supHold + 3.5; // y el siguiente, otra repetición después (nunca dos seguidos)
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
