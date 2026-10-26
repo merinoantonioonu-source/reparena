@@ -235,18 +235,18 @@ function applyComic() {
 }
 
 /* ---------- Efectos de cómic ---------- */
-// Al acertar, líneas de impacto; al derribar, un estallido de estrella con su onomatopeya (¡POW!, ¡ZAS!…); y las
+// Al acertar, líneas de impacto; al derribar, un estallido de estrella (sin palabras: para eso está el sonido); y las
 // explosiones, en nubes de humo dibujadas (blancas, con contorno) en lugar de fuego y humo
 const CFX = { list: [], tex: null };
 function cfxTex() {
   if (CFX.tex) return CFX.tex;
-  const T = CFX.tex = { words: [], lines: null, puff: null };
-  for (const w of ['¡POW!', '¡ZAS!', '¡BAM!', '¡KRAK!', '¡PAF!', '¡BUM!']) {
-    const cv = mkCanvas(512, 320), x = cv.getContext('2d'), cx = 256, cy = 160, n = 13;
-    const star = (R, r, fill) => { x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU + 0.12, rad = (i % 2 ? r : R) * (0.86 + 0.14 * Math.sin(i * 2.7)); x.lineTo(cx + Math.cos(a) * rad * 1.55, cy + Math.sin(a) * rad); } x.closePath(); x.fillStyle = fill; x.fill(); };
-    star(152, 98, '#140c1a'); star(140, 89, '#ffd23f'); star(104, 68, '#ff8a3d');
-    x.textAlign = 'center'; x.textBaseline = 'middle'; fitFont(x, w, 330, 112, '%px ' + FD); x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#140c1a'; x.strokeText(w, cx, cy + 6); x.fillStyle = '#ffffff'; x.fillText(w, cx, cy + 6);
-    T.words.push(texFrom(cv));
+  const T = CFX.tex = { stars: [], lines: null, puff: null };
+  for (let v = 0; v < 3; v++) { // estrellas de estallido, con sus puntas desiguales (tres variantes)
+    const cv = mkCanvas(256), x = cv.getContext('2d'), c = 128, n = 11 + v, R = rng(31 + v);
+    const jit = Array.from({ length: n * 2 }, () => 0.8 + R() * 0.25);
+    const star = (Ro, ri, fill) => { x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU, rad = (i % 2 ? ri : Ro) * jit[i]; x.lineTo(c + Math.cos(a) * rad, c + Math.sin(a) * rad); } x.closePath(); x.fillStyle = fill; x.fill(); };
+    star(124, 66, '#140c1a'); star(113, 58, '#ffd23f'); star(76, 40, '#ff8a3d'); x.fillStyle = '#fff8e0'; x.beginPath(); x.arc(c, c, 22, 0, TAU); x.fill();
+    T.stars.push(texFrom(cv));
   }
   { const cv = mkCanvas(256), x = cv.getContext('2d'), R = rng(5); x.fillStyle = '#140c1a';
     for (let i = 0; i < 22; i++) { const a = i / 22 * TAU + R() * 0.15, r0 = 70 + R() * 25, r1 = 124, w = 0.035 + R() * 0.03; x.beginPath(); x.moveTo(128 + Math.cos(a) * r0, 128 + Math.sin(a) * r0); x.lineTo(128 + Math.cos(a - w) * r1, 128 + Math.sin(a - w) * r1); x.lineTo(128 + Math.cos(a + w) * r1, 128 + Math.sin(a + w) * r1); x.closePath(); x.fill(); }
@@ -274,7 +274,7 @@ function updateCFX(dt) {
 function comicHit(p) { if (comicOn() && CFX.list.length < 40) cfxAdd(cfxTex().lines, p, 0.45, 0.24, 'lines', { rot: rand(0, TAU) }); }
 function comicKill(p, big) {
   if (!comicOn()) return; const T = cfxTex();
-  cfxAdd(pick(T.words), p.clone().add(new V3(0, 0.3, 0)), big ? 0.7 : 0.45, 1.1, 'pop', { top: true, rot: rand(-0.2, 0.2), w: 1.6 });
+  cfxAdd(pick(T.stars), p, big ? 0.8 : 0.5, 0.45, 'pop', { rot: rand(0, TAU) });
   cfxAdd(T.lines, p, big ? 1.5 : 0.95, 0.3, 'lines', { rot: rand(0, TAU) });
 }
 function comicBoom(p, size) { const T = cfxTex(); for (let i = 0; i < 7; i++) cfxAdd(T.puff, p.clone().add(new V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).multiplyScalar(0.25 * size)), (0.35 + Math.random() * 0.3) * size, rand(0.5, 0.9), 'puff', { v: new V3(rand(-1, 1), rand(0.4, 1.4), rand(-1, 1)).multiplyScalar(0.7 * size) }); }
