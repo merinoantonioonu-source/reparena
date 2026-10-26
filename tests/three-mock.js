@@ -76,6 +76,13 @@ class Quaternion {
     const x = this._x + (q._x * s - this._x) * t, y = this._y + (q._y * s - this._y) * t, z = this._z + (q._z * s - this._z) * t, w = this._w + (q._w * s - this._w) * t, l = Math.hypot(x, y, z, w) || 1; return this.set(x / l, y / l, z / l, w / l);
   }
   invert() { return this.set(-this._x, -this._y, -this._z, this._w); }
+  setFromRotationMatrix(m) { // (como three.js: la matriz de rotación pura, en columnas)
+    const te = m.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], tr = m11 + m22 + m33;
+    if (tr > 0) { const s = 0.5 / Math.sqrt(tr + 1); return this.set((m32 - m23) * s, (m13 - m31) * s, (m21 - m12) * s, 0.25 / s); }
+    if (m11 > m22 && m11 > m33) { const s = 2 * Math.sqrt(1 + m11 - m22 - m33); return this.set(0.25 * s, (m12 + m21) / s, (m13 + m31) / s, (m32 - m23) / s); }
+    if (m22 > m33) { const s = 2 * Math.sqrt(1 + m22 - m11 - m33); return this.set((m12 + m21) / s, 0.25 * s, (m23 + m32) / s, (m13 - m31) / s); }
+    const s = 2 * Math.sqrt(1 + m33 - m11 - m22); return this.set((m13 + m31) / s, (m23 + m32) / s, 0.25 * s, (m21 - m12) / s);
+  }
 }
 class Matrix4 {
   constructor() { this.elements = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]; }
