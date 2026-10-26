@@ -190,18 +190,45 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spnow{margin:12px 0 0;font-size:.95rem;color:var(--teal)}
 .splists{margin:16px 0}
 .splists h3{margin:0 0 6px;font-size:1rem}
-.splist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px;margin-top:10px}
-.splist label{display:flex;gap:8px;align-items:center;font-size:.92rem;min-width:0}
-.splist label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.splist{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.splist .sprow{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 10px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.splist .sprow > label{flex:1 1 220px;display:flex;gap:8px;align-items:flex-start;font-size:.92rem;min-width:0}
+.splist label span{white-space:normal;overflow-wrap:anywhere}
+.splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
+.splist .sptracks label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.splist .sptracks small,.sesmusic .tracks small{opacity:.7}
+.splist .sppicks{padding:8px 10px;border:1px dashed var(--line);border-radius:10px;font-size:.92rem}
+.splist .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.splist .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:.88em}
+.btn.tiny{padding:2px 8px;min-height:0;line-height:1.5;font-size:.82em}
 .status.sp{margin:8px 0 0}
 .session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
 .seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.main > section > h2,.main > section > .exHead > h2,.main > section > .todayHead > h2{cursor:pointer;user-select:none}
+.main > section > h2::after,.main > section > .exHead > h2::after,.main > section > .todayHead > h2::after{content:'▾';display:inline-block;margin-left:.5em;font-size:.7em;opacity:.6;transition:transform .15s}
+.main > section.collapsed > h2::after,.main > section.collapsed > .exHead > h2::after,.main > section.collapsed > .todayHead > h2::after{transform:rotate(-90deg)}
+.main > section.collapsed > :not(h2):not(.exHead):not(.todayHead){display:none !important}
+.main > section.collapsed > .exHead > :not(h2){display:none !important}
 .sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
 .sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
 .sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
 .sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
 .sesmusic select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;max-width:100%}
+.sesset{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
+.sesset details{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--panel)}
+.sesset summary{cursor:pointer;font-weight:600}
+.sesset .bfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 16px;margin-top:8px}
+.sesset .bfield{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.sesset .bfield > label{flex:1 1 120px;font-size:.9rem}
+.sesset .bfield.own > label{color:var(--teal, #3cf0c6)}
+.sesset input[type=number]{width:5.5em;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
+.sesset select{max-width:100%;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
+.sesset .bmulti{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.88rem}
+.lpick{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:2px}
+.lpick .lp{flex:0 1 auto;max-width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.9rem;cursor:pointer;line-height:1.3}
+.lpick .lp.on{border-color:var(--teal, #3cf0c6);box-shadow:0 0 0 1px var(--teal, #3cf0c6) inset;color:var(--teal, #3cf0c6)}
+.sesmusic .tracks span{white-space:normal;overflow-wrap:anywhere}
 .sesmusic .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .sesmusic .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:.9em}
 .sesmusic .btn.tiny{padding:0 7px;min-height:0;line-height:1.6;font-size:.85em}
@@ -234,6 +261,16 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   </aside>
 
   <div class="main">
+  <section class="today" id="todayBox" aria-live="polite"></section>
+  <section class="hist">
+    <h2>Tu progreso e historial en este dispositivo</h2>
+    <div class="stats" id="progBox"></div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Ejercicio</th><th>Rondas</th><th>Reps totales</th><th>Mejor ronda</th><th>Perfectas</th><th>Tiempo</th><th>≈ kcal</th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table></div>
+  </section>
+
   <section class="secMode">
     <h2>1 · Modo de juego</h2>
     <div class="cards modes">
@@ -286,6 +323,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-press2" value="press2">
         <span class="tag">Barra o kettlebell · muñecas</span><b>Press con barra</b>
         <small>Desde los hombros, sube la barra (o la kettlebell con las dos manos) hasta estirar los brazos. Las dos manos a la vez, un disparo.</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-fraise" value="fraise">
+        <span class="tag">Una pesa · muñecas</span><b>Elevaciones frontales (una pesa)</b>
+        <small>Una sola pesa (kettlebell, mancuerna o disco) con las dos manos: súbela al frente, con los brazos estirados, hasta la altura de los hombros. Arriba, un disparo.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-thruster" value="thruster">
         <span class="tag">Kettlebell, barra o mancuernas · visor y muñecas</span><b>Sentadilla con press</b>
         <small>Con el peso en los hombros, baja en sentadilla para cargar y, al subir, empújalo por encima de la cabeza para lanzar el rayo. Piernas, tronco y hombros en un solo movimiento.</small></label>
@@ -338,7 +378,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
   </section>
 
-  <section>
+  <section class="secCommon">
     <h2>3 · Opciones comunes</h2>
     <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
@@ -365,14 +405,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Si no marcas ninguna, sigue lo que estuviera sonando.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Canciones ▾</b> ves las canciones de cada lista y puedes elegir solo las que quieras (de una o de varias listas): entonces suenan esas, en el orden en que las marcaste y en bucle. Si no marcas nada, sigue lo que estuviera sonando.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
     <p>No hace falta abrir la app de Spotify: basta con pulsar Play en el juego. Si el navegador no puede reproducir Spotify, el menú lo dice y la música sonará en otro dispositivo tuyo (el mando funciona igual). Si la música ya suena en otro dispositivo, el menú ofrece «Que suene en las gafas».</p>
   </section>
 
-  <section>
+  <section class="secSpec">
     <h2 id="specTitle">4 · Opciones del modo y el ejercicio</h2>
     <p class="note">Solo las que sirven para lo que has elegido arriba.</p>
     <p class="levelnote" id="levelNote"></p>
@@ -395,7 +435,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
 
 
-  <section class="today" id="todayBox" aria-live="polite"></section>
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
@@ -408,6 +447,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     </div>
     <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
     <p class="estimate" id="sesSummary"></p>
+    <div class="profiles">
+      <h3>Sesiones guardadas</h3>
+      <p class="note">Guarda la sesión de ahora (sus bloques con su perfil, sus ajustes propios y su música, y el descanso) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
+      <div class="profsave"><input id="sessName" type="text" maxlength="40" placeholder="Nombre de la sesión" aria-label="Nombre de la sesión"><button class="btn small alt" id="btnSessSave">Guardar sesión</button></div>
+      <p class="status" id="sessStatus" aria-live="polite"></p>
+      <div class="proflist" id="sessSaved"></div>
+    </div>
   </section>
 
 
@@ -431,14 +477,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     </ul>
   </section>
 
-  <section class="hist">
-    <h2>Tu historial en este dispositivo</h2>
-    <div class="stats" id="progBox"></div>
-    <div class="tablebox"><table>
-      <thead><tr><th>Ejercicio</th><th>Rondas</th><th>Reps totales</th><th>Mejor ronda</th><th>Perfectas</th><th>Tiempo</th><th>≈ kcal</th></tr></thead>
-      <tbody id="histBody"></tbody>
-    </table></div>
-  </section>
 
   <!--__SOUNDS__-->
   </div>

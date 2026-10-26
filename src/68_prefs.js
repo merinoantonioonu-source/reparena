@@ -70,6 +70,7 @@ function renderProfiles() {
   host.innerHTML = L.length ? L.map((p, i) => `<div class="profrow"><div><b>${escHTML(p.name)}</b><span>${profLine(p)}</span></div>
     <button class="btn small alt" data-p="load" data-i="${i}">Cargar</button><button class="btn small" data-p="del" data-i="${i}">Borrar</button></div>`).join('')
     : '<p class="note">Aún no hay perfiles guardados.</p>';
+  if (typeof renderSession === 'function') renderSession(); // (los bloques pueden elegir perfil: su lista, al día)
 }
 const escHTML = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function profInitPage() {
@@ -82,4 +83,20 @@ function profInitPage() {
     else if (typeof confirm !== 'function' || confirm('¿Borrar este perfil?')) profDelete(i);
   });
   renderProfiles();
+}
+
+// En la página: cada sección se pliega y despliega pulsando su título (y se acuerda de cómo la dejaste)
+function pageSections() {
+  const main = $('.main'); if (!main || !main.addEventListener) return;
+  const ui = store(UI_KEY) || {}, shut = new Set(ui.shut || ['how', 'soundsBox']); // (al principio, plegadas solo las largas: cómo se juega y los sonidos)
+  const keyOf = sec => sec.id || (sec.className || '').split(' ').filter(c => c && c !== 'collapsed')[0] || '';
+  const all = () => { try { return [...main.querySelectorAll(':scope > section')]; } catch (e) { return []; } };
+  for (const sec of all()) if (shut.has(keyOf(sec))) sec.classList.add('collapsed');
+  main.addEventListener('click', ev => {
+    const h = ev.target.closest && ev.target.closest('h2'); if (!h) return;
+    const sec = h.closest('section'); if (!sec || sec.parentElement !== main) return;
+    if (h.parentElement !== sec && !/exHead|todayHead/.test(h.parentElement.className)) return;
+    sec.classList.toggle('collapsed');
+    const u = store(UI_KEY) || {}; u.shut = all().filter(x => x.classList.contains('collapsed')).map(keyOf).filter(Boolean); store(UI_KEY, u);
+  });
 }

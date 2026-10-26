@@ -5,7 +5,7 @@
 // cifrados unas horas: el servicio no puede leerlos y, sin el código, nadie sabe en qué canal están. Lo que depende de
 // cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
-const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-ranks', 'reparena3-session', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify'];
+const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-ranks', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify'];
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
 const XFER_HOURS = 12;
 const _xEnc = new TextEncoder(), _xDec = new TextDecoder();
@@ -29,14 +29,15 @@ function xferPack() {
   const d = {};
   for (const k of XFER_KEYS) {
     let v = store(k); if (v === null || v === undefined) continue;
-    if (k === 'reparena3-spotify') { const { clientId, lists, music } = v; v = { clientId, lists, music }; }
+    if (k === 'reparena3-spotify') { const { clientId, lists, picks } = v; v = { clientId, lists, picks }; }
     d[k] = v;
   }
   return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
 }
 function xferSummary(p) {
   const d = p.d || {}, prof = (d['reparena3-profiles'] || []).length, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
-  return `${prof} ${prof === 1 ? 'perfil' : 'perfiles'} · ${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
+  const sv = (d['reparena3-sessions'] || []).length;
+  return `${prof} ${prof === 1 ? 'perfil' : 'perfiles'} · ${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${sv} ${sv === 1 ? 'sesión guardada' : 'sesiones guardadas'} · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
 }
 // Enviar: devuelve el código
 async function xferSend() {
@@ -81,7 +82,7 @@ function xferApply(p, reload = true) {
     if (k === 'reparena3-history') {
       const mine = store(k) || [], seen = new Set(mine.map(r => `${r.date}|${r.ex}|${r.reps}`));
       store(k, mine.concat(v.filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`))).sort((a, b) => (a.date || 0) - (b.date || 0)).slice(-400));
-    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.music ? { music: v.music } : {}));
+    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}));
     else store(k, v);
   }
   if (reload) setTimeout(() => location.reload(), 300);
