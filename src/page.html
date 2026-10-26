@@ -200,6 +200,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
 .sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
 .sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
+.sesmusic select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;max-width:100%}
+.sesmusic .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sesmusic .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:.9em}
+.sesmusic .btn.tiny{padding:0 7px;min-height:0;line-height:1.6;font-size:.85em}
+.sesmusic .tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:320px;overflow:auto}
+.sesmusic .tracks label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.sesmusic .tracks small{color:var(--muted, #a49fc8)}
 .sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
@@ -376,6 +384,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <div class="profsave"><input id="profName" type="text" maxlength="40" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button class="btn small alt" id="btnProfSave">Guardar ajustes actuales</button></div>
       <p class="status" id="profStatus" aria-live="polite"></p>
       <div class="proflist" id="profList"></div>
+    </div>
+    <div class="profiles">
+      <h3>Pasar a otro dispositivo</h3>
+      <p class="note">Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Ajustes ▸ → Perfiles ▸ → A otro dispositivo → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
+      <div class="profsave"><button class="btn small alt" id="btnXferSend">Enviar desde aquí</button><input id="xferCode" type="text" inputmode="numeric" maxlength="9" placeholder="Código de 8 cifras" aria-label="Código del otro dispositivo"><button class="btn small" id="btnXferRecv">Recibir</button></div>
+      <p class="status" id="xferStatus" aria-live="polite"></p>
     </div>
   </section>
 

@@ -133,6 +133,34 @@ async function spPlayLists(lists = spLists()) {
   try { await spApi('PUT', '/me/player/shuffle?state=true' + (dev ? '&device_id=' + encodeURIComponent(dev) : '')); } catch (e) { /* da igual */ }
   SP.started = true; if (SP.st) SP.st.is_playing = true;
 }
+// Las canciones de una lista (hasta 300): { uri, name, by }
+async function spListTracks(id) {
+  SP.trk = SP.trk || {}; if (SP.trk[id]) return SP.trk[id];
+  const out = []; let url = `/playlists/${id}/tracks?limit=100&fields=items(track(uri,name,artists(name))),next`;
+  for (let i = 0; i < 3 && url; i++) { const j = await spApi('GET', url); (j && j.items || []).forEach(x => { const t = x && x.track; if (t && t.uri && t.uri.startsWith('spotify:track:')) out.push({ uri: t.uri, name: t.name, by: (t.artists || []).map(a => a.name).join(', ') }); }); url = j && j.next ? j.next.replace('https://api.spotify.com/v1', '') : null; }
+  return (SP.trk[id] = out);
+}
+const spDev = () => spHereOk() ? SPP.id : SP.st && SP.st.device && SP.st.device.id;
+const spQ = (dev = spDev()) => dev ? '?device_id=' + encodeURIComponent(dev) : '';
+// Una lista entera (al azar o en orden) o desde una de sus canciones
+async function spPlayList(l, fromUri, shuffle) {
+  const q = spQ(); await spApi('PUT', '/me/player/play' + q, fromUri ? { context_uri: l.uri, offset: { uri: fromUri } } : { context_uri: l.uri });
+  try { await spApi('PUT', '/me/player/shuffle?state=' + (!!shuffle) + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
+  SP.started = true; SP.block = null; if (SP.st) SP.st.is_playing = true;
+}
+// La música de un bloque de la sesión: sus canciones, en orden y en bucle mientras dura (si el bloque anterior tenía las
+// mismas, siguen sin empezar de nuevo)
+async function spPlayTracks(tracks) {
+  const uris = tracks.map(t => t.uri).filter(Boolean).slice(0, 100); if (!uris.length) return;
+  const q = spQ(); await spApi('PUT', '/me/player/play' + q, { uris });
+  try { await spApi('PUT', '/me/player/shuffle?state=false' + (q ? '&' + q.slice(1) : '')); await spApi('PUT', '/me/player/repeat?state=context' + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
+  SP.started = true; if (SP.st) SP.st.is_playing = true;
+}
+function spBlockMusic(b) {
+  const tr = b && Array.isArray(b.music) ? b.music : []; if (!tr.length || !spConnected()) return false;
+  const key = tr.map(t => t.uri).join(','); if (SP.block === key && spPlaying()) return true;
+  SP.block = key; SP.resume = false; spDo(() => spPlayTracks(tr)); return true;
+}
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
@@ -237,10 +265,41 @@ function musicRows() {
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
   const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
   const where = SP.st && SP.st.device && SP.st.device.name ? ` (en ${SP.st.device.name})` : '';
-  const L = spLists(), lists = L.length ? [{ t: 'btns', items: [...L.slice(0, 3).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Todas mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : [])] }] : [];
+  const L = spLists(), lists = [{ t: 'btns', items: [...L.slice(0, 2).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : []),
+    { label: 'Listas y canciones  ▸', accent: '#a68bff', flex: 1.4, onPress: () => { const b = menu && menu.rebuild; SP.loadErr = ''; spListMenu(b || (() => hideMenu())); } }] }];
   return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here, ...lists,
     ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
+}
+// Elegir en el juego cualquiera de tus listas (de 8 en 8) y, dentro, ponerla entera, al azar o desde una canción
+function spListMenu(back, page = 0) {
+  const again = p => spListMenu(back, p), rows = [{ t: 'title', text: 'TUS LISTAS' }];
+  if (!SP.mine) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando tus listas…', color: SP.loadErr ? '#ff8a3d' : '#ffd166' });
+    if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
+    else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
+  else {
+    const N = 8, pages = Math.max(1, Math.ceil(SP.mine.length / N)), p = clamp(page, 0, pages - 1), slice = SP.mine.slice(p * N, p * N + N);
+    if (!SP.mine.length) rows.push({ t: 'text', text: 'No tienes listas en Spotify', color: '#a49fc8' });
+    for (let i = 0; i < slice.length; i += 2) rows.push({ t: 'btns', items: slice.slice(i, i + 2).map(l => ({ label: l.name, onPress: () => spTrackMenu(l, () => again(p)) })) });
+    if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  }
+  rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spList = true;
+}
+function spTrackMenu(l, back, page = 0) {
+  const again = p => spTrackMenu(l, back, p), T = SP.trk && SP.trk[l.id], rows = [{ t: 'title', text: l.name }];
+  rows.push({ t: 'btns', items: [{ label: '▶ Toda la lista', style: 'primary', onPress: () => spDo(() => spPlayList(l, null, false)) }, { label: 'Al azar', onPress: () => spDo(() => spPlayList(l, null, true)) }] });
+  if (!T) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando sus canciones…', color: '#ffd166' });
+    if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
+    else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
+  else {
+    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
+    rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
+    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(() => spPlayList(l, t.uri, false)) }] });
+    if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  }
+  rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spTrk = l.id;
 }
 // Minicontroles para el menú de muñeca o el atril (principal y pausa): lo que suena y anterior, pausa/play, siguiente y
 // volumen, con iconos. Pulsarlos en plena partida no la termina: la pausa sigue ahí y «Continuar» la reanuda

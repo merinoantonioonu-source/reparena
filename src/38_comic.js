@@ -22,22 +22,28 @@ const COMIC_LIGHT = `
 	float cD = dot( normal, cL );
 	#ifdef COMIC_SOFT
 		float cLit = smoothstep( -0.45, 0.75, cD );
+	#elif defined( COMIC_CHAR )
+		float cLit = smoothstep( -0.18, 0.32, cD ); // (personajes: corte suave, para que el relieve de la cara se lea)
 	#else
 		float cLit = smoothstep( 0.0, 0.035, cD );
 	#endif
 	vec3 cBase = diffuseColor.rgb; float cLum = dot( cBase, vec3( 0.299, 0.587, 0.114 ) ); cBase = max( mix( vec3( cLum ), cBase, 1.3 ), 0.0 );
 	vec3 cCol = mix( cBase * uComicShadow, cBase, cLit ) * ( 0.9 + 0.13 * clamp( cD, 0.0, 1.0 ) );
-	float cSp = smoothstep( 0.9, 0.93, dot( reflect( - cL, normal ), normalize( vViewPosition ) ) ) * cLit; cCol += vec3( 0.3 ) * cSp;
-	#if __VERSION__ >= 300
+	#ifndef COMIC_CHAR
+		float cSp = smoothstep( 0.9, 0.93, dot( reflect( - cL, normal ), normalize( vViewPosition ) ) ) * cLit; cCol += vec3( 0.3 ) * cSp;
+	#endif
+	#if __VERSION__ >= 300 && ! defined( COMIC_CHAR )
 		vec3 cW = transpose( mat3( viewMatrix ) ) * ( - vViewPosition ) + cameraPosition;
 		cCol *= mix( 0.8, 1.07, smoothstep( -0.2, 3.4, cW.y ) );
 		float cH = abs( fract( dot( cW, vec3( 0.9, 0.55, -0.7 ) ) * 26.0 ) - 0.5 );
 		cCol *= 1.0 - ( 1.0 - smoothstep( 0.1, 0.2, cH ) ) * ( 1.0 - cLit ) * 0.3 * smoothstep( 7.0, 3.0, length( vViewPosition ) ); // (solo de cerca: a lo lejos hacía aguas)
 	#endif
 	vec3 outgoingLight = cCol * uComicK + totalEmissiveRadiance * 1.4;`;
-function comicShader(sh, soft) {
+// (char: un personaje con esqueleto: conserva su relieve y va sin el brillo plano ni el rayado, que le deformaban la cara)
+function comicShader(sh, soft, char) {
   if (!sh.fragmentShader.includes(COMIC_OUT)) return; // (otro sombreador: se queda como estaba)
   if (soft) sh.fragmentShader = '#define COMIC_SOFT\n' + sh.fragmentShader;
+  else if (char) sh.fragmentShader = '#define COMIC_CHAR\n' + sh.fragmentShader;
   Object.assign(sh.uniforms, { uComicL: COMIC.uL, uComicK: COMIC.uK, uComicShadow: COMIC.uShadow });
   let f = sh.fragmentShader;
   for (const inc of ['lights_physical_fragment', 'lights_fragment_begin', 'lights_fragment_maps', 'lights_fragment_end', 'aomap_fragment']) f = f.replace(`#include <${inc}>`, '');
@@ -53,8 +59,8 @@ function comicPatch(m) {
   const prev = m.onBeforeCompile || (() => {}), base = THREE.Material && THREE.Material.prototype.customProgramCacheKey;
   const own = m.customProgramCacheKey && m.customProgramCacheKey !== base && (!S || m.customProgramCacheKey !== S.key), prevKey = own ? m.customProgramCacheKey.bind(m) : () => prev.toString();
   if (!S) { S = { on: false, saved: null }; COMIC.st.set(m, S); COMIC.mats.add(m); if (m.addEventListener) m.addEventListener('dispose', () => COMIC.mats.delete(m)); }
-  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh, !!this.userData.comicSoft); };
-  S.key = function () { return prevKey() + (S.on ? (this.userData.comicSoft ? '|comicsoft' : '|comic') : ''); };
+  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh, !!this.userData.comicSoft, !!this.skinning); };
+  S.key = function () { return prevKey() + (S.on ? (this.userData.comicSoft ? '|comicsoft' : this.skinning ? '|comicchar' : '|comic') : ''); };
   m.onBeforeCompile = S.wrap; m.customProgramCacheKey = S.key;
   comicSet(m, comicOn());
 }
@@ -68,7 +74,8 @@ function comicSet(m, on) {
     // color en cada fotograma, y sin la textura se quedaban blancos)
     const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap) && !m.skinning && !m.userData.keepMap;
     if (detailed && m.map) { const a = texAvg(m.map); if (a) { sv.color = m.color.getHex(); m.color.multiply(pastel(a)); } }
-    for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { sv[k] = m[k]; m[k] = null; }
+    // (los personajes conservan el relieve: sin él se perdían las facciones)
+    for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { if (k === 'normalMap' && m.skinning) continue; sv[k] = m[k]; m[k] = null; }
   } else if (S.saved) { const sv = S.saved; if (sv.color !== undefined) { m.color.setHex(sv.color); delete sv.color; } Object.assign(m, sv); S.saved = null; }
   m.needsUpdate = true;
 }

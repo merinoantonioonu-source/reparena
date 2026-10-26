@@ -219,7 +219,7 @@ function guardTip() {
   if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
   const f = guardFam();
   if (f === 'fist') return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
-  if (f === 'weights') return '¡Te va a golpear! Junta las manos delante de la cara: guardia';
+  if (f === 'weights') return settings.exercise === 'fraise' ? '¡Te va a golpear! Sube la pesa al frente y aguántala: escudo' : '¡Te va a golpear! Junta las manos delante de la cara: guardia';
   return '¡Te va a golpear! Quédate quieto en la postura: burbuja · o aparta la cabeza';
 }
 const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escudo';
