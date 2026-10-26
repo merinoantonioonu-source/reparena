@@ -458,15 +458,16 @@ function menuClose() {
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
 
 /* ---------- Teclado numérico ---------- */
-function openKeypad(f, row) {
+// (opt: para escribir algo que no es un ajuste, como el código de otro dispositivo: { code, maxLen, onOK(texto) })
+function openKeypad(f, row, opt = null) {
   if (!menu) return; closeKeypad();
   const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
   const ksc = menu.wrist ? wristScale() : 1, kkh = KEY_H / ksc, kd = 0.01 / ksc;
   const grp = new THREE.Group(); grp.position.set(0, 0, kkh + kd + 0.004 / ksc); menu.group.add(grp); // (por encima de las teclas del menú)
   const bg = makePanel(KW, KH, 640, { hd: 1.75 }); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
-  const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
-  const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
+  const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH, opt };
+  const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', opt ? ' ' : ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
@@ -485,15 +486,16 @@ function drawKeypad() {
   const c = kp.bg.ctx, W = kp.bg.W, H = kp.bg.H, s = W / kp.KW, f = kp.f;
   c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, 26); c.fillStyle = 'rgba(10,7,22,0.98)'; c.fill(); c.lineWidth = 5; c.strokeStyle = '#ffd166'; c.stroke();
   c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = '#a49fc8'; fitFont(c, f.short || f.label, W - 40, 24, '500 %px ' + FB); c.fillText(f.short || f.label, 22, 18);
-  const shown = kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
+  const shown = kp.opt ? (kp.str ? kp.str.replace(/^(\d{4})(\d+)$/, '$1 $2') : '— — — —') : kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
   rr(c, 18, 50, W - 36, kp.dispH * s - 30, 12); c.fillStyle = '#1d1738'; c.fill();
   c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = kp.fresh ? '#7d77a8' : '#ffffff'; c.font = `700 40px ${FB}`; c.fillText(shown + (f.unit ? ' ' + f.unit : ''), W - 34, 50 + (kp.dispH * s - 30) / 2);
-  c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2);
+  if (!kp.opt) { c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2); }
   kp.bg.tex.needsUpdate = true;
 }
 function keypadKey(k) {
   const kp = menu && menu.keypad; if (!kp) return;
   if (kp.fresh) { kp.str = ''; kp.fresh = false; }
+  if (kp.opt) { if (k === '⌫') kp.str = kp.str.slice(0, -1); else if (/\d/.test(k) && kp.str.length < (kp.opt.maxLen || 8)) kp.str += k; drawKeypad(); return; }
   if (k === '⌫') kp.str = kp.str.slice(0, -1);
   else if (k === ',') { if (decimals(kp.f) > 0 && !kp.str.includes(',')) kp.str = (kp.str || '0') + ','; }
   else if (kp.str.replace(',', '').length < 5) kp.str = (kp.str === '0' ? '' : kp.str) + k;
@@ -501,6 +503,7 @@ function keypadKey(k) {
 }
 function keypadOK() {
   const kp = menu && menu.keypad; if (!kp) return;
+  if (kp.opt) { const str = kp.str; closeKeypad(); if (str) kp.opt.onOK(str); return; }
   if (!kp.fresh && kp.str !== '') { setSetting(kp.f.key, kp.str); refreshRow(kp.row); }
   closeKeypad();
 }

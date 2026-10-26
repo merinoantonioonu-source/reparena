@@ -1207,6 +1207,7 @@ const DET = {
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   iw: { pair: 0, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
+  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -1361,6 +1362,28 @@ function deadliftStep(t, dt) {
 // Leñador: las manos juntas (con la kettlebell o el disco) bajan junto a una cadera y suben en diagonal por encima del
 // hombro contrario. Abajo a un lado carga; arriba al otro lado dispara (en CHOP_WIN s). Alturas respecto a tu altura de pie
 const CHOP_WIN = 2.5, _chp = new V3();
+// Elevación frontal con una sola pesa (kettlebell, mancuerna, disco o barra) sujeta con las dos manos: las manos, juntas,
+// suben desde los muslos con los brazos estirados al frente hasta la altura de los hombros. Se sigue el punto medio de
+// las manos que se vean (con una basta: la pesa las tapa a veces) respecto a la cabeza; al empezar a subir carga y
+// arriba dispara. Arriba tienen que estar lejos de la cara (brazos estirados): así un curl no cuenta
+const _frm = new V3();
+function fraiseStep(t, dt) {
+  const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
+  for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
+  if (!n) { d.lost += dt; if (d.lost > 0.6) d.state = 'down'; return; }
+  _frm.divideScalar(n); d.lost = 0;
+  const r = _frm.y - head.p.y, fwd = Math.hypot(_frm.x - head.p.x, _frm.z - head.p.z);
+  d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido (se adapta a tu altura)
+  if (d.state === 'down') { if (r > d.bottom + Math.min(0.1, range * 0.3)) { Object.assign(d, { state: 'rising', max: r, t0: t, fwd }); onCharge(); } }
+  else if (d.state === 'rising') {
+    d.max = Math.max(d.max, r); d.fwd = Math.max(d.fwd, fwd);
+    if (r - d.bottom >= range) {
+      if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
+      const dur = t - d.t0, pt = settings.perfectTime;
+      onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); d.state = 'top';
+    } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
+  } else if (r < d.bottom + Math.min(0.12, range * 0.3)) d.state = 'down'; // hay que bajarla para la siguiente
+}
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
   for (const s of ['left', 'right']) if (hands[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
@@ -1506,6 +1529,8 @@ function runDetectors(t, dt) {
   } else if (CHAIN[settings.exercise]) {
     // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
+  } else if (settings.exercise === 'fraise') {
+    fraiseStep(t, dt);
   } else if (settings.exercise === 'chop') {
     chopStep(t, dt);
   } else if (settings.exercise === 'dlrow') {
@@ -2171,7 +2196,7 @@ function beginRun() {
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }

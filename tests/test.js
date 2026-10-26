@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -232,6 +232,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.camera.rotation.set(0, 0, 0);
   // con barra o kettlebell: las dos manos a la vez; sentadilla con press: hay que subir las pesas para disparar
   await runConfig('Combate curl con barra', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2' }, squatSim(2.0), 420, s => s.reps < 9 ? 'el curl con barra no cuenta las repeticiones' : s.partial > 2 ? 'el curl con barra da medias de más' : '');
+  // elevaciones frontales con una sola pesa (las dos manos juntas): cuentan al llegar a los hombros con los brazos al frente
+  await runConfig('Combate elevaciones frontales', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'fraise' }, squatSim(2.4), 420, s => s.reps < 9 ? 'las elevaciones frontales no cuentan las repeticiones' : s.kills < 4 ? 'las elevaciones frontales no derriban voladores' : '');
+  { const pf = RA.settings.perfectTime; RA.setSetting('fraiseRange', 70); // (con un recorrido mayor del que se hace, no cuenta: a medias)
+    await runConfig('Combate elevaciones frontales cortas', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'fraise', waves: 1, repsWave: 3, fraiseRange: 70 }, squatSim(2.4), 25, s => s.reps ? `con 70 cm de recorrido no deberían contar subidas de 62 (${s.reps})` : !s.partial ? 'debería avisar de que sube poco' : '', true);
+    RA.setSetting('fraiseRange', 45); RA.setSetting('perfectTime', pf); }
   await runConfig('Combate press con barra', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'press2' }, squatSim(1.8), 420, s => s.reps < 9 ? 'el press con barra no cuenta las repeticiones' : '');
   await runConfig('Combate sentadilla con press', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster' }, squatSim(3.0), 420, s => s.reps < 9 ? 'la sentadilla con press no dispara' : s.partial > 2 ? 'la sentadilla con press da medias de más' : '');
   await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.noArms = true; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
@@ -608,6 +613,78 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   let maxAmmo = 0;
   await runConfig('Asalto+pistolas sin disparar', { ...base, mode: 'walkers', exercise: 'squat', pistol: 1, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.4; RA.PV.keys.KeyT = false; maxAmmo = Math.max(maxAmmo, RA.GUN.ammo); }, 25, s => s.kills ? 'sin apretar el gatillo no debería disparar' : maxAmmo !== 2 ? `la munición debería llegar a una por pistola (2) y no pasar (${maxAmmo})` : '', true);
   RA.PV.keys.KeyT = false; RA.camera.rotation.set(0, 0, 0); RA.setSetting('pistol', 0);
+  // ---- Pasar los datos a otro dispositivo por código (con un servicio de mensajes de mentira: como ntfy.sh) ----
+  { const topics = new Map(), realFetch = globalThis.fetch; let posts = 0;
+    globalThis.fetch = async (url, o = {}) => {
+      const m = String(url).match(/^https:\/\/ntfy\.sh\/([\w-]+)(\/json.*)?$/); if (!m) return realFetch ? realFetch(url, o) : { ok: false, status: 404 };
+      const L = topics.get(m[1]) || []; topics.set(m[1], L);
+      if (o.method === 'POST') { if (String(o.body).length > 4096) return { ok: false, status: 413 }; posts++; L.push({ event: 'message', message: String(o.body) }); return { ok: true, status: 200, text: async () => '' }; }
+      return { ok: true, status: 200, text: async () => [{ event: 'open' }, ...L].map(x => JSON.stringify(x)).join('\n') };
+    };
+    const ses0 = JSON.stringify(storage.get('reparena3-session') || null), prof = [{ name: 'Mañana suave', s: { mode: 'combat', exercise: 'squat', walkTime: 21 } }];
+    storage.set('reparena3-profiles', JSON.stringify(prof)); storage.set('reparena3-session', JSON.stringify({ blocks: [{ mode: 'combat', ex: 'squat', n: 30 }, { mode: 'touch', ex: 'slam', n: 20 }], rest: 45 }));
+    storage.set('reparena3-history', JSON.stringify(Array.from({ length: 300 }, (_, i) => ({ ex: 'squat', mode: 'combat', reps: 10 + i % 7, perfect: 3, kills: 2, win: true, time: 120, work: 100, kcal: 9.5, date: 1.7e12 + i * 6e5 })))); // (que no quepa en un mensaje)
+    storage.set('reparena3-spotify', JSON.stringify({ clientId: 'abc', refresh: 'SECRETO', access: 'SECRETO', lists: [{ id: 'l1', name: 'Correr', uri: 'spotify:playlist:l1' }] }));
+    storage.set('reparena3-roomset', JSON.stringify({ gates: [1, 2] }));
+    let code = null, got = null, bad = '', wrong = '';
+    try { code = await RA.xferSend(); got = await RA.xferFetch(code); } catch (e) { bad = e.message; }
+    try { await RA.xferFetch(String((+code + 1) % 1e8).padStart(8, '0')); wrong = 'aceptó un código equivocado'; } catch (e) { wrong = e.message; }
+    const chunks = posts, raw = [...topics.values()].flat().map(x => x.message).join('');
+    // el otro dispositivo: otros perfiles y bloques, una partida suya en el historial y su propio inicio de sesión de Spotify
+    storage.set('reparena3-profiles', '[]'); storage.set('reparena3-session', JSON.stringify({ blocks: [], rest: 60 })); storage.set('reparena3-history', JSON.stringify([{ ex: 'pushup', mode: 'combat', reps: 5, date: 1.9e12 }]));
+    storage.set('reparena3-spotify', JSON.stringify({ clientId: 'abc', refresh: 'MIO' })); storage.set('reparena3-roomset', JSON.stringify({ gates: [9] }));
+    if (got) RA.xferApply(got, false);
+    const P = JSON.parse(storage.get('reparena3-profiles') || '[]'), S = JSON.parse(storage.get('reparena3-session') || '{}'), H = JSON.parse(storage.get('reparena3-history') || '[]'), SP2 = JSON.parse(storage.get('reparena3-spotify') || '{}'), RM = JSON.parse(storage.get('reparena3-roomset') || '{}');
+    log(`transfer by code: code ${code} · ${chunks} messages · readable in transit ${/Mañana|Correr|SECRETO/.test(raw)} · wrong code → «${wrong}» · received profiles ${P.length} blocks ${(S.blocks || []).length} history ${H.length} · spotify login kept ${SP2.refresh} lists ${(SP2.lists || []).length} · tokens sent ${/SECRETO/.test(JSON.stringify(got || {}))} · room kept ${JSON.stringify(RM.gates)}${bad ? ' · error ' + bad : ''}`);
+    if (bad || !/^\d{8}$/.test(code || '') || chunks < 2) errors.push(`envío por código: no funciona (${bad || 'código ' + code + ', ' + chunks + ' mensajes'})`);
+    if (/Mañana|Correr|SECRETO/.test(raw)) errors.push('envío por código: los datos deberían ir cifrados');
+    if (!/descifrar|nada/.test(wrong)) errors.push('envío por código: con otro código no debería poder leerse (' + wrong + ')');
+    if (P.length !== 1 || (S.blocks || []).length !== 2 || H.length !== 301 || SP2.refresh !== 'MIO' || (SP2.lists || []).length !== 1 || /SECRETO/.test(JSON.stringify(got || {})) || JSON.stringify(RM.gates) !== '[9]') errors.push('envío por código: al recibir deberían llegar perfiles, bloques, historial (juntado) y listas, sin tokens ni la habitación');
+    // y en el juego: el menú con Enviar y Recibir
+    RA.xferMenu(() => {}); const lab = RA.activeWidgets().map(w => w.label).join('|'); log(`   transfer menu: ${lab}`);
+    if (!/Enviar desde aquí/.test(lab) || !/Recibir/.test(lab)) errors.push('envío por código: falta el menú en el juego');
+    { RA.activeWidgets().find(w => /^Recibir/.test(w.label)).onPress(); for (const d of code) RA.keypadKey(d); RA.keypadOK(); for (let i = 0; i < 40 && !RA.activeWidgets().some(w => /^Cargar/.test(w.label)); i++) await sleep(50);
+      const l2 = RA.activeWidgets().map(w => w.label).join('|'); log(`   typed the code on the keypad → ${l2}`); if (!/Cargar y reiniciar/.test(l2)) errors.push('envío por código: al escribir el código en el teclado del juego debería ofrecer cargar lo recibido');
+      RA.activeWidgets().find(w => w.label === 'Cancelar').onPress(); }
+    globalThis.fetch = realFetch; storage.set('reparena3-session', ses0); storage.delete('reparena3-profiles'); storage.delete('reparena3-roomset'); storage.delete('reparena3-spotify'); storage.delete('reparena3-history'); }
+  // ---- Spotify: elegir lista y canción en el juego, y la música de cada bloque (varias canciones, en orden y en bucle) ----
+  { const realFetch = globalThis.fetch, calls = [], cfg0 = RA.SP.cfg, st0 = RA.SP.st;
+    const lists = Array.from({ length: 11 }, (_, i) => ({ id: 'L' + i, name: 'Lista ' + i, uri: 'spotify:playlist:L' + i, tracks: { total: 5 } }));
+    const tracks = id => ({ items: Array.from({ length: 12 }, (_, k) => ({ track: { uri: `spotify:track:${id}-${k}`, name: `Canción ${k}`, artists: [{ name: 'Grupo' }] } })), next: null });
+    globalThis.fetch = async (url, o = {}) => {
+      const u = String(url); if (!u.startsWith('https://api.spotify.com/v1')) return realFetch(url, o);
+      const path = u.slice('https://api.spotify.com/v1'.length); calls.push({ m: o.method, path, body: o.body ? JSON.parse(o.body) : null });
+      const res = j => ({ ok: true, status: j ? 200 : 204, text: async () => j ? JSON.stringify(j) : '' });
+      if (path.startsWith('/me/playlists')) return res({ items: lists, next: null });
+      const mt = path.match(/^\/playlists\/(\w+)\/tracks/); if (mt) return res(tracks(mt[1]));
+      if (path.startsWith('/me/player') && o.method === 'GET') return res({ is_playing: true, device: { id: 'D1', name: 'PC' }, item: { name: 'Canción 3', artists: [{ name: 'Grupo' }] } });
+      return res(null);
+    };
+    RA.SP.cfg = { clientId: 'x', refresh: 'r', access: 'a', exp: Date.now() + 3.6e6 }; RA.SP.st = { is_playing: true, device: { id: 'D1', name: 'PC' } }; RA.SP.mine = null; RA.SP.trk = {}; RA.SP.busy = false; RA.SP.block = null;
+    const waitFor = async (f, n = 60) => { for (let i = 0; i < n && !f(); i++) await sleep(25); return f(); };
+    const labels = () => RA.activeWidgets().map(w => w.label);
+    // en el juego: tus listas de 8 en 8 → una lista → sus canciones → desde la 4.ª
+    RA.spListMenu(() => {}); await waitFor(() => labels().includes('Lista 0'));
+    const page1 = labels().filter(l => /^Lista/.test(l)).length; RA.activeWidgets().find(w => w.label === '▶').onPress(); const page2 = labels().filter(l => /^Lista/.test(l)).length;
+    RA.activeWidgets().find(w => w.label === 'Lista 9').onPress(); await waitFor(() => labels().some(l => /^Canción 3/.test(l)));
+    RA.activeWidgets().find(w => /^Canción 3/.test(w.label)).onPress(); await waitFor(() => calls.some(c => c.m === 'PUT' && c.path.startsWith('/me/player/play')));
+    const fromSong = calls.find(c => c.m === 'PUT' && c.path.startsWith('/me/player/play'));
+    // la música de un bloque: dos canciones de una lista y una de otra, en ese orden y en bucle; el bloque siguiente con las mismas no las reinicia
+    await sleep(600); calls.length = 0; RA.SP.busy = false;
+    const mus = RA.blockMusic({ music: [{ uri: 'spotify:track:L1-2', name: 'A', by: 'x' }, { uri: 'spotify:track:L1-5', name: 'B', by: 'x' }, { uri: 'spotify:track:L7-0', name: 'C', by: 'y' }, { uri: 'nope' }] }).music;
+    RA.SES.blocks = [{ mode: 'combat', ex: 'squat', n: 10, foes: 'robots', music: mus }, { mode: 'combat', ex: 'squat', n: 10, foes: 'robots', music: mus }];
+    RA.applyBlock(0); await waitFor(() => calls.some(c => c.path.startsWith('/me/player/repeat')));
+    const play = calls.find(c => c.m === 'PUT' && c.path.startsWith('/me/player/play')), rep = calls.find(c => c.path.startsWith('/me/player/repeat')), shuf = calls.find(c => c.path.startsWith('/me/player/shuffle'));
+    await sleep(600); const n0 = calls.filter(c => c.path.startsWith('/me/player/play')).length; RA.applyBlock(1); await sleep(200); const n1 = calls.filter(c => c.path.startsWith('/me/player/play')).length;
+    // y en la página, el selector del bloque
+    RA.SES.mList = 'L1'; await RA.spListTracks('L1'); const html = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    log(`spotify: lists in game ${page1}+${page2} (of 11) · from a song → ${JSON.stringify(fromSong && fromSong.body)} · block music ${(mus || []).length} songs → play ${JSON.stringify(play && play.body)} · repeat ${rep && rep.path} · shuffle ${shuf && shuf.path} · next block with the same songs restarts them ${n1 > n0} · page picker: chips ${(html.match(/class="chip"/g) || []).length}, tracks ${(html.match(/data-m="trk"/g) || []).length}, checked ${(html.match(/ checked/g) || []).length}`);
+    if (page1 !== 8 || page2 !== 3) errors.push('Spotify: en el juego deberían salir todas tus listas, de 8 en 8');
+    if (!fromSong || !fromSong.body || fromSong.body.context_uri !== 'spotify:playlist:L9' || !fromSong.body.offset || fromSong.body.offset.uri !== 'spotify:track:L9-3') errors.push('Spotify: tocar una canción debería poner su lista empezando por ella');
+    if (!mus || mus.length !== 3 || !play || JSON.stringify(play.body.uris) !== JSON.stringify(['spotify:track:L1-2', 'spotify:track:L1-5', 'spotify:track:L7-0']) || !/state=context/.test(rep && rep.path) || !/state=false/.test(shuf && shuf.path)) errors.push('Spotify: la música del bloque debería sonar en su orden y en bucle');
+    if (n1 > n0) errors.push('Spotify: si el bloque siguiente tiene las mismas canciones, no deberían empezar de nuevo');
+    if ((html.match(/class="chip"/g) || []).length !== 3 || (html.match(/data-m="trk"/g) || []).length !== 12 || (html.match(/ checked/g) || []).length !== 2) errors.push('Spotify: en la página, el bloque debería enseñar sus canciones y las de la lista elegida, marcadas las suyas');
+    await sleep(700); globalThis.fetch = realFetch; RA.SP.cfg = cfg0; RA.SP.st = st0; RA.SP.mine = null; RA.SES.blocks = []; RA.SES.mList = ''; }
   // ---- Toques: aros para la cabeza y gemas para las manos (Espacio y G los alcanzan) ----
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
   for (const [name, ex, extra] of [['slam', 'slam', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],

@@ -59,6 +59,7 @@ function profilesMenu(back) {
   rows.push({ t: 'btns', items: [
     ...(L.length < PROF_MAX ? [{ label: `Guardar: ${profAuto()}`, flex: 2, style: 'primary', onPress: () => { const n = profSave(); say(`Guardado como «${n}»`, '#3cf0c6', 1.8); again(); } }] : []),
     { label: 'Volver', onPress: () => { PREFS.delArm = -1; back(); } }] });
+  rows.splice(rows.length - 1, 0, { t: 'btns', items: [{ label: 'A otro dispositivo (código)  ▸', accent: MC.prof, onPress: () => { PREFS.delArm = -1; xferMenu(again); } }] });
   const m = openMenu(rows, { accent: MC.prof }); m.rebuild = again;
 }
 

@@ -200,6 +200,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
 .sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
 .sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
+.sesmusic select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;max-width:100%}
+.sesmusic .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sesmusic .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:.9em}
+.sesmusic .btn.tiny{padding:0 7px;min-height:0;line-height:1.6;font-size:.85em}
+.sesmusic .tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:320px;overflow:auto}
+.sesmusic .tracks label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.sesmusic .tracks small{color:var(--muted, #a49fc8)}
 .sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
 </style>
@@ -377,6 +385,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <p class="status" id="profStatus" aria-live="polite"></p>
       <div class="proflist" id="profList"></div>
     </div>
+    <div class="profiles">
+      <h3>Pasar a otro dispositivo</h3>
+      <p class="note">Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Ajustes ▸ → Perfiles ▸ → A otro dispositivo → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
+      <div class="profsave"><button class="btn small alt" id="btnXferSend">Enviar desde aquí</button><input id="xferCode" type="text" inputmode="numeric" maxlength="9" placeholder="Código de 8 cifras" aria-label="Código del otro dispositivo"><button class="btn small" id="btnXferRecv">Recibir</button></div>
+      <p class="status" id="xferStatus" aria-live="polite"></p>
+    </div>
   </section>
 
 
@@ -552,8 +566,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
@@ -574,13 +588,13 @@ const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen 
 const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
-  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'dips']],
+  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
@@ -621,6 +635,7 @@ const SCHEMA = [
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
   { key: 'dipDepth', g: 'ejercicio', label: 'Bajada en el fondo', short: 'Bajada fondo', type: 'num', min: 6, max: 40, step: 1, def: 15, unit: 'cm', ex: ['dips'], hint: 'Cuánto debe bajar la cabeza al doblar los codos, con las manos en el borde de la silla.' },
   { key: 'pressRange', g: 'ejercicio', label: 'Recorrido del press', short: 'Recorrido press', type: 'num', min: 15, max: 60, step: 1, def: 32, unit: 'cm', ex: ['press', 'press2'], hint: 'Cuánto deben subir las manos desde los hombros. Con mancuernas cada brazo dispara al llegar arriba; con barra, los dos a la vez.' },
+  { key: 'fraiseRange', g: 'ejercicio', label: 'Recorrido de la elevación frontal', short: 'Recorrido elevación', type: 'num', min: 20, max: 70, step: 1, def: 45, unit: 'cm', ex: ['fraise'], hint: 'Cuánto deben subir las manos (juntas, sujetando la pesa) desde abajo, con los brazos estirados al frente: hasta la altura de los hombros, unos 45 cm.' },
   { key: 'thrUp', g: 'ejercicio', label: 'Manos por encima de los ojos en la sentadilla con press', short: 'Manos arriba', type: 'num', min: 5, max: 50, step: 1, def: 20, unit: 'cm', ex: ['thruster'], hint: 'Al volver de la sentadilla, las dos manos (con la kettlebell, la barra o las mancuernas) tienen que subir esto por encima de los ojos para disparar.' },
   { key: 'swingDrop', g: 'ejercicio', label: 'Bajada de la cabeza en el swing', short: 'Bajada swing', type: 'num', min: 6, max: 45, step: 1, def: 15, unit: 'cm', ex: ['swing'], hint: 'Cuánto baja la cabeza al llevar la cadera atrás con la espalda recta: eso carga. Al subir, la kettlebell al frente a la altura del pecho dispara.' },
   { key: 'dlDepth', g: 'ejercicio', label: 'Bajada del peso muerto', short: 'Bajada p. muerto', type: 'num', min: 15, max: 80, step: 1, def: 28, unit: 'cm', ex: ['dlrow'], hint: 'Cuánto baja la cabeza al llevar el peso hacia el suelo (cadera atrás, espalda recta). Eso carga; tirar de los codos hacia atrás (remo) dispara en ese momento, de pie o aún inclinado.' },
@@ -854,7 +869,7 @@ function fieldVisible(f) {
 // De pie con las manos libres: sentadillas y zancadas (se apunta con las manos y valen las pistolas)
 const handsFree = () => settings.exercise === 'squat' || settings.exercise === 'lunge';
 // Con pesas en las manos (no se abre la pausa juntando los dedos)
-const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow'].includes(settings.exercise);
+const holdsWeights = () => ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow'].includes(settings.exercise);
 // En plancha sobre una mano (plancha con un brazo y remo en plancha): arañas por los dos costados, cada brazo dispara a su lado
 const oneArm = () => settings.exercise === 'plank1';
 const deepOn = () => settings.deepDrop > 0 && DEEP_EX.includes(settings.exercise) && isCombat();
@@ -1020,7 +1035,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, fraise: 2.4, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -1055,7 +1070,7 @@ function updateSummary() {
 }
 /* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
 // Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
-const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, fraise: 3.5, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
 const REST_MET = 2;
 // kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
 function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
@@ -3745,22 +3760,28 @@ const COMIC_LIGHT = `
 	float cD = dot( normal, cL );
 	#ifdef COMIC_SOFT
 		float cLit = smoothstep( -0.45, 0.75, cD );
+	#elif defined( COMIC_CHAR )
+		float cLit = smoothstep( -0.18, 0.32, cD ); // (personajes: corte suave, para que el relieve de la cara se lea)
 	#else
 		float cLit = smoothstep( 0.0, 0.035, cD );
 	#endif
 	vec3 cBase = diffuseColor.rgb; float cLum = dot( cBase, vec3( 0.299, 0.587, 0.114 ) ); cBase = max( mix( vec3( cLum ), cBase, 1.3 ), 0.0 );
 	vec3 cCol = mix( cBase * uComicShadow, cBase, cLit ) * ( 0.9 + 0.13 * clamp( cD, 0.0, 1.0 ) );
-	float cSp = smoothstep( 0.9, 0.93, dot( reflect( - cL, normal ), normalize( vViewPosition ) ) ) * cLit; cCol += vec3( 0.3 ) * cSp;
-	#if __VERSION__ >= 300
+	#ifndef COMIC_CHAR
+		float cSp = smoothstep( 0.9, 0.93, dot( reflect( - cL, normal ), normalize( vViewPosition ) ) ) * cLit; cCol += vec3( 0.3 ) * cSp;
+	#endif
+	#if __VERSION__ >= 300 && ! defined( COMIC_CHAR )
 		vec3 cW = transpose( mat3( viewMatrix ) ) * ( - vViewPosition ) + cameraPosition;
 		cCol *= mix( 0.8, 1.07, smoothstep( -0.2, 3.4, cW.y ) );
 		float cH = abs( fract( dot( cW, vec3( 0.9, 0.55, -0.7 ) ) * 26.0 ) - 0.5 );
 		cCol *= 1.0 - ( 1.0 - smoothstep( 0.1, 0.2, cH ) ) * ( 1.0 - cLit ) * 0.3 * smoothstep( 7.0, 3.0, length( vViewPosition ) ); // (solo de cerca: a lo lejos hacía aguas)
 	#endif
 	vec3 outgoingLight = cCol * uComicK + totalEmissiveRadiance * 1.4;`;
-function comicShader(sh, soft) {
+// (char: un personaje con esqueleto: conserva su relieve y va sin el brillo plano ni el rayado, que le deformaban la cara)
+function comicShader(sh, soft, char) {
   if (!sh.fragmentShader.includes(COMIC_OUT)) return; // (otro sombreador: se queda como estaba)
   if (soft) sh.fragmentShader = '#define COMIC_SOFT\n' + sh.fragmentShader;
+  else if (char) sh.fragmentShader = '#define COMIC_CHAR\n' + sh.fragmentShader;
   Object.assign(sh.uniforms, { uComicL: COMIC.uL, uComicK: COMIC.uK, uComicShadow: COMIC.uShadow });
   let f = sh.fragmentShader;
   for (const inc of ['lights_physical_fragment', 'lights_fragment_begin', 'lights_fragment_maps', 'lights_fragment_end', 'aomap_fragment']) f = f.replace(`#include <${inc}>`, '');
@@ -3776,8 +3797,8 @@ function comicPatch(m) {
   const prev = m.onBeforeCompile || (() => {}), base = THREE.Material && THREE.Material.prototype.customProgramCacheKey;
   const own = m.customProgramCacheKey && m.customProgramCacheKey !== base && (!S || m.customProgramCacheKey !== S.key), prevKey = own ? m.customProgramCacheKey.bind(m) : () => prev.toString();
   if (!S) { S = { on: false, saved: null }; COMIC.st.set(m, S); COMIC.mats.add(m); if (m.addEventListener) m.addEventListener('dispose', () => COMIC.mats.delete(m)); }
-  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh, !!this.userData.comicSoft); };
-  S.key = function () { return prevKey() + (S.on ? (this.userData.comicSoft ? '|comicsoft' : '|comic') : ''); };
+  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh, !!this.userData.comicSoft, !!this.skinning); };
+  S.key = function () { return prevKey() + (S.on ? (this.userData.comicSoft ? '|comicsoft' : this.skinning ? '|comicchar' : '|comic') : ''); };
   m.onBeforeCompile = S.wrap; m.customProgramCacheKey = S.key;
   comicSet(m, comicOn());
 }
@@ -3791,7 +3812,8 @@ function comicSet(m, on) {
     // color en cada fotograma, y sin la textura se quedaban blancos)
     const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap) && !m.skinning && !m.userData.keepMap;
     if (detailed && m.map) { const a = texAvg(m.map); if (a) { sv.color = m.color.getHex(); m.color.multiply(pastel(a)); } }
-    for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { sv[k] = m[k]; m[k] = null; }
+    // (los personajes conservan el relieve: sin él se perdían las facciones)
+    for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { if (k === 'normalMap' && m.skinning) continue; sv[k] = m[k]; m[k] = null; }
   } else if (S.saved) { const sv = S.saved; if (sv.color !== undefined) { m.color.setHex(sv.color); delete sv.color; } Object.assign(m, sv); S.saved = null; }
   m.needsUpdate = true;
 }
@@ -5696,15 +5718,16 @@ function menuClose() {
 function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
 
 /* ---------- Teclado numérico ---------- */
-function openKeypad(f, row) {
+// (opt: para escribir algo que no es un ajuste, como el código de otro dispositivo: { code, maxLen, onOK(texto) })
+function openKeypad(f, row, opt = null) {
   if (!menu) return; closeKeypad();
   const KW = 0.32, kw = 0.086, kh = 0.06, g = 0.01, dispH = 0.09;
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
   const ksc = menu.wrist ? wristScale() : 1, kkh = KEY_H / ksc, kd = 0.01 / ksc;
   const grp = new THREE.Group(); grp.position.set(0, 0, kkh + kd + 0.004 / ksc); menu.group.add(grp); // (por encima de las teclas del menú)
   const bg = makePanel(KW, KH, 640, { hd: 1.75 }); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
-  const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
-  const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
+  const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH, opt };
+  const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', opt ? ' ' : ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
@@ -5723,15 +5746,16 @@ function drawKeypad() {
   const c = kp.bg.ctx, W = kp.bg.W, H = kp.bg.H, s = W / kp.KW, f = kp.f;
   c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, 26); c.fillStyle = 'rgba(10,7,22,0.98)'; c.fill(); c.lineWidth = 5; c.strokeStyle = '#ffd166'; c.stroke();
   c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = '#a49fc8'; fitFont(c, f.short || f.label, W - 40, 24, '500 %px ' + FB); c.fillText(f.short || f.label, 22, 18);
-  const shown = kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
+  const shown = kp.opt ? (kp.str ? kp.str.replace(/^(\d{4})(\d+)$/, '$1 $2') : '— — — —') : kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
   rr(c, 18, 50, W - 36, kp.dispH * s - 30, 12); c.fillStyle = '#1d1738'; c.fill();
   c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = kp.fresh ? '#7d77a8' : '#ffffff'; c.font = `700 40px ${FB}`; c.fillText(shown + (f.unit ? ' ' + f.unit : ''), W - 34, 50 + (kp.dispH * s - 30) / 2);
-  c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2);
+  if (!kp.opt) { c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2); }
   kp.bg.tex.needsUpdate = true;
 }
 function keypadKey(k) {
   const kp = menu && menu.keypad; if (!kp) return;
   if (kp.fresh) { kp.str = ''; kp.fresh = false; }
+  if (kp.opt) { if (k === '⌫') kp.str = kp.str.slice(0, -1); else if (/\d/.test(k) && kp.str.length < (kp.opt.maxLen || 8)) kp.str += k; drawKeypad(); return; }
   if (k === '⌫') kp.str = kp.str.slice(0, -1);
   else if (k === ',') { if (decimals(kp.f) > 0 && !kp.str.includes(',')) kp.str = (kp.str || '0') + ','; }
   else if (kp.str.replace(',', '').length < 5) kp.str = (kp.str === '0' ? '' : kp.str) + k;
@@ -5739,6 +5763,7 @@ function keypadKey(k) {
 }
 function keypadOK() {
   const kp = menu && menu.keypad; if (!kp) return;
+  if (kp.opt) { const str = kp.str; closeKeypad(); if (str) kp.opt.onOK(str); return; }
   if (!kp.fresh && kp.str !== '') { setSetting(kp.f.key, kp.str); refreshRow(kp.row); }
   closeKeypad();
 }
@@ -6218,6 +6243,7 @@ const DEMO = {
   curl2: { P: 2.4, bar: true, keys: [[0, STAND], [0.4, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.55, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.9, STAND], [1, STAND]], fire: 0.42, desc: 'Barra con las dos manos y los codos quietos: súbela hasta los hombros y bájala controlando.' },
   press: { P: 2.6, high: 2.35, dumb: true, keys: [[0, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [0.4, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.55, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.9, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [1, P_(STAND, ST_ARMS([28, 172], [24, 170]))]], fire: 0.4, src: 'armF', desc: 'Mancuernas a la altura de los hombros: súbelas hasta estirar los brazos por encima de la cabeza.' },
   press2: { P: 2.6, high: 2.35, bar: true, keys: [[0, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [0.4, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.55, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.9, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [1, P_(STAND, ST_ARMS([28, 172], [24, 170]))]], fire: 0.4, src: 'armF', desc: 'Barra apoyada delante de los hombros: empújala hacia arriba hasta bloquear los codos.' },
+  fraise: { P: 2.6, kb: true, keys: [[0, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))], [0.42, P_(STAND, ST_ARMS([90, 90], [88, 88]))], [0.55, P_(STAND, ST_ARMS([90, 90], [88, 88]))], [0.92, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))], [1, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))]], fire: 0.44, src: 'armF', desc: 'Una pesa con las dos manos: súbela al frente, brazos estirados, hasta los hombros. Arriba disparas.' },
   thruster: { P: 3.0, high: 2.35, bar: true, keys: [[0, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [0.35, P_(SQUAT, ST_ARMS([40, 175], [36, 172]))], [0.48, P_(SQUAT, ST_ARMS([40, 175], [36, 172]))], [0.75, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.9, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [1, P_(STAND, ST_ARMS([28, 172], [24, 170]))]], fire: 0.74, src: 'armF', low: 0.42, desc: 'Barra en los hombros: baja en sentadilla y, al subir, aprovecha el impulso para empujarla por encima de la cabeza.' },
   frontsq: { P: 3.0, dumb: true, keys: [[0, STAND], [0.38, SQUAT], [0.5, SQUAT], [0.8, P_(STAND, ST_ARMS([90, 92], [86, 88]))], [0.92, STAND], [1, STAND]], fire: 0.8, src: 'armF', low: 0.44, desc: 'Baja en sentadilla y, al subir, eleva las mancuernas al frente con los brazos estirados hasta la altura de los hombros.' },
   swing: { P: 2.2, kb: true, keys: [[0, P_(HINGE, { armF: { ang: [-28, -28] }, armB: { ang: [-30, -30] } })], [0.45, P_(STAND, ST_ARMS([92, 92], [90, 90]))], [0.6, P_(STAND, ST_ARMS([88, 88], [86, 86]))], [1, P_(HINGE, { armF: { ang: [-28, -28] }, armB: { ang: [-30, -30] } })]], fire: 0.47, src: 'armF', desc: 'Pesa entre las piernas con la espalda recta: empuja la cadera adelante y deja que suba hasta el pecho.' },
@@ -6599,6 +6625,34 @@ async function spPlayLists(lists = spLists()) {
   try { await spApi('PUT', '/me/player/shuffle?state=true' + (dev ? '&device_id=' + encodeURIComponent(dev) : '')); } catch (e) { /* da igual */ }
   SP.started = true; if (SP.st) SP.st.is_playing = true;
 }
+// Las canciones de una lista (hasta 300): { uri, name, by }
+async function spListTracks(id) {
+  SP.trk = SP.trk || {}; if (SP.trk[id]) return SP.trk[id];
+  const out = []; let url = `/playlists/${id}/tracks?limit=100&fields=items(track(uri,name,artists(name))),next`;
+  for (let i = 0; i < 3 && url; i++) { const j = await spApi('GET', url); (j && j.items || []).forEach(x => { const t = x && x.track; if (t && t.uri && t.uri.startsWith('spotify:track:')) out.push({ uri: t.uri, name: t.name, by: (t.artists || []).map(a => a.name).join(', ') }); }); url = j && j.next ? j.next.replace('https://api.spotify.com/v1', '') : null; }
+  return (SP.trk[id] = out);
+}
+const spDev = () => spHereOk() ? SPP.id : SP.st && SP.st.device && SP.st.device.id;
+const spQ = (dev = spDev()) => dev ? '?device_id=' + encodeURIComponent(dev) : '';
+// Una lista entera (al azar o en orden) o desde una de sus canciones
+async function spPlayList(l, fromUri, shuffle) {
+  const q = spQ(); await spApi('PUT', '/me/player/play' + q, fromUri ? { context_uri: l.uri, offset: { uri: fromUri } } : { context_uri: l.uri });
+  try { await spApi('PUT', '/me/player/shuffle?state=' + (!!shuffle) + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
+  SP.started = true; SP.block = null; if (SP.st) SP.st.is_playing = true;
+}
+// La música de un bloque de la sesión: sus canciones, en orden y en bucle mientras dura (si el bloque anterior tenía las
+// mismas, siguen sin empezar de nuevo)
+async function spPlayTracks(tracks) {
+  const uris = tracks.map(t => t.uri).filter(Boolean).slice(0, 100); if (!uris.length) return;
+  const q = spQ(); await spApi('PUT', '/me/player/play' + q, { uris });
+  try { await spApi('PUT', '/me/player/shuffle?state=false' + (q ? '&' + q.slice(1) : '')); await spApi('PUT', '/me/player/repeat?state=context' + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
+  SP.started = true; if (SP.st) SP.st.is_playing = true;
+}
+function spBlockMusic(b) {
+  const tr = b && Array.isArray(b.music) ? b.music : []; if (!tr.length || !spConnected()) return false;
+  const key = tr.map(t => t.uri).join(','); if (SP.block === key && spPlaying()) return true;
+  SP.block = key; SP.resume = false; spDo(() => spPlayTracks(tr)); return true;
+}
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
@@ -6703,10 +6757,41 @@ function musicRows() {
   if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
   const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
   const where = SP.st && SP.st.device && SP.st.device.name ? ` (en ${SP.st.device.name})` : '';
-  const L = spLists(), lists = L.length ? [{ t: 'btns', items: [...L.slice(0, 3).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Todas mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : [])] }] : [];
+  const L = spLists(), lists = [{ t: 'btns', items: [...L.slice(0, 2).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : []),
+    { label: 'Listas y canciones  ▸', accent: '#a68bff', flex: 1.4, onPress: () => { const b = menu && menu.rebuild; SP.loadErr = ''; spListMenu(b || (() => hideMenu())); } }] }];
   return [{ t: 'text', text: spNowText() + (spPlaying() && !spHereNow() ? where : ''), color: SP.err ? '#ff8a3d' : '#3cf0c6', music: true }, ...here, ...lists,
     ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : []),
     { t: 'btns', items: [{ label: 'Anterior', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', onPress: spNext }, { label: 'Vol −', onPress: () => spVol(-10) }, { label: 'Vol +', onPress: () => spVol(10) }] }];
+}
+// Elegir en el juego cualquiera de tus listas (de 8 en 8) y, dentro, ponerla entera, al azar o desde una canción
+function spListMenu(back, page = 0) {
+  const again = p => spListMenu(back, p), rows = [{ t: 'title', text: 'TUS LISTAS' }];
+  if (!SP.mine) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando tus listas…', color: SP.loadErr ? '#ff8a3d' : '#ffd166' });
+    if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
+    else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
+  else {
+    const N = 8, pages = Math.max(1, Math.ceil(SP.mine.length / N)), p = clamp(page, 0, pages - 1), slice = SP.mine.slice(p * N, p * N + N);
+    if (!SP.mine.length) rows.push({ t: 'text', text: 'No tienes listas en Spotify', color: '#a49fc8' });
+    for (let i = 0; i < slice.length; i += 2) rows.push({ t: 'btns', items: slice.slice(i, i + 2).map(l => ({ label: l.name, onPress: () => spTrackMenu(l, () => again(p)) })) });
+    if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  }
+  rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spList = true;
+}
+function spTrackMenu(l, back, page = 0) {
+  const again = p => spTrackMenu(l, back, p), T = SP.trk && SP.trk[l.id], rows = [{ t: 'title', text: l.name }];
+  rows.push({ t: 'btns', items: [{ label: '▶ Toda la lista', style: 'primary', onPress: () => spDo(() => spPlayList(l, null, false)) }, { label: 'Al azar', onPress: () => spDo(() => spPlayList(l, null, true)) }] });
+  if (!T) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando sus canciones…', color: '#ffd166' });
+    if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
+    else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
+  else {
+    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
+    rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
+    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(() => spPlayList(l, t.uri, false)) }] });
+    if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  }
+  rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spTrk = l.id;
 }
 // Minicontroles para el menú de muñeca o el atril (principal y pausa): lo que suena y anterior, pausa/play, siguiente y
 // volumen, con iconos. Pulsarlos en plena partida no la termina: la pausa sigue ahí y «Continuar» la reanuda
@@ -6767,7 +6852,8 @@ function spListsPage() {
 // como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
-const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false };
+const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, mList: '', mErr: '' };
+const MUSIC_MAX = 50; // (canciones por bloque, como mucho)
 const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
@@ -6775,9 +6861,14 @@ const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.m
   const s = store(SES_KEY) || {};
   // los bloques de Asalto y Enjambre pasan a Combate con sus enemigos y su puntería
   const mig = b => b && LEGACY_MODES[b.mode] ? { ...b, mode: 'combat', ...LEGACY_MODES[b.mode] } : b;
-  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.map(mig).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b) }));
+  if (Array.isArray(s.blocks)) SES.blocks = s.blocks.map(mig).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b), ...blockMusic(b) }));
   if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
 })();
+// La música del bloque: canciones de Spotify (de una o varias listas) que suenan en orden y en bucle mientras dura
+function blockMusic(b) {
+  const m = Array.isArray(b && b.music) ? b.music.filter(t => t && typeof t.uri === 'string' && t.uri.startsWith('spotify:track:')).slice(0, MUSIC_MAX).map(t => ({ uri: t.uri, name: String(t.name || '').slice(0, 120), by: String(t.by || '').slice(0, 120) })) : [];
+  return m.length ? { music: m } : {};
+}
 // En Combate el bloque guarda sus enemigos (y, si venía de Enjambre o Asalto, su puntería)
 // (foes: por tierra, voladores o mezcla, sobre los enemigos elegidos en Ajustes → Enemigos; por defecto, lo que haya ahí)
 const foeCat = v => FOE_CATS.some(o => o[0] === v) ? v : null;
@@ -6802,6 +6893,7 @@ function applyBlock(i) {
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
   Object.assign(settings, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b));
   onSettingChanged('mode'); onSettingChanged('exercise');
+  if (typeof spBlockMusic === 'function') spBlockMusic(b); // (su música, si la tiene)
 }
 function startSession() {
   if (!SES.blocks.length) return;
@@ -6864,6 +6956,41 @@ function sessionRows() {
 }
 
 /* ---------- Editor de la página ---------- */
+// Música del bloque: eliges una de tus listas, marcas canciones (puedes cambiar de lista y seguir añadiendo) y quedan
+// en el bloque, en ese orden; arriba, las elegidas (✕ para quitarlas)
+const escS = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function sesMusicHTML(b, i) {
+  const sel = b.music || [], on = new Set(sel.map(t => t.uri));
+  let h = `<div class="sesmusic" data-i="${i}"><p class="note">Canciones del bloque ${i + 1}: suenan en este orden, en bucle, mientras dura el bloque (de una o de varias listas; hasta ${MUSIC_MAX}).</p>`;
+  h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${k + 1}. ${escS(t.name)}<button class="btn tiny" data-a="mrm" data-k="${k}" aria-label="Quitar ${escS(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
+  if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba, en Música) para elegir canciones.</p></div>';
+  if (!SP.mine) return h + `<p class="status">${escS(SES.mErr || 'Cargando tus listas…')}</p></div>`;
+  h += `<label>Lista: <select data-m="list" aria-label="Lista de Spotify"><option value="">— elige una lista —</option>${SP.mine.map(l => `<option value="${l.id}"${l.id === SES.mList ? ' selected' : ''}>${escS(l.name)}</option>`).join('')}</select></label>`;
+  const T = SES.mList && SP.trk && SP.trk[SES.mList];
+  if (SES.mList && !T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
+  if (T) h += `<div class="tracks">${T.map(t => `<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>`).join('')}</div>`;
+  return h + '</div>';
+}
+function sesMusicLoad() {
+  if (!spConnected()) return;
+  if (!SP.mine) spMyLists().then(l => { SP.mine = l; SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = 'No se pudieron cargar tus listas: ' + spErrText(e); renderSession(); });
+  else if (SES.mList && !(SP.trk && SP.trk[SES.mList])) spListTracks(SES.mList).then(() => { SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = 'No se pudieron cargar sus canciones: ' + spErrText(e); renderSession(); });
+}
+function sesMusicChange(el) {
+  const b = SES.blocks[SES.musicOpen]; if (!b) return;
+  if (el.dataset.m === 'list') { SES.mList = el.value; SES.mErr = ''; renderSession(); sesMusicLoad(); return; }
+  if (el.dataset.m === 'trk') {
+    const T = (SP.trk && SP.trk[SES.mList]) || [], t = T.find(x => x.uri === el.dataset.uri); if (!t) return;
+    const sel = b.music || []; b.music = el.checked ? (sel.some(x => x.uri === t.uri) || sel.length >= MUSIC_MAX ? sel : sel.concat({ ...t })) : sel.filter(x => x.uri !== t.uri);
+    if (!b.music.length) delete b.music; saveSession(); renderSession();
+  }
+}
+function sesMusicClick(btn) {
+  const b = SES.blocks[SES.musicOpen]; if (!b) return;
+  if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
+  else if (btn.dataset.a === 'mclear') delete b.music;
+  saveSession(); renderSession();
+}
 const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'combat', ex: 'plank1', n: 30, foes: 'robots' }, { mode: 'combat', ex: 'pushup', n: 30, foes: 'robots' }];
 function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
 function renderSession() {
@@ -6873,7 +7000,8 @@ function renderSession() {
     <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
-    <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>`).join('')
+    <button class="btn small${(b.music || []).length ? ' alt' : ''}" data-a="music" aria-label="Música del bloque ${i + 1}">♫ ${(b.music || []).length || 'Música'}</button>
+    <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
@@ -6882,6 +7010,7 @@ function renderSession() {
 function sesInitPage() {
   const host = $('#sesList');
   host.addEventListener('change', ev => {
+    if (ev.target.closest && ev.target.closest('.sesmusic')) { sesMusicChange(ev.target); return; }
     const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;
     const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
     if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); delete b.foes; delete b.aim; Object.assign(b, blockExtra(b)); }
@@ -6892,7 +7021,9 @@ function sesInitPage() {
   });
   host.addEventListener('click', ev => {
     const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
+    if (btn.closest('.sesmusic')) { sesMusicClick(btn); return; }
     const i = +btn.closest('.sesrow').dataset.i;
+    if (btn.dataset.a === 'music') { SES.musicOpen = SES.musicOpen === i ? -1 : i; renderSession(); if (SES.musicOpen === i) sesMusicLoad(); return; }
     if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
     saveSession(); renderSession();
   });
@@ -6964,6 +7095,7 @@ function profilesMenu(back) {
   rows.push({ t: 'btns', items: [
     ...(L.length < PROF_MAX ? [{ label: `Guardar: ${profAuto()}`, flex: 2, style: 'primary', onPress: () => { const n = profSave(); say(`Guardado como «${n}»`, '#3cf0c6', 1.8); again(); } }] : []),
     { label: 'Volver', onPress: () => { PREFS.delArm = -1; back(); } }] });
+  rows.splice(rows.length - 1, 0, { t: 'btns', items: [{ label: 'A otro dispositivo (código)  ▸', accent: MC.prof, onPress: () => { PREFS.delArm = -1; xferMenu(again); } }] });
   const m = openMenu(rows, { accent: MC.prof }); m.rebuild = again;
 }
 
@@ -6986,6 +7118,131 @@ function profInitPage() {
     else if (typeof confirm !== 'function' || confirm('¿Borrar este perfil?')) profDelete(i);
   });
   renderProfiles();
+}
+
+/* =================== PASAR TUS DATOS A OTRO DISPOSITIVO (POR CÓDIGO) =================== */
+// Sin servidor propio: en un dispositivo pulsas «Enviar» y sale un código de 8 cifras; en el otro lo escribes y se cargan
+// tus ajustes, perfiles, bloques de sesión, favoritos, rangos, historial y la música elegida. Del código salen a la vez
+// la clave (AES-GCM, derivada con PBKDF2) y el canal de un servicio público de mensajes (ntfy.sh) donde se dejan los datos
+// cifrados unas horas: el servicio no puede leerlos y, sin el código, nadie sabe en qué canal están. Lo que depende de
+// cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
+const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
+const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-ranks', 'reparena3-session', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify'];
+const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
+const XFER_HOURS = 12;
+const _xEnc = new TextEncoder(), _xDec = new TextDecoder();
+const xferHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+const xferB64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const xferUnB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const xferCodeOk = c => /^\d{8}$/.test(String(c || '').replace(/\D/g, ''));
+const xferFmt = c => String(c).replace(/\D/g, '').replace(/^(\d{4})(\d{4})$/, '$1 $2');
+async function xferTopic(code) { return 'reparena-' + xferHex(await crypto.subtle.digest('SHA-256', _xEnc.encode('reparena-canal:' + code))).slice(0, 32); }
+async function xferKey(code) {
+  const base = await crypto.subtle.importKey('raw', _xEnc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: _xEnc.encode('reparena-xfer-v1'), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function xferZip(bytes, back) { // (comprimido si el navegador sabe; si no, tal cual)
+  if (typeof CompressionStream === 'undefined') return null;
+  const s = new Blob([bytes]).stream().pipeThrough(back ? new DecompressionStream('deflate-raw') : new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+// Lo que se manda: cada clave tal cual, salvo Spotify (solo tu app y la música elegida: el inicio de sesión es de cada aparato)
+function xferPack() {
+  const d = {};
+  for (const k of XFER_KEYS) {
+    let v = store(k); if (v === null || v === undefined) continue;
+    if (k === 'reparena3-spotify') { const { clientId, lists, music } = v; v = { clientId, lists, music }; }
+    d[k] = v;
+  }
+  return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
+}
+function xferSummary(p) {
+  const d = p.d || {}, prof = (d['reparena3-profiles'] || []).length, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
+  return `${prof} ${prof === 1 ? 'perfil' : 'perfiles'} · ${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
+}
+// Enviar: devuelve el código
+async function xferSend() {
+  const rnd = crypto.getRandomValues(new Uint32Array(2)), code = String(rnd[0] % 100000000).padStart(8, '0');
+  const plain = _xEnc.encode(JSON.stringify(xferPack())), zip = await xferZip(plain), body = zip || plain;
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await xferKey(code), body));
+  const all = new Uint8Array(13 + ct.length); all[0] = zip ? 1 : 0; all.set(iv, 1); all.set(ct, 13);
+  const b64 = xferB64(all), n = Math.ceil(b64.length / XFER_CHUNK), id = xferHex(crypto.getRandomValues(new Uint8Array(4))), topic = await xferTopic(code);
+  for (let i = 0; i < n; i++) {
+    const r = await fetch(`${XFER.base}/${topic}`, { method: 'POST', body: `RA1|${id}|${i}|${n}|${b64.slice(i * XFER_CHUNK, (i + 1) * XFER_CHUNK)}` }); // (sin cabeceras propias: así el navegador no tiene que preguntar antes)
+    if (!r.ok) throw new Error('el servicio respondió ' + r.status);
+  }
+  XFER.last = { code, t: Date.now() }; return code;
+}
+// Recibir: busca en el canal del código el último envío completo y lo descifra (no aplica nada todavía)
+async function xferFetch(code) {
+  code = String(code).replace(/\D/g, ''); if (!xferCodeOk(code)) throw new Error('el código tiene 8 cifras');
+  const topic = await xferTopic(code), r = await fetch(`${XFER.base}/${topic}/json?poll=1&since=${XFER_HOURS}h`);
+  if (!r.ok) throw new Error('el servicio respondió ' + r.status);
+  const sets = new Map(); let lastId = null;
+  for (const line of (await r.text()).split('\n')) {
+    let m; try { m = JSON.parse(line); } catch (e) { continue; }
+    if (!m || m.event !== 'message' || typeof m.message !== 'string' || !m.message.startsWith('RA1|')) continue;
+    const [, id, i, n, part] = m.message.split('|'); if (!sets.has(id)) sets.set(id, { n: +n, parts: [] });
+    sets.get(id).parts[+i] = part; lastId = id;
+  }
+  // el más reciente que esté entero
+  const ids = [...sets.keys()].reverse(); let got = null;
+  for (const id of [lastId, ...ids]) { const s = id && sets.get(id); if (s && s.parts.filter(x => x !== undefined).length === s.n) { got = s.parts.join(''); break; } }
+  if (!got) throw new Error(sets.size ? 'el envío llegó incompleto: vuelve a enviarlo' : 'no hay nada con ese código (¿caducó? duran ' + XFER_HOURS + ' h)');
+  const all = xferUnB64(got);
+  let body; try { body = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.slice(1, 13) }, await xferKey(code), all.slice(13))); } catch (e) { throw new Error('no se pudo descifrar: revisa el código'); }
+  if (all[0] === 1) body = await xferZip(body, true);
+  const p = JSON.parse(_xDec.decode(body)); if (!p || p.v !== 1 || !p.d) throw new Error('el envío no es de RepArena');
+  return p;
+}
+// Cargar lo recibido: sustituye lo de este aparato (el historial se junta, sin repetir partidas; de Spotify se conserva el
+// inicio de sesión de aquí) y vuelve a empezar la página para que todo lo lea
+function xferApply(p, reload = true) {
+  for (const k of XFER_KEYS) {
+    const v = p.d[k]; if (v === undefined) continue;
+    if (k === 'reparena3-history') {
+      const mine = store(k) || [], seen = new Set(mine.map(r => `${r.date}|${r.ex}|${r.reps}`));
+      store(k, mine.concat(v.filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`))).sort((a, b) => (a.date || 0) - (b.date || 0)).slice(-400));
+    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.music ? { music: v.music } : {}));
+    else store(k, v);
+  }
+  if (reload) setTimeout(() => location.reload(), 300);
+}
+
+/* ---------- En el juego ---------- */
+function xferMenu(back, view = {}) {
+  const again = v => xferMenu(back, v), run = (fn, next) => { if (XFER.busy) return; XFER.busy = true; again({ ...view, wait: true });
+    fn().then(r => { XFER.busy = false; again(next(r)); }).catch(e => { XFER.busy = false; again({ err: (e && e.message) || String(e) }); }); };
+  const rows = [{ t: 'title', text: 'A OTRO DISPOSITIVO' }];
+  if (view.wait) rows.push({ t: 'text', text: 'Un momento…', color: '#ffd166' });
+  else if (view.code) rows.push({ t: 'text', text: 'Escribe este código en el otro dispositivo (en el juego: Ajustes ▸ → Perfiles ▸ → A otro dispositivo; o en la página):', color: '#a49fc8' }, { t: 'title', text: xferFmt(view.code), color: '#3cf0c6' }, { t: 'text', text: `Vale durante ${XFER_HOURS} h · los datos van cifrados`, color: '#a49fc8' });
+  else if (view.got) rows.push({ t: 'text', text: `Recibido (desde ${view.got.from || 'otro dispositivo'}): ${xferSummary(view.got)}`, color: '#3cf0c6' }, { t: 'text', text: 'Al cargarlo se sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta) y RepArena vuelve a empezar: tendrás que volver a entrar.', color: '#ffd166' });
+  else rows.push({ t: 'text', text: view.err ? '✕ ' + view.err : 'Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida de un dispositivo a otro (p. ej. del PC a las gafas) con un código de 8 cifras.', color: view.err ? '#ff6a6a' : '#a49fc8' });
+  if (view.got) rows.push({ t: 'btns', items: [{ label: 'Cargar y reiniciar', style: 'primary', flex: 2, onPress: () => { xferApply(view.got); say('Datos cargados: reiniciando…', '#3cf0c6', 2); } }, { label: 'Cancelar', onPress: () => again({}) }] });
+  else if (!view.wait) rows.push({ t: 'btns', items: [
+    { label: 'Enviar desde aquí', style: 'primary', onPress: () => run(xferSend, code => ({ code })) },
+    { label: 'Recibir (escribir código)', onPress: () => openKeypad({ label: 'Código de 8 cifras', short: 'Código del otro dispositivo', unit: '' }, null, { code: true, maxLen: 8, onOK: str => run(() => xferFetch(str), got => ({ got })) }) }] });
+  rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.prof }); m.rebuild = () => again(view);
+}
+
+/* ---------- En la página ---------- */
+function xferInitPage() {
+  const send = $('#btnXferSend'), recv = $('#btnXferRecv'), inp = $('#xferCode'), st = $('#xferStatus'); if (!send) return;
+  const say2 = (t, bad) => { st.textContent = t; st.style.color = bad ? 'var(--red)' : ''; };
+  send.addEventListener('click', async () => {
+    send.disabled = true; say2('Enviando…');
+    try { const c = await xferSend(); say2(`Código: ${xferFmt(c)} — escríbelo en el otro dispositivo (vale ${XFER_HOURS} h).`); } catch (e) { say2('No se pudo enviar: ' + e.message, true); }
+    send.disabled = false;
+  });
+  recv.addEventListener('click', async () => {
+    recv.disabled = true; say2('Buscando…');
+    try {
+      const p = await xferFetch(inp.value);
+      if (confirm(`Recibido: ${xferSummary(p)}.\n\nSe sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta). ¿Cargar?`)) { say2('Cargado: recargando la página…'); xferApply(p); } else say2('No se ha cargado nada.');
+    } catch (e) { say2('No se pudo recibir: ' + e.message, true); }
+    recv.disabled = false;
+  });
 }
 
 
@@ -8197,6 +8454,7 @@ const DET = {
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   iw: { pair: 0, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
+  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -8351,6 +8609,28 @@ function deadliftStep(t, dt) {
 // Leñador: las manos juntas (con la kettlebell o el disco) bajan junto a una cadera y suben en diagonal por encima del
 // hombro contrario. Abajo a un lado carga; arriba al otro lado dispara (en CHOP_WIN s). Alturas respecto a tu altura de pie
 const CHOP_WIN = 2.5, _chp = new V3();
+// Elevación frontal con una sola pesa (kettlebell, mancuerna, disco o barra) sujeta con las dos manos: las manos, juntas,
+// suben desde los muslos con los brazos estirados al frente hasta la altura de los hombros. Se sigue el punto medio de
+// las manos que se vean (con una basta: la pesa las tapa a veces) respecto a la cabeza; al empezar a subir carga y
+// arriba dispara. Arriba tienen que estar lejos de la cara (brazos estirados): así un curl no cuenta
+const _frm = new V3();
+function fraiseStep(t, dt) {
+  const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
+  for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
+  if (!n) { d.lost += dt; if (d.lost > 0.6) d.state = 'down'; return; }
+  _frm.divideScalar(n); d.lost = 0;
+  const r = _frm.y - head.p.y, fwd = Math.hypot(_frm.x - head.p.x, _frm.z - head.p.z);
+  d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido (se adapta a tu altura)
+  if (d.state === 'down') { if (r > d.bottom + Math.min(0.1, range * 0.3)) { Object.assign(d, { state: 'rising', max: r, t0: t, fwd }); onCharge(); } }
+  else if (d.state === 'rising') {
+    d.max = Math.max(d.max, r); d.fwd = Math.max(d.fwd, fwd);
+    if (r - d.bottom >= range) {
+      if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
+      const dur = t - d.t0, pt = settings.perfectTime;
+      onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); d.state = 'top';
+    } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
+  } else if (r < d.bottom + Math.min(0.12, range * 0.3)) d.state = 'down'; // hay que bajarla para la siguiente
+}
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
   for (const s of ['left', 'right']) if (hands[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
@@ -8496,6 +8776,8 @@ function runDetectors(t, dt) {
   } else if (CHAIN[settings.exercise]) {
     // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
+  } else if (settings.exercise === 'fraise') {
+    fraiseStep(t, dt);
   } else if (settings.exercise === 'chop') {
     chopStep(t, dt);
   } else if (settings.exercise === 'dlrow') {
@@ -9161,7 +9443,7 @@ function beginRun() {
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
@@ -11089,7 +11371,7 @@ function guardTip() {
   if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
   const f = guardFam();
   if (f === 'fist') return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
-  if (f === 'weights') return '¡Te va a golpear! Junta las manos delante de la cara: guardia';
+  if (f === 'weights') return settings.exercise === 'fraise' ? '¡Te va a golpear! Sube la pesa al frente y aguántala: escudo' : '¡Te va a golpear! Junta las manos delante de la cara: guardia';
   return '¡Te va a golpear! Quédate quieto en la postura: burbuja · o aparta la cabeza';
 }
 const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escudo';
@@ -11363,7 +11645,7 @@ function iwSim(dt) {
 function previewInput(dt) {
   const ex = settings.exercise;
   const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
-  let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
+  let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'fraise', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
   if (PV.bar) target = PV.fall ? PV.baseY - 0.35 : PV.crouch && settings.exercise !== 'hang' ? PV.baseY + barReq() + 0.06 : PV.baseY;
@@ -11386,7 +11668,7 @@ function previewInput(dt) {
   if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
   PV.press += clamp((PV.crouch ? 0.24 : -0.15) - PV.press, -1.2 * dt, 1.2 * dt);
-  PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt);
+  PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt); PV.fr = (PV.fr || 0) + clamp((PV.crouch ? 1 : 0) - (PV.fr || 0), -1.6 * dt, 1.6 * dt);
   // sentadilla con press: al volver de la sentadilla, las manos suben por encima de la cabeza un momento
   if (PV.wasCrouch && !PV.crouch) PV.thrUp = 0.9; PV.wasCrouch = PV.crouch; PV.thrUp = Math.max(0, PV.thrUp - dt);
   const sp = 1.6 * dt, yaw = camera.rotation.y, f = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new V3(-f.z, 0, f.x);
@@ -11416,6 +11698,8 @@ function previewInput(dt) {
   // press de hombro: las mancuernas a la altura de los hombros; Espacio las sube por encima de la cabeza
   // curl con barra: las dos manos a la altura de la cadera; Espacio las sube juntas hasta los hombros
   if (settings.exercise === 'curl2' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.2).addScaledVector(f, 0.15); h.wrist.y += -0.72 + PV.curl; }
+  // elevación frontal: las dos manos juntas (una pesa) delante de los muslos; Espacio la sube, con los brazos estirados, a la altura de los hombros
+  if (settings.exercise === 'fraise' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s], k = PV.fr || 0; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.05).addScaledVector(f, 0.15 + 0.42 * k); h.wrist.y += -0.85 + 0.62 * k; }
   // sentadilla con press: las pesas en los hombros; al subir de la sentadilla, por encima de la cabeza
   if (settings.exercise === 'thruster' && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1], ['right', 1]]) { const h = hands[s]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(r, sg * 0.15).addScaledVector(f, 0.12); h.wrist.y += PV.thrUp > 0 && !PV.noArms ? 0.32 : -0.25; }
   // swing y sentadilla con elevación: abajo, las pesas cuelgan; al subir, al frente o tirando de los codos (PV.noArms: no)
@@ -11664,7 +11948,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); xferInitPage(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();
