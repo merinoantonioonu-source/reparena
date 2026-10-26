@@ -213,7 +213,7 @@ function layoutArena() {
   safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn();
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
-  catcher.visible = arMode && !!settings.shadows && !forestOn();
+  catcher.visible = arMode && !!settings.shadows && settings.look !== 'comic' && !forestOn();
   keyLight.target.position.set(0, 0, -D * 0.45);
   const ext = Math.max(6, D * 0.65); Object.assign(keyLight.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); keyLight.shadow.camera.updateProjectionMatrix();
   keyLight.position.set(-5, 10, 4 - D * 0.45);
@@ -277,12 +277,13 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland();
+  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland(); applyComic();
 }
 function applyShadows() {
-  renderer.shadowMap.enabled = !!settings.shadows; keyLight.castShadow = !!settings.shadows;
+  const on = !!settings.shadows && settings.look !== 'comic'; // (el estilo cómic va sin sombras en tiempo real)
+  renderer.shadowMap.enabled = on; keyLight.castShadow = on;
   scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); });
-  catcher.visible = arMode && !!settings.shadows && !forestOn();
+  catcher.visible = arMode && !!settings.shadows && settings.look !== 'comic' && !forestOn();
 }
 settingHooks.push(k => {
   if (['depth', 'board', 'mode', 'exercise', '*'].includes(k)) layoutArena();
@@ -293,7 +294,7 @@ settingHooks.push(k => {
 const ENV = { lightningT: 12, flash: 0, emitT: 0 };
 function updateEnv(dt, t) {
   skyMat.uniforms.time.value = t;
-  if (!arMode && !forestOn() && !NAT.group.visible && !ISL.group.visible) {
+  if (!arMode && !forestOn() && !NAT.group.visible && !ISL.group.visible && !comicArenaOn()) { // (la fortaleza de noche: rayos, focos, fuegos)
     ENV.lightningT -= dt;
     if (ENV.lightningT <= 0) { ENV.lightningT = rand(14, 34); ENV.flash = 1; ENV.flash2 = 0.25; const d = rand(0.6, 2.5); setTimeout(() => SND.thunder(d), 200); }
     if (ENV.flash > 0) { ENV.flash = Math.max(0, ENV.flash - dt * 3.5); if (ENV.flash2 && ENV.flash < 0.4) { ENV.flash = 0.8; ENV.flash2 = 0; } }

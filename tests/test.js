@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  COMIC, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -156,6 +156,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (edge || one !== 'A' || hits1 !== 'AA' || jitter !== 'AA' || slid !== 'AA' || swipe !== 'AA' || again !== 'AAA' || other !== 'AAAB') errors.push(`botones táctiles: pulsaciones de más o de menos (${edge}, ${one}, ${hits1}, ${jitter}, ${slid}, ${swipe}, ${again}, ${other})`);
   }
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30, arcPatterns: 0, arcNew: 0, arcFever: 0 }; // (los arcos de siempre: las coreografías y lo nuevo tienen su prueba)
+  // ---- Estilo cómic (prueba): se elige en Entorno; sombreado de dibujo, contornos de tinta y la fortaleza con cielo y suelo de cómic; al quitarlo, todo como antes ----
+  { const gm = RA.gloves.left.seg.material, nm0 = gm.normalMap, map0 = gm.map, col0 = gm.color.getHex(), outl = v => { let n = 0; RA.scene.traverse(o => { if (o.userData && o.userData.isOutline && o.visible) n++; }); return n; };
+    RA.setSetting('scenery', 'arena'); RA.startPreview(); frame(3); RA.setSetting('look', 'comic'); frame(3);
+    const on = { comicMat: !!(RA.COMIC.st.get(gm) || {}).on, noMaps: !gm.normalMap && !gm.map, comicSky: !!RA.COMIC.saved, envShown: RA.env.visible, noShadows: !RA.renderer.shadowMap.enabled, outlines: outl() };
+    RA.setSetting('look', 'real'); frame(3);
+    const off = { real: !(RA.COMIC.st.get(gm) || {}).on, maps: gm.normalMap === nm0 && gm.map === map0 && gm.color.getHex() === col0, sky: !RA.COMIC.saved, outlinesHidden: outl() === 0, shadows: RA.renderer.shadowMap.enabled === !!RA.settings.shadows };
+    RA.exitAll(); frame(1);
+    log(`comic look: on ${JSON.stringify(on)} · back to realistic ${JSON.stringify(off)}`);
+    if (Object.values(on).some(v => !v) || Object.values(off).some(v => !v)) errors.push('estilo cómic: no cambia bien los materiales, los contornos y el escenario, o al quitarlo no vuelve todo como estaba'); }
   // al final, «Traer menú» y luego «Menú principal»: el principal sale donde estaba el que trajiste
   const bringMenu = () => {
     RA.camera.position.set(0.8, 1.6, 1.6); frame(2); const before = menuTop();
@@ -228,6 +237,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.noArms = false;
   // peso muerto: bajar y subir dispara, sin necesidad de ver las manos
   await runConfig('Combate peso muerto (sin manos)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'dlrow' }, t => { squatSim(3.0)(t); RA.hands.left.ok = RA.hands.right.ok = false; }, 420, s => s.reps < 6 || !s.kills ? 'el peso muerto no dispara (sin manos)' : s.partial > 2 ? 'el peso muerto da medias de más' : '');
+  await runConfig('Cómic: combate con monstruos y voladores', { ...base, mode: 'combat', aim: 'auto', exercise: 'squat', look: 'comic', scenery: 'arena', foesGate: 'robot,zombie,imp', foesFly: 'drone,bee' }, squatSim(2.4), 420, s => s.kills < 3 ? 'con el estilo cómic no se juega bien' : '');
+  RA.setSetting('look', 'real');
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
   for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {

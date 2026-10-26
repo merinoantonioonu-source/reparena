@@ -139,6 +139,9 @@ class Color {
   constructor(r = 1, g, b) { if (g === undefined) this.setHex(typeof r === 'number' ? r : 0xffffff); else { this.r = r; this.g = g; this.b = b; } }
   setHex(h) { h = Math.floor(h); this.r = (h >> 16 & 255) / 255; this.g = (h >> 8 & 255) / 255; this.b = (h & 255) / 255; return this; }
   setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; return this; }
+  multiplyScalar(k) { this.r *= k; this.g *= k; this.b *= k; return this; }
+  getHex() { const c = v => Math.max(0, Math.min(255, Math.round(v * 255))); return (c(this.r) << 16) ^ (c(this.g) << 8) ^ c(this.b); }
+  multiply(c) { this.r *= c.r; this.g *= c.g; this.b *= c.b; return this; }
   setScalar(s) { this.r = this.g = this.b = s; return this; }
   copy(c) { this.r = c.r; this.g = c.g; this.b = c.b; return this; }
   clone() { return new Color(this.r, this.g, this.b); }
@@ -280,12 +283,12 @@ class InstancedBufferGeometry extends BufferGeometry { constructor() { super(); 
 class CatmullRomCurve3 { constructor(points) { this.points = points; } }
 // ---------- materials & textures ----------
 class Material {
-  constructor(p = {}) { this.opacity = 1; this.transparent = false; this.visible = true; this.needsUpdate = false; this.side = 0; this.color = new Color(0xffffff); this.setValues(p); }
+  constructor(p = {}) { this.opacity = 1; this.transparent = false; this.visible = true; this.needsUpdate = false; this.side = 0; this.color = new Color(0xffffff); this.userData = {}; this.setValues(p); }
   setValues(p) { for (const k in p) { if (p[k] === undefined) throw new Error('undefined material param ' + k); if (k === 'color' || k === 'emissive') this[k] = p[k] instanceof Color ? p[k].clone() : new Color(p[k]); else this[k] = p[k]; } }
   clone() { const m = new this.constructor(); for (const k in this) if (k !== 'uuid') m[k] = this[k]; m.color = this.color.clone(); return m; }
   dispose() { this.disposed = true; }
 }
-class MeshStandardMaterial extends Material {}
+class MeshStandardMaterial extends Material { constructor(p) { super(p); this.isMeshStandardMaterial = true; } }
 class MeshBasicMaterial extends Material {}
 class ShaderMaterial extends Material { constructor(p) { super(p); if (!this.vertexShader || !this.fragmentShader) throw new Error('shader missing'); } }
 class SpriteMaterial extends Material { constructor(p) { super(p); this.rotation = this.rotation || 0; } }
