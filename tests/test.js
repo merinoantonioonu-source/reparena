@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx} };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -85,7 +85,8 @@ function menuTop() { const g = RA.menu.group, h = RA.menu.H / 2; return new THRE
 
 // ONLY=expresión: solo las partidas cuyo nombre encaja (para depurar deprisa)
 // Pone unos ajustes como antes de guardarlos por modo y ejercicio: sin lo guardado, el modo y el ejercicio primero
-function applyCfg(cfg) { storage.delete('reparena3-combos'); for (const k of ['mode', 'exercise']) if (k in cfg) RA.setSetting(k, cfg[k]); for (const k in cfg) if (k !== 'mode' && k !== 'exercise') RA.setSetting(k, cfg[k]); }
+function applyCfg(cfg) { storage.delete('reparena3-combos'); RA.PV.guard = false; if (!('guard' in cfg)) cfg = { ...cfg, guard: 'off' }; // (la defensa, solo en sus pruebas)
+  for (const k of ['mode', 'exercise']) if (k in cfg) RA.setSetting(k, cfg[k]); for (const k in cfg) if (k !== 'mode' && k !== 'exercise') RA.setSetting(k, cfg[k]); }
 async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
   if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   // (cada prueba parte de lo que hay: sin lo guardado de cada modo y ejercicio, y el modo y el ejercicio antes que lo demás)
@@ -348,6 +349,70 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }, 420, s => '');
     log(`knockdown: ${downs} robots knocked down, pushed back up to ${moved.toFixed(2)} m · a boss knocked down ${bossDown}`);
     if (downs < 1 || moved < 0.8 || bossDown) errors.push('derribo: un disparo cargado ×3 o ×4 debería derribar y echar atrás (a los jefes, no)'); }
+  // Defensa 1: cada impacto aparta un poco al enemigo y le retrasa el golpe que preparaba (a los jefes, mucho menos)
+  { const P0 = new THREE.Vector3(0, 1.4, -2), probes = [], pushes = [], delays = []; let off = null;
+    await runConfig('defensa: retroceso con cada impacto', { ...base, mode: 'combat', exercise: 'squat', foeKind: 'ground', foesGate: 'robot', waves: 1, repsWave: 40, walkTime: 6, maxAlive: 2 }, t => {
+      RA.PV.crouch = false;
+      for (const e of RA.enemies) if (e.type === 'robot' && e.alive && e.state === 'windup' && e.st > 0.25 && !probes.some(p => p.e === e) && probes.length < 2) { const d0 = Math.hypot(e.pos.x - RA.HL.x, e.pos.z - RA.HL.z), st = e.st; e.hp += 1; e.onHit(1, false, P0, 1); probes.push({ e, d0, t, st, st1: e.st }); }
+      for (const p of probes) if (!p.done && t - p.t > 0.25) { p.done = true; pushes.push(Math.hypot(p.e.pos.x - RA.HL.x, p.e.pos.z - RA.HL.z) - p.d0); delays.push(p.st - p.st1); }
+      if (!off && probes.length >= 2 && probes.every(p => p.done)) { const e = RA.enemies.find(e => e.alive && e.type === 'robot' && e.state === 'windup' && !(e.pushV && e.pushV.length() > 0.01)); if (e) { RA.setSetting('knockback', 0); off = { e, x: e.pos.x, z: e.pos.z, t }; e.hp += 1; e.onHit(1, false, P0, 1); } }
+      if (off && t - off.t > 0.25) { off.moved = Math.hypot(off.e.pos.x - off.x, off.e.pos.z - off.z); RA.endRun(false, true); }
+    }, 120, s => '', true);
+    RA.setSetting('knockback', 100);
+    log(`knockback: pushed back ${pushes.map(v => v.toFixed(2)).join(' ')} m · strike delayed ${delays.map(v => v.toFixed(2)).join(' ')} s · with 0 % moved ${off && off.moved !== undefined ? off.moved.toFixed(3) : '?'}`);
+    if (pushes.length < 2 || pushes.some(v => v < 0.07)) errors.push('defensa: cada impacto debería apartar al enemigo unos centímetros');
+    if (delays.some(v => v < 0.1)) errors.push('defensa: un impacto mientras prepara el golpe debería retrasárselo');
+    if (!off || !(off.moved < 0.02)) errors.push('defensa: con «Retroceso» a 0 % no deberían moverse al recibir'); }
+  // Defensa 2: las perfectas llenan el escudo por técnica; lleno, para solo el siguiente golpe y aparta al enemigo
+  { let fill = null, shieldHit = null;
+    await runConfig('defensa: escudo por técnica', { ...base, mode: 'combat', exercise: 'squat', guard: 'tech', foeKind: 'ground', foesGate: 'robot', waves: 1, repsWave: 40, walkTime: 6, maxAlive: 1 }, t => {
+      RA.PV.crouch = false;
+      if (fill === null && RA.state === 'play') { const c0 = RA.GUARD.charge; for (let i = 0; i < 4; i++) { RA.onCharge(); RA.onRep({ perfect: true }); } fill = [c0, RA.GUARD.charge]; }
+      const e = RA.enemies.find(e => e.alive && e.type === 'robot');
+      if (fill && !shieldHit && e && e.state === 'strike') shieldHit = { e, taken: RA.stats.taken };
+      if (shieldHit && !shieldHit.done && shieldHit.e.state === 'knock') { shieldHit.done = true; shieldHit.taken2 = RA.stats.taken; shieldHit.stun = shieldHit.e.stunT; shieldHit.charge = RA.GUARD.charge; }
+      if (shieldHit && shieldHit.done && !shieldHit.next && e && e.state === 'knock' && e.st > 3) {} 
+      if (shieldHit && shieldHit.done && RA.stats.taken > shieldHit.taken2) RA.endRun(false, true); // el siguiente golpe ya entra (el escudo se gastó)
+    }, 90, s => '', true);
+    log(`technique shield: charge ${fill && fill.map(v => v.toFixed(2)).join(' → ')} · hit absorbed ${shieldHit && shieldHit.taken2 === shieldHit.taken} · stunned ${shieldHit && shieldHit.stun > 0} · charge after ${shieldHit && shieldHit.charge} · shields ${RA.stats.shields}`);
+    if (!fill || fill[1] < 1) errors.push('defensa: cuatro repeticiones perfectas deberían llenar el escudo');
+    if (!shieldHit || !shieldHit.done || shieldHit.taken2 !== shieldHit.taken || !(shieldHit.stun > 0) || shieldHit.charge !== 0) errors.push('defensa: con el escudo lleno, el golpe no debería hacer daño, el enemigo debería quedar aturdido y el escudo, gastarse'); }
+  // Defensa 3 y 4: el puño cerrado delante del pecho (manos libres) o las dos manos juntas (pesas): subido mientras el
+  // enemigo prepara el golpe es una parada (rebota y queda aturdido); mantenido desde antes, solo bloquea
+  for (const ex of ['squat', 'curl2']) {
+    let mode = 'parry', parryAt = -1, blockFrom = -1, warned = false, shown = false;
+    await runConfig(`defensa: guardia (${ex})`, { ...base, mode: 'combat', exercise: ex, guard: 'full', guardDiff: 'normal', foeKind: 'ground', foesGate: 'robot', waves: 1, repsWave: 60, walkTime: 6, maxAlive: 1 }, t => {
+      RA.PV.crouch = false; const e = RA.enemies.find(e => e.alive && e.type === 'robot');
+      if (e && e.state === 'windup' && e.st > 0.2) warned = warned || RA.GV.warn.some(w => w.visible && w.material.opacity > 0.3);
+      if (mode === 'guard' || RA.PV.guard) shown = shown || (ex === 'squat' ? RA.GV.shield.left.visible : RA.GV.big.visible);
+      if (mode === 'parry') { RA.PV.guard = !!e && (e.state === 'windup' || e.state === 'strike') && !(e.stunT > 0); if (RA.stats.parries >= 1) { mode = 'block'; blockFrom = t; } }
+      else if (mode === 'block') { RA.PV.guard = true; if (RA.stats.blocks >= 1) { mode = 'done'; RA.PV.guard = false; RA.endRun(false, true); } }
+    }, 120, s => '', true);
+    RA.PV.guard = false;
+    log(`guard ${ex}: parries ${RA.stats.parries} blocks ${RA.stats.blocks} taken ${RA.stats.taken} energy ${RA.GUARD.en.toFixed(2)} score ${RA.score} · windup warning ${warned} · shield shown ${shown}`);
+    if (!warned) errors.push(`defensa (${ex}): mientras prepara el golpe, el enemigo debería brillar avisando`);
+    if (!shown) errors.push(`defensa (${ex}): con la guardia subida debería verse el escudo`);
+    if (RA.stats.parries < 1 || RA.stats.blocks < 1 || RA.stats.taken) errors.push(`defensa (${ex}): la guardia debería parar (subida a tiempo) y bloquear (mantenida) sin recibir daño`); }
+  // Defensa 5: manos ocupadas (flexiones contra arañas): quieto en tu postura, la burbuja para los golpes hasta que se
+  // acaba la energía; una perfecta suelta la onda que aparta a las de cerca; apartar la cabeza de golpe esquiva
+  { let waveTry = 0, dodge = null, broke = false;
+    await runConfig('defensa: burbuja, onda y esquiva (flexiones)', { ...base, mode: 'combat', exercise: 'pushup', guard: 'full', foeKind: 'ground', foesHatch: 'spider', waves: 1, repsWave: 60, walkTime: 5, maxAlive: 2 }, t => {
+      RA.PV.crouch = false; broke = broke || RA.GUARD.broke;
+      const near = RA.enemies.find(e => e.alive && e.type === 'spider' && e.mode === 'rear');
+      if (near && !RA.stats.waves && waveTry++ < 50) { RA.onCharge(); RA.onRep({ perfect: true }); }
+      if (dodge === null && RA.stats.blocks >= 1 && RA.state === 'play') {
+        const G = RA.GUARD, h = RA.head.p, f = { type: 'flyer', alive: true, center: o => o.set(h.x, h.y, h.z - 1) };
+        G.hist.length = 0; G.hist.push({ t: t - 0.3, x: h.x - 0.25, y: h.y, z: h.z }, { t: t - 0.15, x: h.x - 0.1, y: h.y, z: h.z }, { t, x: h.x, y: h.y, z: h.z });
+        const up = G.up; G.up = null; dodge = RA.guardAbsorb(f); G.up = up;
+      }
+      if (dodge !== null && broke && RA.stats.taken >= 1) RA.endRun(false, true);
+    }, 150, s => '', true);
+    log(`busy hands: bubble blocks ${RA.stats.blocks} parries ${RA.stats.parries} · waves ${RA.stats.waves} · dodge ${dodge} (${RA.stats.dodges}) · energy ran out ${broke} · taken ${RA.stats.taken}`);
+    if (RA.stats.blocks + RA.stats.parries < 1) errors.push('defensa: quieto en la flexión, la burbuja debería parar los golpes');
+    if (!RA.stats.waves) errors.push('defensa: una flexión perfecta con una araña a punto de atacar debería soltar la onda expansiva');
+    if (!dodge) errors.push('defensa: apartar la cabeza de golpe debería esquivar');
+    if (!broke) errors.push('defensa: la burbuja debería gastar la energía (sin repeticiones, acaba cayendo)'); }
+  RA.setSetting('foeKind', 'both'); RA.setSetting('foesHatch', 'spider'); // (lo que tocaron las pruebas de la defensa)
   // el diablillo (con un modelo de mentira): golpes variados (gancho, tajos…), cada uno con su marca de parada; derribado
   // cae de espaldas y se levanta con sus animaciones; y el lanzador te tira piedras: te dan si no te mueves, se esquivan
   // apartándote y se paran con la mano

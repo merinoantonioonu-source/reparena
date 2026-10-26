@@ -4,7 +4,7 @@ const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0, parries: 0, blocks: 0, dodges: 0, shields: 0, waves: 0 });
 let stats = newStats();
 const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dificultad creciente (ver rampWaveEnd)
 let msg = { text: '', color: '#fff', t: 0 };
@@ -109,6 +109,9 @@ function beatStep(dt) {
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop; // (el lanzador, siempre lejos)
+// Empujones: lo que se frena cada segundo (al recibir, sale despedido y en unas décimas se para) y cuánto, según
+// «Retroceso al recibir impactos»
+const SHOVE_K = 7, knockK = () => (settings.knockback >= 0 ? settings.knockback : 100) / 100;
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
@@ -389,6 +392,12 @@ class Robot {
         break;
       }
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { // empujado: se desliza hacia atrás y se frena enseguida
+      const d = _rd.copy(this.pushV).multiplyScalar(dt); this.pos.add(d); if (this.state === 'knock' || this.state === 'down') { this.knockFrom.add(d); this.knockTo.add(d); }
+      this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K));
+      // preparando el golpe, si lo apartan de su puesto, lo deshace: tiene que volver a acercarse
+      if (this.state === 'windup' && this.pos.distanceTo(this.slot) > 0.45) { if (this.zone) blockCancel(this); this.zone = null; this.state = 'walk'; this.st = 0; this.vel.set(0, 0, 0); }
+    }
     this.dodgeStep(dt, faceP);
     if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
     if (this.throwCD > 0) this.throwCD -= dt;
@@ -460,10 +469,23 @@ class Robot {
     this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
     this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
+  // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
+  shove(dist) {
+    if (!this.out || this.state === 'emerge' || !(dist > 0)) return;
+    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso con cada impacto: más cuanto más fuerte (cargado, perfecto); los pesados, menos; los jefes, muy poco. Si
+  // estaba preparando el golpe, se le retrasa
+  recoil(perfect, pow) {
+    const k = knockK() * (this.K.boss ? 0.3 : this.K.heavy ? 0.6 : 1); if (!k || this.hp <= 0 || this.state === 'down') return;
+    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k);
+    if (this.state === 'windup') this.st = Math.max(0, this.st - (this.K.boss ? 0.08 : 0.2) * pow * Math.min(1, k));
+  }
   onHit(dmg, perfect, point, pow = 1) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; }
     if (pow >= 3 && this.hp > dmg) this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
   }
@@ -554,7 +576,7 @@ class Beast extends Robot {
   }
   onHit(dmg, perfect, point, pow = 1) {
     const down = pow >= 3 && this.hp > dmg && this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
     if (down && this.downAnim) { /* ya cae con su animación */ }
     else if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
     else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
@@ -631,6 +653,7 @@ class Spider {
         break;
       case 'run':
         if (!active) break;
+        if (this.stunT > 0) { this.stunT -= dt; this.rear = 0; break; } // aturdida tras una parada: no se mueve ni ataca
         this.runT -= dt;
         if (this.runT <= 0) { this.run = !this.run; this.runT = this.run ? rand(0.3, 0.9) : rand(0.15, 0.8); if (this.run && Math.random() < 0.4) SND.skitter(this.center(tmpA), s); }
         if (this.run) { moveTo = this.target; speed = this.avg / 0.55 * rand(0.9, 1.2); }
@@ -655,13 +678,13 @@ class Spider {
         break;
       case 'lunge': {
         const k = Math.min(1, this.st / 0.22); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, k); this.pos.y = Math.sin(k * Math.PI) * 0.12 + k * Math.max(0, HL.y - 0.25) * 0.7;
-        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8, this.voice); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28); }
+        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8, this.voice); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28 + (this.bounce || 0)); this.bounce = 0; }
         break;
       }
       case 'recoil': {
         const k = Math.min(1, this.st / 0.35); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, smooth(k)); this.pos.y = this.lungeFrom.y * (1 - k) + Math.sin(k * Math.PI) * 0.05; this.rear = 1 - k;
         if (k < 1) { this.vel.subVectors(this.lungeTo, this.lungeFrom).multiplyScalar(1 / 0.35); this.vel.y = 0; } // retrocede con las patas (de espaldas)
-        if (k >= 1) { this.pos.y = 0; this.mode = 'run'; this.st = 0; this.run = false; this.runT = rand(0.4, 1.0); }
+        if (k >= 1) { this.pos.y = 0; this.mode = 'run'; this.st = 0; this.run = false; this.runT = rand(0.4, 1.0); if (this.parryT) { this.stunT = this.parryT; this.parryT = 0; } }
         break;
       }
       case 'dying':
@@ -670,6 +693,7 @@ class Spider {
         if (this.st > 1.9) { this.dispose(); this.gone = true; return; }
         break;
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { if (this.mode === 'run' || this.mode === 'threat' || this.mode === 'rear') this.pos.addScaledVector(this.pushV, dt); this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K)); }
     if (moveTo) {
       const to = tmpA.subVectors(moveTo, this.pos); to.y = 0; const d = to.length();
       if (d > 0.005) { to.normalize(); const lat = Math.sin(t * 9 + this.s * 7) * 0.35; const dir = tmpB.set(to.x + to.z * lat, 0, to.z - to.x * lat).normalize(); const step = Math.min(d, speed * dt); this.pos.addScaledVector(dir, step); this.vel.copy(dir).multiplyScalar(speed); this.yaw += wrapAng(Math.atan2(dir.x, dir.z) - this.yaw) * Math.min(1, dt * 10); }
@@ -731,10 +755,23 @@ class Spider {
       legInstance(SPLEGS.fem, SPLEGS.n, L.hipW, _knee, s); legInstance(SPLEGS.tib, SPLEGS.n, _knee, L.foot, s); SPLEGS.n++;
     }
   }
-  onHit(dmg, perfect, point) {
+  shove(dist) {
+    if (this.mode === 'emerge' || this.mode === 'dying' || !(dist > 0)) return;
+    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso: unos centímetros (a su escala); alzada para atacar, un disparo fuerte o perfecto le quita el ataque y uno
+  // flojo se lo retrasa
+  recoil(perfect, pow) {
+    const k = knockK() * (this.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
+    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k);
+    if (this.mode === 'rear') { if ((pow >= 2 || perfect) && !this.boss) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = 0.5; } else this.st = Math.max(0, this.st - 0.15 * k); }
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     this.hp -= dmg; setHpBar(this.bar, this.hp / this.maxHp);
     fx.ichor(point, 8, this.s); SND.squish(point);
     this.rear = 0; if (this.mode === 'run') { this.run = false; this.runT = 0.25; }
+    this.recoil(perfect, pow);
     if (this.hp <= 0) this.kill();
   }
   kill() {
@@ -780,7 +817,7 @@ function updateRocks(dt) {
         fx.sparks(w, 16, [1, 0.8, 0.5], 2.4, 0.04); haptic(par.side, 0.8, 50); say('¡Parada!', '#3cf0c6', 0.8, false); continue;
       }
       if (r.t >= r.T) { // llega: ¿sigues ahí?
-        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
+        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true, rock: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
         r.mode = 'fall'; if (state === 'play') { score += 50; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true; say('¡Esquivada!', '#3cf0c6', 0.8, false); }
       }
     } else { // parada o esquivada: cae y desaparece
@@ -813,7 +850,7 @@ class HatchBeast extends Spider {
     this.pitch += ((-this.rear * 0.5) - this.pitch) * Math.min(1, dt * 10); this.model.rotation.x = this.pitch;
     this.tint = Math.max(0, this.tint - dt * 4); this.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); // al recibir, se tiñe de rojo
   }
-  onHit(dmg, perfect, point) { this.tint = 1; super.onHit(dmg, perfect, point); }
+  onHit(dmg, perfect, point, pow) { this.tint = 1; super.onHit(dmg, perfect, point, pow); }
   dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); }
 }
 
@@ -879,7 +916,7 @@ class Flyer {
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
-        if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5; this.windT = 0; }
+        if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5 + (this.parryT || 0); this.parryT = 0; this.windT = 0; } // (parado, huye más lejos)
       }
       if (this.t > this.nextDart && !this.windT && (!beatP() || BEAT.hit)) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
@@ -887,6 +924,7 @@ class Flyer {
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
       }
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { this.base.addScaledVector(this.pushV, dt); this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K)); } // empujado
     this.dart.lerp(this.dartT, 1 - Math.exp(-dt * 2.2 * Math.max(0.3, this.erratic)));
     const dir = tmpB.set(-this.base.x, 0, -this.base.z); if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1); dir.normalize();
     const right = tmpC.set(dir.z, 0, -dir.x), wob = (push ? 0.04 : 0.25) * this.erratic;
@@ -920,10 +958,21 @@ class Flyer {
     if (this.buzz) this.buzz.set(this.center(tmpA));
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
-  onHit(dmg, perfect, point) {
+  shove(dist) {
+    if (!(dist > 0)) return;
+    const b = tmpA.subVectors(this.base, HL); b.y *= 0.3; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso: sale despedido hacia atrás; si estaba cogiendo impulso para picar, se le quita
+  recoil(perfect, pow) {
+    const k = knockK() * (this.K.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
+    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1));
+    if (this.windT > 0 && this.windT < 0.45 && !this.K.boss) { this.windT = 0; this.retreat = Math.max(this.retreat, 0.5); }
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     this.hp -= dmg; this.flickT = 0.2; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 8, [1, 0.6, 0.2], 2, 0.03 * Math.max(0.5, this.scale)); SND.metalHit(point, false);
-    this.dartT.multiplyScalar(-1);
+    this.dartT.multiplyScalar(-1); this.recoil(perfect, pow);
     if (this.hp <= 0) this.kill();
   }
   kill() {
@@ -1103,7 +1152,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  registerRep(opts.perfect, true, side);
+  registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
@@ -2119,7 +2168,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -2194,6 +2243,7 @@ function startWave(i) {
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
+  if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
   hapticBoth(0.9, 120);
   combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
@@ -2397,7 +2447,7 @@ function gameStep(dt, t) {
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
     updateProjectiles(dt); updateRocks(dt);
-    updateGates(dt, t);
+    updateGates(dt, t); guardStep(dt, t);
   }
   if (SPLEGS.fem) {
     SPLEGS.n = 0; for (const e of enemies) if (e.type === 'spider') e.drawLegs();

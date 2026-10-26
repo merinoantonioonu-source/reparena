@@ -532,7 +532,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>B</kbd> guardia (puño delante del pecho; con pesas, las dos manos juntas) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -695,6 +695,9 @@ const SCHEMA = [
   { key: 'swordHand', g: 'armas', label: 'Mano de la espada', short: 'Mano', type: 'choice', opts: [['right', 'Derecha'], ['left', 'Izquierda']], def: 'right', modes: ['combat', 'touch'], cond: () => swordSet() && settings.sword === 'one', hint: 'Con una sola espada y las pistolas activadas, en la otra mano llevas el bláster.' },
   { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
   { key: 'swordBlock', g: 'armas', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['combat'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
+  { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, según el ejercicio, el puño cerrado delante del pecho (manos libres), las dos manos juntas delante de la cara (pesas), apartar la cabeza o una repetición profunda (manos ocupadas) o el botón de agarre de los mandos.' },
+  { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
+  { key: 'knockback', g: 'armas', label: 'Retroceso al recibir impactos', short: 'Retroceso', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], hint: 'Cuánto retroceden los enemigos con cada disparo o tajo (más si es cargado o perfecto; los jefes, mucho menos). Si estaban preparando el golpe, se les retrasa.' },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
   { key: 'arcMax', g: 'arcos', label: 'Bajada máxima bajo un arco', short: 'Bajada máxima', type: 'num', min: 5, max: 90, step: 1, def: 38, unit: 'cm', modes: ['arcs'], hint: 'Cada arco sale a una altura al azar entre la mínima y la máxima.' },
@@ -6131,6 +6134,7 @@ function drawBoard() {
   else if (pistolOn() && live) ch = [`▮ ${GUN.ammo}`, GUN.ammo ? BC.teal : '#ff8a3d'];
   else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
   if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
+  guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
   // abajo: lo de hoy
   boardDay2(c, W, 356);
   board.tex.needsUpdate = true;
@@ -6972,7 +6976,7 @@ const GAME_STATES = ['calib', 'ready', 'mount', 'play', 'rest'];
 let state = 'idle', preview = false, xrActive = false;
 let enemies = [], arcs = [], projs = [], spawnQueue = [], spawnTimer = 0, spawnInterval = 3, waveIdx = 0, waveTarget = 0, waveDone = 0;
 let lives = 3, score = 0, combo = 0, stateT = 0, calibT = 0, pinchT = 0, pausedFrom = 'play';
-const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0 });
+const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 0, time: 0, work: 0, shots: 0, hits: 0, taken: 0, falls: 0, hold: 0, spawned: 0, parries: 0, blocks: 0, dodges: 0, shields: 0, waves: 0 });
 let stats = newStats();
 const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dificultad creciente (ver rampWaveEnd)
 let msg = { text: '', color: '#fff', t: 0 };
@@ -7077,6 +7081,9 @@ function beatStep(dt) {
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
 const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heavy ? 1.05 : 0.95) : K.stop; // (el lanzador, siempre lejos)
+// Empujones: lo que se frena cada segundo (al recibir, sale despedido y en unas décimas se para) y cuánto, según
+// «Retroceso al recibir impactos»
+const SHOVE_K = 7, knockK = () => (settings.knockback >= 0 ? settings.knockback : 100) / 100;
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
@@ -7357,6 +7364,12 @@ class Robot {
         break;
       }
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { // empujado: se desliza hacia atrás y se frena enseguida
+      const d = _rd.copy(this.pushV).multiplyScalar(dt); this.pos.add(d); if (this.state === 'knock' || this.state === 'down') { this.knockFrom.add(d); this.knockTo.add(d); }
+      this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K));
+      // preparando el golpe, si lo apartan de su puesto, lo deshace: tiene que volver a acercarse
+      if (this.state === 'windup' && this.pos.distanceTo(this.slot) > 0.45) { if (this.zone) blockCancel(this); this.zone = null; this.state = 'walk'; this.st = 0; this.vel.set(0, 0, 0); }
+    }
     this.dodgeStep(dt, faceP);
     if (this.dodge > 0) faceTo = this.roll ? this.dodgeYaw : faceTo;
     if (this.throwCD > 0) this.throwCD -= dt;
@@ -7428,10 +7441,23 @@ class Robot {
     this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
     this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
+  // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
+  shove(dist) {
+    if (!this.out || this.state === 'emerge' || !(dist > 0)) return;
+    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso con cada impacto: más cuanto más fuerte (cargado, perfecto); los pesados, menos; los jefes, muy poco. Si
+  // estaba preparando el golpe, se le retrasa
+  recoil(perfect, pow) {
+    const k = knockK() * (this.K.boss ? 0.3 : this.K.heavy ? 0.6 : 1); if (!k || this.hp <= 0 || this.state === 'down') return;
+    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k);
+    if (this.state === 'windup') this.st = Math.max(0, this.st - (this.K.boss ? 0.08 : 0.2) * pow * Math.min(1, k));
+  }
   onHit(dmg, perfect, point, pow = 1) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; }
     if (pow >= 3 && this.hp > dmg) this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
   }
@@ -7522,7 +7548,7 @@ class Beast extends Robot {
   }
   onHit(dmg, perfect, point, pow = 1) {
     const down = pow >= 3 && this.hp > dmg && this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
     if (down && this.downAnim) { /* ya cae con su animación */ }
     else if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
     else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
@@ -7599,6 +7625,7 @@ class Spider {
         break;
       case 'run':
         if (!active) break;
+        if (this.stunT > 0) { this.stunT -= dt; this.rear = 0; break; } // aturdida tras una parada: no se mueve ni ataca
         this.runT -= dt;
         if (this.runT <= 0) { this.run = !this.run; this.runT = this.run ? rand(0.3, 0.9) : rand(0.15, 0.8); if (this.run && Math.random() < 0.4) SND.skitter(this.center(tmpA), s); }
         if (this.run) { moveTo = this.target; speed = this.avg / 0.55 * rand(0.9, 1.2); }
@@ -7623,13 +7650,13 @@ class Spider {
         break;
       case 'lunge': {
         const k = Math.min(1, this.st / 0.22); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, k); this.pos.y = Math.sin(k * Math.PI) * 0.12 + k * Math.max(0, HL.y - 0.25) * 0.7;
-        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8, this.voice); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28); }
+        if (k >= 1) { hurtPlayer(this); SND.hiss(this.center(tmpA), s * 0.8, this.voice); this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); const back = tmpA.subVectors(this.target, HL); back.y = 0; back.normalize(); this.lungeTo.copy(this.target).addScaledVector(back, 0.28 + (this.bounce || 0)); this.bounce = 0; }
         break;
       }
       case 'recoil': {
         const k = Math.min(1, this.st / 0.35); this.pos.lerpVectors(this.lungeFrom, this.lungeTo, smooth(k)); this.pos.y = this.lungeFrom.y * (1 - k) + Math.sin(k * Math.PI) * 0.05; this.rear = 1 - k;
         if (k < 1) { this.vel.subVectors(this.lungeTo, this.lungeFrom).multiplyScalar(1 / 0.35); this.vel.y = 0; } // retrocede con las patas (de espaldas)
-        if (k >= 1) { this.pos.y = 0; this.mode = 'run'; this.st = 0; this.run = false; this.runT = rand(0.4, 1.0); }
+        if (k >= 1) { this.pos.y = 0; this.mode = 'run'; this.st = 0; this.run = false; this.runT = rand(0.4, 1.0); if (this.parryT) { this.stunT = this.parryT; this.parryT = 0; } }
         break;
       }
       case 'dying':
@@ -7638,6 +7665,7 @@ class Spider {
         if (this.st > 1.9) { this.dispose(); this.gone = true; return; }
         break;
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { if (this.mode === 'run' || this.mode === 'threat' || this.mode === 'rear') this.pos.addScaledVector(this.pushV, dt); this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K)); }
     if (moveTo) {
       const to = tmpA.subVectors(moveTo, this.pos); to.y = 0; const d = to.length();
       if (d > 0.005) { to.normalize(); const lat = Math.sin(t * 9 + this.s * 7) * 0.35; const dir = tmpB.set(to.x + to.z * lat, 0, to.z - to.x * lat).normalize(); const step = Math.min(d, speed * dt); this.pos.addScaledVector(dir, step); this.vel.copy(dir).multiplyScalar(speed); this.yaw += wrapAng(Math.atan2(dir.x, dir.z) - this.yaw) * Math.min(1, dt * 10); }
@@ -7699,10 +7727,23 @@ class Spider {
       legInstance(SPLEGS.fem, SPLEGS.n, L.hipW, _knee, s); legInstance(SPLEGS.tib, SPLEGS.n, _knee, L.foot, s); SPLEGS.n++;
     }
   }
-  onHit(dmg, perfect, point) {
+  shove(dist) {
+    if (this.mode === 'emerge' || this.mode === 'dying' || !(dist > 0)) return;
+    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso: unos centímetros (a su escala); alzada para atacar, un disparo fuerte o perfecto le quita el ataque y uno
+  // flojo se lo retrasa
+  recoil(perfect, pow) {
+    const k = knockK() * (this.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
+    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k);
+    if (this.mode === 'rear') { if ((pow >= 2 || perfect) && !this.boss) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = 0.5; } else this.st = Math.max(0, this.st - 0.15 * k); }
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     this.hp -= dmg; setHpBar(this.bar, this.hp / this.maxHp);
     fx.ichor(point, 8, this.s); SND.squish(point);
     this.rear = 0; if (this.mode === 'run') { this.run = false; this.runT = 0.25; }
+    this.recoil(perfect, pow);
     if (this.hp <= 0) this.kill();
   }
   kill() {
@@ -7748,7 +7789,7 @@ function updateRocks(dt) {
         fx.sparks(w, 16, [1, 0.8, 0.5], 2.4, 0.04); haptic(par.side, 0.8, 50); say('¡Parada!', '#3cf0c6', 0.8, false); continue;
       }
       if (r.t >= r.T) { // llega: ¿sigues ahí?
-        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
+        if (Math.hypot(p.x - HL.x, p.y - HL.y, p.z - HL.z) < ROCK_HIT && state === 'play') { fx.sparks(w, 12, [0.8, 0.7, 0.6], 2, 0.04); SND.metalHit(w, false); say('¡Pedrada!', '#ff3b5c', 1.0, false); hurtPlayer({ silent: true, rock: true }); arena.remove(r.m); ROCKS.splice(i, 1); continue; }
         r.mode = 'fall'; if (state === 'play') { score += 50; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true; say('¡Esquivada!', '#3cf0c6', 0.8, false); }
       }
     } else { // parada o esquivada: cae y desaparece
@@ -7781,7 +7822,7 @@ class HatchBeast extends Spider {
     this.pitch += ((-this.rear * 0.5) - this.pitch) * Math.min(1, dt * 10); this.model.rotation.x = this.pitch;
     this.tint = Math.max(0, this.tint - dt * 4); this.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); // al recibir, se tiñe de rojo
   }
-  onHit(dmg, perfect, point) { this.tint = 1; super.onHit(dmg, perfect, point); }
+  onHit(dmg, perfect, point, pow) { this.tint = 1; super.onHit(dmg, perfect, point, pow); }
   dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); }
 }
 
@@ -7847,7 +7888,7 @@ class Flyer {
       if (this.windT > 0 && state !== 'play') this.windT = 0;
       if (this.windT > 0) { // carga 0.45 s echándose atrás, se lanza 0.25 s y pica
         const was = this.windT; this.windT += dt; if (was < 0.45 && this.windT >= 0.45) SND.whoosh(this.center(tmpC));
-        if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5; this.windT = 0; }
+        if (this.windT >= 0.7) { hurtPlayer(this); this.retreat = 2.5 + (this.parryT || 0); this.parryT = 0; this.windT = 0; } // (parado, huye más lejos)
       }
       if (this.t > this.nextDart && !this.windT && (!beatP() || BEAT.hit)) {
         const A = clamp(d * (push ? 0.25 : 0.2), push ? 0.06 : 0.4, push ? 0.35 : 2.4) * this.erratic;
@@ -7855,6 +7896,7 @@ class Flyer {
         this.nextDart = this.t + rand(0.8, 3.0) / Math.sqrt(Math.max(0.2, this.erratic));
       }
     }
+    if (this.pushV && this.pushV.lengthSq() > 1e-6) { this.base.addScaledVector(this.pushV, dt); this.pushV.multiplyScalar(Math.exp(-dt * SHOVE_K)); } // empujado
     this.dart.lerp(this.dartT, 1 - Math.exp(-dt * 2.2 * Math.max(0.3, this.erratic)));
     const dir = tmpB.set(-this.base.x, 0, -this.base.z); if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1); dir.normalize();
     const right = tmpC.set(dir.z, 0, -dir.x), wob = (push ? 0.04 : 0.25) * this.erratic;
@@ -7888,10 +7930,21 @@ class Flyer {
     if (this.buzz) this.buzz.set(this.center(tmpA));
     if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
-  onHit(dmg, perfect, point) {
+  shove(dist) {
+    if (!(dist > 0)) return;
+    const b = tmpA.subVectors(this.base, HL); b.y *= 0.3; const l = b.length() || 1;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+  }
+  // Retroceso: sale despedido hacia atrás; si estaba cogiendo impulso para picar, se le quita
+  recoil(perfect, pow) {
+    const k = knockK() * (this.K.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
+    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1));
+    if (this.windT > 0 && this.windT < 0.45 && !this.K.boss) { this.windT = 0; this.retreat = Math.max(this.retreat, 0.5); }
+  }
+  onHit(dmg, perfect, point, pow = 1) {
     this.hp -= dmg; this.flickT = 0.2; setHpBar(this.bar, this.hp / this.maxHp);
     fx.sparks(point, 8, [1, 0.6, 0.2], 2, 0.03 * Math.max(0.5, this.scale)); SND.metalHit(point, false);
-    this.dartT.multiplyScalar(-1);
+    this.dartT.multiplyScalar(-1); this.recoil(perfect, pow);
     if (this.hp <= 0) this.kill();
   }
   kill() {
@@ -8071,7 +8124,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  registerRep(opts.perfect, true, side);
+  registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
@@ -9087,7 +9140,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -9162,6 +9215,7 @@ function startWave(i) {
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
+  if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
   hapticBoth(0.9, 120);
   combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
@@ -9365,7 +9419,7 @@ function gameStep(dt, t) {
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
     updateProjectiles(dt); updateRocks(dt);
-    updateGates(dt, t);
+    updateGates(dt, t); guardStep(dt, t);
   }
   if (SPLEGS.fem) {
     SPLEGS.n = 0; for (const e of enemies) if (e.type === 'spider') e.drawLegs();
@@ -10786,6 +10840,258 @@ function swordCutTest(x) {
   return null;
 }
 
+/* =================== DEFENSA: ESCUDO, GUARDIA, ESQUIVA =================== */
+// Contra los golpes de los enemigos (solo en Combate y sin espadas, que tienen sus bloqueos):
+// · Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y
+//   aparta al enemigo (vale con cualquier ejercicio, sin gestos).
+// · Con gestos (Defensa completa), según lo que tengas en las manos:
+//   - manos libres (sentadillas, zancadas): el puño cerrado delante del pecho saca un escudo en el antebrazo;
+//   - pesas: las dos manos juntas delante de la cara o el pecho; en el curl, aguantar arriba; en el press, los brazos
+//     arriba paran a los voladores; en el swing, la kettlebell aparta a los que tienes delante;
+//   - manos ocupadas (flexiones, planchas, superman, fondos): apartar la cabeza de golpe esquiva, una repetición
+//     perfecta o profunda suelta una onda que aparta a los de cerca y aguantar bien la postura levanta una burbuja;
+//   - con los mandos: el botón de agarre, en cualquier ejercicio.
+//   La guardia gasta energía mientras la mantienes con un enemigo encima y al parar un golpe; las repeticiones la recargan. Subida durante la
+//   preparación del golpe es una parada (el enemigo rebota y queda aturdido); mantenida desde mucho antes, solo bloquea.
+const GDIFF = {
+  easy: { perf: 0.34, rep: 0.1, streak: 0.15, enP: 0.3, en: 0.2, drain: 0.05, block: 0.15, parry: 0.1, win: 1.6, stun: 2.2, dodge: 0.1 },
+  normal: { perf: 0.25, rep: 0.07, streak: 0.1, enP: 0.25, en: 0.15, drain: 0.1, block: 0.25, parry: 0.15, win: 1.1, stun: 1.8, dodge: 0.14 },
+  hard: { perf: 0.17, rep: 0.05, streak: 0.08, enP: 0.2, en: 0.1, drain: 0.16, block: 0.35, parry: 0.2, win: 0.75, stun: 1.4, dodge: 0.18 }
+};
+const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false };
+const gDiff = () => GDIFF[settings.guardDiff] || GDIFF.normal;
+const guardOn = () => isCombat() && !!settings.guard && settings.guard !== 'off';
+const gestureOn = () => guardOn() && settings.guard === 'full' && !swordActive();
+// Qué se tiene en las manos: libres, pesas u ocupadas (apoyadas en el suelo o en el banco)
+const guardFam = () => handsFree() || settings.exercise === 'jsquat' ? 'fist' : holdsWeights() ? 'weights' : 'busy';
+function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false }); GUARD.hist.length = 0; }
+
+/* ---------- Lo que se ve ---------- */
+const G_TEAL = new THREE.Color(0x3cf0c6), G_LOW = new THREE.Color(0xff8a3d), G_WHITE = new THREE.Color(0xffffff);
+function guardShield() { // un escudo hexagonal: el cristal y el borde
+  const g = new THREE.Group();
+  const glass = new THREE.Mesh(new THREE.CircleGeometry(0.14, 6), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
+  const rim = new THREE.Mesh(new THREE.RingGeometry(0.128, 0.152, 6), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, side: THREE.DoubleSide, toneMapped: false }));
+  glass.renderOrder = rim.renderOrder = 21; g.add(glass, rim); g.visible = false; g.userData.mats = [glass.material, rim.material]; scene.add(g); return g;
+}
+const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [] };
+GV.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
+GV.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }));
+for (const m of [GV.bubble, GV.ring]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
+function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = false; for (const w of GV.warn) w.visible = false; }
+
+/* ---------- Detectar la guardia ---------- */
+const _gdF = new V3(), _gdP = new V3(), _gdQ = new V3();
+// delante de la cara o del pecho: entre 8 y 60 cm por delante de la cabeza, sin irse mucho a un lado, entre lo y hi de altura
+function gFront(p, lo, hi) { const dx = p.x - head.p.x, dz = p.z - head.p.z, al = dx * _gdF.x + dz * _gdF.z, dy = p.y - head.p.y; return al > 0.08 && al < 0.6 && Math.abs(dx * _gdF.z - dz * _gdF.x) < 0.35 && dy > lo && dy < hi; }
+// puño cerrado: las puntas de los dedos cerca de la muñeca
+function gFist(h) { if (!h.isHand) return false; let n = 0, s = 0; for (const j of [9, 14, 19, 24]) { const J = h.J[j]; if (J && J.ok) { s += J.p.distanceTo(h.wrist); n++; } } return n >= 3 && s / n < 0.1; }
+const gGrip = h => !h.isHand && h.pad && h.pad.buttons && h.pad.buttons[1] && h.pad.buttons[1].pressed;
+// Busca la guardia de ahora: { kind, side, pos }; kind: 'grip', 'fist', 'guard' (manos juntas), 'curl', 'up' (brazos
+// arriba: solo para voladores) o 'bubble'
+function guardDetect(dt) {
+  _gdF.copy(fwdH());
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gGrip(h)) return { kind: 'grip', side: s, pos: h.wrist }; }
+  const fam = guardFam(), L = hands.left, R = hands.right, ex = settings.exercise;
+  if (fam === 'fist') {
+    for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gFist(h) && gFront(h.wrist, -0.7, 0.12)) return { kind: 'fist', side: s, pos: _gdP.copy(h.wrist).add(_gdQ.set(0, -0.045, 0)).addScaledVector(_gdF, -0.07) }; }
+    return null;
+  }
+  if (fam === 'weights') {
+    if (L.ok && R.ok && L.wrist.distanceTo(R.wrist) < 0.3) { _gdP.lerpVectors(L.wrist, R.wrist, 0.5); if (gFront(_gdP, -0.65, 0.15)) return { kind: 'guard', side: null, pos: _gdP }; }
+    if (ex === 'curl' || ex === 'curl2') for (const s of ['left', 'right']) if (DET.curl[s].state === 'hold' && hands[s].ok) return { kind: 'curl', side: s, pos: hands[s].wrist };
+    if (ex === 'press' || ex === 'press2' || ex === 'thruster') {
+      const up = s => (hands[s].ok && hands[s].wrist.y > head.p.y + 0.1) || (ex !== 'thruster' && !hands[s].ok && DET.pr[s].state === 'top');
+      if (up('left') || up('right')) return { kind: 'up', side: null, pos: _gdP.copy(head.p).add(_gdQ.set(0, 0.32, 0)) };
+    }
+    return null;
+  }
+  // manos ocupadas: aguantar bien la postura levanta la burbuja (en el superman, arriba; en la plancha lateral, la
+  // cadera arriba; en el resto, quieto en tu postura)
+  const away = isSeated() ? head.p.y > 1.5 : head.p.y > 1.0;
+  const hold = ex === 'superman' ? DET.su.state === 'up' : ex === 'splank' ? DET.sp.state === 'hold' && !DET.sp.awayT && state === 'play' : !away && head.speed < 0.06;
+  GUARD.still = hold ? GUARD.still + dt : 0;
+  return GUARD.still > (ex === 'superman' || ex === 'splank' ? 0.4 : 1.0) ? { kind: 'bubble', side: null, pos: head.p } : null;
+}
+
+/* ---------- Cada fotograma ---------- */
+// Cuánto le falta a un enemigo para golpear: de 0 (empieza a prepararlo) a 1 (el golpe), o -1 si no está atacando
+function guardThreat(e) {
+  if (!e.alive) return -1;
+  if (e.type === 'robot') return e.K.thrower ? -1 : e.state === 'windup' ? clamp(e.st / (e.zone ? 1.25 : 0.75), 0, 1) : e.state === 'strike' ? 1 : -1;
+  if (e.type === 'spider') return e.mode === 'rear' ? clamp(e.st / 0.55, 0, 1) : e.mode === 'lunge' ? 1 : -1;
+  if (e.type === 'flyer') return e.windT > 0 ? clamp(e.windT / 0.7, 0, 1) : -1;
+  return -1;
+}
+// ¿Está encima? (el que anda, a menos de 3,5 m; la araña, más cerca que lejos; el volador, a punto de picar)
+function guardNear(e) {
+  if (!e.alive) return false;
+  if (e.type === 'robot') return e.out && Math.hypot(e.pos.x - HL.x, e.pos.z - HL.z) < 3.5;
+  if (e.type === 'spider') return e.close > 0.5;
+  return e.type === 'flyer' && e.base.distanceTo(HL) < (isTiny() ? 0.6 : 1.6);
+}
+function guardWarnSpr(i) {
+  if (!GV.warn[i]) { const s = glowSprite(0xff8a3d, 1, 0); s.renderOrder = 20; scene.add(s); GV.warn[i] = s; }
+  return GV.warn[i];
+}
+function guardStep(dt, t) {
+  if (!guardOn() || !['play', 'rest'].includes(state)) { guardHide(); GUARD.up = null; return; }
+  const G = GUARD, D = gDiff();
+  G.waveCD = Math.max(0, G.waveCD - dt); G.flash = Math.max(0, G.flash - dt * 4);
+  // la cabeza de los últimos instantes (para la esquiva)
+  G.histT -= dt; if (G.histT <= 0) { G.histT = 0.05; G.hist.push({ t, x: head.p.x, y: head.p.y, z: head.p.z }); if (G.hist.length > 16) G.hist.shift(); }
+  // la guardia: gasta energía mientras la mantienes; sin energía cae y no vuelve hasta recargar un poco
+  const g = gestureOn() && !G.broke ? guardDetect(dt) : null;
+  if (g) {
+    if (G.up !== g.kind || G.side !== g.side) G.upT = 0; else G.upT += dt;
+    G.up = g.kind; G.side = g.side; G.pos.copy(g.pos);
+    if (enemies.some(guardNear)) G.en = Math.max(0, G.en - D.drain * dt); // (sin nadie cerca, mantenerla no gasta)
+    if (G.en <= 0) { G.broke = true; guardBreakFx(); say('¡Sin energía! Las repeticiones la recargan', '#ff8a3d', 1.6); G.up = null; G.side = null; }
+  } else {
+    if (G.up === 'bubble') guardBreakFx(); // la burbuja estalla al perder la postura
+    G.up = null; G.side = null; G.upT = 0;
+  }
+  // el escudo o la burbuja, del color de la energía que queda (y blanco un instante al parar un golpe)
+  guardHide(); const col = _gdC.copy(G_LOW).lerp(G_TEAL, clamp(G.en * 2, 0, 1)).lerp(G_WHITE, G.flash);
+  if (G.up === 'bubble') {
+    GV.bubble.visible = true; GV.bubble.position.copy(head.p); GV.bubble.rotation.y = t * 0.4; GV.bubble.scale.setScalar(1 + G.flash * 0.25 + Math.sin(t * 5) * 0.015);
+    GV.bubble.material.color.copy(col); GV.bubble.material.opacity = 0.22 + G.flash * 0.5;
+  } else if (G.up) {
+    const big = G.up === 'guard' || G.up === 'up', m = big ? GV.big : GV.shield[G.side || 'right'];
+    m.visible = true; m.position.copy(G.pos); m.scale.setScalar((big ? 1.7 : G.up === 'curl' ? 0.9 : 1) * (1 + G.flash * 0.3) * smooth(Math.min(1, G.upT / 0.12 + 0.3)));
+    if (G.up === 'up') m.lookAt(_gdP.copy(G.pos).add(_gdQ.set(0, 1, 0))); else m.lookAt(_gdP.copy(G.pos).add(_gdF));
+    m.userData.mats[0].color.copy(col); m.userData.mats[1].color.copy(col); m.userData.mats[0].opacity = 0.42 + G.flash * 0.45;
+  }
+  // el escudo por técnica cargado: un anillo que gira a tu alrededor
+  if (G.charge >= 1) {
+    GV.ring.visible = true; GV.ring.position.copy(head.p); GV.ring.position.y -= isFloor() || head.p.y < 1.0 ? 0.08 : 0.32; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
+    GV.ring.material.opacity = 0.4 + 0.2 * Math.sin(t * 6);
+  }
+  // aviso de golpe: el enemigo tiembla y brilla mientras lo prepara, cada vez más rojo
+  let n = 0;
+  for (const e of enemies) {
+    const k = guardThreat(e); if (k < 0 || n >= 6) continue;
+    const sz = e.type === 'robot' ? 0.9 * e.sc : e.type === 'spider' ? 0.22 * e.s : 0.45 * Math.max(0.4, e.scale), amp = (e.type === 'robot' ? 0.015 * e.sc : e.type === 'spider' ? 0.004 * e.s : 0.01) * (0.4 + k);
+    e.root.position.x += Math.sin(t * 71 + n) * amp; e.root.position.z += Math.cos(t * 63 + n) * amp;
+    const w = guardWarnSpr(n++); e.center(w.position); w.visible = true;
+    w.material.color.setRGB(1, 0.75 - 0.6 * k, 0.2 - 0.15 * k); w.material.opacity = 0.3 + 0.45 * k;
+    const s = sz * (0.8 + 0.25 * Math.sin(t * (18 + 20 * k))); w.scale.set(s, s, 1);
+  }
+  updateGuardWaves(dt);
+  // en el marcador, cuando cambia lo bastante
+  const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
+}
+const _gdC = new THREE.Color();
+
+/* ---------- Al llegar un golpe ---------- */
+// Desde hurtPlayer: ¿lo para la guardia, una esquiva o el escudo? Si lo para, el golpe no hace daño
+function guardAbsorb(src) {
+  if (!guardOn() || !src || !(src.rock || src.type === 'robot' || src.type === 'spider' || src.type === 'flyer') || !['play', 'rest'].includes(state)) return false;
+  const G = GUARD, D = gDiff();
+  // con gesto: subida durante la preparación, parada (rebota y queda aturdido); mantenida desde antes, bloqueo. Los
+  // brazos arriba del press solo paran a los que vienen volando
+  if (G.up && (G.up !== 'up' || src.type === 'flyer' || src.rock)) {
+    const parry = G.upT <= D.win, p = G.up === 'bubble' ? guardPoint(src, new V3()) : G.pos.clone();
+    G.en = Math.max(0, G.en - (parry ? D.parry : D.block)); if (G.en <= 0) G.broke = true;
+    guardHitFx(p, parry, G.side); guardRepel(src, parry ? 0.6 : 0.3, parry ? D.stun : 0);
+    if (parry) stats.parries = (stats.parries || 0) + 1; else stats.blocks = (stats.blocks || 0) + 1;
+    say(parry ? '¡PARADA! Contraataca' : G.up === 'bubble' ? '¡La burbuja aguanta!' : '¡Bloqueado!', parry ? '#3cf0c6' : '#ffffff', 1.1);
+    return true;
+  }
+  // esquiva: con las manos ocupadas, apartar la cabeza de golpe justo antes
+  if (gestureOn() && guardFam() === 'busy' && guardDodged(src, D)) {
+    stats.dodges = (stats.dodges || 0) + 1; SND.whoosh(head.p); say('¡Esquivada!', '#3cf0c6', 1.0); score += 50; boardDirty = true;
+    return true;
+  }
+  // el escudo por técnica: para el golpe solo y aparta al enemigo
+  if (G.charge >= 1) {
+    G.charge = 0; G.ready = false; const p = guardPoint(src, new V3());
+    guardHitFx(p, true, null); guardRepel(src, 0.5, 1.0); stats.shields = (stats.shields || 0) + 1;
+    say('¡ESCUDO! Lo has repelido', '#3cf0c6', 1.2);
+    return true;
+  }
+  return false;
+}
+// Dónde se para el golpe: entre tu cabeza y el enemigo, a la altura del pecho
+function guardPoint(src, out) {
+  if (!src.center) return out.copy(head.p).addScaledVector(fwd(), 0.35);
+  const c = src.center(_gdQ), d = _gdP.subVectors(c, head.p); d.y = 0; const l = d.length() || 1;
+  return out.copy(head.p).addScaledVector(d, 0.38 / l).add(_gdQ.set(0, isFloor() ? -0.05 : -0.2, 0));
+}
+// Rebote: lo aparta (dist, en metros a su escala) y, en una parada, lo deja aturdido «stun» segundos
+function guardRepel(e, dist, stun) {
+  if (!e || !e.alive) return;
+  if (e.type === 'robot') { e.shove(dist * (e.K.boss ? 0.4 : 1)); if (stun) { e.stunT = Math.max(e.stunT || 0, stun * (e.K.boss ? 0.6 : 1)); e.stagger = 1; } }
+  else if (e.type === 'spider') { e.bounce = dist * 0.35; e.parryT = stun; }
+  else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1)); e.parryT = stun; }
+}
+function guardDodged(src, D) {
+  const H = GUARD.hist; if (H.length < 3 || !src.center) return false;
+  const now = H[H.length - 1]; let old = null; for (const h of H) if (now.t - h.t <= 0.55) { old = h; break; }
+  if (!old || old === now) return false;
+  const c = src.center(_gdQ), dx = c.x - head.p.x, dz = c.z - head.p.z, l = Math.hypot(dx, dz) || 1;
+  const mx = head.p.x - old.x, mz = head.p.z - old.z, lat = Math.abs((mx * dz - mz * dx) / l), down = old.y - head.p.y;
+  return lat > D.dodge || (src.type === 'flyer' && down > D.dodge * 1.2); // a los voladores, también agachando la cabeza
+}
+function guardHitFx(p, parry, side) {
+  SND.swordBlock(p, false); fx.sparks(p, parry ? 30 : 16, [1, 0.85, 0.4], 3, 0.04); fx.glow(p, [1, 1, 1], parry ? 0.8 : 0.5, 0.12); comicHit(p);
+  if (side) { haptic(side, 1, 80); haptic(side === 'left' ? 'right' : 'left', 0.35, 40); } else hapticBoth(parry ? 0.7 : 0.4, 60);
+  GUARD.flash = 1; score += parry ? 150 : 50; boardDirty = true;
+}
+function guardBreakFx() {
+  const p = GUARD.up === 'bubble' ? head.p.clone().addScaledVector(fwd(), 0.3) : GUARD.pos.clone();
+  fx.sparks(p, 10, [0.25, 0.95, 0.8], 1.6, 0.03); SND.pop(p, false);
+}
+
+/* ---------- Con cada repetición ---------- */
+// Carga el escudo por técnica (las perfectas, mucho; las rachas, un extra) y recarga la energía de la guardia; con las
+// manos ocupadas, la perfecta o profunda suelta la onda; en el swing, la kettlebell aparta a los que tienes delante
+function guardOnRep(opts) {
+  if (!guardOn()) return;
+  const G = GUARD, D = gDiff(), was = G.charge;
+  G.charge = Math.min(1, G.charge + (opts.perfect ? D.perf : D.rep) + (combo > 0 && combo % 5 === 0 ? D.streak : 0));
+  if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); say('¡ESCUDO LISTO! Parará el siguiente golpe', '#3cf0c6', 1.4); }
+  G.en = Math.min(1, G.en + (opts.perfect ? D.enP : D.en)); if (G.broke && G.en >= 0.3) G.broke = false;
+  if (!gestureOn()) return;
+  if (settings.exercise === 'swing') guardWave(true);
+  else if (guardFam() === 'busy' && (opts.perfect || (opts.pow || 1) >= 2)) guardWave(false);
+}
+// Onda expansiva: aparta a los que están cerca (y les quita el golpe que preparaban); front: solo los de delante
+function guardWave(front) {
+  if (GUARD.waveCD > 0) return;
+  _gdF.copy(fwdH()); let any = false;
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    const c = e.center(_gdQ), dx = c.x - head.p.x, dz = c.z - head.p.z, d = Math.hypot(dx, dz) || 1e-3;
+    const R = e.type === 'robot' ? 1.8 * Math.max(1, e.sc) : e.type === 'spider' ? 0.75 : isTiny() ? 0.6 : 1.4;
+    if (d > R || (front && (dx * _gdF.x + dz * _gdF.z) / d < 0.3)) continue;
+    any = true;
+    if (e.type === 'robot') e.shove(0.55 * (e.K.boss ? 0.4 : 1));
+    else if (e.type === 'spider') { e.shove(0.15); if (e.mode === 'rear' && !e.boss) { e.mode = 'run'; e.st = 0; e.run = false; e.runT = 0.5; } }
+    else if (e.type === 'flyer') { e.shove(0.6 * (isTiny() ? 0.42 : 1)); if (e.windT > 0 && e.windT < 0.45) { e.windT = 0; e.retreat = Math.max(e.retreat, 0.6); } }
+  }
+  if (!any) return;
+  GUARD.waveCD = 1.2; stats.waves = (stats.waves || 0) + 1; SND.whoosh(head.p);
+  let w = GV.waves.find(o => !o.m.visible);
+  if (!w) { const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 20; scene.add(m); w = { m, t: 0 }; GV.waves.push(w); }
+  w.t = 0; w.m.visible = true; w.m.position.set(head.p.x, Math.max(0.03, head.p.y - (isFloor() || head.p.y < 1.0 ? 0.25 : 1.1)), head.p.z); w.m.scale.setScalar(0.2);
+  say(front ? '¡Apartados!' : '¡Onda expansiva!', '#3cf0c6', 0.9, false);
+}
+function updateGuardWaves(dt) {
+  for (const w of GV.waves) if (w.m.visible) { w.t += dt; const k = w.t / 0.4; w.m.scale.setScalar(0.2 + k * 1.6); w.m.material.opacity = 0.6 * (1 - k); if (k >= 1) w.m.visible = false; }
+}
+
+/* ---------- En el marcador ---------- */
+function guardBoard(c, RX) {
+  if (!guardOn() || !['play', 'rest', 'ready'].includes(state)) return;
+  const G = GUARD, two = gestureOn(), w = two ? 160 : 330, y = 322;
+  c.textAlign = 'left'; c.font = `500 20px ${FB}`;
+  const x1 = RX - (two ? 2 * w + 30 : w);
+  c.fillStyle = G.charge >= 1 ? BC.teal : BC.lil; c.fillText(G.charge >= 1 ? 'ESCUDO LISTO' : 'ESCUDO', x1, y - 16);
+  boardBar(c, x1, y, w, 12, G.charge, BC.teal, '#7af7ff');
+  if (two) { const x2 = RX - w; c.fillStyle = G.broke ? '#ff8a3d' : BC.lil; c.fillText(G.broke ? 'SIN ENERGÍA' : 'GUARDIA', x2, y - 16); boardBar(c, x2, y, w, 12, G.en, G.broke ? '#ff8a3d' : BC.gold, '#ffe9a8'); }
+}
+
 
 /* =================== ENTRADA XR =================== */
 let lastStandYaw = 0;
@@ -10951,6 +11257,11 @@ function previewInput(dt) {
   if (oneArm() && GAME_STATES.includes(state)) for (const [s, sg, key] of [['left', -1, 'KeyQ'], ['right', 1, 'KeyE']]) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
+  }
+  // B: guardia (el puño izquierdo cerrado delante del pecho; con pesas, las dos manos juntas delante de la cara)
+  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of holdsWeights() ? [['left', -1], ['right', 1]] : [['left', -1]]) {
+    const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, sg * 0.06); h.wrist.y -= 0.25;
+    for (const j of [9, 14, 19, 24]) { const J = h.J[j]; J.ok = true; J.p.copy(h.wrist).addScaledVector(f, 0.05); }
   }
   if (PV.handAt) { const h = hands[PV.handSide || 'right']; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
   // Toques: G lleva al diamante la mano que pide (si ya volvió de su toque anterior)

@@ -164,6 +164,11 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
+  // B: guardia (el puño izquierdo cerrado delante del pecho; con pesas, las dos manos juntas delante de la cara)
+  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of holdsWeights() ? [['left', -1], ['right', 1]] : [['left', -1]]) {
+    const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, sg * 0.06); h.wrist.y -= 0.25;
+    for (const j of [9, 14, 19, 24]) { const J = h.J[j]; J.ok = true; J.p.copy(h.wrist).addScaledVector(f, 0.05); }
+  }
   if (PV.handAt) { const h = hands[PV.handSide || 'right']; h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(PV.handAt); h.tip.copy(PV.handAt); } // pruebas: mano en un punto
   // Toques: G lleva al diamante la mano que pide (si ya volvió de su toque anterior)
   if (settings.mode === 'touch' && PV.keys.KeyG && GAME_STATES.includes(state)) { const g = touchAssist('hand'); if (g) { const h = hands[g.hand], w = arena.localToWorld(g.pos.clone()); h.ok = h.tipOk = true; h.isHand = false; h.wrist.copy(w); h.tip.copy(w); } }
