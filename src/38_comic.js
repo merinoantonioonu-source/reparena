@@ -157,7 +157,7 @@ function comicEnvBuild() {
     side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, extensions: { derivatives: true }, uniforms: { uT: { value: 0 } },
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: `uniform float uT; varying vec3 vP;
-      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+      float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: en las Quest, sin(números grandes) pierde precisión y el ruido salía en bloques rectos)
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
       float fbm(vec2 p){ float v=0.0, a=0.6; for(int i=0;i<3;i++){ v+=a*vnoise(p); p*=2.03; a*=0.42; } return v / 0.9564; } // (pocas octavas: formas redondeadas)
       // bultos redondos (celdas: cerca de un punto de cada celda, alto): dan al borde las ondas de una nube de dibujo
@@ -173,8 +173,9 @@ function comicEnvBuild() {
         vec2 uv = d.xz / (max(h, 0.0) + 0.5) * 2.0 + vec2(uT * 0.008, uT * 0.003);
         float n = cloudF(uv, h), thr = 0.63 + 0.22 * (1.0 - smoothstep(0.05, 0.3, h));
         float fw = max(fwidth(n), 1e-4), cl = smoothstep(thr - fw, thr, n), ink = smoothstep(thr - fw * 3.5, thr - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
-        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube)
-        vec2 u2 = uv - normalize(d.xz + vec2(1e-4)) * 0.1; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
+        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube; el desplazamiento,
+        // sin normalizar: en lo más alto no da saltos)
+        vec2 u2 = uv - d.xz * 0.12; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
         vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), top);
         c = mix(c, cloud, cl); c = mix(c, vec3(0.2,0.13,0.25), ink * 0.85);
         gl_FragColor = vec4(c, 1.0);

@@ -13,7 +13,7 @@ const VX_RMIN = 0.07, VX_D = 1.3;
 const funY = r => -VX_D * ((1 - r) * 0.35 + 0.65 * (1 / Math.max(r, VX_RMIN) - 1) / (1 / VX_RMIN - 1));
 // estrías en espiral logarítmica (a: ángulo, z: profundidad del túnel) que giran y fluyen hacia dentro
 const SWIRL_GLSL = `
-float vxHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vxHash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: estable en las Quest)
 float vxNoise(vec2 p, float P) { // ruido suave que da la vuelta entera en P celdas (sin costura en el ángulo)
   vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float i1 = mod(i.x + 1.0, P); i.x = mod(i.x, P);
   return mix(mix(vxHash(i), vxHash(vec2(i1, i.y)), f.x), mix(vxHash(vec2(i.x, i.y + 1.0)), vxHash(vec2(i1, i.y + 1.0)), f.x), f.y);

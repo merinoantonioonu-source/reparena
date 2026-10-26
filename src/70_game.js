@@ -894,7 +894,9 @@ class Flyer {
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
   }
-  center(out) { this.root.getWorldPosition(out); return out; }
+  // (ya muerto, donde murió: se quita de la escena al momento y, fuera de ella, su posición saldría en coordenadas de la
+  // arena, lejos de donde estaba; el estallido y los puntos de onKilled salían desplazados)
+  center(out) { if (this.deadAt) return out.copy(this.deadAt); this.root.getWorldPosition(out); return out; }
   update(dt, t) {
     this.t += dt; const push = isTiny(), low = lowFly(), active = state === 'play' || state === 'rest';
     if (active) {
@@ -976,7 +978,7 @@ class Flyer {
     if (this.hp <= 0) this.kill();
   }
   kill() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1; this.deadAt = c.clone();
     if (this.inst.mx) { fx.ichor(c, big ? 30 : 18, (big ? 2.2 : 1.4) * s); fx.glow(c, [1, 0.7, 0.4], (big ? 0.8 : 0.4) * s, 0.12); SND.squish(c); if (big) { fx.explosion(c, 1.2 * s, true); SND.explosion(c, true); } this.dispose(); return; } // (sin chatarra)
     if (this.kind === 'hornet') { fx.ichor(c, 18, 1.5 * s); fx.glow(c, [1, 0.8, 0.3], 0.4 * s, 0.1); SND.squish(c); }
     else { fx.explosion(c, (big ? 1.4 : 0.55) * s, big); SND.explosion(c, big); }
