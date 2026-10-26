@@ -164,7 +164,8 @@ function spBlockMusic(b) {
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
-    else if (spLists().length && !SP.started) await spPlayLists(); // la primera vez, tus listas; luego Play reanuda
+    else if (spPicks().length && !SP.started) { await spPlayTracks(spPicks()); SP.block = null; } // la primera vez, tus canciones elegidas (en orden y en bucle)…
+    else if (spLists().length && !SP.started) await spPlayLists(); // …o tus listas; luego Play reanuda
     else if (spHereOk() && !spHereNow()) await spToHere(); // en pausa en otro dispositivo: Play la trae a las gafas
     else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; }
     else await spWake();
@@ -274,6 +275,7 @@ function musicRows() {
 // Elegir en el juego cualquiera de tus listas (de 8 en 8) y, dentro, ponerla entera, al azar o desde una canción
 function spListMenu(back, page = 0) {
   const again = p => spListMenu(back, p), rows = [{ t: 'title', text: 'TUS LISTAS' }];
+  if (spPicks().length) rows.push({ t: 'btns', items: [{ label: `▶ Tus canciones elegidas (${spPicks().length})`, style: 'primary', onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }] });
   if (!SP.mine) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando tus listas…', color: SP.loadErr ? '#ff8a3d' : '#ffd166' });
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
@@ -342,14 +344,33 @@ function spInitPage() {
   spHandleRedirect();
   spPlayerInit();
 }
-// Casillas con tus listas (las cargadas y, si no, las ya elegidas)
+// Tus listas: cada una con su casilla (toda la lista) y «Canciones ▾», que despliega sus canciones para elegir solo las
+// que quieras. Las canciones elegidas (de una o varias listas) suenan ellas, en el orden en que las marcaste y en bucle;
+// si no eliges ninguna, suenan las listas marcadas (varias, mezcladas). Los nombres largos ocupan las líneas que haga falta
+const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
+const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
-  const chosen = new Set(spLists().map(l => l.id)), all = SP.mine || spLists();
-  host.innerHTML = all.map(l => `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${String(l.name).replace(/[<&"]/g, c => ({ '<': '&lt;', '&': '&amp;', '"': '&quot;' }[c]))}</span></label>`).join('');
-  if (!host.querySelectorAll) return;
-  host.querySelectorAll('input').forEach(i => i.addEventListener('change', () => {
-    const on = new Set([...host.querySelectorAll('input:checked')].map(x => x.dataset.id));
-    SP.cfg.lists = all.filter(l => on.has(l.id)).map(l => ({ id: l.id, name: l.name, uri: l.uri })); SP.started = false; spSave(); spMenuSync();
-  }));
+  const chosen = new Set(spLists().map(l => l.id)), all = SP.mine || spLists(), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
+  let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle.<div class="chips">${P.map((t, k) => `<span class="chip">${k + 1}. ${escSp(t.name)}<button class="btn tiny" data-sp="rm" data-k="${k}" aria-label="Quitar ${escSp(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
+  h += all.map(l => {
+    const T = open === l.id && SP.trk && SP.trk[l.id];
+    return `<div class="sprow"><label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label><button class="btn tiny" data-sp="open" data-id="${l.id}" aria-expanded="${open === l.id}">${open === l.id ? 'Canciones ▴' : 'Canciones ▾'}</button>
+      ${open === l.id ? (T ? `<div class="sptracks">${T.length ? T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('') : '<p class="hint">Esta lista no tiene canciones que se puedan poner.</p>'}</div>` : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`) : ''}</div>`;
+  }).join('');
+  host.innerHTML = h;
+  if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
+  host.addEventListener('change', ev => {
+    const el = ev.target, all2 = SP.mine || spLists();
+    if (el.dataset.id) { const on2 = new Set([...host.querySelectorAll('input[data-id]:checked')].map(x => x.dataset.id)); SP.cfg.lists = all2.filter(l => on2.has(l.id)).map(l => ({ id: l.id, name: l.name, uri: l.uri })); }
+    else if (el.dataset.trk) { const T = (SP.trk && SP.trk[SP.openList]) || [], t = T.find(x => x.uri === el.dataset.trk); if (!t) return; const P2 = spPicks(); SP.cfg.picks = el.checked ? (P2.some(x => x.uri === t.uri) || P2.length >= 100 ? P2 : P2.concat({ uri: t.uri, name: t.name, by: t.by })) : P2.filter(x => x.uri !== t.uri); spListsPage(); }
+    SP.started = false; spSave(); spMenuSync();
+  });
+  host.addEventListener('click', ev => {
+    const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
+    if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = SP.openList === id ? null : id; SP.trkErr = ''; spListsPage();
+      if (SP.openList && !(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
+    if (b.dataset.sp === 'rm') SP.cfg.picks = spPicks().filter((_, k) => k !== +b.dataset.k); else if (b.dataset.sp === 'clear') SP.cfg.picks = [];
+    SP.started = false; spSave(); spListsPage(); spMenuSync();
+  });
 }
