@@ -910,6 +910,7 @@ function drawBoard() {
   else if (pistolOn() && live) ch = [`▮ ${GUN.ammo}`, GUN.ammo ? BC.teal : '#ff8a3d'];
   else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
   if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
+  guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
   // abajo: lo de hoy
   boardDay2(c, W, 356);
   board.tex.needsUpdate = true;
