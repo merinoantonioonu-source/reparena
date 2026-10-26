@@ -176,7 +176,7 @@ function beastRig(kind) {
     } else {
       mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
-      const still = mat.clone(); still.skinning = false; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
+      const still = mat.clone(); still.skinning = false; still.userData.keepMap = true; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
       model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; } });
     }
     const root = new THREE.Group(); root.add(model);

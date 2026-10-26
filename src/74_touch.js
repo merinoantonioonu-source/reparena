@@ -420,12 +420,21 @@ function touchStep(dt, t) {
     TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
   }
   if (state === 'paused') return;
+  // la compuerta de delante (por donde llegan), abierta mientras dura la oleada; al acabar se cierra y vuelve a abrirse
+  // con la siguiente
+  if (state === 'play' && (spawnQueue.length || touchLeft())) for (const g of tchGates()) g.openT = Math.max(g.openT, 0.6);
   TCH.hintT -= dt; sampleHands(dt);
   for (const x of touches) if (x.alive) x.update(dt, t);
   touches = touches.filter(x => x.alive);
   TCH.prevHL.copy(HL); TCH.hadHL = true;
 }
 const touchLeft = () => touches.some(x => x.alive && !x.judged);
+// las compuertas que quedan delante (a menos de 30° del frente); si no hay ninguna, la más centrada
+function tchGates() {
+  const l = liveGates().filter(g => g.g.visible !== false), ang = g => Math.abs(Math.atan2(g.x, -g.z));
+  const front = l.filter(g => ang(g) < 0.52); if (front.length || !l.length) return front;
+  return [l.reduce((a, b) => ang(b) < ang(a) ? b : a)];
+}
 function touchClear() { touches.forEach(x => x.alive && x.dispose()); touches = []; touchRearm(); }
 // En el ordenador: el siguiente objetivo al que llevar la cabeza (Espacio) o la mano (G). Si esa parte aún no ha
 // vuelto a su postura tras el toque anterior, ninguno: así vuelve primero a casa

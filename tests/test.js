@@ -623,6 +623,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // se pueden tocar mientras viajan: la cabeza va a buscar la ameba (o la mano el diamante) a mitad de camino,
   // y entre un toque y el siguiente vuelve a su postura de partida
   const midway = new Set(); let home = null;
+  // la compuerta de delante, abierta mientras llegan los objetivos; cerrada en el descanso; se reabre en la oleada siguiente
+  { const seen = { play: 0, playN: 0, rest: 0, restN: 0, reopen: false }; let rests = 0, lastSt = '';
+    await runConfig('Toques: compuerta abierta durante la oleada', { ...base, mode: 'touch', exercise: 'slam', lives: 0, waves: 2, repsWave: 4, rest: 4, tchHands: 40, tchArrive: 2, tchGap: 2 }, t => {
+      assist(); const open = Math.max(...RA.gates.map(g => g.open));
+      if (RA.state !== lastSt) { if (RA.state === 'rest') rests++; lastSt = RA.state; }
+      if (RA.state === 'play' && RA.touches.some(x => x.alive && !x.judged && x.mode === 'approach')) { seen.playN++; if (open > 0.8) seen.play++; if (rests) seen.reopen = seen.reopen || open > 0.8; }
+      if (RA.state === 'rest' && RA.stateT > 2) { seen.restN++; if (open < 0.1) seen.rest++; }
+    });
+    RA.PV.keys.KeyG = false; RA.PV.crouch = false;
+    log(`touch gate: open while targets come ${seen.play}/${seen.playN} · closed in the rest ${seen.rest}/${seen.restN} · reopened next wave ${seen.reopen}`);
+    if (seen.play < seen.playN * 0.7 || seen.rest < seen.restN * 0.9 || !seen.restN || !seen.reopen) errors.push('Toques: la compuerta debería estar abierta mientras llegan los objetivos, cerrada en el descanso y reabrirse en la oleada siguiente'); }
   await runConfig('Toques en pleno viaje', { ...base, mode: 'touch', exercise: 'slam', waves: 1, repsWave: 5, lives: 0, tchArrive: 4, tchGap: 4.5, tchHands: 40 }, () => {
     if (RA.PV.home) { home = RA.PV.home.clone(); RA.PV.home = null; }
     const x = RA.touches.find(o => o.alive && !o.judged && o.mode === 'approach' && RA.TCH.clock > o.spawnT + 1.5);

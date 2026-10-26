@@ -64,7 +64,9 @@ function comicSet(m, on) {
   const S = COMIC.st.get(m); if (!S || S.on === on) return;
   S.on = on;
   if (on) {
-    const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap);
+    // (los que tienen esqueleto conservan su textura de color: el diablillo y el Puglin se tiñen al recibir reescribiendo el
+    // color en cada fotograma, y sin la textura se quedaban blancos)
+    const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap) && !m.skinning && !m.userData.keepMap;
     if (detailed && m.map) { const a = texAvg(m.map); if (a) { sv.color = m.color.getHex(); m.color.multiply(pastel(a)); } }
     for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { sv[k] = m[k]; m[k] = null; }
   } else if (S.saved) { const sv = S.saved; if (sv.color !== undefined) { m.color.setHex(sv.color); delete sv.color; } Object.assign(m, sv); S.saved = null; }
@@ -157,15 +159,24 @@ function comicEnvBuild() {
     fragmentShader: `uniform float uT; varying vec3 vP;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
-      float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
+      float fbm(vec2 p){ float v=0.0, a=0.6; for(int i=0;i<3;i++){ v+=a*vnoise(p); p*=2.03; a*=0.42; } return v / 0.9564; } // (pocas octavas: formas redondeadas)
+      // bultos redondos (celdas: cerca de un punto de cada celda, alto): dan al borde las ondas de una nube de dibujo
+      float bumps(vec2 p){ vec2 i=floor(p), f=fract(p); float m=1.0; for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 o=vec2(float(x),float(y)); vec2 q=o+vec2(hash(i+o), hash(i+o+17.3))*0.8+0.1; m=min(m, length(q-f)); } return 1.0-m; }
+      // (los bultos, solo junto al borde de una nube: sin motas sueltas en el cielo)
+      // (hacia el horizonte, donde todo se ve más pequeño, sin bultos: no salen granitos)
+      float cloudF(vec2 p, float h){ float f = fbm(p); return f * 0.88 + bumps(p * 5.0) * 0.14 * smoothstep(0.42, 0.58, f) * smoothstep(0.06, 0.3, h); }
       void main(){
         vec3 d = normalize(vP); float h = d.y;
         vec3 c = mix(vec3(1.0,0.85,0.72), vec3(0.62,0.8,1.0), smoothstep(-0.02, 0.4, h)); c = mix(c, vec3(0.45,0.66,0.98), smoothstep(0.4, 0.95, h));
-        vec2 uv = d.xz / (max(h, 0.0) + 0.25) * 0.9 + vec2(uT * 0.008, uT * 0.003);
-        float n = fbm(uv), mh = smoothstep(0.03, 0.12, h);
-        float fw = max(fwidth(n), 1e-4), cl = smoothstep(0.55 - fw, 0.55, n), ink = smoothstep(0.55 - fw * 3.5, 0.55 - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
-        vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), smoothstep(0.57, 0.64, fbm(uv + vec2(0.04, 0.06))));
-        c = mix(c, cloud, cl * mh); c = mix(c, vec3(0.2,0.13,0.25), ink * mh * 0.85);
+        // las nubes, en una cúpula que apenas se estira hacia el horizonte; allí no se cortan: encogen (el umbral sube), así
+        // cada una sigue entera con su borde de tinta y no quedan franjas planas ni cortes rectos
+        vec2 uv = d.xz / (max(h, 0.0) + 0.5) * 2.0 + vec2(uT * 0.008, uT * 0.003);
+        float n = cloudF(uv, h), thr = 0.63 + 0.22 * (1.0 - smoothstep(0.05, 0.3, h));
+        float fw = max(fwidth(n), 1e-4), cl = smoothstep(thr - fw, thr, n), ink = smoothstep(thr - fw * 3.5, thr - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
+        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube)
+        vec2 u2 = uv - normalize(d.xz + vec2(1e-4)) * 0.1; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
+        vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), top);
+        c = mix(c, cloud, cl); c = mix(c, vec3(0.2,0.13,0.25), ink * 0.85);
         gl_FragColor = vec4(c, 1.0);
       }`
   });

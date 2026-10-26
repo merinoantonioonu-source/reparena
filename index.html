@@ -2082,15 +2082,17 @@ const flashLight = new THREE.PointLight(0xffa050, 0, 14, 2); scene.add(flashLigh
 
 
 /* =================== PANELES DE TEXTO =================== */
+// opts.hd: el lienzo, tantas veces más grande (más nítido), dibujando igual (W y H siguen siendo los de px)
 function makePanel(w, h, px = 1024, opts = {}) {
-  const c = mkCanvas(px, Math.round(px * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const k = opts.hd || 1, c = mkCanvas(Math.round(px * k), Math.round(px * k * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  if (k !== 1 && ctx.scale) ctx.scale(k, k);
   tex.encoding = THREE.sRGBEncoding; tex.anisotropy = MAX_ANISO;
   // escriben su profundidad (lo transparente del lienzo, no): las Quest recolocan cada imagen al último movimiento de la
   // cabeza según la profundidad de cada punto, y un panel sin ella se recolocaba como si estuviera al fondo (temblaba)
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: opts.depthWrite !== false, alphaTest: 0.04, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   if (opts.depthTest === false) m.renderOrder = 30;
-  return { c, ctx, tex, mesh: m, w, h, W: c.width, H: c.height };
+  return { c, ctx, tex, mesh: m, w, h, W: Math.round(c.width / k), H: Math.round(c.height / k) };
 }
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const FD = '"Bungee","Arial Black",sans-serif', FB = '"Rubik",system-ui,sans-serif';
@@ -3785,7 +3787,9 @@ function comicSet(m, on) {
   const S = COMIC.st.get(m); if (!S || S.on === on) return;
   S.on = on;
   if (on) {
-    const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap);
+    // (los que tienen esqueleto conservan su textura de color: el diablillo y el Puglin se tiñen al recibir reescribiendo el
+    // color en cada fotograma, y sin la textura se quedaban blancos)
+    const sv = S.saved = {}, detailed = !!(m.normalMap || m.roughnessMap) && !m.skinning && !m.userData.keepMap;
     if (detailed && m.map) { const a = texAvg(m.map); if (a) { sv.color = m.color.getHex(); m.color.multiply(pastel(a)); } }
     for (const k of [...COMIC_MAPS, ...(detailed ? ['map'] : [])]) { sv[k] = m[k]; m[k] = null; }
   } else if (S.saved) { const sv = S.saved; if (sv.color !== undefined) { m.color.setHex(sv.color); delete sv.color; } Object.assign(m, sv); S.saved = null; }
@@ -3878,15 +3882,24 @@ function comicEnvBuild() {
     fragmentShader: `uniform float uT; varying vec3 vP;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
-      float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
+      float fbm(vec2 p){ float v=0.0, a=0.6; for(int i=0;i<3;i++){ v+=a*vnoise(p); p*=2.03; a*=0.42; } return v / 0.9564; } // (pocas octavas: formas redondeadas)
+      // bultos redondos (celdas: cerca de un punto de cada celda, alto): dan al borde las ondas de una nube de dibujo
+      float bumps(vec2 p){ vec2 i=floor(p), f=fract(p); float m=1.0; for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 o=vec2(float(x),float(y)); vec2 q=o+vec2(hash(i+o), hash(i+o+17.3))*0.8+0.1; m=min(m, length(q-f)); } return 1.0-m; }
+      // (los bultos, solo junto al borde de una nube: sin motas sueltas en el cielo)
+      // (hacia el horizonte, donde todo se ve más pequeño, sin bultos: no salen granitos)
+      float cloudF(vec2 p, float h){ float f = fbm(p); return f * 0.88 + bumps(p * 5.0) * 0.14 * smoothstep(0.42, 0.58, f) * smoothstep(0.06, 0.3, h); }
       void main(){
         vec3 d = normalize(vP); float h = d.y;
         vec3 c = mix(vec3(1.0,0.85,0.72), vec3(0.62,0.8,1.0), smoothstep(-0.02, 0.4, h)); c = mix(c, vec3(0.45,0.66,0.98), smoothstep(0.4, 0.95, h));
-        vec2 uv = d.xz / (max(h, 0.0) + 0.25) * 0.9 + vec2(uT * 0.008, uT * 0.003);
-        float n = fbm(uv), mh = smoothstep(0.03, 0.12, h);
-        float fw = max(fwidth(n), 1e-4), cl = smoothstep(0.55 - fw, 0.55, n), ink = smoothstep(0.55 - fw * 3.5, 0.55 - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
-        vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), smoothstep(0.57, 0.64, fbm(uv + vec2(0.04, 0.06))));
-        c = mix(c, cloud, cl * mh); c = mix(c, vec3(0.2,0.13,0.25), ink * mh * 0.85);
+        // las nubes, en una cúpula que apenas se estira hacia el horizonte; allí no se cortan: encogen (el umbral sube), así
+        // cada una sigue entera con su borde de tinta y no quedan franjas planas ni cortes rectos
+        vec2 uv = d.xz / (max(h, 0.0) + 0.5) * 2.0 + vec2(uT * 0.008, uT * 0.003);
+        float n = cloudF(uv, h), thr = 0.63 + 0.22 * (1.0 - smoothstep(0.05, 0.3, h));
+        float fw = max(fwidth(n), 1e-4), cl = smoothstep(thr - fw, thr, n), ink = smoothstep(thr - fw * 3.5, thr - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
+        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube)
+        vec2 u2 = uv - normalize(d.xz + vec2(1e-4)) * 0.1; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
+        vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), top);
+        c = mix(c, cloud, cl); c = mix(c, vec3(0.2,0.13,0.25), ink * 0.85);
         gl_FragColor = vec4(c, 1.0);
       }`
   });
@@ -4870,7 +4883,7 @@ function beastRig(kind) {
     } else {
       mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
-      const still = mat.clone(); still.skinning = false; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
+      const still = mat.clone(); still.skinning = false; still.userData.keepMap = true; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
       model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; } });
     }
     const root = new THREE.Group(); root.add(model);
@@ -5269,7 +5282,7 @@ function drawRank(c, i, x, y, S, col) {
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
     this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge;
-    this.p = makePanel(w, h, Math.round(clamp(2200 * w, 192, 1024)), { depthTest: o.depthTest });
+    this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
   setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { const rec = style && style !== this.style; this.label = l; if (style) this.style = style; this.draw(); if (rec && this.setHover) this.setHover(this.hover, true); } }
@@ -5302,7 +5315,7 @@ class Btn {
 class Slider {
   constructor(f, w, h, onDrag) {
     this.kind = 'slider'; this.f = f; this.w = w; this.h = h; this.onDrag = onDrag; this.value = settings[f.key]; this.pad = 0.012;
-    this.p = makePanel(w, h, Math.round(clamp(2200 * w, 256, 1024))); this.mesh = this.p.mesh; this.hover = false; this.baseZ = 0; this.prevZ = {}; this.pending = false; this.draw();
+    this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048))); this.mesh = this.p.mesh; this.hover = false; this.baseZ = 0; this.prevZ = {}; this.pending = false; this.draw();
   }
   frac() { return (this.value - this.f.min) / (this.f.max - this.f.min); }
   draw() {
@@ -5328,7 +5341,7 @@ class Slider {
 // canto biselado, con la luz ya pintada (arriba claras, los laterales más oscuros y el de abajo aún más) sobre una bandeja
 // oscura con grosor. Todas las de un menú van en una sola malla (un solo dibujo); al pulsar una se mueven sus vértices y,
 // con el dedo encima, se aclara (sin volver a pintar su etiqueta)
-const KEY_H = 0.012; // alto de las teclas, en metros reales
+const KEY_H = 0.012, KEY_RO = 51; // alto de las teclas, en metros reales; su orden de dibujo (tras OUT.black)
 const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
   danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
 // con el estilo cómic: teclas de colores claros con la letra oscura, sobre una bandeja violeta (y con contorno de tinta)
@@ -5375,13 +5388,13 @@ const knobGeo = (() => {
 })();
 // list: botones y deslizadores ya colocados; tray: { w, h, d } la bandeja bajo todo
 function buildKeys(group, list, kh, tray) {
-  const P = [], I = [], R = [];
+  const P = [], I = [], R = [], IO = []; // IO: los triángulos con contorno (sin la cara de arriba)
   const shapeOf = (cx, cy, w, h, z0, top, colHex, flat) => {
     const start = P.length / 3, a = w / 2, b = h / 2, t = Math.min(0.007, Math.min(w, h) * 0.14), r0 = Math.min(a, b) * 0.34, H = top - z0, ao = [];
     // de abajo arriba: la base, el lateral (que se estrecha), el hombro redondeado y el canto; la bandeja, recta
     const rings = flat ? [[0, z0, 1], [0, top, 1]] : [[0, z0, 0.55], [t * 0.15, z0 + H * 0.45, 0.85], [t * 0.5, z0 + H * 0.8, 1], [t * 0.82, z0 + H * 0.95, 1], [t, top, 1]];
     rings.forEach(([ins, z, o]) => { keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), z); for (let i = 0; i < KRING; i++) ao.push(o); });
-    for (let k = 0; k + 1 < rings.length; k++) for (let i = 0; i < KRING; i++) { const A = start + k * KRING + i, B = start + k * KRING + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); }
+    for (let k = 0; k + 1 < rings.length; k++) for (let i = 0; i < KRING; i++) { const A = start + k * KRING + i, B = start + k * KRING + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); IO.push(A, B, B + KRING, A, B + KRING, A + KRING); }
     if (!flat) { // la cara de arriba, algo cóncava (como las teclas de verdad): su borde, un anillo más adentro algo más hondo y el centro
       const c0 = P.length / 3, dish = H * 0.1;
       keyRing(P, cx, cy, a - t, b - t, Math.max(0.002, r0 - t * 0.5), top); keyRing(P, cx, cy, (a - t) * 0.72, (b - t) * 0.6, Math.max(0.002, (r0 - t * 0.5) * 0.7), top - dish * 0.75); P.push(cx, cy, top - dish);
@@ -5397,10 +5410,14 @@ function buildKeys(group, list, kh, tray) {
   const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(C, 3);
   if (pos.setUsage) { pos.setUsage(THREE.DynamicDrawUsage); col.setUsage(THREE.DynamicDrawUsage); }
   g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
-  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; group.add(mesh);
+  // (se pintan después de la esfera negra del final de la ronda, OUT.black, que tapa todo lo opaco: si no, en el resumen las
+  // teclas salían negras y no se leía lo que ponían)
+  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; group.add(mesh);
   if (comicOn()) { // contorno de tinta de las teclas y la bandeja (comparte las posiciones: al hundir una tecla, su contorno la sigue)
     g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); outN(g);
-    const o = new THREE.Mesh(g, outlMat(false)); o.userData.isOutline = true; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
+    // (solo los laterales: la cara de arriba es cóncava y, vista en ángulo, su contorno asomaba por ella como grietas)
+    const go = new THREE.BufferGeometry(); go.setAttribute('position', pos); go.setAttribute('normal', g.attributes.normal); go.setAttribute('aOutN', g.attributes.aOutN); go.setIndex(IO);
+    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
   }
   const base = new Float32Array(P), K = { mesh, pos, col, base };
   const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
@@ -5411,7 +5428,7 @@ function buildKeys(group, list, kh, tray) {
     w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
     if (w.kind === 'slider') { // la bolita: se arrastra por la ranura
       const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
-      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; w.mesh.add(m); w.knob = m; w.draw(); continue;
+      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; w.mesh.add(m); w.knob = m; w.draw(); continue;
     }
     // al hundirla, además de bajar, se encoge un poco y se oscurece (de frente, el descenso solo apenas se veía); al pulsar, destella
     w.setPush = p => {
@@ -5575,7 +5592,7 @@ function openMenu(rows, opts = {}) {
   const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
-  const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
+  const bg = makePanel(MW, H, 1024, { hd: 1.75 }); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh); // (lienzo de 1792 px: letras nítidas)
   const c = bg.ctx, sc = bg.W / MW;
   // la bandeja de las teclas: gris muy oscuro, con un filo del color de la sección
   if (comicOn()) { // en cómic: violeta con una trama de puntos (como el papel de los cómics), borde de tinta y un filo del color de la sección
@@ -5684,7 +5701,7 @@ function openKeypad(f, row) {
   const KH = PAD * 2 + dispH + 5 * kh + 5 * g;
   const ksc = menu.wrist ? wristScale() : 1, kkh = KEY_H / ksc, kd = 0.01 / ksc;
   const grp = new THREE.Group(); grp.position.set(0, 0, kkh + kd + 0.004 / ksc); menu.group.add(grp); // (por encima de las teclas del menú)
-  const bg = makePanel(KW, KH, 640); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
+  const bg = makePanel(KW, KH, 640, { hd: 1.75 }); bg.mesh.renderOrder = RO.keypad; grp.add(bg.mesh);
   const kp = { f, row, str: '', fresh: true, grp, bg, widgets: [], KW, KH, dispH };
   const keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', '⌫'];
   let y0 = KH / 2 - PAD - dispH - g;
@@ -10531,12 +10548,21 @@ function touchStep(dt, t) {
     TCH.nextArrive = Math.max(TCH.nextArrive, TCH.clock) + tchGapFor(spec.move); boardDirty = true;
   }
   if (state === 'paused') return;
+  // la compuerta de delante (por donde llegan), abierta mientras dura la oleada; al acabar se cierra y vuelve a abrirse
+  // con la siguiente
+  if (state === 'play' && (spawnQueue.length || touchLeft())) for (const g of tchGates()) g.openT = Math.max(g.openT, 0.6);
   TCH.hintT -= dt; sampleHands(dt);
   for (const x of touches) if (x.alive) x.update(dt, t);
   touches = touches.filter(x => x.alive);
   TCH.prevHL.copy(HL); TCH.hadHL = true;
 }
 const touchLeft = () => touches.some(x => x.alive && !x.judged);
+// las compuertas que quedan delante (a menos de 30° del frente); si no hay ninguna, la más centrada
+function tchGates() {
+  const l = liveGates().filter(g => g.g.visible !== false), ang = g => Math.abs(Math.atan2(g.x, -g.z));
+  const front = l.filter(g => ang(g) < 0.52); if (front.length || !l.length) return front;
+  return [l.reduce((a, b) => ang(b) < ang(a) ? b : a)];
+}
 function touchClear() { touches.forEach(x => x.alive && x.dispose()); touches = []; touchRearm(); }
 // En el ordenador: el siguiente objetivo al que llevar la cabeza (Espacio) o la mano (G). Si esa parte aún no ha
 // vuelto a su postura tras el toque anterior, ninguno: así vuelve primero a casa
@@ -11375,14 +11401,14 @@ renderer.setAnimationLoop((time, frame) => {
 // (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
 const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
-function qualApply(lv, session = renderer.xr.getSession()) {
-  QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+function qualApply(lv, session = renderer.xr.getSession(), sharp = false) {
+  if (!sharp) QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
   const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
   if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
     const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
-    if ('fixedFoveation' in L) L.fixedFoveation = 1;
+    if ('fixedFoveation' in L) L.fixedFoveation = sharp ? 0.4 : 1;
     session.updateRenderState({ baseLayer: L });
   } catch (e) { console.warn('calidad', e && e.message); }
 }
@@ -11390,7 +11416,10 @@ function qualStep(dt) {
   QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
   const s = renderer.xr.getSession(); if (!s || preview) return;
   if (settings.quality !== 'auto') { qualApply(QFIX[settings.quality] || 0, s); return; }
-  if (QUAL.applied < 0) qualApply(QUAL.lv, s);
+  // con un menú abierto fuera de la partida (inicio, pausa, resumen), a resolución completa y con menos foveación: las letras,
+  // nítidas (también en realidad mixta, donde la calidad automática solía bajar); al volver a jugar, la que tenía
+  if (menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state)) { if (QUAL.applied !== -2) { QUAL.applied = -3; qualApply(0, s, true); QUAL.applied = -2; } QUAL.t = 0; QUAL.n = 0; return; }
+  if (QUAL.applied !== QUAL.lv) { QUAL.applied = -1; qualApply(QUAL.lv, s); }
   const hz = s.frameRate || +settings.xrHz || 72; QUAL.now += dt; QUAL.t += dt; QUAL.n++; QUAL.cool -= dt; QUAL.block -= dt;
   if (QUAL.t < 1) return;
   const fps = QUAL.n / QUAL.t; QUAL.t = 0; QUAL.n = 0;
