@@ -161,6 +161,7 @@ const fx = {
   muzzle(pos, color) { fx.glow(pos, color, 0.25, 0.1); fx.sparks(pos, 6, color, 1.5, 0.025); },
   electric(pos, n = 14) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rv(1).multiplyScalar(rand(1, 3)), life: rand(0.1, 0.35), c0: [0.9, 0.9, 1], c1: [1, 0.25, 0.15], s0: 0.04, s1: 0.01, tile: 3, fin: 0.01 }); fx.glow(pos, [1, 0.4, 0.3], 0.5, 0.12); },
   explosion(pos, size = 1, big = false) {
+    if (comicOn()) { comicBoom(pos, size * (big ? 1.6 : 1)); fx.sparks(pos, big ? 20 : 10, [1, 0.8, 0.2], 4 * Math.sqrt(size), 0.05); return; } // en cómic, nubes de humo dibujadas
     fx.glow(pos, [1, 0.85, 0.6], 2.2 * size, 0.14);
     for (let i = 0; i < (big ? 26 : 14); i++) PADD.add({ pos: pos.clone().add(rv(0.15 * size)), v: rv(1).multiplyScalar(2.2 * size), life: rand(0.45, 0.95), c0: [1, 0.85, 0.45], c1: [0.55, 0.08, 0.01], s0: 0.35 * size, s1: 1.25 * size, tile: 2, rotV: rand(-3, 3), drag: 3, fin: 0.04 });
     for (let i = 0; i < (big ? 22 : 12); i++) PNORM.add({ pos: pos.clone().add(rv(0.25 * size)), v: rv(1).multiplyScalar(1.2 * size).add(new V3(0, 0.5 * size, 0)), life: rand(1.8, 3.2), c0: [0.13, 0.11, 0.1], c1: [0.07, 0.065, 0.06], a: 0.75, s0: 0.5 * size, s1: 2.3 * size, tile: 1, rotV: rand(-0.6, 0.6), drag: 1.6, fin: 0.12 });

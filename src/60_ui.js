@@ -52,7 +52,7 @@ class Btn {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
     if (this.cap) { // tecla de verdad (buildKeys): el cuerpo es la tecla; aquí solo lo que va impreso encima
-      const tc = (KEYC[this.style] || KEYC.normal)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const tc = keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
       if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, tc);
@@ -107,6 +107,10 @@ class Slider {
 const KEY_H = 0.012; // alto de las teclas, en metros reales
 const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
   danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
+// con el estilo cómic: teclas de colores claros con la letra oscura, sobre una bandeja violeta (y con contorno de tinta)
+const KEYC_C = { normal: [0x8fc7ff, '#1b1222'], primary: [0xff8a3d, '#1b1222'], selected: [0xffd23f, '#1b1222'], value: [0xfff2d6, '#c2410c'], tab: [0xc9b8ff, '#1b1222'],
+  danger: [0xff6b7f, '#1b1222'], key: [0x8fc7ff, '#1b1222'], ghost: [0xd9d2e9, '#5a4f73'], slider: [0xfff2d6, ''], tray: [0x3a2d5c, ''] };
+const keyc = style => { const P = comicOn() ? KEYC_C : KEYC; return P[style] || P.normal; };
 // la luz con la que se pintan las teclas (en el plano del menú: x a la derecha, y arriba, z hacia ti): de arriba a la izquierda
 const KEY_L = new V3(-0.42, 0.62, 0.66).normalize(), KEY_HV = KEY_L.clone().add(new V3(0, 0, 1)).normalize();
 // anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
@@ -128,6 +132,10 @@ function vNormals(P, I) {
 // un color con su luz: difusa desde KEY_L, un brillo donde la superficie refleja hacia ti y oscurecido abajo (ao)
 function shadeInto(C, i, col, N, ao, spec = 0.32) {
   const o = i * 3, d = Math.max(0, N[o] * KEY_L.x + N[o + 1] * KEY_L.y + N[o + 2] * KEY_L.z), h = Math.max(0, N[o] * KEY_HV.x + N[o + 1] * KEY_HV.y + N[o + 2] * KEY_HV.z);
+  if (comicOn() && spec < 0.45) { // cómic: dos tonos, la sombra violácea (la bolita de los deslizadores sigue como siempre)
+    const lit = d > 0.35, f = (lit ? 1 : 0.8) * (0.6 + 0.4 * ao);
+    C[o] = Math.min(1, col.r * f * (lit ? 1 : 0.88)); C[o + 1] = Math.min(1, col.g * f * (lit ? 1 : 0.84)); C[o + 2] = Math.min(1, col.b * f); return;
+  }
   const f = (0.34 + 0.78 * d) * ao, sp = spec * Math.pow(h, 28);
   C[o] = Math.min(1, col.r * f + sp); C[o + 1] = Math.min(1, col.g * f + sp); C[o + 2] = Math.min(1, col.b * f + sp);
 }
@@ -156,16 +164,20 @@ function buildKeys(group, list, kh, tray) {
       for (let i = 0; i < KRING * 2 + 1; i++) ao.push(1);
       for (let i = 0; i < KRING; i++) { const A = c0 + i, B = c0 + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); I.push(c0 + KRING * 2, c0 + KRING + i, c0 + KRING + (i + 1) % KRING); }
     }
-    return { start, count: P.length / 3 - start, ao, col: colHex };
+    return { start, count: P.length / 3 - start, ao, col: colHex, cx, cy };
   };
-  if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, KEYC.tray[0], true) });
-  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, w.kind === 'slider' ? KEYC.slider[0] : (KEYC[w.style] || KEYC.normal)[0], false) });
+  if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, keyc('tray')[0], true) });
+  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, keyc(w.kind === 'slider' ? 'slider' : w.style)[0], false) });
   const N = vNormals(P, I), C = new Float32Array(P.length);
   for (const rg of R) { rg.N = N; keyColors(rg, C, rg.col, false); }
   const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(C, 3);
   if (pos.setUsage) { pos.setUsage(THREE.DynamicDrawUsage); col.setUsage(THREE.DynamicDrawUsage); }
   g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
   const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; group.add(mesh);
+  if (comicOn()) { // contorno de tinta de las teclas y la bandeja (comparte las posiciones: al hundir una tecla, su contorno la sigue)
+    g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); outN(g);
+    const o = new THREE.Mesh(g, outlMat(false)); o.userData.isOutline = true; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
+  }
   const base = new Float32Array(P), K = { mesh, pos, col, base };
   const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
   mesh.onAfterRender = () => { for (const a of [pos, col]) if (a.updateRange) a.updateRange.count = -1; };
@@ -177,14 +189,25 @@ function buildKeys(group, list, kh, tray) {
       const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
       m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; w.mesh.add(m); w.knob = m; w.draw(); continue;
     }
-    w.setPush = p => { w.mesh.position.z = w.baseZ - p; const a = pos.array; for (let i = rg.start; i < rg.start + rg.count; i++) a[i * 3 + 2] = base[i * 3 + 2] - p; touch(pos, rg); };
-    w.setHover = (h, restyle) => { if (restyle) rg.col = (KEYC[w.style] || KEYC.normal)[0]; keyColors(rg, col.array, rg.col, h); touch(col, rg); };
+    // al hundirla, además de bajar, se encoge un poco y se oscurece (de frente, el descenso solo apenas se veía); al pulsar, destella
+    w.setPush = p => {
+      const k = clamp(p / w.maxPush, 0, 1), s = 1 - 0.09 * k, a = pos.array;
+      for (let i = rg.start; i < rg.start + rg.count; i++) { a[i * 3] = rg.cx + (base[i * 3] - rg.cx) * s; a[i * 3 + 1] = rg.cy + (base[i * 3 + 1] - rg.cy) * s; a[i * 3 + 2] = base[i * 3 + 2] - p; }
+      w.mesh.position.z = w.baseZ - p; w.mesh.scale.set(s, s, 1); touch(pos, rg);
+      if (Math.abs(k - (rg.press || 0)) > 0.04 || (k === 0) !== !rg.press) { rg.press = k; w.recolor(); }
+    };
+    w.recolor = () => { keyColors(rg, col.array, rg.col, w.hover); touch(col, rg); };
+    w.setHover = (h, restyle) => { if (restyle) rg.col = keyc(w.style)[0]; w.recolor(); };
+    w.flash = () => { w.flashT = 0.22; };
+    w.flashStep = dt => { w.flashT = Math.max(0, w.flashT - dt); rg.flash = w.flashT / 0.22; w.recolor(); };
   }
   return K;
 }
 // los colores de una tecla con su luz (ver shadeInto); con el dedo encima, más clara
 function keyColors(rg, C, hex, hover) {
   _kc.setHex(hex); if (hover) _kc.lerp(_kc2.setHex(0xffffff), 0.28);
+  if (rg.press) _kc.multiplyScalar(1 - 0.35 * rg.press); // hundida, más oscura
+  if (rg.flash) _kc.lerp(_kc2.setHex(0xffffff), 0.7 * rg.flash); // y el destello al pulsar
   if (_kc.convertSRGBToLinear) _kc.convertSRGBToLinear(); // (los colores de los vértices van en lineal: si no, salen lavados)
   for (let i = 0; i < rg.count; i++) shadeInto(C, rg.start + i, _kc, rg.N, rg.ao[i], rg.w === null ? 0.1 : 0.32);
 }
@@ -256,6 +279,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     else S.cand = null;
   }
   for (const w of vis) {
+    if (w.flashT > 0) w.flashStep(dt);
     const hover = hov.has(w); if (hover !== w.hover) { w.hover = hover; if (w.setHover) w.setHover(hover); else w.draw(); }
     if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
     else {
@@ -266,7 +290,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
   POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
-  SND.click(); haptic(press.side, 0.15, 15); press.w.onPress(); return true;
+  SND.click(); haptic(press.side, 0.15, 15); if (press.w.flash) press.w.flash(); press.w.onPress(); return true;
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */
@@ -330,7 +354,11 @@ function openMenu(rows, opts = {}) {
   const bg = makePanel(MW, H, 1024); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh);
   const c = bg.ctx, sc = bg.W / MW;
   // la bandeja de las teclas: gris muy oscuro, con un filo del color de la sección
-  rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); { const gr = c.createLinearGradient(0, 0, 0, bg.H); gr.addColorStop(0, '#262a34'); gr.addColorStop(1, '#1a1d25'); c.fillStyle = gr; } c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke();
+  if (comicOn()) { // en cómic: violeta con una trama de puntos (como el papel de los cómics), borde de tinta y un filo del color de la sección
+    rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); c.fillStyle = '#3a2d5c'; c.fill(); c.save(); c.clip(); c.fillStyle = 'rgba(255,255,255,0.07)';
+    for (let y = 8, r = 0; y < bg.H; y += 14, r++) for (let x = (r % 2) * 7 + 8; x < bg.W; x += 14) { c.beginPath(); c.arc(x, y, 2.6, 0, TAU); c.fill(); }
+    c.restore(); c.lineWidth = 12; c.strokeStyle = '#140c1a'; c.stroke(); rr(c, 14, 14, bg.W - 28, bg.H - 28, 26); c.lineWidth = 4; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke();
+  } else { rr(c, 4, 4, bg.W - 8, bg.H - 8, 34); { const gr = c.createLinearGradient(0, 0, 0, bg.H); gr.addColorStop(0, '#262a34'); gr.addColorStop(1, '#1a1d25'); c.fillStyle = gr; } c.fill(); c.lineWidth = 5; c.strokeStyle = opts.border || opts.accent || '#ff4fa3'; c.stroke(); }
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
@@ -787,6 +815,12 @@ function boardFrame(c, W, H) {
   c.drawImage(boardBg, 0, 0);
 }
 function boardFrameDraw(c, W, H) {
+  if (comicOn()) { // en cómic: violeta con trama de puntos, borde grueso de tinta y un filo blanco por dentro
+    c.fillStyle = '#3a2d5c'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(255,255,255,0.08)';
+    for (let y = 10, r = 0; y < H; y += 16, r++) for (let x = (r % 2) * 8 + 10; x < W; x += 16) { c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fill(); }
+    rr(c, 8, 8, W - 16, H - 16, 26); c.lineWidth = 14; c.strokeStyle = '#140c1a'; c.stroke(); rr(c, 20, 20, W - 40, H - 40, 18); c.lineWidth = 4; c.strokeStyle = '#fff4e0'; c.stroke();
+    return;
+  }
   const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1b1338'); g.addColorStop(0.55, '#0d0a20'); g.addColorStop(1, '#190b27'); c.fillStyle = g; c.fillRect(0, 0, W, H);
   for (const [x, y, r, col] of [[0.18, 0.45, 0.45, '60,240,198'], [0.88, 0.15, 0.4, '255,79,163']]) {
     const q = c.createRadialGradient(W * x, H * y, 8, W * x, H * y, W * r); q.addColorStop(0, `rgba(${col},0.13)`); q.addColorStop(1, `rgba(${col},0)`); c.fillStyle = q; c.fillRect(0, 0, W, H);
@@ -807,7 +841,7 @@ function boardBar(c, x, y, w, h, k, c0, c1) {
   const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, c0); g.addColorStop(1, c1);
   rr(c, x, y, Math.max(h, w * Math.min(1, k)), h, h / 2); c.fillStyle = g; c.fill();
 }
-function glowText(c, t, x, y, col, blur) { c.save(); c.shadowColor = col; c.shadowBlur = blur; c.fillStyle = col; c.fillText(t, x, y); c.restore(); }
+function glowText(c, t, x, y, col, blur) { c.save(); if (comicOn()) { c.lineJoin = 'round'; c.lineWidth = 10; c.strokeStyle = '#140c1a'; c.strokeText(t, x, y); } else { c.shadowColor = col; c.shadowBlur = blur; } c.fillStyle = col; c.fillText(t, x, y); c.restore(); } // (en cómic, con contorno de tinta en vez de brillo)
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 // Abajo, lo de hoy en dos barras con pocas palabras: minutos frente a tu meta y tu récord de un día con este ejercicio
 function boardDay2(c, W, y) {
