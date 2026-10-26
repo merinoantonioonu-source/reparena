@@ -12,7 +12,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 // sin comprobar cada sombreador al compilarlo (esa comprobación espera a que termine: compilar era mucho más lento en las
 // gafas); y las sombras se recalculan cuando toca (ver qualStep)
 if (renderer.debug) renderer.debug.checkShaderErrors = false; renderer.shadowMap.autoUpdate = false;
-renderer.shadowMap.enabled = !!settings.shadows; renderer.shadowMap.type = THREE.PCFShadowMap; // (la suave pedía muchas más muestras por píxel: en las gafas, tirones)
+renderer.shadowMap.enabled = !!settings.shadows && settings.look !== 'neon'; renderer.shadowMap.type = THREE.PCFShadowMap; // (la suave pedía muchas más muestras por píxel: en las gafas, tirones)
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
 if (renderer.xr.setFoveation) renderer.xr.setFoveation(0.6);
