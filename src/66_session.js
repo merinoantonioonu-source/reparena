@@ -206,7 +206,8 @@ function sesMusicHTML(b, i) {
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba, en Música) para elegir canciones.</p></div>';
   if (!SP.mine) return h + `<p class="status">${escS(SES.mErr || 'Cargando tus listas…')}</p></div>`;
   // (las listas, como botones que ocupan las líneas que haga falta: en el desplegable del navegador los nombres largos no se veían)
-  h += `<div class="lpick" role="listbox" aria-label="Elige una lista de Spotify">${SP.mine.map(l => `<button type="button" class="lp${l.id === SES.mList ? ' on' : ''}" data-a="mlist" data-id="${l.id}" role="option" aria-selected="${l.id === SES.mList}">${escS(l.name)}</button>`).join('')}</div>`;
+  h += `<div class="lpick" role="listbox" aria-label="Elige una lista de Spotify">${SP.mine.map(l => `<button type="button" class="lp${l.id === SES.mList ? ' on' : ''}${l.mine === false ? ' other' : ''}" data-a="mlist" data-id="${l.id}" role="option" aria-selected="${l.id === SES.mList}"${l.mine === false ? ' title="De otro usuario: Spotify no deja ver sus canciones"' : ''}>${escS(l.name)}</button>`).join('')}</div>`;
+  if (SES.mList && (SP.mine.find(l => l.id === SES.mList) || {}).mine === false) return h + `<p class="hint">${escS(spErrText(new Error('NOT_YOURS')))}. Para usar algunas de sus canciones, guárdalas en una lista tuya.</p></div>`;
   const T = SES.mList && SP.trk && SP.trk[SES.mList];
   if (SES.mList && !T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
   if (T) h += `<div class="tracks">${T.map(t => `<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>`).join('')}</div>`;
@@ -215,7 +216,7 @@ function sesMusicHTML(b, i) {
 function sesMusicLoad() {
   if (!spConnected()) return;
   if (!SP.mine) spMyLists().then(l => { SP.mine = l; SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = 'No se pudieron cargar tus listas: ' + spErrText(e); renderSession(); });
-  else if (SES.mList && !(SP.trk && SP.trk[SES.mList])) spListTracks(SES.mList).then(() => { SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = 'No se pudieron cargar sus canciones: ' + spErrText(e); renderSession(); });
+  else if (SES.mList && !(SP.trk && SP.trk[SES.mList]) && (SP.mine.find(l => l.id === SES.mList) || {}).mine !== false) spListTracks(SES.mList).then(() => { SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = e.message === 'NOT_YOURS' ? '' : 'No se pudieron cargar sus canciones: ' + spErrText(e); renderSession(); });
 }
 function sesMusicChange(el) {
   const b = SES.blocks[SES.musicOpen]; if (!b) return;

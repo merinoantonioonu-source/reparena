@@ -648,15 +648,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       RA.activeWidgets().find(w => w.label === 'Cancelar').onPress(); }
     globalThis.fetch = realFetch; storage.set('reparena3-session', ses0); storage.delete('reparena3-profiles'); storage.delete('reparena3-roomset'); storage.delete('reparena3-spotify'); storage.delete('reparena3-history'); }
   // ---- Spotify: elegir lista y canción en el juego, y la música de cada bloque (varias canciones, en orden y en bucle) ----
-  { const realFetch = globalThis.fetch, calls = [], cfg0 = RA.SP.cfg, st0 = RA.SP.st;
-    const lists = Array.from({ length: 11 }, (_, i) => ({ id: 'L' + i, name: 'Lista ' + i, uri: 'spotify:playlist:L' + i, tracks: { total: 5 } }));
-    const tracks = id => ({ items: Array.from({ length: 12 }, (_, k) => ({ track: { uri: `spotify:track:${id}-${k}`, name: `Canción ${k}`, artists: [{ name: 'Grupo' }] } })), next: null });
+  { const realFetch = globalThis.fetch, calls = [], cfg0 = RA.SP.cfg, st0 = RA.SP.st; let oldCalls = 0;
+    // (como la API desde 2026: las canciones, en /items y cada una en «item»; /tracks responde 403; la lista 10 es de otro usuario)
+    const lists = Array.from({ length: 11 }, (_, i) => ({ id: 'L' + i, name: 'Lista ' + i, uri: 'spotify:playlist:L' + i, items: { total: 5 }, owner: { id: i === 10 ? 'otro' : 'yo' }, collaborative: false }));
+    const tracks = id => ({ items: Array.from({ length: 12 }, (_, k) => ({ item: { uri: `spotify:track:${id}-${k}`, name: `Canción ${k}`, artists: [{ name: 'Grupo' }] } })), next: null });
     globalThis.fetch = async (url, o = {}) => {
       const u = String(url); if (!u.startsWith('https://api.spotify.com/v1')) return realFetch(url, o);
       const path = u.slice('https://api.spotify.com/v1'.length); calls.push({ m: o.method, path, body: o.body ? JSON.parse(o.body) : null });
-      const res = j => ({ ok: true, status: j ? 200 : 204, text: async () => j ? JSON.stringify(j) : '' });
+      const res = j => ({ ok: true, status: j ? 200 : 204, text: async () => j ? JSON.stringify(j) : '' }), forbidden = { ok: false, status: 403, text: async () => JSON.stringify({ error: { status: 403, message: 'Forbidden' } }) };
+      if (path === '/me') return res({ id: 'yo' });
       if (path.startsWith('/me/playlists')) return res({ items: lists, next: null });
-      const mt = path.match(/^\/playlists\/(\w+)\/tracks/); if (mt) return res(tracks(mt[1]));
+      if (/^\/playlists\/\w+\/tracks/.test(path)) { oldCalls++; return forbidden; }
+      const mt = path.match(/^\/playlists\/(\w+)\/items/); if (mt) return mt[1] === 'L10' ? forbidden : res(tracks(mt[1]));
       if (path.startsWith('/me/player') && o.method === 'GET') return res({ is_playing: true, device: { id: 'D1', name: 'PC' }, item: { name: 'Canción 3', artists: [{ name: 'Grupo' }] } });
       return res(null);
     };
@@ -678,6 +681,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     await sleep(600); const n0 = calls.filter(c => c.path.startsWith('/me/player/play')).length; RA.applyBlock(1); await sleep(200); const n1 = calls.filter(c => c.path.startsWith('/me/player/play')).length;
     // y en la página, el selector del bloque
     RA.SES.mList = 'L1'; await RA.spListTracks('L1'); const html = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    // la lista de otro usuario: no se pueden ver sus canciones (Spotify, 2026), se marca y se explica; entera sí se pone
+    let other = ''; try { await RA.spListTracks('L10'); other = 'leída'; } catch (e) { other = e.message; }
+    const l10 = RA.SP.mine.find(l => l.id === 'L10'), mineFlags = RA.SP.mine.filter(l => l.mine).length; RA.SES.mList = 'L10'; const html10 = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    log(`   2026 API: old /tracks calls ${oldCalls} · other user's list → ${other} (marked ${l10 && l10.mine}) · own lists ${mineFlags} of 11 · block picker explains ${/solo deja ver las canciones/.test(html10)}`);
+    if (oldCalls || other !== 'NOT_YOURS' || !l10 || l10.mine !== false || mineFlags !== 10 || !/solo deja ver las canciones/.test(html10)) errors.push('Spotify: las canciones deberían pedirse en /items y, en listas de otros usuarios, explicarse que Spotify no deja verlas');
     log(`spotify: lists in game ${page1}+${page2} (of 11) · from a song → ${JSON.stringify(fromSong && fromSong.body)} · block music ${(mus || []).length} songs → play ${JSON.stringify(play && play.body)} · repeat ${rep && rep.path} · shuffle ${shuf && shuf.path} · next block with the same songs restarts them ${n1 > n0} · page picker: chips ${(html.match(/class="chip"/g) || []).length}, tracks ${(html.match(/data-m="trk"/g) || []).length}, checked ${(html.match(/ checked/g) || []).length}`);
     if (page1 !== 8 || page2 !== 3) errors.push('Spotify: en el juego deberían salir todas tus listas, de 8 en 8');
     if (!fromSong || !fromSong.body || fromSong.body.context_uri !== 'spotify:playlist:L9' || !fromSong.body.offset || fromSong.body.offset.uri !== 'spotify:track:L9-3') errors.push('Spotify: tocar una canción debería poner su lista empezando por ella');
