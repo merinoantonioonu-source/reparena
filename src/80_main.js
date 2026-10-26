@@ -281,14 +281,14 @@ renderer.setAnimationLoop((time, frame) => {
 // (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
 const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
-function qualApply(lv, session = renderer.xr.getSession()) {
-  QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
+function qualApply(lv, session = renderer.xr.getSession(), sharp = false) {
+  if (!sharp) QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
   const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
   if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
     const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
-    if ('fixedFoveation' in L) L.fixedFoveation = 1;
+    if ('fixedFoveation' in L) L.fixedFoveation = sharp ? 0.4 : 1;
     session.updateRenderState({ baseLayer: L });
   } catch (e) { console.warn('calidad', e && e.message); }
 }
@@ -296,7 +296,10 @@ function qualStep(dt) {
   QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
   const s = renderer.xr.getSession(); if (!s || preview) return;
   if (settings.quality !== 'auto') { qualApply(QFIX[settings.quality] || 0, s); return; }
-  if (QUAL.applied < 0) qualApply(QUAL.lv, s);
+  // con un menú abierto fuera de la partida (inicio, pausa, resumen), a resolución completa y con menos foveación: las letras,
+  // nítidas (también en realidad mixta, donde la calidad automática solía bajar); al volver a jugar, la que tenía
+  if (menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state)) { if (QUAL.applied !== -2) { QUAL.applied = -3; qualApply(0, s, true); QUAL.applied = -2; } QUAL.t = 0; QUAL.n = 0; return; }
+  if (QUAL.applied !== QUAL.lv) { QUAL.applied = -1; qualApply(QUAL.lv, s); }
   const hz = s.frameRate || +settings.xrHz || 72; QUAL.now += dt; QUAL.t += dt; QUAL.n++; QUAL.cool -= dt; QUAL.block -= dt;
   if (QUAL.t < 1) return;
   const fps = QUAL.n / QUAL.t; QUAL.t = 0; QUAL.n = 0;

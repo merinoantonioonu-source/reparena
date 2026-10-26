@@ -1,14 +1,16 @@
 
 /* =================== PANELES DE TEXTO =================== */
+// opts.hd: el lienzo, tantas veces más grande (más nítido), dibujando igual (W y H siguen siendo los de px)
 function makePanel(w, h, px = 1024, opts = {}) {
-  const c = mkCanvas(px, Math.round(px * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const k = opts.hd || 1, c = mkCanvas(Math.round(px * k), Math.round(px * k * h / w)), ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  if (k !== 1 && ctx.scale) ctx.scale(k, k);
   tex.encoding = THREE.sRGBEncoding; tex.anisotropy = MAX_ANISO;
   // escriben su profundidad (lo transparente del lienzo, no): las Quest recolocan cada imagen al último movimiento de la
   // cabeza según la profundidad de cada punto, y un panel sin ella se recolocaba como si estuviera al fondo (temblaba)
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: opts.depthTest !== false, depthWrite: opts.depthWrite !== false, alphaTest: 0.04, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   if (opts.depthTest === false) m.renderOrder = 30;
-  return { c, ctx, tex, mesh: m, w, h, W: c.width, H: c.height };
+  return { c, ctx, tex, mesh: m, w, h, W: Math.round(c.width / k), H: Math.round(c.height / k) };
 }
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const FD = '"Bungee","Arial Black",sans-serif', FB = '"Rubik",system-ui,sans-serif';
