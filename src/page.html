@@ -197,6 +197,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
 .splist .sptracks label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
 .splist .sptracks small,.sesmusic .tracks small{opacity:.7}
+.spin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0}
+.spin b{overflow-wrap:anywhere}
+.splist .sprow > .lname{flex:1 1 220px;font-size:.92rem}
 .splist .sppicks{padding:8px 10px;border:1px dashed var(--line);border-radius:10px;font-size:.92rem}
 .splist .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .splist .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:.88em}
@@ -209,10 +212,23 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .main > section.collapsed > h2::after,.main > section.collapsed > .exHead > h2::after,.main > section.collapsed > .todayHead > h2::after{transform:rotate(-90deg)}
 .main > section.collapsed > :not(h2):not(.exHead):not(.todayHead){display:none !important}
 .main > section.collapsed > .exHead > :not(h2){display:none !important}
-.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.sesrow .expick{flex:1 1 8em;max-width:11.5em;min-height:38px;padding:3px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;font-size:.8rem;line-height:1.2;text-align:left;cursor:pointer;display:flex;align-items:center;gap:6px}
+.sesrow .expick span{flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sesrow .expick::after{content:'▾';opacity:.6;font-size:.8em}
+.sesrow .expick.on{border-color:var(--teal)}
+.sesrow .sesn2{display:inline-flex;align-items:center;gap:4px}
+.sesrow select.prof{width:7.6em}
+.sesrow .ibs{display:inline-flex;gap:4px;margin-left:auto}
+.sesrow .ib{position:relative;width:32px;height:32px;padding:6px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer;display:inline-grid;place-items:center}
+.sesrow .ib svg{width:100%;height:100%}
+.sesrow .ib.on{border-color:var(--teal);color:var(--teal)}
+.sesrow .ib:disabled{opacity:.35;cursor:default}
+.sesrow .ib .badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--teal);color:#0d0a1c;font-size:10px;font-weight:700;line-height:16px;text-align:center}
+.sesex{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
-.sesrow select,.sesrow input,.spfield select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
-.sesrow input{width:5.2em;text-align:right;font-variant-numeric:tabular-nums}
+.sesrow select,.sesrow input,.spfield select{padding:7px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
+.sesrow input{width:3.8em;text-align:right;font-variant-numeric:tabular-nums}
 .sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
 .sesmusic select{padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;max-width:100%}
 .sesset{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
@@ -238,7 +254,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesmusic .tracks label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
 .sesmusic .tracks small{color:var(--muted, #a49fc8)}
 .sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
-.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:2.6em}
+.sesrow .unit{color:var(--muted);font-size:.85rem;min-width:1.6em}
 </style>
 </head>
 <body>
@@ -407,7 +423,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Canciones ▾</b> ves las canciones de cada lista y puedes elegir solo las que quieras (de una o de varias listas): entonces suenan esas, en el orden en que las marcaste y en bucle. Si no marcas nada, sigue lo que estuviera sonando.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>

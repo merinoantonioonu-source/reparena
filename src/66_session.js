@@ -4,7 +4,7 @@
 // como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
-const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, mList: '', mErr: '', name: '' };
+const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, exOpen: -1, mList: '', mErr: '', name: '' };
 const MUSIC_MAX = 50; // (canciones por bloque, como mucho)
 // Ajustes que puede tener cada bloque (su perfil o los suyos propios, con el engranaje): los del juego, sin el modo, el
 // ejercicio ni las oleadas, que los pone el bloque. El sonido, el entorno y el menú no cambian de un bloque a otro
@@ -205,18 +205,21 @@ function sesMusicHTML(b, i) {
   h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${k + 1}. ${escS(t.name)}<button class="btn tiny" data-a="mrm" data-k="${k}" aria-label="Quitar ${escS(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba, en Música) para elegir canciones.</p></div>';
   if (!SP.mine) return h + `<p class="status">${escS(SES.mErr || 'Cargando tus listas…')}</p></div>`;
-  // (las listas, como botones que ocupan las líneas que haga falta: en el desplegable del navegador los nombres largos no se veían)
-  h += `<div class="lpick" role="listbox" aria-label="Elige una lista de Spotify">${SP.mine.map(l => `<button type="button" class="lp${l.id === SES.mList ? ' on' : ''}${l.mine === false ? ' other' : ''}" data-a="mlist" data-id="${l.id}" role="option" aria-selected="${l.id === SES.mList}"${l.mine === false ? ' title="De otro usuario: Spotify no deja ver sus canciones"' : ''}>${escS(l.name)}</button>`).join('')}</div>`;
-  if (SES.mList && (SP.mine.find(l => l.id === SES.mList) || {}).mine === false) return h + `<p class="hint">${escS(spErrText(new Error('NOT_YOURS')))}. Para usar algunas de sus canciones, guárdalas en una lista tuya.</p></div>`;
-  const T = SES.mList && SP.trk && SP.trk[SES.mList];
-  if (SES.mList && !T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
-  if (T) h += `<div class="tracks">${T.map(t => `<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>`).join('')}</div>`;
+  // tus listas (y las que te gustan), como botones de las líneas que haga falta; al abrir una, solo sus canciones
+  const L = spPickable();
+  if (!SES.mList) h += `<div class="lpick" role="listbox" aria-label="Elige una lista de Spotify">${L.map(l => `<button type="button" class="lp" data-a="mlist" data-id="${l.id}" role="option">${escS(l.name)} ▸</button>`).join('')}</div>`;
+  else {
+    const l = L.find(x => x.id === SES.mList) || { name: '' }, T = SP.trk && SP.trk[SES.mList];
+    h += `<div class="spin"><button type="button" class="btn small" data-a="mback">← Tus listas</button><b>${escS(l.name)}</b></div>`;
+    if (!T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
+    else h += T.length ? `<div class="tracks">${T.map(t => `<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>';
+  }
   return h + '</div>';
 }
 function sesMusicLoad() {
   if (!spConnected()) return;
   if (!SP.mine) spMyLists().then(l => { SP.mine = l; SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = 'No se pudieron cargar tus listas: ' + spErrText(e); renderSession(); });
-  else if (SES.mList && !(SP.trk && SP.trk[SES.mList]) && (SP.mine.find(l => l.id === SES.mList) || {}).mine !== false) spListTracks(SES.mList).then(() => { SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = e.message === 'NOT_YOURS' ? '' : 'No se pudieron cargar sus canciones: ' + spErrText(e); renderSession(); });
+  else if (SES.mList && !(SP.trk && SP.trk[SES.mList])) spListTracks(SES.mList).then(() => { SES.mErr = ''; renderSession(); }).catch(e => { SES.mErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); renderSession(); });
 }
 function sesMusicChange(el) {
   const b = SES.blocks[SES.musicOpen]; if (!b) return;
@@ -228,29 +231,49 @@ function sesMusicChange(el) {
 }
 function sesMusicClick(btn) {
   const b = SES.blocks[SES.musicOpen]; if (!b) return;
-  if (btn.dataset.a === 'mlist') { SES.mList = SES.mList === btn.dataset.id ? '' : btn.dataset.id; SES.mErr = ''; renderSession(); sesMusicLoad(); return; }
+  if (btn.dataset.a === 'mlist') { SES.mList = btn.dataset.id; SES.mErr = ''; renderSession(); sesMusicLoad(); return; }
+  if (btn.dataset.a === 'mback') { SES.mList = ''; SES.mErr = ''; renderSession(); return; }
   if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
   else if (btn.dataset.a === 'mclear') delete b.music;
   saveSession(); renderSession();
 }
 const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'combat', ex: 'plank1', n: 30, foes: 'robots' }, { mode: 'combat', ex: 'pushup', n: 30, foes: 'robots' }];
 function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
+// Iconos de los botones de cada bloque (dibujados: se ven igual en cualquier navegador)
+const SES_ICON = {
+  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l-6 7h4v7h4v-7h4z" fill="currentColor"/></svg>',
+  dup: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12M10 7V5h4v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  set: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8 3.5-2.1-.6-.5-1.3 1-1.9-1.6-1.6-1.9 1-1.3-.5L13 4h-2l-.6 2.1-1.3.5-1.9-1-1.6 1.6 1 1.9-.5 1.3L4 11v2l2.1.6.5 1.3-1 1.9 1.6 1.6 1.9-1 1.3.5.6 2.1h2l.6-2.1 1.3-.5 1.9 1 1.6-1.6-1-1.9.5-1.3L20 13z" fill="currentColor"/></svg>',
+  music: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="17" r="2.5" fill="currentColor"/><circle cx="17" cy="15" r="2.5" fill="currentColor"/></svg>'
+};
+const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<button type="button" class="ib${on ? ' on' : ''}" data-a="${a}" aria-label="${label} ${i + 1}" title="${label}"${extra}>${icon}${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
+// Cada bloque, en una sola fila: modo, ejercicio (un botón que abre la lista debajo; nombres de hasta dos líneas), enemigos,
+// cantidad, perfil y los iconos: ajustes propios, música, duplicar, subir y quitar
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
   host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
-    <select data-f="ex" aria-label="Ejercicio del bloque ${i + 1}">${sesOpts(Object.entries(EX_NAMES).filter(([x]) => blockOk(b.mode, x)), b.ex)}</select>
+    <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
-    <input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span>
-    <select data-f="prof" aria-label="Perfil del bloque ${i + 1}"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>Perfil: ${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>Perfil: ${escS(b.prof)} (no está)</option>` : ''}</select>
-    <button class="btn small${b.set ? ' alt' : ''}" data-a="set" aria-label="Ajustes propios del bloque ${i + 1}" title="Ajustes propios de este bloque">⚙${b.set ? ' ' + Object.keys(b.set).length : ''}</button>
-    <button class="btn small${(b.music || []).length ? ' alt' : ''}" data-a="music" aria-label="Música del bloque ${i + 1}">♫ ${(b.music || []).length || 'Música'}</button>
-    <button class="btn small" data-a="up"${i ? '' : ' disabled'} aria-label="Subir el bloque ${i + 1}">Subir</button><button class="btn small" data-a="del" aria-label="Quitar el bloque ${i + 1}">Quitar</button></div>${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
+    <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
+    <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
+    <span class="ibs">${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('up', i, 'Subir el bloque', SES_ICON.up, i ? '' : ' disabled')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
   if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
+// (la lista de ejercicios del bloque, debajo de su fila: cada nombre en las líneas que haga falta)
+function sesExHTML(b, i) {
+  return `<div class="sesex lpick" data-i="${i}" role="listbox" aria-label="Ejercicio del bloque ${i + 1}">${Object.keys(EX_NAMES).filter(x => blockOk(b.mode, x)).map(x => `<button type="button" class="lp${x === b.ex ? ' on' : ''}" data-a="exset" data-x="${x}" role="option" aria-selected="${x === b.ex}">${escS(EX_NAMES[x])}</button>`).join('')}</div>`;
+}
+// Duplicar un bloque: la copia, justo debajo, con todo (perfil, ajustes propios y canciones), lista para editarla
+function sesDup(i) {
+  if (SES.blocks.length >= 20 || !SES.blocks[i]) return false;
+  SES.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(SES.blocks[i]))); SES.exOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
+}
+function sesSetEx(b, x) { const wasHang = b.ex === 'hang'; b.ex = x; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
 function sesInitPage() {
   const host = $('#sesList');
   host.addEventListener('change', ev => {
@@ -260,7 +283,7 @@ function sesInitPage() {
     const b = SES.blocks[+row.dataset.i], f = ev.target.dataset.f; if (!b) return;
     if (f === 'mode') { b.mode = ev.target.value; if (!blockOk(b.mode, b.ex)) b.ex = Object.keys(EX_NAMES).find(x => blockOk(b.mode, x)); delete b.foes; delete b.aim; Object.assign(b, blockExtra(b)); }
     else if (f === 'foes') b.foes = foeCat(ev.target.value) || 'robots';
-    else if (f === 'ex') { const wasHang = b.ex === 'hang'; b.ex = ev.target.value; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
+    else if (f === 'ex') sesSetEx(b, ev.target.value);
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
     else if (f === 'prof') { if (ev.target.value) b.prof = ev.target.value; else delete b.prof; }
     saveSession(); renderSession();
@@ -269,10 +292,14 @@ function sesInitPage() {
     const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
     if (btn.closest('.sesmusic')) { sesMusicClick(btn); return; }
     if (btn.closest('.sesset')) { sesSetClick(btn); return; }
+    if (btn.closest('.sesex')) { const b = SES.blocks[+btn.closest('.sesex').dataset.i]; if (b && btn.dataset.x) { sesSetEx(b, btn.dataset.x); SES.exOpen = -1; saveSession(); renderSession(); } return; }
     const i = +btn.closest('.sesrow').dataset.i;
+    if (btn.dataset.a === 'ex') { SES.exOpen = SES.exOpen === i ? -1 : i; renderSession(); return; }
+    if (btn.dataset.a === 'dup') { sesDup(i); return; }
     if (btn.dataset.a === 'music') { SES.musicOpen = SES.musicOpen === i ? -1 : i; renderSession(); if (SES.musicOpen === i) sesMusicLoad(); return; }
     if (btn.dataset.a === 'set') { SES.setOpen = SES.setOpen === i ? -1 : i; renderSession(); return; }
     if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
+    SES.exOpen = SES.setOpen = SES.musicOpen = -1; // (los paneles abiertos irían a otro bloque)
     saveSession(); renderSession();
   });
   $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; const b = { mode: blockOk(settings.mode, ex) ? settings.mode : 'combat', ex, n: ex === 'hang' ? 30 : 20 }; SES.blocks.push({ ...b, ...blockExtra(b) }); saveSession(); renderSession(); });

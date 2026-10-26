@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, renderSession };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -657,6 +657,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const path = u.slice('https://api.spotify.com/v1'.length); calls.push({ m: o.method, path, body: o.body ? JSON.parse(o.body) : null });
       const res = j => ({ ok: true, status: j ? 200 : 204, text: async () => j ? JSON.stringify(j) : '' }), forbidden = { ok: false, status: 403, text: async () => JSON.stringify({ error: { status: 403, message: 'Forbidden' } }) };
       if (path === '/me') return res({ id: 'yo' });
+      if (path.startsWith('/me/tracks')) return res({ items: Array.from({ length: 4 }, (_, k) => ({ track: { uri: `spotify:track:fav-${k}`, name: `Favorita ${k}`, artists: [{ name: 'Yo' }] } })), next: null });
       if (path.startsWith('/me/playlists')) return res({ items: lists, next: null });
       if (/^\/playlists\/\w+\/tracks/.test(path)) { oldCalls++; return forbidden; }
       const mt = path.match(/^\/playlists\/(\w+)\/items/); if (mt) return mt[1] === 'L10' ? forbidden : res(tracks(mt[1]));
@@ -668,7 +669,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const labels = () => RA.activeWidgets().map(w => w.label);
     // en el juego: tus listas de 8 en 8 → una lista → sus canciones → desde la 4.ª
     RA.spListMenu(() => {}); await waitFor(() => labels().includes('Lista 0'));
-    const page1 = labels().filter(l => /^Lista/.test(l)).length; RA.activeWidgets().find(w => w.label === '▶').onPress(); const page2 = labels().filter(l => /^Lista/.test(l)).length;
+    const page1 = labels().filter(l => /^Lista|te gustan/.test(l)).length, liked1 = labels().some(l => /te gustan/.test(l)); RA.activeWidgets().find(w => w.label === '▶').onPress(); const page2 = labels().filter(l => /^Lista/.test(l)).length, l10 = labels().includes('Lista 10');
     RA.activeWidgets().find(w => w.label === 'Lista 9').onPress(); await waitFor(() => labels().some(l => /^Canción 3/.test(l)));
     RA.activeWidgets().find(w => /^Canción 3/.test(w.label)).onPress(); await waitFor(() => calls.some(c => c.m === 'PUT' && c.path.startsWith('/me/player/play')));
     const fromSong = calls.find(c => c.m === 'PUT' && c.path.startsWith('/me/player/play'));
@@ -680,14 +681,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const play = calls.find(c => c.m === 'PUT' && c.path.startsWith('/me/player/play')), rep = calls.find(c => c.path.startsWith('/me/player/repeat')), shuf = calls.find(c => c.path.startsWith('/me/player/shuffle'));
     await sleep(600); const n0 = calls.filter(c => c.path.startsWith('/me/player/play')).length; RA.applyBlock(1); await sleep(200); const n1 = calls.filter(c => c.path.startsWith('/me/player/play')).length;
     // y en la página, el selector del bloque
-    RA.SES.mList = 'L1'; await RA.spListTracks('L1'); const html = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    RA.SES.mList = 'L1'; await RA.spListTracks('L1'); const html = RA.sesMusicHTML(RA.SES.blocks[0], 0); // (dentro de la lista 1)
     // la lista de otro usuario: no se pueden ver sus canciones (Spotify, 2026), se marca y se explica; entera sí se pone
     let other = ''; try { await RA.spListTracks('L10'); other = 'leída'; } catch (e) { other = e.message; }
-    const l10 = RA.SP.mine.find(l => l.id === 'L10'), mineFlags = RA.SP.mine.filter(l => l.mine).length; RA.SES.mList = 'L10'; const html10 = RA.sesMusicHTML(RA.SES.blocks[0], 0);
-    log(`   2026 API: old /tracks calls ${oldCalls} · other user's list → ${other} (marked ${l10 && l10.mine}) · own lists ${mineFlags} of 11 · block picker explains ${/solo deja ver las canciones/.test(html10)}`);
-    if (oldCalls || other !== 'NOT_YOURS' || !l10 || l10.mine !== false || mineFlags !== 10 || !/solo deja ver las canciones/.test(html10)) errors.push('Spotify: las canciones deberían pedirse en /items y, en listas de otros usuarios, explicarse que Spotify no deja verlas');
+    const L10 = RA.SP.mine.find(l => l.id === 'L10'), mineFlags = RA.SP.mine.filter(l => l.mine).length; RA.SES.mList = ''; const htmlL = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    RA.SES.mList = 'liked'; await RA.spListTracks('liked'); const htmlF = RA.sesMusicHTML(RA.SES.blocks[0], 0);
+    log(`   2026 API: old /tracks calls ${oldCalls} · other user's list → ${other} (mine ${L10 && L10.mine}) · own lists ${mineFlags} of 11 · block picker lists ${(htmlL.match(/data-a="mlist"/g) || []).length} (other user's shown ${/Lista 10/.test(htmlL)}, liked ${/te gustan/.test(htmlL)}) · inside liked: ${(htmlF.match(/data-m="trk"/g) || []).length} songs, back ${/mback/.test(htmlF)}, lists hidden ${!/data-a="mlist"/.test(htmlF)}`);
+    if (oldCalls || other !== 'NOT_YOURS' || !L10 || L10.mine !== false || mineFlags !== 10) errors.push('Spotify: las canciones deberían pedirse en /items y las listas de otros usuarios quedar marcadas');
+    if (/Lista 10/.test(htmlL) || !/te gustan/.test(htmlL) || (htmlL.match(/data-a="mlist"/g) || []).length !== 11) errors.push('Spotify: el selector del bloque debería enseñar tus canciones que te gustan y tus listas, sin las de otros usuarios');
+    if ((htmlF.match(/data-m="trk"/g) || []).length !== 4 || !/mback/.test(htmlF) || /data-a="mlist"/.test(htmlF)) errors.push('Spotify: dentro de una lista deberían verse solo sus canciones (y volver a tus listas)');
     log(`spotify: lists in game ${page1}+${page2} (of 11) · from a song → ${JSON.stringify(fromSong && fromSong.body)} · block music ${(mus || []).length} songs → play ${JSON.stringify(play && play.body)} · repeat ${rep && rep.path} · shuffle ${shuf && shuf.path} · next block with the same songs restarts them ${n1 > n0} · page picker: chips ${(html.match(/class="chip"/g) || []).length}, tracks ${(html.match(/data-m="trk"/g) || []).length}, checked ${(html.match(/ checked/g) || []).length}`);
-    if (page1 !== 8 || page2 !== 3) errors.push('Spotify: en el juego deberían salir todas tus listas, de 8 en 8');
+    if (page1 !== 8 || page2 !== 3 || !liked1 || l10) errors.push(`Spotify: en el juego deberían salir tus canciones que te gustan y tus listas (no las de otros usuarios), de 8 en 8 (${page1}+${page2}, me gusta ${liked1}, ajena ${l10})`);
     if (!fromSong || !fromSong.body || fromSong.body.context_uri !== 'spotify:playlist:L9' || !fromSong.body.offset || fromSong.body.offset.uri !== 'spotify:track:L9-3') errors.push('Spotify: tocar una canción debería poner su lista empezando por ella');
     if (!mus || mus.length !== 3 || !play || JSON.stringify(play.body.uris) !== JSON.stringify(['spotify:track:L1-2', 'spotify:track:L1-5', 'spotify:track:L7-0']) || !/state=context/.test(rep && rep.path) || !/state=false/.test(shuf && shuf.path)) errors.push('Spotify: la música del bloque debería sonar en su orden y en bucle');
     if (n1 > n0) errors.push('Spotify: si el bloque siguiente tiene las mismas canciones, no deberían empezar de nuevo');
@@ -706,6 +710,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const saved = JSON.parse(storage.get('reparena3-settings') || '{}'); RA.setSetting('sndVol', RA.settings.sndVol); const saved2 = JSON.parse(storage.get('reparena3-settings') || '{}');
     RA.endSession(); const after = [RA.settings.walkTime, RA.settings.lives];
     const F = RA.blockFields(RA.SES.blocks[1]).map(f => f.key), html = RA.sesSetHTML(RA.SES.blocks[1], 1);
+    // duplicar: la copia, debajo y con todo (también sus canciones); editarla no cambia la original
+    RA.SES.blocks[1].music = [{ uri: 'spotify:track:x', name: 'X', by: 'y' }]; const dupOk = RA.sesDup(1), copy = RA.SES.blocks[2];
+    if (copy) { copy.n = 99; copy.set.lives = 7; copy.music.push({ uri: 'spotify:track:z', name: 'Z', by: 'y' }); }
+    const dupRes = copy && RA.SES.blocks[1].n === 20 && RA.SES.blocks[1].set.lives === 3 && RA.SES.blocks[1].music.length === 1 && copy.music.length === 2 && copy.ex === 'fraise';
+    log(`   duplicate block: ${dupOk} · copy below with everything, independent ${dupRes}`); if (!dupOk || !dupRes) errors.push('bloques: duplicar debería copiar el bloque entero debajo (con canciones) y la copia editarse aparte');
+    RA.SES.blocks.splice(2, 1);
     // guardar la sesión con su nombre, vaciarla y cargarla de nuevo; y que vaya en el envío por código
     const okSave = RA.sessSave('Mi sesión'); RA.SES.blocks = []; const okLoad = RA.sessLoad(RA.savedSessions().findIndex(x => x.name === 'Mi sesión'));
     const back = JSON.stringify(RA.SES.blocks), inPack = !!(RA.xferPack().d['reparena3-sessions'] || []).find(x => x.name === 'Mi sesión');
