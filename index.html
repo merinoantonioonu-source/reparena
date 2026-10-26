@@ -226,7 +226,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .ib:disabled{opacity:.35;cursor:default}
 .sesrow .ib .badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--teal);color:#0d0a1c;font-size:10px;font-weight:700;line-height:16px;text-align:center}
 .sesex{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
-.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.2em;text-align:left}
+.sesgrip{display:inline-flex;align-items:center;gap:1px;align-self:stretch;margin:-7px 0 -7px -8px;padding:0 2px 0 4px;border:0;border-radius:12px 0 0 12px;background:none;color:var(--muted);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.sesgrip svg{width:18px;height:18px}
+.sesgrip:hover,.sesgrip:focus-visible{color:var(--teal);background:var(--panel2)}
+.sesgrip:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+.sesrow.drag{position:relative;z-index:5;background:var(--panel2);box-shadow:0 10px 26px rgba(0,0,0,.45);border-color:var(--teal);transition:none}
+.sesrow.drag .sesgrip{cursor:grabbing;color:var(--teal)}
+.sesrow.dropb{box-shadow:0 -4px 0 -1px var(--teal)}
+.sesrow.dropa{box-shadow:0 4px 0 -1px var(--teal)}
 .sesrow select,.sesrow input,.spfield select{padding:7px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
 .sesrow input{width:3.8em;text-align:right;font-variant-numeric:tabular-nums}
 .sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
@@ -456,7 +464,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
@@ -7200,7 +7208,7 @@ const SES_EXAMPLE = [{ mode: 'arcs', ex: 'squat', n: 40 }, { mode: 'combat', ex:
 function sesOpts(list, sel) { return list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join(''); }
 // Iconos de los botones de cada bloque (dibujados: se ven igual en cualquier navegador)
 const SES_ICON = {
-  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l-6 7h4v7h4v-7h4z" fill="currentColor"/></svg>',
+  grip: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></g></svg>',
   dup: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
   del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12M10 7V5h4v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
   set: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8 3.5-2.1-.6-.5-1.3 1-1.9-1.6-1.6-1.9 1-1.3-.5L13 4h-2l-.6 2.1-1.3.5-1.9-1-1.6 1.6 1 1.9-.5 1.3L4 11v2l2.1.6.5 1.3-1 1.9 1.6 1.6 1.9-1 1.3.5.6 2.1h2l.6-2.1 1.3-.5 1.9 1 1.6-1.6-1-1.9.5-1.3L20 13z" fill="currentColor"/></svg>',
@@ -7208,16 +7216,17 @@ const SES_ICON = {
 };
 const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<button type="button" class="ib${on ? ' on' : ''}" data-a="${a}" aria-label="${label} ${i + 1}" title="${label}"${extra}>${icon}${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
 // Cada bloque, en una sola fila: modo, ejercicio (un botón que abre la lista debajo; nombres de hasta dos líneas), enemigos,
-// cantidad, perfil y los iconos: ajustes propios, música, duplicar, subir y quitar
+// cantidad, perfil y los iconos: ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
+// de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
-  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><span class="sesn">${i + 1}</span>
+  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><button type="button" class="sesgrip" aria-label="Bloque ${i + 1}: arrástralo para cambiarlo de sitio (o flechas arriba y abajo)" title="Arrastra para cambiar de sitio">${SES_ICON.grip}<span class="sesn">${i + 1}</span></button>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
-    <span class="ibs">${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('up', i, 'Subir el bloque', SES_ICON.up, i ? '' : ' disabled')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
+    <span class="ibs">${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const sum = $('#sesSummary');
@@ -7232,9 +7241,48 @@ function sesDup(i) {
   if (SES.blocks.length >= 20 || !SES.blocks[i]) return false;
   SES.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(SES.blocks[i]))); SES.exOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
 }
+// Cambiar un bloque de sitio (al soltarlo tras arrastrarlo, o con las flechas)
+function sesMove(from, to) {
+  to = clamp(to, 0, SES.blocks.length - 1); if (from === to || !SES.blocks[from]) return false;
+  SES.blocks.splice(to, 0, SES.blocks.splice(from, 1)[0]); SES.exOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
+}
+// Arrastrar por el asa (ratón, dedo o lápiz): la fila sigue al puntero y una línea marca dónde caerá; al soltar, se mueve allí
+function sesDragInit(host) {
+  let D = null;
+  const clear = () => { if (!D) return; D.row.classList.remove('drag'); D.row.style.transform = ''; for (const r of D.rows) r.classList.remove('dropb', 'dropa'); clearInterval(D.scroll); D = null; };
+  const gap = y => D.mids.filter(m => m < y + scrollY).length; // (el hueco entre filas donde cae, por la mitad de cada una al empezar)
+  const mark = () => {
+    const k = gap(D.y), last = D.rows.length - 1; D.k = k;
+    D.rows.forEach((r, j) => { r.classList.toggle('dropb', j === k && k !== D.from && k !== D.from + 1); r.classList.toggle('dropa', j === last && k === last + 1 && D.from !== last); });
+    D.row.style.transform = `translateY(${D.y - D.y0 + scrollY - D.sy}px)`;
+  };
+  host.addEventListener('pointerdown', ev => {
+    const g = ev.target.closest && ev.target.closest('.sesgrip'); if (!g || ev.button > 0 || SES.blocks.length < 2) return;
+    ev.preventDefault(); clear();
+    const row = g.closest('.sesrow'), rows = [...host.querySelectorAll('.sesrow')];
+    D = { row, rows, from: rows.indexOf(row), k: -1, y0: ev.clientY, y: ev.clientY, sy: scrollY, id: ev.pointerId, mids: rows.map(r => { const R = r.getBoundingClientRect(); return R.top + R.height / 2 + scrollY; }) };
+    try { g.setPointerCapture(ev.pointerId); } catch (e) {}
+    row.classList.add('drag');
+    // cerca del borde de la ventana, la página se desplaza sola (para llevarlo lejos en una sesión larga)
+    D.scroll = setInterval(() => { if (!D) return; const e = 50, v = D.y < e ? -12 : D.y > innerHeight - e ? 12 : 0; if (v) { scrollBy(0, v); mark(); } }, 30);
+  });
+  host.addEventListener('pointermove', ev => { if (D && ev.pointerId === D.id) { D.y = ev.clientY; mark(); } });
+  host.addEventListener('pointerup', ev => {
+    if (!D || ev.pointerId !== D.id) return;
+    const { from, k } = D; clear();
+    if (k >= 0) sesMove(from, k > from ? k - 1 : k);
+  });
+  host.addEventListener('pointercancel', clear);
+  host.addEventListener('keydown', ev => {
+    const g = ev.target.closest && ev.target.closest('.sesgrip'); if (!g || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+    ev.preventDefault(); const i = +g.closest('.sesrow').dataset.i, to = i + (ev.key === 'ArrowUp' ? -1 : 1);
+    if (sesMove(i, to)) { const n = host.querySelector(`.sesrow[data-i="${to}"] .sesgrip`); if (n) n.focus(); }
+  });
+}
 function sesSetEx(b, x) { const wasHang = b.ex === 'hang'; b.ex = x; if (wasHang !== (b.ex === 'hang')) b.n = b.ex === 'hang' ? 30 : 20; }
 function sesInitPage() {
   const host = $('#sesList');
+  sesDragInit(host);
   host.addEventListener('change', ev => {
     if (ev.target.closest && ev.target.closest('.sesmusic')) { sesMusicChange(ev.target); return; }
     if (ev.target.closest && ev.target.closest('.sesset')) { sesSetChange(ev.target); return; }
@@ -7257,7 +7305,8 @@ function sesInitPage() {
     if (btn.dataset.a === 'dup') { sesDup(i); return; }
     if (btn.dataset.a === 'music') { SES.musicOpen = SES.musicOpen === i ? -1 : i; renderSession(); if (SES.musicOpen === i) sesMusicLoad(); return; }
     if (btn.dataset.a === 'set') { SES.setOpen = SES.setOpen === i ? -1 : i; renderSession(); return; }
-    if (btn.dataset.a === 'del') SES.blocks.splice(i, 1); else if (i > 0) SES.blocks.splice(i - 1, 0, SES.blocks.splice(i, 1)[0]);
+    if (btn.dataset.a !== 'del') return;
+    SES.blocks.splice(i, 1);
     SES.exOpen = SES.setOpen = SES.musicOpen = -1; // (los paneles abiertos irían a otro bloque)
     saveSession(); renderSession();
   });

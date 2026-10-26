@@ -226,7 +226,15 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .ib:disabled{opacity:.35;cursor:default}
 .sesrow .ib .badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--teal);color:#0d0a1c;font-size:10px;font-weight:700;line-height:16px;text-align:center}
 .sesex{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
-.sesn{font-family:var(--display);color:var(--teal);min-width:1.6em}
+.sesn{font-family:var(--display);color:var(--teal);min-width:1.2em;text-align:left}
+.sesgrip{display:inline-flex;align-items:center;gap:1px;align-self:stretch;margin:-7px 0 -7px -8px;padding:0 2px 0 4px;border:0;border-radius:12px 0 0 12px;background:none;color:var(--muted);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.sesgrip svg{width:18px;height:18px}
+.sesgrip:hover,.sesgrip:focus-visible{color:var(--teal);background:var(--panel2)}
+.sesgrip:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+.sesrow.drag{position:relative;z-index:5;background:var(--panel2);box-shadow:0 10px 26px rgba(0,0,0,.45);border-color:var(--teal);transition:none}
+.sesrow.drag .sesgrip{cursor:grabbing;color:var(--teal)}
+.sesrow.dropb{box-shadow:0 -4px 0 -1px var(--teal)}
+.sesrow.dropa{box-shadow:0 4px 0 -1px var(--teal)}
 .sesrow select,.sesrow input,.spfield select{padding:7px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;min-width:0}
 .sesrow input{width:3.8em;text-align:right;font-variant-numeric:tabular-nums}
 .sesmusic{margin:-4px 0 4px 26px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
@@ -456,7 +464,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
