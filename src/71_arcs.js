@@ -105,6 +105,7 @@ class ArcObs {
 // Orbe: un cristal dorado que gira y late, con dos aros que se cruzan, un halo, chispitas que lo rondan y una estela
 const orbGeo = new THREE.IcosahedronGeometry(0.075, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
 const orbMat = std({ color: 0xfff0b8, emissive: 0xffb02a, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.06, flatShading: true, toneMapped: false });
+orbMat.userData.comicSoft = true; // (en cómic, sombreado redondeado)
 const orbRingMat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
 function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); orbRingMat.color.setHex(on ? 0xff7fc4 : 0xffd166); }

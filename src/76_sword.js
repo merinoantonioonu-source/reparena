@@ -190,7 +190,7 @@ function swordStrike(S, e, p, dmg, counter) {
   if (laser) fx.electric(p, 10);
   stats.hits++; stats.shots++;
   if (counter) say('¡CONTRAATAQUE!', '#ffd166', 0.9);
-  e.onHit(dmg, true, p); if (!e.alive) onKilled(e);
+  e.onHit(dmg, true, p); comicHit(p); if (!e.alive) onKilled(e);
 }
 
 /* ---------- Combate: bloquear el golpe del robot ---------- */

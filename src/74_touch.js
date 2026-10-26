@@ -217,7 +217,7 @@ class TouchTarget {
       this.root.rotation.y = this.yaw;
     } else if (this.move === 'floor') { // pulsador en el suelo: una base oscura con su tapa luminosa y un aro que late alrededor
       this.base = new THREE.Mesh(padBaseGeo, padBaseMat); this.base.castShadow = this.base.receiveShadow = true; this.root.add(this.base);
-      this.mat = std({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.25, metalness: 0.2, transparent: true, toneMapped: false });
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 1.1, roughness: 0.25, metalness: 0.2, transparent: true, toneMapped: false }); this.mat.userData.comicSoft = true;
       this.pad = new THREE.Mesh(padTopGeo, this.mat); this.pad.position.y = 0.033; this.root.add(this.pad);
       this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.rotation.x = -Math.PI / 2; this.halo.position.y = 0.006; this.halo.scale.setScalar(0.62); this.root.add(this.halo);
@@ -226,7 +226,7 @@ class TouchTarget {
       this.ripple = new THREE.Mesh(padRippleGeo, this.rippleMat); this.ripple.rotation.x = -Math.PI / 2; this.ripple.position.y = 0.008; this.root.add(this.ripple);
       this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex[this.hand], color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.13, 0.13, 1); this.icon.position.y = 0.2; this.root.add(this.icon);
     } else {
-      this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false });
+      this.mat = std({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.4, flatShading: true, toneMapped: false }); this.mat.userData.comicSoft = true;
       this.gem = new THREE.Mesh(gemGeo, this.mat); this.gem.scale.set(0.085, 0.125, 0.085); this.root.add(this.gem);
       this.glow = glowSprite(col, 0.45, 0.7); this.root.add(this.glow);
       this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: handIconTex[this.hand], color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false })); this.icon.scale.set(0.13, 0.13, 1); this.icon.position.y = 0.22; this.root.add(this.icon);

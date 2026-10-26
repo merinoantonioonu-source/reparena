@@ -15,20 +15,29 @@ const COMIC = { mats: new Set(), st: new WeakMap(), ol: new WeakMap(), uL: { val
 const comicOn = () => settings.look === 'comic';
 const comicArenaOn = () => comicOn() && !arMode && !forestOn() && sceneryPick() === 'arena';
 const COMIC_OUT = 'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;';
+// (COMIC_SOFT: los orbes y los diamantes, con un degradado redondeado en vez del corte duro; y a todo, un poco de luz dentro
+// de cada tono y un degradado de abajo arriba, para que los planos grandes, como las compuertas, no queden de un solo color)
 const COMIC_LIGHT = `
 	vec3 cL = normalize( ( viewMatrix * vec4( uComicL, 0.0 ) ).xyz );
-	float cD = dot( normal, cL ), cLit = smoothstep( 0.0, 0.035, cD );
+	float cD = dot( normal, cL );
+	#ifdef COMIC_SOFT
+		float cLit = smoothstep( -0.45, 0.75, cD );
+	#else
+		float cLit = smoothstep( 0.0, 0.035, cD );
+	#endif
 	vec3 cBase = diffuseColor.rgb; float cLum = dot( cBase, vec3( 0.299, 0.587, 0.114 ) ); cBase = max( mix( vec3( cLum ), cBase, 1.3 ), 0.0 );
-	vec3 cCol = mix( cBase * uComicShadow, cBase, cLit );
+	vec3 cCol = mix( cBase * uComicShadow, cBase, cLit ) * ( 0.9 + 0.13 * clamp( cD, 0.0, 1.0 ) );
 	float cSp = smoothstep( 0.9, 0.93, dot( reflect( - cL, normal ), normalize( vViewPosition ) ) ) * cLit; cCol += vec3( 0.3 ) * cSp;
 	#if __VERSION__ >= 300
 		vec3 cW = transpose( mat3( viewMatrix ) ) * ( - vViewPosition ) + cameraPosition;
+		cCol *= mix( 0.8, 1.07, smoothstep( -0.2, 3.4, cW.y ) );
 		float cH = abs( fract( dot( cW, vec3( 0.9, 0.55, -0.7 ) ) * 26.0 ) - 0.5 );
 		cCol *= 1.0 - ( 1.0 - smoothstep( 0.1, 0.2, cH ) ) * ( 1.0 - cLit ) * 0.3 * smoothstep( 7.0, 3.0, length( vViewPosition ) ); // (solo de cerca: a lo lejos hacía aguas)
 	#endif
 	vec3 outgoingLight = cCol * uComicK + totalEmissiveRadiance * 1.4;`;
-function comicShader(sh) {
+function comicShader(sh, soft) {
   if (!sh.fragmentShader.includes(COMIC_OUT)) return; // (otro sombreador: se queda como estaba)
+  if (soft) sh.fragmentShader = '#define COMIC_SOFT\n' + sh.fragmentShader;
   Object.assign(sh.uniforms, { uComicL: COMIC.uL, uComicK: COMIC.uK, uComicShadow: COMIC.uShadow });
   let f = sh.fragmentShader;
   for (const inc of ['lights_physical_fragment', 'lights_fragment_begin', 'lights_fragment_maps', 'lights_fragment_end', 'aomap_fragment']) f = f.replace(`#include <${inc}>`, '');
@@ -44,8 +53,8 @@ function comicPatch(m) {
   const prev = m.onBeforeCompile || (() => {}), base = THREE.Material && THREE.Material.prototype.customProgramCacheKey;
   const own = m.customProgramCacheKey && m.customProgramCacheKey !== base && (!S || m.customProgramCacheKey !== S.key), prevKey = own ? m.customProgramCacheKey.bind(m) : () => prev.toString();
   if (!S) { S = { on: false, saved: null }; COMIC.st.set(m, S); COMIC.mats.add(m); if (m.addEventListener) m.addEventListener('dispose', () => COMIC.mats.delete(m)); }
-  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh); };
-  S.key = function () { return prevKey() + (S.on ? '|comic' : ''); };
+  S.wrap = function (sh, r) { prev.call(this, sh, r); if (S.on) comicShader(sh, !!this.userData.comicSoft); };
+  S.key = function () { return prevKey() + (S.on ? (this.userData.comicSoft ? '|comicsoft' : '|comic') : ''); };
   m.onBeforeCompile = S.wrap; m.customProgramCacheKey = S.key;
   comicSet(m, comicOn());
 }
@@ -143,7 +152,7 @@ function comicEnvBuild() {
   if (COMIC.sky) return;
   // cielo de dibujo: melocotón en el horizonte y azul claro arriba, con nubes blancas de borde entintado y la panza lavanda
   COMIC.sky = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, uniforms: { uT: { value: 0 } },
+    side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, extensions: { derivatives: true }, uniforms: { uT: { value: 0 } },
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: `uniform float uT; varying vec3 vP;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
@@ -154,7 +163,7 @@ function comicEnvBuild() {
         vec3 c = mix(vec3(1.0,0.85,0.72), vec3(0.62,0.8,1.0), smoothstep(-0.02, 0.4, h)); c = mix(c, vec3(0.45,0.66,0.98), smoothstep(0.4, 0.95, h));
         vec2 uv = d.xz / (max(h, 0.0) + 0.25) * 0.9 + vec2(uT * 0.008, uT * 0.003);
         float n = fbm(uv), mh = smoothstep(0.03, 0.12, h);
-        float cl = smoothstep(0.545, 0.555, n), ink = smoothstep(0.52, 0.53, n) - cl;
+        float fw = max(fwidth(n), 1e-4), cl = smoothstep(0.55 - fw, 0.55, n), ink = smoothstep(0.55 - fw * 3.5, 0.55 - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
         vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), smoothstep(0.57, 0.64, fbm(uv + vec2(0.04, 0.06))));
         c = mix(c, cloud, cl * mh); c = mix(c, vec3(0.2,0.13,0.25), ink * mh * 0.85);
         gl_FragColor = vec4(c, 1.0);
@@ -171,28 +180,118 @@ function comicEnvBuild() {
   COMIC.floor = new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
   COMIC.ground = new THREE.MeshBasicMaterial({ color: 0xd9b996, toneMapped: false });
 }
-// Encima de lo que pone applyEnvMode: en la fortaleza con cómic, su cielo, su suelo y su luz
-function applyComic() {
-  const on = comicArenaOn();
-  if (on) {
-    comicEnvBuild();
-    if (!COMIC.saved) COMIC.saved = { sky: sky.material, floor: envFloor.material, ground: outerGround.material };
-    sky.material = COMIC.sky; envFloor.material = COMIC.floor; outerGround.material = COMIC.ground;
-    scene.fog = new THREE.FogExp2(0xf6dfe4, 0.011); renderer.setClearColor(0xf6dfe4, 1);
-  } else if (COMIC.saved) { sky.material = COMIC.saved.sky; envFloor.material = COMIC.saved.floor; outerGround.material = COMIC.saved.ground; COMIC.saved = null; }
-  searchlights.forEach(s => { s.grp.visible = !on; }); if (envLights.mesh) envLights.mesh.parent.visible = !on; // (los focos y las luces rojas de la noche de tormenta)
+/* ---------- Escenario de cómic (en lugar de la fortaleza) ---------- */
+// Un valle de dibujo animado, todo de pocos polígonos y con su contorno: el suelo color arena con grietas a tinta, mesetas
+// escalonadas en tonos coral, melocotón y lavanda, ruinas de columnas y arcos color crema, rocas que flotan en el cielo y,
+// al fondo, montañas recortadas en lavanda. Cada parte es una sola malla (un dibujo, y otro su contorno)
+const ccol = h => { const c = new THREE.Color(h); return c.convertSRGBToLinear ? c.convertSRGBToLinear() : c; };
+function comicWorldBuild() {
+  if (COMIC.world) return COMIC.world; comicEnvBuild();
+  const g = new THREE.Group(), R = rng(23), mat = std({ vertexColors: true, flatShading: true, roughness: 1, metalness: 0 });
+  const sk = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), COMIC.sky); sk.renderOrder = -10; g.add(sk);
+  const fl = new THREE.Mesh(new THREE.CircleGeometry(46, 64), COMIC.floor); fl.rotation.x = -Math.PI / 2; g.add(fl);
+  const og = new THREE.Mesh(new THREE.RingGeometry(45.9, 160, 48), COMIC.ground); og.rotation.x = -Math.PI / 2; og.position.y = -0.01; g.add(og);
+  const k = new Kit();
+  // mesetas: tres o cuatro pisos que se estrechan, cada uno de su color
+  const BANDS = [['#f2a3a0', '#f7c79f', '#e98f8f', '#fbe0b8'], ['#c9a0dc', '#e3b7e8', '#b98ad0', '#f1d9f5'], ['#f7b98f', '#fbd3a5', '#ee9a72', '#fde8c8']];
+  for (let i = 0; i < 13; i++) {
+    const a = i / 13 * TAU + R() * 0.3, r = 30 + R() * 26, x = Math.cos(a) * r, z = Math.sin(a) * r, P = BANDS[i % 3], floors = 3 + (R() < 0.4 ? 1 : 0);
+    let y = 0, rad = 4 + R() * 5; const ry = R() * TAU;
+    for (let f = 0; f < floors; f++) { const h = 2.5 + R() * 4.5, rt = rad * (0.78 + R() * 0.1); k.add('w', G.cylRaw(rt, rad, h, 7), ccol(P[f % P.length]), x, y + h / 2, z, 0, ry + f * 0.4, 0); y += h; rad = rt * (0.92 - R() * 0.1); }
+    k.add('w', G.cylRaw(rad * 0.98, rad, 0.5, 7), ccol(P[3]), x, y + 0.25, z, 0, ry, 0); // la tapa, más clara
+  }
+  // ruinas: columnas rotas (alguna con su capitel) y un par de arcos
+  for (let i = 0; i < 9; i++) {
+    const a = i / 9 * TAU + 0.35 + R() * 0.25, r = 13 + R() * 7, x = Math.cos(a) * r, z = Math.sin(a) * r, h = 1.6 + R() * 3.2;
+    k.add('w', G.cylRaw(0.42, 0.48, h, 8), ccol('#f3e3c3'), x, h / 2, z, (R() - 0.5) * 0.12, R() * 3, (R() - 0.5) * 0.12);
+    if (R() < 0.5) k.add('w', G.box(1.1, 0.35, 1.1), ccol('#e8d2a8'), x, h + 0.17, z, 0, R() * 3, 0);
+    k.add('w', G.box(1.2, 0.3, 1.2), ccol('#e0c89c'), x, 0.15, z, 0, R() * 3, 0);
+  }
+  for (const a of [2.2, 4.1]) { const r = 17, x = Math.cos(a) * r, z = Math.sin(a) * r, t = new V3(-Math.sin(a), 0, Math.cos(a));
+    for (const sgn of [-1, 1]) k.add('w', G.cylRaw(0.45, 0.5, 4.2, 8), ccol('#f3e3c3'), x + t.x * sgn * 1.5, 2.1, z + t.z * sgn * 1.5);
+    k.add('w', G.box(4.2, 0.6, 1.1), ccol('#e8d2a8'), x, 4.5, z, 0, -a + Math.PI / 2, 0); }
+  // rocas que flotan: un cono boca abajo con su meseta encima
+  for (let i = 0; i < 5; i++) {
+    const a = R() * TAU, r = 38 + R() * 22, x = Math.cos(a) * r, z = Math.sin(a) * r, y = 16 + R() * 12, s = 2.5 + R() * 3, P = BANDS[(i + 1) % 3];
+    k.add('w', G.cylRaw(s, s * 0.15, s * 1.6, 6), ccol(P[0]), x, y - s * 0.8, z, 0, R() * 3, 0); k.add('w', G.cylRaw(s * 0.95, s, 0.6, 6), ccol(P[3]), x, y + 0.3, z, 0, R() * 3, 0);
+  }
+  g.add(k.build({ w: mat }));
+  // montañas al fondo: recortadas, lavanda (sin luz ni niebla: un fondo pintado)
+  const N = 64, P = [], I = [], L = [], pk = [];
+  for (let i = 0; i <= N; i++) pk.push(i === N ? pk[0] : 10 + R() * 12 + (i % 5 === 0 ? R() * 14 : 0));
+  for (let i = 0; i <= N; i++) { const a = i / N * TAU, x = Math.cos(a) * 115, z = Math.sin(a) * 115; P.push(x, 0, z, x, pk[i], z); if (i < N) { const b = i * 2; I.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); L.push(x, pk[i], z, Math.cos(a + TAU / N) * 115, pk[i + 1], Math.sin(a + TAU / N) * 115); } }
+  const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3)); mg.setIndex(I);
+  g.add(new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ color: ccol('#b9a6dd'), fog: false, side: THREE.DoubleSide, toneMapped: false })));
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(L), 3));
+  g.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x140c1a, fog: false })));
+  g.visible = false; scene.add(g); COMIC.world = g; // (al añadirlo, sus piezas reciben el sombreado de cómic y su contorno)
+  return g;
 }
+// Encima de lo que pone applyEnvMode: en la fortaleza con cómic, el valle de dibujo en su lugar
+function applyComic() {
+  const on = comicArenaOn(); if (on) comicWorldBuild(); if (COMIC.world) COMIC.world.visible = on;
+  if (!on) return;
+  env.visible = false; scene.fog = new THREE.FogExp2(0xf6dfe4, 0.011); renderer.setClearColor(0xf6dfe4, 1);
+}
+
+/* ---------- Efectos de cómic ---------- */
+// Al acertar, líneas de impacto; al derribar, un estallido de estrella con su onomatopeya (¡POW!, ¡ZAS!…); y las
+// explosiones, en nubes de humo dibujadas (blancas, con contorno) en lugar de fuego y humo
+const CFX = { list: [], tex: null };
+function cfxTex() {
+  if (CFX.tex) return CFX.tex;
+  const T = CFX.tex = { words: [], lines: null, puff: null };
+  for (const w of ['¡POW!', '¡ZAS!', '¡BAM!', '¡KRAK!', '¡PAF!', '¡BUM!']) {
+    const cv = mkCanvas(512, 320), x = cv.getContext('2d'), cx = 256, cy = 160, n = 13;
+    const star = (R, r, fill) => { x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU + 0.12, rad = (i % 2 ? r : R) * (0.86 + 0.14 * Math.sin(i * 2.7)); x.lineTo(cx + Math.cos(a) * rad * 1.55, cy + Math.sin(a) * rad); } x.closePath(); x.fillStyle = fill; x.fill(); };
+    star(152, 98, '#140c1a'); star(140, 89, '#ffd23f'); star(104, 68, '#ff8a3d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; fitFont(x, w, 330, 112, '%px ' + FD); x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#140c1a'; x.strokeText(w, cx, cy + 6); x.fillStyle = '#ffffff'; x.fillText(w, cx, cy + 6);
+    T.words.push(texFrom(cv));
+  }
+  { const cv = mkCanvas(256), x = cv.getContext('2d'), R = rng(5); x.fillStyle = '#140c1a';
+    for (let i = 0; i < 22; i++) { const a = i / 22 * TAU + R() * 0.15, r0 = 70 + R() * 25, r1 = 124, w = 0.035 + R() * 0.03; x.beginPath(); x.moveTo(128 + Math.cos(a) * r0, 128 + Math.sin(a) * r0); x.lineTo(128 + Math.cos(a - w) * r1, 128 + Math.sin(a - w) * r1); x.lineTo(128 + Math.cos(a + w) * r1, 128 + Math.sin(a + w) * r1); x.closePath(); x.fill(); }
+    T.lines = texFrom(cv); }
+  { const cv = mkCanvas(128), x = cv.getContext('2d'); x.fillStyle = '#140c1a'; x.beginPath(); x.arc(64, 64, 60, 0, TAU); x.fill(); x.fillStyle = '#ffffff'; x.beginPath(); x.arc(64, 64, 53, 0, TAU); x.fill();
+    x.fillStyle = '#d9cdf0'; x.beginPath(); x.arc(64, 64, 53, 0.15 * Math.PI, 0.85 * Math.PI); x.arc(64, 44, 48, 0.8 * Math.PI, 0.2 * Math.PI, true); x.fill(); T.puff = texFrom(cv); }
+  return T;
+}
+function cfxAdd(tex, pos, size, life, kind, o = {}) {
+  const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: !o.top, toneMapped: false, rotation: o.rot || 0 });
+  const s = new THREE.Sprite(m); s.position.copy(pos); s.renderOrder = o.top ? 26 : 9; s.scale.setScalar(0.001); scene.add(s);
+  CFX.list.push({ s, t: 0, life, size, kind, v: o.v || null, w: o.w || 1 });
+}
+function updateCFX(dt) {
+  for (let i = CFX.list.length - 1; i >= 0; i--) {
+    const f = CFX.list[i]; f.t += dt; const k = f.t / f.life;
+    if (k >= 1) { scene.remove(f.s); f.s.material.dispose(); CFX.list.splice(i, 1); continue; }
+    let sc = f.size;
+    if (f.kind === 'pop') { sc *= k < 0.1 ? 1.25 * smooth(k / 0.1) : k < 0.2 ? 1.25 - 0.25 * (k - 0.1) / 0.1 : 1; f.s.material.opacity = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1; f.s.position.y += dt * 0.12; } // salta, se asienta y se va
+    else if (f.kind === 'lines') { sc *= 0.6 + 0.9 * k; f.s.material.opacity = 1 - k * k; }
+    else { sc *= 0.35 + 0.9 * smooth(Math.min(1, k * 1.7)); f.s.material.opacity = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1; if (f.v) { f.s.position.addScaledVector(f.v, dt); f.v.multiplyScalar(1 - dt * 2); } }
+    f.s.scale.set(sc * f.w, sc, 1);
+  }
+}
+function comicHit(p) { if (comicOn() && CFX.list.length < 40) cfxAdd(cfxTex().lines, p, 0.45, 0.24, 'lines', { rot: rand(0, TAU) }); }
+function comicKill(p, big) {
+  if (!comicOn()) return; const T = cfxTex();
+  cfxAdd(pick(T.words), p.clone().add(new V3(0, 0.3, 0)), big ? 0.7 : 0.45, 1.1, 'pop', { top: true, rot: rand(-0.2, 0.2), w: 1.6 });
+  cfxAdd(T.lines, p, big ? 1.5 : 0.95, 0.3, 'lines', { rot: rand(0, TAU) });
+}
+function comicBoom(p, size) { const T = cfxTex(); for (let i = 0; i < 7; i++) cfxAdd(T.puff, p.clone().add(new V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).multiplyScalar(0.25 * size)), (0.35 + Math.random() * 0.3) * size, rand(0.5, 0.9), 'puff', { v: new V3(rand(-1, 1), rand(0.4, 1.4), rand(-1, 1)).multiplyScalar(0.7 * size) }); }
+
 function applyLook() {
   // sin el «tono de cine» (comprime los colores): los del dibujo, tal cual
   renderer.toneMapping = comicOn() ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
   comicScan(scene); const on = comicOn(); COMIC.mats.forEach(m => comicSet(m, on));
   applyShadows(); applyEnvMode();
+  boardBg = null; boardDirty = true; if (menu && menu.rebuild) menu.rebuild(); // el marcador y el menú, en el estilo nuevo
   WARM.done.clear(); warmQueue(); // los enemigos, otra vez poco a poco, con el sombreador nuevo
 }
 settingHooks.push(k => { if (k === 'look') applyLook(); });
 function updateComic(dt, t) {
   COMIC.sweepT -= dt; if (COMIC.sweepT <= 0) { COMIC.sweepT = 1.5; comicScan(scene); } // (por si algo cambió de material sin pasar por add)
-  if (COMIC.sky && sky.material === COMIC.sky) COMIC.sky.uniforms.uT.value = t;
+  if (COMIC.sky) COMIC.sky.uniforms.uT.value = t;
+  updateCFX(dt);
 }
 if (comicOn()) renderer.toneMapping = THREE.NoToneMapping;
 comicScan(scene);
