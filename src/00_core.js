@@ -192,7 +192,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'Auto: sobre las compuertas en VR, en una columna en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
-  { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['real', 'Realista'], ['neon', 'Neón (prueba)']], def: 'real', hint: 'Neón (prueba): una estética estilizada y más ligera para la gráfica: colores planos en dos tonos con un filo luminoso, sin texturas de relieve ni sombras en tiempo real; en la fortaleza, una arena de neón (suelo de rejilla luminosa, cielo con sol retro y montañas de alambre).' },
+  { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['real', 'Realista'], ['comic', 'Cómic (prueba)']], def: 'real', hint: 'Cómic (prueba): aspecto de dibujo animado, como Retronika o Broken Edge: contornos negros, sombreado plano con un corte duro y sombras de color, rayado a lápiz en la sombra y colores claros; sin sombras en tiempo real (más ligero). En la fortaleza, cielo con nubes de dibujo y suelo con grietas a tinta.' },
   { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'Automática: si el juego no llega a la frecuencia de las gafas (72 imágenes por segundo), baja la resolución por pasos y recalcula las sombras menos a menudo, y la vuelve a subir si sobra. Con menos de 72, lo cercano (manos y paneles) se ve a saltos.' },
   { key: 'xrHz', g: 'entorno', label: 'Fotogramas por segundo en las gafas', short: 'Fotogramas', type: 'choice', opts: [['72', '72 (estable)'], ['90', '90'], ['120', '120']], def: '72', hint: 'A 72 la imagen va siempre fluida (como en muchos juegos de las Quest); a 90 o 120 es más suave si las gafas llegan, pero si no llegan da tirones.' },
   { key: 'perfHud', g: 'sistema', label: 'Medidor de fotogramas', short: 'Medidor', type: 'toggle', def: 0, hint: 'Muestra abajo a la izquierda de la vista los fotogramas por segundo y los que se pierden: si ves pérdidas, baja la frecuencia o quita las sombras.' },
@@ -246,6 +246,7 @@ function fmtVal(f, v = settings[f.key]) {
   }
   if (EX_NAMES[s.exercise]) settings.exercise = s.exercise;
   if (s.roomMode === undefined && s.room === 0) settings.roomMode = 'off'; // antes era un sí/no
+  if (s.look === 'neon') settings.look = 'comic'; // (la prueba de neón pasó a ser la de cómic)
   if (s.barMix === undefined && s.barSides) settings.barMix = 50; // antes, todos por los lados o ninguno: ahora se mezclan
   // la puntería por defecto pasó de automática a lanzar con las manos: a quien la tenía en automática (lo de antes) se le cambia una vez
   if (s.aimV !== 2) { if (!s.aim || s.aim === 'auto') settings.aim = 'hands'; } settings.aimV = 2;
