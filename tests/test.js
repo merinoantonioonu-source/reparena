@@ -422,7 +422,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const atks = new Set(), downClips = new Set();
     await runConfig('diablillo: golpes variados y derribo', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'imp', waves: 2, repsWave: 16, walkTime: 5, maxAlive: 3, lives: 0 }, t => {
       RA.PV.crouch = (t % 4.6) < 0.9; // sin cargar: que lleguen a golpear
-      for (const e of RA.enemies) { if (e.constructor.name !== 'Beast') continue; if (t > 30 && e.alive && e.out && e.state === 'walk' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, e.center(new THREE.Vector3()), 4); } if (e.state === 'windup' && e.atk) atks.add(e.atk); if (e.state === 'down') downClips.add(e.cur); }
+      for (const e of RA.enemies) { if (e.constructor.name !== 'Beast') continue; if (t > 30 && e.alive && e.out && (e.state === 'walk' || e.state === 'windup') && !downClips.has('LayToIdle') && Math.random() < 0.03) { e.hp += 2; e.onHit(1, false, e.center(new THREE.Vector3()), 4); } /* (como un disparo ×4 que no lo mata; hasta verlo levantarse) */ if (e.state === 'windup' && e.atk) atks.add(e.atk); if (e.state === 'down') downClips.add(e.cur); }
     }, 420, s => '', true);
     const zones = ['Melee_Hook', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Punch_Jab'].map(a => { const r = { atk: a, pos: new THREE.Vector3(0, 0, -2) }; RA.blockStart(r); const P = RA.blockPoint(r, new THREE.Vector3()); return `${a}:${r.zone}/${r.zoneSide}@${P.x.toFixed(2)}`; });
     log(`imp attacks: ${[...atks].join(',')} · knocked down playing ${[...downClips].join(',')} · block marks ${zones.join(' ')}`);
@@ -542,16 +542,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const LK = { on: 0, n: 0, other: 0, ring: 0, kLo: 1, kHi: 0, dead: 0 };
     await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
       const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl.length && x.lkl[0].visible);
-      if (g && RA.state === 'play') { LK.n++; if (vis(g)) LK.on++; LK.kLo = Math.min(LK.kLo, RA.LKL.k); LK.kHi = Math.max(LK.kHi, RA.LKL.k); }
+      if (g && RA.state === 'play') { LK.n++; if (vis(g)) LK.on++; LK.kLo = Math.min(LK.kLo, RA.LKL.k); LK.kHi = Math.max(LK.kHi, RA.LKL.k); if (LK.prev !== undefined) LK.jump = Math.max(LK.jump || 0, Math.abs(RA.LKL.k - LK.prev)); LK.prev = RA.LKL.k; } else LK.prev = undefined;
       for (const x of RA.enemies) { if (x !== g && x.alive && vis(x)) LK.other++; if (!x.alive && vis(x)) LK.dead++; }
       if (Object.values(RA.locks).some(r => r.visible)) LK.ring++;
     }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
-    log(`lock outline: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · blink ${LK.kLo.toFixed(2)}–${LK.kHi.toFixed(2)}`);
-    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.5) errors.push('diana: el robot apuntado debería llevar el contorno de neón parpadeando (solo él, nunca el aro antiguo)'); }
+    log(`lock outline: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · glow ${LK.kLo.toFixed(2)}–${LK.kHi.toFixed(2)}, biggest step per frame ${(LK.jump || 0).toFixed(3)}`);
+    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.3 || LK.jump > 0.12) errors.push('diana: el robot apuntado debería llevar el contorno de neón con un brillo que sube y baja despacio (solo él, nunca el aro antiguo)'); }
   // la mirada baja al agacharse y aún no ha vuelto al subir (cuando se dispara): el rayo va igual al robot que mirabas
   { let crT = -9; await runConfig('Combate mirada que se mueve en la sentadilla', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); if (RA.PV.crouch) crT = t; const e = RA.enemies.find(x => x.alive); if (e) { RA.camera.lookAt(e.center(new THREE.Vector3())); if (t - crT < 0.5) RA.camera.rotateX(-0.42); } }, 420, s => s.kills < 3 ? 'con la mirada moviéndose no se derriban robots' : s.shots > s.hits * 2.5 || s.taken > 4 ? `con la mirada moviéndose en la sentadilla se falla demasiado (${s.hits}/${s.shots}, golpes recibidos ${s.taken})` : ''); } // los fallos que quedan: disparos sin ningún robot a la vista
   RA.camera.rotation.set(0, 0, 0);
-  await runConfig('Combate voladores automática', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'squat', flySpeed: 8 }, squatSim(), 420, s => s.kills < 6 ? 'la puntería automática no derriba voladores' : '');
+  // (y el estallido de cada uno sale donde murió: onKilled pregunta su posición cuando ya se ha quitado de la escena)
+  { const last = new Map(); let far = 0, deaths = 0;
+    await runConfig('Combate voladores automática', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'squat', flySpeed: 8 }, t => { squatSim()(t);
+      for (const e of RA.enemies) { if (e.type !== 'flyer') continue; if (e.alive) last.set(e, e.root.getWorldPosition(new THREE.Vector3())); else if (last.has(e)) { deaths++; far = Math.max(far, e.center(new THREE.Vector3()).distanceTo(last.get(e))); last.delete(e); } }
+    }, 420, s => s.kills < 6 ? 'la puntería automática no derriba voladores' : '');
+    log(`flyer deaths: ${deaths} · burst at most ${far.toFixed(2)} m from where it died`);
+    if (deaths && far > 0.5) errors.push(`voladores: el estallido sale a ${far.toFixed(2)} m de donde murió el volador`); }
   const MIX = { robots: 0, flyers: 0 };
   await runConfig('Combate mezcla', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'squat', walkTime: 10, flySpeed: 8 }, t => { squatSim()(t); for (const e of RA.enemies) if (e.alive) MIX[e.type === 'robot' ? 'robots' : 'flyers'] = 1; }, 420, s => !MIX.robots || !MIX.flyers ? 'la mezcla no trae robots y voladores' : s.kills < 4 ? 'en la mezcla no se derriba a nadie' : '');
   await runConfig('Combate mezcla en flexiones', { ...base, mode: 'combat', foes: 'mix', aim: 'auto', exercise: 'pushup', walkTime: 8 }, squatSim(2.6), 420, s => s.kills < 4 ? 'en flexiones con mezcla no se derriba a nadie' : '');

@@ -16,13 +16,13 @@ const GDIFF = {
   normal: { perf: 0.25, rep: 0.07, streak: 0.1, enP: 0.25, en: 0.15, drain: 0.1, block: 0.25, parry: 0.15, win: 1.1, stun: 1.8, dodge: 0.14 },
   hard: { perf: 0.17, rep: 0.05, streak: 0.08, enP: 0.2, en: 0.1, drain: 0.16, block: 0.35, parry: 0.2, win: 0.75, stun: 1.4, dodge: 0.18 }
 };
-const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false };
+const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, need: 1, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false };
 const gDiff = () => GDIFF[settings.guardDiff] || GDIFF.normal;
 const guardOn = () => isCombat() && !!settings.guard && settings.guard !== 'off';
 const gestureOn = () => guardOn() && settings.guard === 'full' && !swordActive();
 // Qué se tiene en las manos: libres, pesas u ocupadas (apoyadas en el suelo o en el banco)
 const guardFam = () => handsFree() || settings.exercise === 'jsquat' ? 'fist' : holdsWeights() ? 'weights' : 'busy';
-function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false }); GUARD.hist.length = 0; }
+function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false }); GUARD.hist.length = 0; }
 
 /* ---------- Lo que se ve ---------- */
 const G_TEAL = new THREE.Color(0x3cf0c6), G_LOW = new THREE.Color(0xff8a3d), G_WHITE = new THREE.Color(0xffffff);
@@ -35,8 +35,21 @@ function guardShield() { // un escudo hexagonal: el cristal y el borde
 const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [] };
 GV.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
 GV.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }));
-for (const m of [GV.bubble, GV.ring]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
-function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = false; for (const w of GV.warn) w.visible = false; }
+// En el suelo (flexiones, planchas, superman), mirando abajo, la burbuja alrededor de la cabeza apenas se veía: allí es una
+// cúpula sobre ti y, en el suelo, un aro que se va llenando mientras aguantas quieto (lleno: burbuja puesta)
+GV.dome = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
+GV.pad = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.57, 72, 1), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uP: { value: 0 }, uCol: { value: new THREE.Color(0x3cf0c6) }, uA: { value: 0.5 } },
+  vertexShader: 'varying vec2 vQ; void main(){ vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform float uP; uniform vec3 uCol; uniform float uA; varying vec2 vQ;
+    void main(){ float a = fract(atan(vQ.x, vQ.y) / 6.28318 + 1.0); float on = step(a, uP); gl_FragColor = vec4(uCol, uA * mix(0.22, 1.0, on)); }`
+}));
+GV.pad.rotation.x = -Math.PI / 2;
+for (const m of [GV.bubble, GV.ring, GV.dome, GV.pad]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
+function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = GV.dome.visible = GV.pad.visible = false; for (const w of GV.warn) w.visible = false; }
+const guardLow = () => isFloor() && head.p.y < 1.0; // tumbado o en plancha, mirando al suelo
+// el centro de la cúpula, en el suelo bajo tu cabeza (algo por delante: ahí están las manos)
+const guardFloorAt = out => out.set(head.p.x, 0.012, head.p.z).addScaledVector(_gdF.copy(fwdH()), 0.12);
 
 /* ---------- Detectar la guardia ---------- */
 const _gdF = new V3(), _gdP = new V3(), _gdQ = new V3();
@@ -68,8 +81,8 @@ function guardDetect(dt) {
   // cadera arriba; en el resto, quieto en tu postura)
   const away = isSeated() ? head.p.y > 1.5 : head.p.y > 1.0;
   const hold = ex === 'superman' ? DET.su.state === 'up' : ex === 'splank' ? DET.sp.state === 'hold' && !DET.sp.awayT && state === 'play' : !away && head.speed < 0.06;
-  GUARD.still = hold ? GUARD.still + dt : 0;
-  return GUARD.still > (ex === 'superman' || ex === 'splank' ? 0.4 : 1.0) ? { kind: 'bubble', side: null, pos: head.p } : null;
+  GUARD.still = hold ? GUARD.still + dt : 0; GUARD.need = ex === 'superman' || ex === 'splank' ? 0.4 : 1.0;
+  return GUARD.still > GUARD.need ? { kind: 'bubble', side: null, pos: head.p } : null;
 }
 
 /* ---------- Cada fotograma ---------- */
@@ -111,7 +124,17 @@ function guardStep(dt, t) {
   }
   // el escudo o la burbuja, del color de la energía que queda (y blanco un instante al parar un golpe)
   guardHide(); const col = _gdC.copy(G_LOW).lerp(G_TEAL, clamp(G.en * 2, 0, 1)).lerp(G_WHITE, G.flash);
-  if (G.up === 'bubble') {
+  const low = guardLow(), busy = gestureOn() && guardFam() === 'busy';
+  if (busy && low && !G.broke) { // el aro del suelo: cuánto falta para la burbuja (o, puesta, lleno y latiendo)
+    guardFloorAt(GV.pad.position); GV.pad.visible = true; const u = GV.pad.material.uniforms;
+    u.uP.value = G.up === 'bubble' ? 1 : clamp(G.still / G.need, 0, 1); u.uCol.value.copy(col); u.uA.value = G.up === 'bubble' ? 0.75 + 0.2 * Math.sin(t * 4) : 0.55;
+  }
+  if (G.up === 'bubble' && low) {
+    GV.dome.visible = true; guardFloorAt(GV.dome.position); GV.dome.rotation.y = t * 0.3; GV.dome.scale.set(1, 0.85, 1).multiplyScalar(1 + G.flash * 0.15);
+    GV.dome.material.color.copy(col); GV.dome.material.opacity = 0.55 + G.flash * 0.45;
+    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
+  } else if (G.up === 'bubble') {
+    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
     GV.bubble.visible = true; GV.bubble.position.copy(head.p); GV.bubble.rotation.y = t * 0.4; GV.bubble.scale.setScalar(1 + G.flash * 0.25 + Math.sin(t * 5) * 0.015);
     GV.bubble.material.color.copy(col); GV.bubble.material.opacity = 0.22 + G.flash * 0.5;
   } else if (G.up) {
@@ -122,13 +145,16 @@ function guardStep(dt, t) {
   }
   // el escudo por técnica cargado: un anillo que gira a tu alrededor
   if (G.charge >= 1) {
-    GV.ring.visible = true; GV.ring.position.copy(head.p); GV.ring.position.y -= isFloor() || head.p.y < 1.0 ? 0.08 : 0.32; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
+    GV.ring.visible = true; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
+    if (low) { guardFloorAt(GV.ring.position); GV.ring.position.y = 0.1; GV.ring.scale.setScalar(1.5); } // (en el suelo, a la vista: alrededor de las manos)
+    else { GV.ring.position.copy(head.p); GV.ring.position.y -= head.p.y < 1.0 ? 0.08 : 0.32; GV.ring.scale.setScalar(1); }
     GV.ring.material.opacity = 0.4 + 0.2 * Math.sin(t * 6);
   }
   // aviso de golpe: el enemigo tiembla y brilla mientras lo prepara, cada vez más rojo
   let n = 0;
   for (const e of enemies) {
     const k = guardThreat(e); if (k < 0 || n >= 6) continue;
+    if (!G.tip) { G.tip = true; const tip = guardTip(); if (tip) say(tip, '#3cf0c6', 2.6); }
     const sz = e.type === 'robot' ? 0.9 * e.sc : e.type === 'spider' ? 0.22 * e.s : 0.45 * Math.max(0.4, e.scale), amp = (e.type === 'robot' ? 0.015 * e.sc : e.type === 'spider' ? 0.004 * e.s : 0.01) * (0.4 + k);
     e.root.position.x += Math.sin(t * 71 + n) * amp; e.root.position.z += Math.cos(t * 63 + n) * amp;
     const w = guardWarnSpr(n++); e.center(w.position); w.visible = true;
@@ -140,6 +166,17 @@ function guardStep(dt, t) {
   const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
 const _gdC = new THREE.Color();
+
+// Cómo defenderse en este ejercicio (sale la primera vez que un enemigo prepara un golpe)
+function guardTip() {
+  if (!gestureOn()) return G_TIPTECH;
+  if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
+  const f = guardFam();
+  if (f === 'fist') return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
+  if (f === 'weights') return '¡Te va a golpear! Junta las manos delante de la cara: guardia';
+  return '¡Te va a golpear! Quédate quieto en la postura: burbuja · o aparta la cabeza';
+}
+const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escudo';
 
 /* ---------- Al llegar un golpe ---------- */
 // Desde hurtPlayer: ¿lo para la guardia, una esquiva o el escudo? Si lo para, el golpe no hace daño

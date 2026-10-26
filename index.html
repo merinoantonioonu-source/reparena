@@ -2117,7 +2117,7 @@ const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 }, flash: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; uniform float flash; varying vec3 vP;
-    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: en las Quest, sin(números grandes) pierde precisión y el ruido salía en bloques rectos)
     float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
     float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
     void main(){
@@ -2453,7 +2453,7 @@ const forestSkyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; varying vec3 vP;
-    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: en las Quest, sin(números grandes) pierde precisión y el ruido salía en bloques rectos)
     float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
     void main(){
       vec3 d = normalize(vP); float h = d.y;
@@ -2636,7 +2636,7 @@ const natSkyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; varying vec3 vP;
-    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: en las Quest, sin(números grandes) pierde precisión y el ruido salía en bloques rectos)
     float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
     float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*vnoise(p); p*=2.03; a*=0.5; } return v; }
     void main(){
@@ -3121,7 +3121,7 @@ const VX_RMIN = 0.07, VX_D = 1.3;
 const funY = r => -VX_D * ((1 - r) * 0.35 + 0.65 * (1 / Math.max(r, VX_RMIN) - 1) / (1 / VX_RMIN - 1));
 // estrías en espiral logarítmica (a: ángulo, z: profundidad del túnel) que giran y fluyen hacia dentro
 const SWIRL_GLSL = `
-float vxHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vxHash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: estable en las Quest)
 float vxNoise(vec2 p, float P) { // ruido suave que da la vuelta entera en P celdas (sin costura en el ángulo)
   vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float i1 = mod(i.x + 1.0, P); i.x = mod(i.x, P);
   return mix(mix(vxHash(i), vxHash(vec2(i1, i.y)), f.x), mix(vxHash(vec2(i.x, i.y + 1.0)), vxHash(vec2(i1, i.y + 1.0)), f.x), f.y);
@@ -3880,7 +3880,7 @@ function comicEnvBuild() {
     side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, extensions: { derivatives: true }, uniforms: { uT: { value: 0 } },
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: `uniform float uT; varying vec3 vP;
-      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+      float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); } // (sin seno: en las Quest, sin(números grandes) pierde precisión y el ruido salía en bloques rectos)
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x), mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x), f.y); }
       float fbm(vec2 p){ float v=0.0, a=0.6; for(int i=0;i<3;i++){ v+=a*vnoise(p); p*=2.03; a*=0.42; } return v / 0.9564; } // (pocas octavas: formas redondeadas)
       // bultos redondos (celdas: cerca de un punto de cada celda, alto): dan al borde las ondas de una nube de dibujo
@@ -3896,8 +3896,9 @@ function comicEnvBuild() {
         vec2 uv = d.xz / (max(h, 0.0) + 0.5) * 2.0 + vec2(uT * 0.008, uT * 0.003);
         float n = cloudF(uv, h), thr = 0.63 + 0.22 * (1.0 - smoothstep(0.05, 0.3, h));
         float fw = max(fwidth(n), 1e-4), cl = smoothstep(thr - fw, thr, n), ink = smoothstep(thr - fw * 3.5, thr - fw * 2.5, n) - cl; // (el borde, de grosor fijo en pantalla)
-        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube)
-        vec2 u2 = uv - normalize(d.xz + vec2(1e-4)) * 0.1; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
+        // por dentro: blanca arriba y con la panza lavanda (la sombra, por el lado de abajo de cada nube; el desplazamiento,
+        // sin normalizar: en lo más alto no da saltos)
+        vec2 u2 = uv - d.xz * 0.12; float top = smoothstep(thr + 0.0, thr + 0.09, cloudF(u2, h));
         vec3 cloud = mix(vec3(0.82,0.78,0.97), vec3(1.0), top);
         c = mix(c, cloud, cl); c = mix(c, vec3(0.2,0.13,0.25), ink * 0.85);
         gl_FragColor = vec4(c, 1.0);
@@ -7883,7 +7884,9 @@ class Flyer {
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
   }
-  center(out) { this.root.getWorldPosition(out); return out; }
+  // (ya muerto, donde murió: se quita de la escena al momento y, fuera de ella, su posición saldría en coordenadas de la
+  // arena, lejos de donde estaba; el estallido y los puntos de onKilled salían desplazados)
+  center(out) { if (this.deadAt) return out.copy(this.deadAt); this.root.getWorldPosition(out); return out; }
   update(dt, t) {
     this.t += dt; const push = isTiny(), low = lowFly(), active = state === 'play' || state === 'rest';
     if (active) {
@@ -7965,7 +7968,7 @@ class Flyer {
     if (this.hp <= 0) this.kill();
   }
   kill() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss, s = isTiny() ? 0.45 : 1; this.deadAt = c.clone();
     if (this.inst.mx) { fx.ichor(c, big ? 30 : 18, (big ? 2.2 : 1.4) * s); fx.glow(c, [1, 0.7, 0.4], (big ? 0.8 : 0.4) * s, 0.12); SND.squish(c); if (big) { fx.explosion(c, 1.2 * s, true); SND.explosion(c, true); } this.dispose(); return; } // (sin chatarra)
     if (this.kind === 'hornet') { fx.ichor(c, 18, 1.5 * s); fx.glow(c, [1, 0.8, 0.3], 0.4 * s, 0.1); SND.squish(c); }
     else { fx.explosion(c, (big ? 1.4 : 0.55) * s, big); SND.explosion(c, big); }
@@ -9892,7 +9895,7 @@ class HeadTarget {
     this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
   }
-  center(out) { this.root.getWorldPosition(out); return out; }
+  center(out) { if (this.deadAt) return out.copy(this.deadAt); this.root.getWorldPosition(out); return out; } // (reventado: donde estaba; ver Flyer.center)
   slotIndex() { let i = 0; for (const o of enemies) { if (o === this) break; if (o.type === 'target' && o.alive && (o.mode === 'approach' || o.mode === 'wait')) i++; } return i; }
   update(dt, t) {
     this.t += dt; const play = state === 'play', idx = this.slotIndex();
@@ -9995,7 +9998,7 @@ class HeadTarget {
     if (this.bubble) { SND.pop(c, false); fx.droplets(c, 8, [0.45, 1, 0.85], 1, 0.025); } else { SND.metalHit(c, false); fx.sparks(c, 8, [1, 0.6, 0.2], 2, 0.03); }
   }
   pop() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss; this.deadAt = c.clone();
     if (this.bubble) { // revienta salpicando gotas irisadas y un destello de película
       SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
       fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
@@ -10883,13 +10886,13 @@ const GDIFF = {
   normal: { perf: 0.25, rep: 0.07, streak: 0.1, enP: 0.25, en: 0.15, drain: 0.1, block: 0.25, parry: 0.15, win: 1.1, stun: 1.8, dodge: 0.14 },
   hard: { perf: 0.17, rep: 0.05, streak: 0.08, enP: 0.2, en: 0.1, drain: 0.16, block: 0.35, parry: 0.2, win: 0.75, stun: 1.4, dodge: 0.18 }
 };
-const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false };
+const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, need: 1, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false };
 const gDiff = () => GDIFF[settings.guardDiff] || GDIFF.normal;
 const guardOn = () => isCombat() && !!settings.guard && settings.guard !== 'off';
 const gestureOn = () => guardOn() && settings.guard === 'full' && !swordActive();
 // Qué se tiene en las manos: libres, pesas u ocupadas (apoyadas en el suelo o en el banco)
 const guardFam = () => handsFree() || settings.exercise === 'jsquat' ? 'fist' : holdsWeights() ? 'weights' : 'busy';
-function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false }); GUARD.hist.length = 0; }
+function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false }); GUARD.hist.length = 0; }
 
 /* ---------- Lo que se ve ---------- */
 const G_TEAL = new THREE.Color(0x3cf0c6), G_LOW = new THREE.Color(0xff8a3d), G_WHITE = new THREE.Color(0xffffff);
@@ -10902,8 +10905,21 @@ function guardShield() { // un escudo hexagonal: el cristal y el borde
 const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [] };
 GV.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
 GV.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }));
-for (const m of [GV.bubble, GV.ring]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
-function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = false; for (const w of GV.warn) w.visible = false; }
+// En el suelo (flexiones, planchas, superman), mirando abajo, la burbuja alrededor de la cabeza apenas se veía: allí es una
+// cúpula sobre ti y, en el suelo, un aro que se va llenando mientras aguantas quieto (lleno: burbuja puesta)
+GV.dome = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
+GV.pad = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.57, 72, 1), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uP: { value: 0 }, uCol: { value: new THREE.Color(0x3cf0c6) }, uA: { value: 0.5 } },
+  vertexShader: 'varying vec2 vQ; void main(){ vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform float uP; uniform vec3 uCol; uniform float uA; varying vec2 vQ;
+    void main(){ float a = fract(atan(vQ.x, vQ.y) / 6.28318 + 1.0); float on = step(a, uP); gl_FragColor = vec4(uCol, uA * mix(0.22, 1.0, on)); }`
+}));
+GV.pad.rotation.x = -Math.PI / 2;
+for (const m of [GV.bubble, GV.ring, GV.dome, GV.pad]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
+function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = GV.dome.visible = GV.pad.visible = false; for (const w of GV.warn) w.visible = false; }
+const guardLow = () => isFloor() && head.p.y < 1.0; // tumbado o en plancha, mirando al suelo
+// el centro de la cúpula, en el suelo bajo tu cabeza (algo por delante: ahí están las manos)
+const guardFloorAt = out => out.set(head.p.x, 0.012, head.p.z).addScaledVector(_gdF.copy(fwdH()), 0.12);
 
 /* ---------- Detectar la guardia ---------- */
 const _gdF = new V3(), _gdP = new V3(), _gdQ = new V3();
@@ -10935,8 +10951,8 @@ function guardDetect(dt) {
   // cadera arriba; en el resto, quieto en tu postura)
   const away = isSeated() ? head.p.y > 1.5 : head.p.y > 1.0;
   const hold = ex === 'superman' ? DET.su.state === 'up' : ex === 'splank' ? DET.sp.state === 'hold' && !DET.sp.awayT && state === 'play' : !away && head.speed < 0.06;
-  GUARD.still = hold ? GUARD.still + dt : 0;
-  return GUARD.still > (ex === 'superman' || ex === 'splank' ? 0.4 : 1.0) ? { kind: 'bubble', side: null, pos: head.p } : null;
+  GUARD.still = hold ? GUARD.still + dt : 0; GUARD.need = ex === 'superman' || ex === 'splank' ? 0.4 : 1.0;
+  return GUARD.still > GUARD.need ? { kind: 'bubble', side: null, pos: head.p } : null;
 }
 
 /* ---------- Cada fotograma ---------- */
@@ -10978,7 +10994,17 @@ function guardStep(dt, t) {
   }
   // el escudo o la burbuja, del color de la energía que queda (y blanco un instante al parar un golpe)
   guardHide(); const col = _gdC.copy(G_LOW).lerp(G_TEAL, clamp(G.en * 2, 0, 1)).lerp(G_WHITE, G.flash);
-  if (G.up === 'bubble') {
+  const low = guardLow(), busy = gestureOn() && guardFam() === 'busy';
+  if (busy && low && !G.broke) { // el aro del suelo: cuánto falta para la burbuja (o, puesta, lleno y latiendo)
+    guardFloorAt(GV.pad.position); GV.pad.visible = true; const u = GV.pad.material.uniforms;
+    u.uP.value = G.up === 'bubble' ? 1 : clamp(G.still / G.need, 0, 1); u.uCol.value.copy(col); u.uA.value = G.up === 'bubble' ? 0.75 + 0.2 * Math.sin(t * 4) : 0.55;
+  }
+  if (G.up === 'bubble' && low) {
+    GV.dome.visible = true; guardFloorAt(GV.dome.position); GV.dome.rotation.y = t * 0.3; GV.dome.scale.set(1, 0.85, 1).multiplyScalar(1 + G.flash * 0.15);
+    GV.dome.material.color.copy(col); GV.dome.material.opacity = 0.55 + G.flash * 0.45;
+    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
+  } else if (G.up === 'bubble') {
+    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
     GV.bubble.visible = true; GV.bubble.position.copy(head.p); GV.bubble.rotation.y = t * 0.4; GV.bubble.scale.setScalar(1 + G.flash * 0.25 + Math.sin(t * 5) * 0.015);
     GV.bubble.material.color.copy(col); GV.bubble.material.opacity = 0.22 + G.flash * 0.5;
   } else if (G.up) {
@@ -10989,13 +11015,16 @@ function guardStep(dt, t) {
   }
   // el escudo por técnica cargado: un anillo que gira a tu alrededor
   if (G.charge >= 1) {
-    GV.ring.visible = true; GV.ring.position.copy(head.p); GV.ring.position.y -= isFloor() || head.p.y < 1.0 ? 0.08 : 0.32; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
+    GV.ring.visible = true; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
+    if (low) { guardFloorAt(GV.ring.position); GV.ring.position.y = 0.1; GV.ring.scale.setScalar(1.5); } // (en el suelo, a la vista: alrededor de las manos)
+    else { GV.ring.position.copy(head.p); GV.ring.position.y -= head.p.y < 1.0 ? 0.08 : 0.32; GV.ring.scale.setScalar(1); }
     GV.ring.material.opacity = 0.4 + 0.2 * Math.sin(t * 6);
   }
   // aviso de golpe: el enemigo tiembla y brilla mientras lo prepara, cada vez más rojo
   let n = 0;
   for (const e of enemies) {
     const k = guardThreat(e); if (k < 0 || n >= 6) continue;
+    if (!G.tip) { G.tip = true; const tip = guardTip(); if (tip) say(tip, '#3cf0c6', 2.6); }
     const sz = e.type === 'robot' ? 0.9 * e.sc : e.type === 'spider' ? 0.22 * e.s : 0.45 * Math.max(0.4, e.scale), amp = (e.type === 'robot' ? 0.015 * e.sc : e.type === 'spider' ? 0.004 * e.s : 0.01) * (0.4 + k);
     e.root.position.x += Math.sin(t * 71 + n) * amp; e.root.position.z += Math.cos(t * 63 + n) * amp;
     const w = guardWarnSpr(n++); e.center(w.position); w.visible = true;
@@ -11007,6 +11036,17 @@ function guardStep(dt, t) {
   const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
 const _gdC = new THREE.Color();
+
+// Cómo defenderse en este ejercicio (sale la primera vez que un enemigo prepara un golpe)
+function guardTip() {
+  if (!gestureOn()) return G_TIPTECH;
+  if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
+  const f = guardFam();
+  if (f === 'fist') return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
+  if (f === 'weights') return '¡Te va a golpear! Junta las manos delante de la cara: guardia';
+  return '¡Te va a golpear! Quédate quieto en la postura: burbuja · o aparta la cabeza';
+}
+const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escudo';
 
 /* ---------- Al llegar un golpe ---------- */
 // Desde hurtPlayer: ¿lo para la guardia, una esquiva o el escudo? Si lo para, el golpe no hace daño
@@ -11119,8 +11159,8 @@ function guardBoard(c, RX) {
 
 /* =================== DIANA: CONTORNO DE NEÓN =================== */
 // En lugar del aro, al enemigo al que apuntas le sale un contorno rojo de neón algo separado de su silueta, que sigue su
-// forma en cada momento (si levanta un brazo o se agacha, la línea va con él) y parpadea mientras lo apuntas (más
-// deprisa con el disparo cargado). Es una copia del enemigo dibujada por detrás y ensanchada en pantalla, como el
+// forma en cada momento (si levanta un brazo o se agacha, la línea va con él) y brilla con un pulso lento mientras lo
+// apuntas (algo más vivo con el disparo cargado). En los pequeños de las trampillas, más fino. Es una copia del enemigo dibujada por detrás y ensanchada en pantalla, como el
 // contorno de tinta del cómic: primero se marca en el stencil el hueco alrededor de toda la figura (sin pintar nada) y
 // el resplandor y la línea solo se pintan fuera de él, así que queda solo la silueta de fuera, sin líneas por dentro.
 // Solo se dibuja en el que apuntas (unas pocas pasadas más de un solo enemigo)
@@ -11130,9 +11170,9 @@ const LKL = {
   mats: {}, has: new Set(), on: new Map(), k: 1
 };
 const LKL_BIT = 2; // (el bit 1 del stencil es la boca del remolino del bosque)
-function lklMat(i, skin) {
-  const key = i + (skin ? 's' : 'n'); if (LKL.mats[key]) return LKL.mats[key];
-  const [mode, w, col, op] = LKL.layers[i];
+function lklMat(i, skin, thin) {
+  const key = i + (skin ? 's' : 'n') + (thin ? 't' : ''); if (LKL.mats[key]) return LKL.mats[key];
+  const [mode, w0, col, op] = LKL.layers[i], w = w0 * (thin ? 0.5 : 1); // (fino: la mitad de ancho, hueco incluido)
   const m = new THREE.MeshBasicMaterial({ color: col || 0, side: THREE.BackSide, skinning: skin, transparent: true, opacity: op || 1, depthWrite: false, toneMapped: false, fog: false });
   Object.assign(m, { stencilWrite: true, stencilRef: LKL_BIT, stencilFuncMask: LKL_BIT });
   if (mode === 'mask') Object.assign(m, { colorWrite: false, depthTest: false, stencilWriteMask: LKL_BIT, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp });
@@ -11148,17 +11188,17 @@ function lklMat(i, skin) {
 	vec2 lD = ( projectionMatrix * vec4( normalize( normalMatrix * lN ), 0.0 ) ).xy;
 	gl_Position.xy += normalize( lD + vec2( 1e-5 ) ) * uLkW * gl_Position.w;`);
   };
-  m.customProgramCacheKey = () => 'lockline' + (skin ? 's' : 'n');
+  m.customProgramCacheKey = () => 'lockline' + (skin ? 's' : 'n'); // (el ancho va en un uniforme: un programa para todos)
   return (LKL.mats[key] = m);
 }
 // Le pone las capas del contorno a todo lo que forma la figura (ocultas hasta que se le apunte); devuelve la lista
-function lklAttach(root) {
+function lklAttach(root, thin) {
   const meshes = [], out = [];
   root.traverse(o => { if ((o.isMesh || o.isSkinnedMesh) && !o.isInstancedMesh && !o.userData.isOutline && !o.userData.isLockLine && o.geometry && o.material && !Array.isArray(o.material) && !o.material.transparent) meshes.push(o); });
   LKL.layers.forEach((L, i) => {
     for (const mesh of meshes) {
       if (!outN(mesh.geometry)) continue;
-      const mat = lklMat(i, !!mesh.isSkinnedMesh); let o;
+      const mat = lklMat(i, !!mesh.isSkinnedMesh, thin); let o;
       if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, mat); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; } else o = new THREE.Mesh(mesh.geometry, mat);
       o.userData.isLockLine = true; o.frustumCulled = false; o.renderOrder = 40 + i; o.raycast = () => {}; o.castShadow = o.receiveShadow = false; o.visible = false;
       mesh.add(o); out.push(o);
@@ -11171,14 +11211,15 @@ function lockShow(e, hot) { if (e && e.alive && e.root) LKL.on.set(e, LKL.on.get
 // Al final de updateAim: enseña el contorno de los apuntados, con su parpadeo, y lo quita a los demás
 function lockStep(t) {
   let hot = false;
-  for (const [e, h] of LKL.on) { if (!e.lkl) { e.lkl = lklAttach(e.root); LKL.has.add(e); } hot = hot || h; }
+  for (const [e, h] of LKL.on) { if (!e.lkl) { e.lkl = lklAttach(e.root, e.type === 'spider' || isTiny()); LKL.has.add(e); } hot = hot || h; } // (los de las trampillas, finos)
   for (const e of LKL.has) {
     const show = LKL.on.has(e) && e.alive;
     if (e.lkl.length && e.lkl[0].visible !== show) for (const o of e.lkl) o.visible = show;
     if (!e.alive && !show) LKL.has.delete(e);
   }
-  // parpadeo: encendido y casi apagado, unas 4 veces por segundo (con carga, 8)
-  const s = Math.sin(t * TAU * (hot ? 8 : 4)); LKL.k = 0.3 + 0.7 * smooth(clamp(s * 2 + 0.5, 0, 1));
+  // brillo que sube y baja despacio (un pulso cada 1,4 s; con carga, cada 0,9 s y algo más vivo)
+  const want = (hot ? 0.6 : 0.4) + (hot ? 0.4 : 0.6) * (0.5 + 0.5 * Math.sin(t * TAU / (hot ? 0.9 : 1.4))), dt = clamp(t - (LKL.t || t), 0, 0.1); LKL.t = t;
+  LKL.k += (want - LKL.k) * Math.min(1, dt * 5); // (al cargar o disparar no salta: se funde)
   for (const k in LKL.mats) { const m = LKL.mats[k]; if (m.colorWrite !== false) m.opacity = m.userData.base * LKL.k; }
   LKL.on.clear();
 }

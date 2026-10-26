@@ -252,7 +252,7 @@ class HeadTarget {
     this.speed = Math.max(0.2, this.pos.distanceTo(this.slot) / dv('barArrive'));
     this.root.position.copy(this.pos);
   }
-  center(out) { this.root.getWorldPosition(out); return out; }
+  center(out) { if (this.deadAt) return out.copy(this.deadAt); this.root.getWorldPosition(out); return out; } // (reventado: donde estaba; ver Flyer.center)
   slotIndex() { let i = 0; for (const o of enemies) { if (o === this) break; if (o.type === 'target' && o.alive && (o.mode === 'approach' || o.mode === 'wait')) i++; } return i; }
   update(dt, t) {
     this.t += dt; const play = state === 'play', idx = this.slotIndex();
@@ -355,7 +355,7 @@ class HeadTarget {
     if (this.bubble) { SND.pop(c, false); fx.droplets(c, 8, [0.45, 1, 0.85], 1, 0.025); } else { SND.metalHit(c, false); fx.sparks(c, 8, [1, 0.6, 0.2], 2, 0.03); }
   }
   pop() {
-    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss;
+    this.alive = false; const c = this.center(new V3()), big = !!this.K.boss; this.deadAt = c.clone();
     if (this.bubble) { // revienta salpicando gotas irisadas y un destello de película
       SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
       fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
