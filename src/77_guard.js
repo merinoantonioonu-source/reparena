@@ -26,13 +26,37 @@ function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, u
 
 /* ---------- Lo que se ve ---------- */
 const G_TEAL = new THREE.Color(0x3cf0c6), G_LOW = new THREE.Color(0xff8a3d), G_WHITE = new THREE.Color(0xffffff);
-function guardShield() { // un escudo hexagonal: el cristal y el borde
-  const g = new THREE.Group();
-  const glass = new THREE.Mesh(new THREE.CircleGeometry(0.14, 6), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
-  const rim = new THREE.Mesh(new THREE.RingGeometry(0.128, 0.152, 6), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, side: THREE.DoubleSide, toneMapped: false }));
-  glass.renderOrder = rim.renderOrder = 21; g.add(glass, rim); g.visible = false; g.userData.mats = [glass.material, rim.material]; scene.add(g); return g;
+// El escudo: un trozo de esfera (abombado hacia el enemigo, los bordes curvándose hacia ti) con una rejilla de hexágonos
+// de energía roja: las celdas brillan más en sus bordes, el contorno del escudo se enciende y alguna celda titila. El eje
+// largo (y) va a lo largo del antebrazo. Con poca energía se apaga y parpadea; al parar un golpe, destello blanco
+const SH_R = 0.3, SH_A = 0.55, SH_B = 0.78; // radio de la esfera; medio ancho y medio largo (en radianes)
+const shieldGeo = (() => { const g = new THREE.SphereGeometry(SH_R, 28, 32, Math.PI / 2 - SH_A, SH_A * 2, Math.PI / 2 - SH_B, SH_B * 2); g.translate(0, 0, -SH_R); return g; })();
+function guardShield() {
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    uniforms: { uCol: { value: new THREE.Color(0xe8140a) }, uHot: { value: new THREE.Color(0xff6a3a) }, uA: { value: 1 }, uFlash: { value: 0 }, uT: { value: 0 } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = position + vec3(0.0, 0.0, ' + SH_R.toFixed(3) + '); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform vec3 uCol; uniform vec3 uHot; uniform float uA; uniform float uFlash; uniform float uT; varying vec3 vP;
+      float hash(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+      void main(){
+        float ax = atan(vP.x, vP.z), ay = asin(clamp(vP.y / ${SH_R.toFixed(3)}, -1.0, 1.0));
+        vec2 e = vec2(ax / ${SH_A.toFixed(3)}, ay / ${SH_B.toFixed(3)}); float r = length(e);
+        if (r > 1.0) discard; // (el contorno, ovalado)
+        // rejilla de hexágonos sobre la superficie (en metros a lo largo de ella; celdas de unos 4 cm)
+        vec2 p = vec2(ax, ay) * ${SH_R.toFixed(3)} / 0.024; const vec2 S = vec2(1.0, 1.7320508);
+        vec2 a = mod(p, S) - S * 0.5, b = mod(p - S * 0.5, S) - S * 0.5, h = dot(a, a) < dot(b, b) ? a : b, id = p - h;
+        vec2 ah = abs(h); float d = max(dot(ah, vec2(0.5, 0.8660254)), ah.x); // 0 en el centro de la celda, 0.5 en su borde
+        float edge = smoothstep(0.36, 0.48, d), line = smoothstep(0.43, 0.49, d);
+        float tw = 0.75 + 0.25 * sin(uT * 3.0 + hash(id) * 6.2832); // (cada celda titila a su ritmo)
+        float rim = smoothstep(0.78, 0.98, r), body = 0.08 + 0.34 * edge * tw + 0.58 * line * tw;
+        vec3 c = mix(uCol, uHot, line * 0.45 + rim * 0.4); c = mix(c, vec3(1.0), uFlash);
+        float al = (body + rim * 0.75) * (1.0 - smoothstep(0.96, 1.0, r) * 0.6);
+        gl_FragColor = vec4(c, clamp(al * uA + uFlash * 0.4, 0.0, 1.0));
+      }`
+  });
+  const g = new THREE.Mesh(shieldGeo, m); g.renderOrder = 21; g.visible = false; g.userData.u = m.uniforms; scene.add(g); return g;
 }
-const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [] };
+const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [], q: new THREE.Quaternion(), qOk: false };
 GV.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
 GV.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }));
 // En el suelo (flexiones, planchas, superman), mirando abajo, la burbuja alrededor de la cabeza apenas se veía: allí es una
@@ -65,7 +89,7 @@ function guardDetect(dt) {
   for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gGrip(h)) return { kind: 'grip', side: s, pos: h.wrist }; }
   const fam = guardFam(), L = hands.left, R = hands.right, ex = settings.exercise;
   if (fam === 'fist') {
-    for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gFist(h) && gFront(h.wrist, -0.7, 0.12)) return { kind: 'fist', side: s, pos: _gdP.copy(h.wrist).add(_gdQ.set(0, -0.045, 0)).addScaledVector(_gdF, -0.07) }; }
+    for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gFist(h) && gFront(h.wrist, -0.7, 0.12)) return { kind: 'fist', side: s, pos: _gdP.copy(h.wrist) }; }
     return null;
   }
   if (fam === 'weights') {
@@ -139,10 +163,10 @@ function guardStep(dt, t) {
     GV.bubble.material.color.copy(col); GV.bubble.material.opacity = 0.22 + G.flash * 0.5;
   } else if (G.up) {
     const big = G.up === 'guard' || G.up === 'up', m = big ? GV.big : GV.shield[G.side || 'right'];
-    m.visible = true; m.position.copy(G.pos); m.scale.setScalar((big ? 1.7 : G.up === 'curl' ? 0.9 : 1) * (1 + G.flash * 0.3) * smooth(Math.min(1, G.upT / 0.12 + 0.3)));
-    if (G.up === 'up') m.lookAt(_gdP.copy(G.pos).add(_gdQ.set(0, 1, 0))); else m.lookAt(_gdP.copy(G.pos).add(_gdF));
-    m.userData.mats[0].color.copy(col); m.userData.mats[1].color.copy(col); m.userData.mats[0].opacity = 0.42 + G.flash * 0.45;
-  }
+    m.visible = true; guardShieldPose(m, G, dt); m.scale.setScalar((big ? 1.35 : G.up === 'curl' ? 0.85 : 1) * (1 + G.flash * 0.2) * smooth(Math.min(1, G.upT / 0.12 + 0.3)));
+    const u = m.userData.u, lowE = clamp(G.en * 2.5, 0, 1); u.uT.value = t; u.uFlash.value = G.flash;
+    u.uA.value = (0.35 + 0.65 * lowE) * (lowE < 1 && Math.sin(t * 25) > 0.3 ? 0.55 : 1); // (con poca energía, más tenue y parpadeando)
+  } else GV.qOk = false;
   // el escudo por técnica cargado: un anillo que gira a tu alrededor
   if (G.charge >= 1) {
     GV.ring.visible = true; GV.ring.rotation.set(Math.PI / 2 + Math.sin(t * 1.3) * 0.12, 0, t * 2);
@@ -166,6 +190,28 @@ function guardStep(dt, t) {
   const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
 const _gdC = new THREE.Color();
+// Dónde va el escudo: delante del antebrazo, entre él y el enemigo que ataca (o, si no, hacia delante), con su eje largo a
+// lo largo del antebrazo (con las manos juntas o sin saber hacia dónde va el brazo, de pie); se gira con suavidad
+const _shX = new V3(), _shY = new V3(), _shZ = new V3(), _shM = new THREE.Matrix4(), _shQ = new THREE.Quaternion(), _shE = new V3();
+function guardShieldPose(m, G, dt) {
+  // hacia dónde mirar: al que está preparando el golpe más cerca (si no, al más cercano; si no, al frente)
+  let best = null, bd = 1e9;
+  for (const e of enemies) { if (!e.alive) continue; const k = guardThreat(e), c = e.center(_shE), d = c.distanceTo(head.p) - (k >= 0 ? 10 : 0); if (d < bd) { bd = d; best = c.clone(); } }
+  if (G.up === 'up') _shZ.set(0, 1, 0); else if (best) { _shZ.subVectors(best, G.pos); _shZ.y *= 0.5; if (_shZ.lengthSq() < 1e-4) _shZ.copy(_gdF); _shZ.normalize(); } else _shZ.copy(_gdF);
+  // el antebrazo: de la muñeca hacia el codo (el +Z de la muñeca, en las manos y en los mandos)
+  const h = G.side ? hands[G.side] : null, arm = _shY.set(0, 0, 0);
+  if (h && h.ok && G.up !== 'guard') arm.set(0, 0, 1).applyQuaternion(h.wristQ);
+  arm.addScaledVector(_shZ, -arm.dot(_shZ)); // (en el plano del escudo)
+  if (arm.lengthSq() < 0.09) { arm.set(0, 1, 0).addScaledVector(_shZ, -_shZ.y); if (G.up === 'up') arm.copy(_gdF); } // (si no, de pie)
+  arm.normalize(); _shX.crossVectors(arm, _shZ).normalize(); arm.crossVectors(_shZ, _shX);
+  _shQ.setFromRotationMatrix(_shM.makeBasis(_shX, arm, _shZ));
+  if (!GV.qOk) { GV.q.copy(_shQ); GV.qOk = true; } else GV.q.slerp(_shQ, Math.min(1, dt * 14));
+  m.quaternion.copy(GV.q);
+  // sitio: el centro del antebrazo y, desde ahí, unos centímetros hacia el enemigo
+  m.position.copy(G.pos);
+  if (h && h.ok && G.up !== 'guard' && G.up !== 'up') m.position.copy(h.wrist).addScaledVector(_shE.set(0, 0, 1).applyQuaternion(h.wristQ), 0.11);
+  m.position.addScaledVector(_shZ, G.up === 'up' ? 0 : 0.09);
+}
 
 // Cómo defenderse en este ejercicio (sale la primera vez que un enemigo prepara un golpe)
 function guardTip() {
@@ -186,7 +232,7 @@ function guardAbsorb(src) {
   // con gesto: subida durante la preparación, parada (rebota y queda aturdido); mantenida desde antes, bloqueo. Los
   // brazos arriba del press solo paran a los que vienen volando
   if (G.up && (G.up !== 'up' || src.type === 'flyer' || src.rock)) {
-    const parry = G.upT <= D.win, p = G.up === 'bubble' ? guardPoint(src, new V3()) : G.pos.clone();
+    const parry = G.upT <= D.win, sh = G.up === 'guard' || G.up === 'up' ? GV.big : GV.shield[G.side || 'right'], p = G.up === 'bubble' ? guardPoint(src, new V3()) : sh.visible ? sh.position.clone() : G.pos.clone(); // (el destello, en el escudo)
     G.en = Math.max(0, G.en - (parry ? D.parry : D.block)); if (G.en <= 0) G.broke = true;
     guardHitFx(p, parry, G.side); guardRepel(src, parry ? 0.6 : 0.3, parry ? D.stun : 0);
     if (parry) stats.parries = (stats.parries || 0) + 1; else stats.blocks = (stats.blocks || 0) + 1;
