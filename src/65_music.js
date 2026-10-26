@@ -6,7 +6,7 @@
 // Inicio de sesión con Authorization Code + PKCE, sin servidor. Hace falta Spotify Premium y una app propia
 // creada en developer.spotify.com con esta página como Redirect URI.
 const SP_KEY = 'reparena3-spotify', SP_PKCE = 'reparena3-spotify-pkce';
-const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative';
+const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read';
 const SP = { cfg: store(SP_KEY) || {}, st: null, err: '', busy: false, pollT: 0, lastRef: 0, mine: null, started: false };
 const spRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
 const spConnected = () => !!SP.cfg.refresh;
@@ -58,6 +58,7 @@ async function spApi(method, path, body, retry = true) {
 function spErrText(e) {
   const m = String((e && e.message) || e);
   if (m === 'NO_DEVICE') return 'Abre Spotify en las Quest o el móvil y pon algo a sonar';
+  if (m === 'LIBRARY') return 'Vuelve a pulsar Conectar con Spotify (en la página): hace falta permiso para ver tus canciones que te gustan';
   if (m === 'NOT_YOURS') return 'Spotify solo deja ver las canciones de tus listas (o de las colaborativas): esta puedes ponerla entera';
   if (m === 'LOGIN' || /invalid_grant|refresh token/i.test(m)) return 'Vuelve a conectar Spotify en la página';
   if (/premium/i.test(m)) return 'Hace falta Spotify Premium';
@@ -125,8 +126,15 @@ async function spMyLists() {
     (j && j.items || []).forEach(p => { if (!p) return; const n = (p.items || p.tracks || {}).total, own = p.owner && p.owner.id; out.push({ id: p.id, name: p.name, uri: p.uri, n, mine: !SP.meId || !own || own === SP.meId || !!p.collaborative }); });
     url = j && j.next ? j.next.replace('https://api.spotify.com/v1', '') : null;
   }
+  // las de otros usuarios no se enseñan (no se pueden elegir sus canciones): si estaban marcadas, dejan de estarlo
+  const other = new Set(out.filter(l => !l.mine).map(l => l.id)), was = spLists();
+  if (was.some(l => other.has(l.id))) { SP.cfg.lists = was.filter(l => !other.has(l.id)); spSave(); }
   return out;
 }
+// Lo que se puede elegir: tus canciones que te gustan (las sueltas) y tus listas (las tuyas y las colaborativas)
+const SP_LIKED = { id: 'liked', name: '♥ Canciones que te gustan', liked: true };
+const spOwnLists = () => (SP.mine || []).filter(l => l.mine !== false);
+const spPickable = () => [SP_LIKED, ...spOwnLists()];
 // Reproduce esas listas en las gafas (o en el reproductor activo): una, tal cual y al azar; varias, sus canciones mezcladas
 async function spPlayLists(lists = spLists()) {
   if (!lists.length) return;
@@ -146,12 +154,13 @@ async function spPlayLists(lists = spLists()) {
 // /tracks y «track»: se aceptan las dos) y solo de listas tuyas o colaborativas: si no, NOT_YOURS
 async function spListTracks(id) {
   SP.trk = SP.trk || {}; if (SP.trk[id]) return SP.trk[id];
-  const out = []; let url = `/playlists/${id}/items?limit=50`, legacy = false;
+  const out = []; let url = id === 'liked' ? '/me/tracks?limit=50' : `/playlists/${id}/items?limit=50`, legacy = false; // (las que te gustan: tu biblioteca)
   for (let i = 0; i < 6 && url; i++) {
     let j;
     try { j = await spApi('GET', url); }
     catch (e) {
       if (!i && !legacy && e.status === 404) { legacy = true; url = `/playlists/${id}/tracks?limit=100`; i--; continue; } // (por si /items no existiera)
+      if (id === 'liked' && (e.status === 403 || e.status === 401)) throw new Error('LIBRARY');
       if (e.status === 403) { const l = (SP.mine || []).find(x => x.id === id); if (l) l.mine = false; throw new Error('NOT_YOURS'); }
       throw e;
     }
@@ -300,8 +309,7 @@ function spListMenu(back, page = 0) {
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
   else {
-    const N = 8, pages = Math.max(1, Math.ceil(SP.mine.length / N)), p = clamp(page, 0, pages - 1), slice = SP.mine.slice(p * N, p * N + N);
-    if (!SP.mine.length) rows.push({ t: 'text', text: 'No tienes listas en Spotify', color: '#a49fc8' });
+    const L = spPickable(), N = 8, pages = Math.max(1, Math.ceil(L.length / N)), p = clamp(page, 0, pages - 1), slice = L.slice(p * N, p * N + N); // (las de otros usuarios no: Spotify no deja ver sus canciones)
     for (let i = 0; i < slice.length; i += 2) rows.push({ t: 'btns', items: slice.slice(i, i + 2).map(l => ({ label: l.name, onPress: () => spTrackMenu(l, () => again(p)) })) });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
@@ -310,7 +318,8 @@ function spListMenu(back, page = 0) {
 }
 function spTrackMenu(l, back, page = 0) {
   const again = p => spTrackMenu(l, back, p), T = SP.trk && SP.trk[l.id], rows = [{ t: 'title', text: l.name }];
-  rows.push({ t: 'btns', items: [{ label: '▶ Toda la lista', style: 'primary', onPress: () => spDo(() => spPlayList(l, null, false)) }, { label: 'Al azar', onPress: () => spDo(() => spPlayList(l, null, true)) }] });
+  const all = sh => spDo(async () => { if (!l.liked) return spPlayList(l, null, sh); const t = (await spListTracks(l.id)).slice(); if (sh) for (let k = t.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [t[k], t[r]] = [t[r], t[k]]; } await spPlayTracks(t); SP.block = null; }); // (las que te gustan no son una lista: se ponen sus canciones)
+  rows.push({ t: 'btns', items: [{ label: l.liked ? '▶ Todas' : '▶ Toda la lista', style: 'primary', onPress: () => all(false) }, { label: 'Al azar', onPress: () => all(true) }] });
   if (l.mine === false) rows.push({ t: 'text', text: spErrText(new Error('NOT_YOURS')), color: '#a49fc8' });
   else if (!T) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando sus canciones…', color: '#ffd166' });
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
@@ -318,7 +327,7 @@ function spTrackMenu(l, back, page = 0) {
   else {
     const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
     rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
-    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(() => spPlayList(l, t.uri, false)) }] });
+    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
@@ -372,26 +381,29 @@ const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
 const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
-  const chosen = new Set(spLists().map(l => l.id)), all = SP.mine || spLists(), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
+  const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
   let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle.<div class="chips">${P.map((t, k) => `<span class="chip">${k + 1}. ${escSp(t.name)}<button class="btn tiny" data-sp="rm" data-k="${k}" aria-label="Quitar ${escSp(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
-  h += all.map(l => {
-    const T = open === l.id && SP.trk && SP.trk[l.id];
-    if (l.mine === false) return `<div class="sprow"><label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label><span class="hint" title="Desde 2026 Spotify solo deja a las apps como esta ver las canciones de tus listas o de las colaborativas">De otro usuario: se pone entera (Spotify no deja ver sus canciones)</span></div>`;
-    return `<div class="sprow"><label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label><button class="btn tiny" data-sp="open" data-id="${l.id}" aria-expanded="${open === l.id}">${open === l.id ? 'Canciones ▴' : 'Canciones ▾'}</button>
-      ${open === l.id ? (T ? `<div class="sptracks">${T.length ? T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('') : '<p class="hint">Esta lista no tiene canciones que se puedan poner.</p>'}</div>` : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`) : ''}</div>`;
-  }).join('');
+  if (open) { // dentro de una lista: solo sus canciones
+    const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
+    h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
+    h += T ? (T.length ? `<div class="sptracks">${T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+  } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
+    const L = SP.mine ? spPickable() : spLists();
+    h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
+  }
   host.innerHTML = h;
   if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
   host.addEventListener('change', ev => {
-    const el = ev.target, all2 = SP.mine || spLists();
-    if (el.dataset.id) { const on2 = new Set([...host.querySelectorAll('input[data-id]:checked')].map(x => x.dataset.id)); SP.cfg.lists = all2.filter(l => on2.has(l.id)).map(l => ({ id: l.id, name: l.name, uri: l.uri })); }
+    const el = ev.target;
+    if (el.dataset.id) { const on2 = new Set([...host.querySelectorAll('input[data-id]:checked')].map(x => x.dataset.id)), all2 = SP.mine || spLists(); SP.cfg.lists = all2.filter(l => on2.has(l.id) || (!host.querySelector(`input[data-id="${l.id}"]`) && spLists().some(x => x.id === l.id))).map(l => ({ id: l.id, name: l.name, uri: l.uri })); }
     else if (el.dataset.trk) { const T = (SP.trk && SP.trk[SP.openList]) || [], t = T.find(x => x.uri === el.dataset.trk); if (!t) return; const P2 = spPicks(); SP.cfg.picks = el.checked ? (P2.some(x => x.uri === t.uri) || P2.length >= 100 ? P2 : P2.concat({ uri: t.uri, name: t.name, by: t.by })) : P2.filter(x => x.uri !== t.uri); spListsPage(); }
     SP.started = false; spSave(); spMenuSync();
   });
   host.addEventListener('click', ev => {
     const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
-    if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = SP.openList === id ? null : id; SP.trkErr = ''; spListsPage();
-      if (SP.openList && !(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = e.message === 'NOT_YOURS' ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
+    if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = id; SP.trkErr = ''; spListsPage();
+      if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
+    if (b.dataset.sp === 'back') { SP.openList = null; spListsPage(); return; }
     if (b.dataset.sp === 'rm') SP.cfg.picks = spPicks().filter((_, k) => k !== +b.dataset.k); else if (b.dataset.sp === 'clear') SP.cfg.picks = [];
     SP.started = false; spSave(); spListsPage(); spMenuSync();
   });
