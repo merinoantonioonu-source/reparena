@@ -1713,11 +1713,10 @@ function throwStep(dt, t) {
     // frenó de golpe, o ya recorrió bastante: si la sacudida va hacia un enemigo, sale el rayo; si no, la carga se queda
     if (sp < T.peak * THROW_STOP || _thd.subVectors(_thr, T.from).length() > THROW_LONG) throwTry(s, h.wrist, _thd.subVectors(_thr, T.from));
   }
-  // al que miras: se sigue a quién miras y un aro lo marca (teal si tienes carga)
+  // al que miras: se sigue a quién miras y su contorno de neón lo marca (parpadea más deprisa si tienes carga)
   if (on && throwByGaze() && !(swordActive() && !pistolOn())) { // (con espada no hay diana)
     const e = gazeLockStep(t, head.p, fwd()), ring = locks.gaze;
-    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(throwCount() ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
-    else ring.visible = false;
+    ring.visible = false; lockShow(e, throwCount() > 0); // (la diana: el contorno de neón, 78_lockline)
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
@@ -1758,8 +1757,7 @@ function updateAim(t) {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
       l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
     } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(GZL.d, 3); }
-    if (e) { ring.visible = true; e.center(ring.position); const sc = e.radius * 3.2; ring.scale.set(sc, sc, 1); ring.material.color.setHex(hot ? 0x3cf0c6 : 0xffffff); ring.material.rotation = t * 1.5; }
-    else ring.visible = false;
+    ring.visible = false; lockShow(e, hot); // la diana: el contorno de neón del apuntado (78_lockline)
   }
 }
 
@@ -2146,6 +2144,7 @@ function warmQueue() {
   for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
   for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
   if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
+  if (RIGS.scout) add('lockline', () => { const o = RIGS.scout.instance(MAT_ROBOT); for (const m of lklAttach(o.root)) m.visible = true; return o; }); // (el contorno de la diana)
   add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
 }
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
