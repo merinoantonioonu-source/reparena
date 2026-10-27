@@ -463,13 +463,17 @@ async function spotifyTempo() {
   } catch (e) { return spErrText(e); }
 }
 function tempoRows(back) {
-  const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
-  // con el ritmo de Spotify, un toque al compás solo encaja el pulso (el tempo ya lo da la canción)
-  const items = [auto && P ? { label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } }
-    : { label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm, it = spConnected() && SP.st && SP.st.item, own = it ? spSongBpm(it.uri) : 0;
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${own && own === P ? ' (el que guardaste para esta canción)' : auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
+  // «Al compás» siempre está (con el de Spotify puesto, tocarlo vuelve a marcarlo tú); con el ritmo de Spotify, además,
+  // «Encajar el pulso»: un toque solo encaja el pulso (el tempo ya lo da la canción)
+  const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  if (auto && P) items.push({ label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } });
   if (spConnected()) items.push({ label: auto ? 'Ritmo de Spotify ✓' : 'Ritmo de Spotify', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
+  // el compás de la canción que suena: guardarlo (tras marcarlo al compás o con el de Spotify) o quitarlo
+  const songItems = !it || !it.uri ? [] : own ? [{ label: 'Quitar el ritmo de esta canción', onPress: () => { spSongBpmSet(it.uri, 0); back(); } }]
+    : P ? [{ label: `Guardar ${P} BPM para esta canción`, style: 'primary', onPress: () => { spSongBpmSet(it.uri, P); say(`«${it.name}»: ${P} BPM cada vez que suene`, '#ffd166', 2.2); back(); } }] : [];
   if (P) items.push({ label: 'Sin ritmo', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } setSetting('bpm', 0); back(); } });
-  rows.push({ t: 'btns', items });
+  rows.push({ t: 'btns', items }); if (songItems.length) rows.push({ t: 'btns', items: songItems });
   return rows;
 }

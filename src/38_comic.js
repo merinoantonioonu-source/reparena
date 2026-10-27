@@ -103,14 +103,16 @@ function texAvg(t) {
 /* ---------- Contornos de tinta ---------- */
 // Una copia de la malla con sus caras de atrás, empujada hacia fuera en la pantalla: asoma como un borde negro alrededor de
 // la figura. Las normales de las esquinas se promedian (aOutN) para que el borde no se abra en los cantos de las cajas
+// (faceless: sin tinta en la cabeza, para los que llevan userData.noFaceInk —el diablillo y el lanzador—: de lejos, el borde
+// de grosor fijo en pantalla se colaba por los huecos de la cara y la llenaba de manchas negras; aOutK lo apaga allí)
 const OUTL = { w: { value: 0.006 }, mats: {} };
-function outlMat(skin) {
-  const k = skin ? 's' : 'n'; if (OUTL.mats[k]) return OUTL.mats[k];
+function outlMat(skin, faceless) {
+  const k = (skin ? 's' : 'n') + (faceless ? 'f' : ''); if (OUTL.mats[k]) return OUTL.mats[k];
   const m = new THREE.MeshBasicMaterial({ color: 0x1b1222, side: THREE.BackSide, skinning: skin, toneMapped: false });
   if (m.color.convertSRGBToLinear) m.color.convertSRGBToLinear(); // (tinta de verdad: el color del material va en lineal; si no, salía gris violáceo)
   m.onBeforeCompile = sh => {
     sh.uniforms.uOutW = OUTL.w;
-    sh.vertexShader = 'attribute vec3 aOutN;\nuniform float uOutW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+    sh.vertexShader = (faceless ? '#define OUT_K\nattribute float aOutK;\n' : '') + 'attribute vec3 aOutN;\nuniform float uOutW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
 	vec3 oN = aOutN;
 	#ifdef USE_SKINNING
 		oN = ( bindMatrixInverse * ( skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW ) * bindMatrix * vec4( oN, 0.0 ) ).xyz;
@@ -119,9 +121,13 @@ function outlMat(skin) {
 		oN = mat3( instanceMatrix ) * oN;
 	#endif
 	vec2 oD = ( projectionMatrix * vec4( normalize( normalMatrix * oN ), 0.0 ) ).xy;
-	gl_Position.xy += normalize( oD + vec2( 1e-5 ) ) * uOutW * gl_Position.w;`);
+	float oK = 1.0;
+	#ifdef OUT_K
+		oK = aOutK;
+	#endif
+	gl_Position.xy += normalize( oD + vec2( 1e-5 ) ) * uOutW * oK * gl_Position.w;`);
   };
-  m.customProgramCacheKey = () => 'comic-outline';
+  m.customProgramCacheKey = () => 'comic-outline' + (faceless ? 'f' : '');
   return (OUTL.mats[k] = m);
 }
 function outN(g) {
@@ -135,6 +141,17 @@ function outN(g) {
   for (let i = 0; i < cnt; i++) { const a = acc.get(keys[i]), l = Math.hypot(a[0], a[1], a[2]) || 1; out[i * 3] = a[0] / l; out[i * 3 + 1] = a[1] / l; out[i * 3 + 2] = a[2] / l; }
   g.setAttribute('aOutN', new THREE.BufferAttribute(out, 3)); return true;
 }
+// Cuánta tinta lleva cada vértice: 0 en lo que mueve la cabeza (el hueso Head y los que cuelgan de él), 1 en el resto
+function outK(mesh) {
+  const g = mesh.geometry; if (g.attributes.aOutK) return true;
+  const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, sk = mesh.skeleton; if (!si || !sw || !sk) return false;
+  const head = sk.bones.find(b => /^head$/i.test(b.name)); if (!head) return false;
+  const ids = new Set(); head.traverse(b => { const i = sk.bones.indexOf(b); if (i >= 0) ids.add(i); });
+  const out = new Float32Array(si.count);
+  const I = ['getX', 'getY', 'getZ', 'getW']; // (r128: sin getComponent)
+  for (let v = 0; v < si.count; v++) { let w = 0; for (const f of I) if (ids.has(si[f](v))) w += sw[f](v); out[v] = 1 - clamp(w * 1.6, 0, 1); } // (el cuello, a medias)
+  g.setAttribute('aOutK', new THREE.BufferAttribute(out, 1)); return true;
+}
 function outlAdd(mesh) {
   if (COMIC.ol.has(mesh) || mesh.userData.isOutline || !(mesh.isMesh || mesh.isSkinnedMesh)) return;
   const mt = mesh.material; COMIC.ol.set(mesh, null);
@@ -142,7 +159,7 @@ function outlAdd(mesh) {
   if (mesh.isInstancedMesh && mesh.count > 64) return; // (la vegetación: miles de copias)
   if (!outN(mesh.geometry)) return;
   let o;
-  if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, outlMat(true)); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; }
+  if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, outlMat(true, !!mesh.userData.noFaceInk && outK(mesh))); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; }
   else if (mesh.isInstancedMesh) { o = new THREE.InstancedMesh(mesh.geometry, outlMat(false), mesh.instanceMatrix.count); o.instanceMatrix = mesh.instanceMatrix; o.onBeforeRender = () => { o.count = mesh.count; }; }
   else o = new THREE.Mesh(mesh.geometry, outlMat(false));
   o.userData.isOutline = true; o.frustumCulled = mesh.frustumCulled; o.renderOrder = mesh.renderOrder; o.raycast = () => {}; o.visible = comicOn();

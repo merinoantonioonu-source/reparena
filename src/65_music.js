@@ -274,9 +274,31 @@ async function dzTempo(it) {
   } catch (e) { /* sin conexión */ }
   return 0;
 }
-// «Ritmo de Spotify» activado: al cambiar de canción, el ritmo cambia solo
+// Compás propio de cada canción: lo guardas tú (en la página, junto a la ★ de tus favoritas, o en el juego, «Guardar el
+// ritmo para esta canción») y, cuando suena, manda sobre todo, también sobre el ritmo de Spotify. Pasa por el código
+const SP_BPM_MAX = 500, SP_BPM_MIN = 40, SP_BPM_TOP = 200;
+const spSongBpm = uri => { const b = uri && (SP.cfg.bpms || {})[uri]; return b >= SP_BPM_MIN && b <= SP_BPM_TOP ? b : 0; };
+function spSongBpmSet(uri, bpm) {
+  const B = Object.assign({}, SP.cfg.bpms); bpm = Math.round(+bpm);
+  delete B[uri]; if (bpm >= SP_BPM_MIN && bpm <= SP_BPM_TOP) B[uri] = bpm; // (la última, al final: si hay demasiadas, se va la más antigua)
+  const ks = Object.keys(B); for (let i = 0; i < ks.length - SP_BPM_MAX; i++) delete B[ks[i]];
+  SP.cfg.bpms = B; spSave();
+  const it = SP.st && SP.st.item; if (it && it.uri === uri) { SP.tempoId = null; spAutoTempo(); } // (si suena ahora, ya)
+}
+// Al cambiar de canción: con su compás guardado, ese (contado desde el principio de la canción: «Encajar el pulso» lo
+// afina); sin él, el de Spotify si está activado o, si no, el que tenías antes de la canción con compás propio
 function spAutoTempo() {
-  const it = SP.st && SP.st.item; if (!SP.cfg.autoBpm || !it || !it.id || it.id === SP.tempoId || SP.tempoBusy) return;
+  const it = SP.st && SP.st.item; if (!it || !it.id || it.id === SP.tempoId || SP.tempoBusy) return;
+  const own = spSongBpm(it.uri);
+  if (own) {
+    SP.tempoId = it.id; if (!SP.songOn) { SP.songOn = true; SP.baseBpm = settings.bpm; }
+    setSetting('bpm', own); TCH.beat0 = perfNow() - (SP.st.progress_ms || 0) / 1000; if (typeof BEAT !== 'undefined') BEAT.off = null;
+    if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(`Ritmo de esta canción: ${own} BPM (el tuyo)`, '#ffd166', 2.5);
+    if (menu && menu.rebuild && !menu.keypad) menu.rebuild();
+    return;
+  }
+  if (SP.songOn) { SP.songOn = false; if (!SP.cfg.autoBpm) { setSetting('bpm', SP.baseBpm || 0); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); } }
+  if (!SP.cfg.autoBpm) { SP.tempoId = it.id; return; }
   SP.tempoId = it.id; SP.tempoBusy = true;
   spotifyTempo().then(m => { if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(m, '#ffd166', 2.5); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); }).finally(() => { SP.tempoBusy = false; });
 }
@@ -325,9 +347,9 @@ function spTrackMenu(l, back, page = 0) {
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { if (e.message !== 'NOT_YOURS') SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
   else {
-    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
+    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1), F = spFavs(), TF = spFavFirst(T); // (tus favoritas, primero y con ★)
     rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
-    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
+    for (const t of TF.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${F.has(t.uri) ? '★ ' : ''}${t.name}${t.by ? ' — ' + t.by : ''}${spSongBpm(t.uri) ? ` · ${spSongBpm(t.uri)} BPM` : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
@@ -379,6 +401,14 @@ function spInitPage() {
 // si no eliges ninguna, suenan las listas marcadas (varias, mezcladas). Los nombres largos ocupan las líneas que haga falta
 const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
 const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Canciones favoritas (★, las marcas tú, en RepArena: no tocan Spotify): al abrir una lista salen las primeras
+const SP_FAV_MAX = 300;
+const spFavs = () => new Set(SP.cfg.favs || []);
+function spFavToggle(uri) { const F = (SP.cfg.favs || []).filter(u => u !== uri); if (F.length === (SP.cfg.favs || []).length) F.unshift(uri); SP.cfg.favs = F.slice(0, SP_FAV_MAX); spSave(); }
+function spFavFirst(T) { const F = spFavs(); return F.size ? T.filter(t => F.has(t.uri)).concat(T.filter(t => !F.has(t.uri))) : T; }
+// el compás de la canción, para las favoritas (y las que ya lo tienen)
+const spBpmIn = (uri, F) => F.has(uri) || spSongBpm(uri) ? `<input type="number" class="spbpm" data-bpm="${escSp(uri)}" min="${SP_BPM_MIN}" max="${SP_BPM_TOP}" step="1" inputmode="numeric" placeholder="BPM" value="${spSongBpm(uri) || ''}" aria-label="Compás de la canción (BPM)" title="Su compás: cuando suene, el juego irá a este ritmo">` : '';
+const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
@@ -386,7 +416,8 @@ function spListsPage() {
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
-    h += T ? (T.length ? `<div class="sptracks">${T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+    const F = spFavs(); // (las favoritas, primero; ★ las marca)
+    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>${spBpmIn(t.uri, F)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
   } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
@@ -395,11 +426,13 @@ function spListsPage() {
   if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
   host.addEventListener('change', ev => {
     const el = ev.target;
+    if (el.dataset.bpm !== undefined) { spSongBpmSet(el.dataset.bpm, el.value); renderSession(); return; }
     if (el.dataset.id) { const on2 = new Set([...host.querySelectorAll('input[data-id]:checked')].map(x => x.dataset.id)), all2 = SP.mine || spLists(); SP.cfg.lists = all2.filter(l => on2.has(l.id) || (!host.querySelector(`input[data-id="${l.id}"]`) && spLists().some(x => x.id === l.id))).map(l => ({ id: l.id, name: l.name, uri: l.uri })); }
     else if (el.dataset.trk) { const T = (SP.trk && SP.trk[SP.openList]) || [], t = T.find(x => x.uri === el.dataset.trk); if (!t) return; const P2 = spPicks(); SP.cfg.picks = el.checked ? (P2.some(x => x.uri === t.uri) || P2.length >= 100 ? P2 : P2.concat({ uri: t.uri, name: t.name, by: t.by })) : P2.filter(x => x.uri !== t.uri); spListsPage(); }
     SP.started = false; spSave(); spMenuSync();
   });
   host.addEventListener('click', ev => {
+    const f = ev.target.closest && ev.target.closest('button[data-fav]'); if (f) { spFavToggle(f.dataset.fav); spListsPage(); renderSession(); return; }
     const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
     if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = id; SP.trkErr = ''; spListsPage();
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }

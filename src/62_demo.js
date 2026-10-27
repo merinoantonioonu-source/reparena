@@ -267,7 +267,8 @@ const DEMO_W = 0.5, DEMO_H = 0.3;
 const DEMOP = (() => { const p = makePanel(DEMO_W, DEMO_H, 640); (p.mesh.material.userData = p.mesh.material.userData || {}).keep = true; return p; })();
 const DEMOV = { t: 0, drawT: 0, ex: '', mode: '', meshes: new Set(), head: null };
 // Panel que sigue a la cabeza mientras calibras, cuentas atrás, te cuelgas o descansas entre bloques
-DEMOV.head = new THREE.Mesh(DEMOP.mesh.geometry, DEMOP.mesh.material); DEMOV.head.visible = false; DEMOV.head.renderOrder = 29; scene.add(DEMOV.head);
+const DEMO_HS = 1.15, _dmR = new V3(); // (el de la espera, algo más grande: se lee mejor con las gafas)
+DEMOV.head = new THREE.Mesh(DEMOP.mesh.geometry, DEMOP.mesh.material); DEMOV.head.visible = false; DEMOV.head.renderOrder = 29; DEMOV.head.scale.setScalar(DEMO_HS); scene.add(DEMOV.head);
 // Copia del panel colgada de un menú (a su derecha); se va con el menú al cerrarlo
 function demoAttach(m, ex = settings.exercise, mode = settings.mode) {
   if (!settings.demo || !m || !m.group) return;
@@ -276,7 +277,7 @@ function demoAttach(m, ex = settings.exercise, mode = settings.mode) {
   mesh.position.set(MW / 2 + DEMO_W * mesh.scale.x / 2 + 0.02, (m.H || 0.6) / 2 - DEMO_H * mesh.scale.x / 2, 0); m.group.add(mesh);
   DEMOV.ex = ex; DEMOV.mode = mode; DEMOV.drawT = 0;
 }
-function demoWaitEx() { if (state === 'between' && SES.blocks[SES.idx + 1]) { const b = SES.blocks[SES.idx + 1]; return [b.ex, b.mode]; } return [settings.exercise, settings.mode]; }
+function demoWaitEx() { const nx = state === 'between' && sesNext(); if (nx) { const b = SES.blocks[nx.i]; return [b.ex, b.mode]; } return [settings.exercise, settings.mode]; }
 function updateDemo(dt) {
   DEMOV.t += dt;
   const wait = !!settings.demo && ['calib', 'ready', 'mount', 'between'].includes(state) && !(menu && !menu.wrist);
@@ -285,9 +286,13 @@ function updateDemo(dt) {
   DEMOV.head.visible = wait;
   if (wait) {
     const [ex, mode] = demoWaitEx(); DEMOV.ex = ex; DEMOV.mode = mode;
-    const tgt = hudLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
-    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(hudQ()); DEMOV.head.userData.init = true; }
-    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(hudQ(), k);
+    // a la derecha del panel del centro (el que dice qué viene: calibración, ¡prepárate!, descanso…), a su altura y girado
+    // como él; antes iba por encima y quedaba casi fuera de la vista. Sin ese panel, delante
+    let tgt, q;
+    if (center.mesh.visible) { q = center.mesh.quaternion; tgt = _dmR.set(1, 0, 0).applyQuaternion(q).multiplyScalar(0.25 * CENTER_SC + DEMO_W * DEMO_HS / 2 + 0.04).add(center.mesh.position); }
+    else { q = hudQ(); tgt = hudLocal(_hl.set(0, 0, -1.05), _dmR); }
+    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(q); DEMOV.head.userData.init = true; }
+    const k = 1 - Math.exp(-dt * 6); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(q, k);
   } else DEMOV.head.userData.init = false;
   if (!any) return;
   DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 12; // basta para que se vea fluido y no pesa en las gafas (cada dibujo se vuelve a subir a la tarjeta)

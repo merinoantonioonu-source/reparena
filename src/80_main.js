@@ -166,8 +166,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
-  // B: guardia (el puño izquierdo cerrado delante del pecho; con pesas, las dos manos juntas delante de la cara)
-  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of holdsWeights() ? [['left', -1], ['right', 1]] : [['left', -1]]) {
+  // B: guardia (el puño izquierdo cerrado delante del pecho)
+  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1]]) {
     const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, sg * 0.06); h.wrist.y -= 0.25;
     for (const j of [9, 14, 19, 24]) { const J = h.J[j]; J.ok = true; J.p.copy(h.wrist).addScaledVector(f, 0.05); }
   }

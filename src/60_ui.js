@@ -781,10 +781,10 @@ function drawCenter() {
       c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
     }
   } else if (state === 'between') {
-    const nb = SES.blocks[SES.idx + 1];
+    const nx = sesNext(), nb = nx && SES.blocks[nx.i];
     c.textAlign = 'left'; c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.fillText('DESCANSO', 44, 68);
     c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(0, Math.ceil(SES.wait))), W - 50, 150);
-    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(`Bloque ${SES.idx + 2} de ${SES.blocks.length}:`, 44, 150);
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(nx ? `Bloque ${nx.i + 1} de ${SES.blocks.length}${SES.rounds > 1 ? ` · vuelta ${nx.r + 1}/${SES.rounds}` : ''}:` : '', 44, 150);
     if (nb) { c.fillStyle = '#ffd166'; fitFont(c, blockLabel(nb), W - 300, 40, '500 %px ' + FB); c.fillText(blockLabel(nb), 44, 210); }
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
@@ -877,7 +877,7 @@ function drawBoard() {
   }
   const N = settings.waves, hang = settings.exercise === 'hang';
   // arriba: oleada, puntos y vidas
-  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
+  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length}${SES.rounds > 1 ? ` V${SES.round + 1}/${SES.rounds}` : ''} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
   c.textAlign = 'left'; fitFont(c, wv, 340, 30, '%px ' + FD); const ww = c.measureText(wv).width + 44;
   boardPill(c, 32, 24, ww, 54, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
   c.textAlign = 'center'; c.font = `54px ${FD}`; glowText(c, String(score), W / 2 + 60, 52, BC.gold, 16);
