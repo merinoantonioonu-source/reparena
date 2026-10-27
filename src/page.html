@@ -202,6 +202,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfav:hover{opacity:.9}
 .spfav.on{color:var(--gold);opacity:1}
 .spfav:focus-visible{outline:2px solid var(--gold);opacity:1}
+.spbpm{flex:none;width:4.6em;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.82rem;text-align:right;font-variant-numeric:tabular-nums}
+.spbpm:focus-visible{outline:2px solid var(--gold)}
 .splist .sptracks small,.sesmusic .tracks small{opacity:.7}
 .spin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0}
 .spin b{overflow-wrap:anywhere}
@@ -442,7 +444,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Junto a cada favorita puedes escribir su <b>compás (BPM)</b>: cuando suene, en Toques y en Combate el juego irá a ese ritmo (por encima del de Spotify). En el juego también se guarda: marca el ritmo «Al compás» y pulsa «Guardar … BPM para esta canción». Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
