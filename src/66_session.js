@@ -24,6 +24,9 @@ function blockOwn(b) {
   if (b && b.set && typeof b.set === 'object') { const st = {}; for (const k in b.set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], b.set[k]); if (Object.keys(st).length) o.set = st; }
   return o;
 }
+// El rango de su ejercicio en su modo (como lo dejaste allí, con sus retoques); si aún no lo has jugado, el de ahora
+const blockExRank = b => comboDiff(b.mode + '|' + b.ex) || {};
+const blockRankOf = b => b.rank || blockExRank(b).rank || settings.rank;
 // Lo que pone el perfil del bloque (sus ajustes del juego; el modo y el ejercicio, los del bloque)
 function blockProfPatch(b) {
   const p = b.prof && profiles().find(x => x.name === b.prof), o = {}; if (!p) return o;
@@ -73,8 +76,9 @@ function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su perfil, sus ajustes—, como estaba)
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  // su perfil, su rango, luego lo del bloque y, por encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
-  const patch = Object.assign(blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
+  // el rango de su ejercicio (con sus retoques), su perfil, el rango elegido para el bloque, luego lo del bloque y, por
+  // encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
+  const patch = Object.assign(blockExRank(b), blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
   if (SES.orig) for (const k in patch) if (!(k in SES.orig)) SES.orig[k] = settings[k];
   Object.assign(settings, patch);
   onSettingChanged('mode'); onSettingChanged('exercise');
@@ -172,7 +176,8 @@ function blockFields(b) {
 function blockValue(b, k) {
   if (b.set && b.set[k] !== undefined) return b.set[k];
   if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango, por encima de su perfil)
-  const pp = blockProfPatch(b); return pp[k] !== undefined ? pp[k] : settings[k];
+  const pp = blockProfPatch(b); if (pp[k] !== undefined) return pp[k];
+  const er = blockExRank(b); return er[k] !== undefined ? er[k] : settings[k]; // (y debajo, el de su ejercicio)
 }
 function sesSetHTML(b, i) {
   const F = blockFields(b), groups = BLOCK_GROUPS.filter(g => F.some(f => f.g === g));
@@ -292,7 +297,7 @@ function renderSession() {
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
-    <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : 'Rango del bloque (el tuyo)', b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
+    <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const rounds = $('#sesRounds'); if (rounds && document.activeElement !== rounds) rounds.value = SES.rounds;
@@ -300,9 +305,9 @@ function renderSession() {
   if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}${SES.rounds > 1 ? ` × ${SES.rounds} vueltas` : ''}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 // (la lista de ejercicios del bloque, debajo de su fila: cada nombre en las líneas que haga falta)
-// El rango del bloque: el tuyo (el de Ajustes) o uno para él solo, con sus galones
+// El rango del bloque: el de su ejercicio (cada uno guarda el suyo) o uno para él solo, con sus galones
 function sesRankHTML(b, i) {
-  return `<div class="sesrank lpick" data-i="${i}" role="listbox" aria-label="Rango del bloque ${i + 1}"><button type="button" class="lp${b.rank ? '' : ' on'}" data-a="rkset" data-r="" role="option" aria-selected="${!b.rank}">El tuyo (${escS(rankName())})</button>${RANKS.map(([r, n], k) => `<button type="button" class="lp rk${r === b.rank ? ' on' : ''}" data-a="rkset" data-r="${r}" role="option" aria-selected="${r === b.rank}">${rankSvg(k)}${escS(n)}</button>`).join('')}</div>`;
+  return `<div class="sesrank lpick" data-i="${i}" role="listbox" aria-label="Rango del bloque ${i + 1}"><button type="button" class="lp${b.rank ? '' : ' on'}" data-a="rkset" data-r="" role="option" aria-selected="${!b.rank}">El de su ejercicio (${escS(rankName(blockExRank(b).rank || settings.rank))})</button>${RANKS.map(([r, n], k) => `<button type="button" class="lp rk${r === b.rank ? ' on' : ''}" data-a="rkset" data-r="${r}" role="option" aria-selected="${r === b.rank}">${rankSvg(k)}${escS(n)}</button>`).join('')}</div>`;
 }
 function sesExHTML(b, i) {
   return `<div class="sesex lpick" data-i="${i}" role="listbox" aria-label="Ejercicio del bloque ${i + 1}">${Object.keys(EX_NAMES).filter(x => blockOk(b.mode, x)).map(x => `<button type="button" class="lp${x === b.ex ? ' on' : ''}" data-a="exset" data-x="${x}" role="option" aria-selected="${x === b.ex}">${escS(EX_NAMES[x])}</button>`).join('')}</div>`;

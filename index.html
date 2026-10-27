@@ -477,7 +477,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras. Con los galones de cada bloque le pones un rango solo para él (puedes ser sargento en sentadillas y recluta en dominadas); sin elegir, juega con el tuyo.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras. Cada bloque juega con el rango de su ejercicio (cada ejercicio guarda el suyo); con los galones le pones otro solo para ese bloque.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
@@ -663,9 +663,11 @@ const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', '
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
 // Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Tu cuerpo (recorridos)', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
 const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
-const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
+const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo' }; // nombre corto en las pestañas de las gafas
+// «Tu cuerpo» no es dificultad: lo que se mueve tu cuerpo en cada ejercicio (cuánto bajas, subes o aguantas); se guarda para cada uno
+const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
@@ -687,26 +689,28 @@ function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', '
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
-// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): cada uno pone de una vez las vidas, lo que
-// tardan y cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente y el ritmo de los arcos, los toques y los
-// objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
+// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): la dificultad es el rango, y cada ejercicio
+// (en cada modo) tiene el suyo, porque puedes ser bueno en uno y no en otro. Pone de una vez las vidas, lo que tardan y
+// cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente, la de la defensa y el ritmo de los arcos, los
+// toques y los objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
 const RANKS = [['recluta', 'Recluta'], ['soldado', 'Soldado'], ['cabo', 'Cabo'], ['sargento', 'Sargento'], ['teniente', 'Teniente'], ['capitan', 'Capitán'], ['general', 'General']];
 const RANK_VALS = {
   lives: [0, 5, 3, 3, 2, 2, 1], walkTime: [22, 17, 14, 11, 9, 7, 5], maxAlive: [2, 3, 5, 6, 7, 8, 10], flySpeed: [2, 3, 3.5, 4.5, 5.5, 7, 9], erratic: [50, 70, 100, 110, 130, 150, 180],
   ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3],
-  tchArrive: [4.5, 4, 3, 2.5, 2, 1.5, 1], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4]
+  tchArrive: [4.5, 4, 3, 2.5, 2, 1.5, 1], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4],
+  guardDiff: ['easy', 'easy', 'normal', 'normal', 'normal', 'hard', 'hard']
 };
 // Con las piernas (sentadillas, zancadas, peso muerto…): aguantar abajo carga el disparo, y bajar mucho, la recarga profunda
 const DEEP_EX = ['squat', 'lunge', 'jsquat', 'thruster', 'frontsq', 'dlrow'];
 const SCHEMA = [
-  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'Pone de una vez la dificultad de todo: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Luego puedes retocar lo que quieras y guardarlo en tu rango.' },
+  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'La dificultad, de una vez: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente, la de la defensa y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Cada ejercicio, en cada modo, guarda su rango: puedes ser sargento en sentadillas y recluta en dominadas. Lo que retoques a mano (con el menú completo) se marca como «retocado».' },
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
   { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
-  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 4, unit: '% por oleada', zero: 'No', hint: 'Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen algo más seguidos y algunos más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
+  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 4, unit: '% por oleada', zero: 'No', hint: 'Lo pone el rango (aquí, retocarlo). Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen algo más seguidos y algunos más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
@@ -791,7 +795,7 @@ const SCHEMA = [
   { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
   { key: 'swordBlock', g: 'armas', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['combat'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
   { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, en los ejercicios de pie con las manos libres (sentadillas, zancadas, sentadilla con salto), el puño cerrado delante del pecho saca un escudo en el antebrazo (con los mandos, el botón de agarre). Con pesas o con las manos apoyadas solo vale el escudo por técnica.' },
-  { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
+  { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Lo pone el rango (fácil hasta soldado, normal de cabo a teniente, difícil desde capitán; aquí, retocarlo). Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
   { key: 'knockback', g: 'armas', label: 'Retroceso al recibir impactos', short: 'Retroceso', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], hint: 'Cuánto retroceden los enemigos con cada disparo o tajo (más si es cargado o perfecto; los jefes, mucho menos). Si estaban preparando el golpe, se les retrasa.' },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
@@ -899,11 +903,11 @@ function fmtVal(f, v = settings[f.key]) {
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
 function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
-// Cada modo con cada ejercicio guarda sus ajustes de juego (la partida, el ejercicio, los enemigos, las armas, los arcos,
-// los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil, el rango y
+// Cada modo con cada ejercicio guarda sus ajustes de juego (su rango, la partida, tu cuerpo, los enemigos, las armas, los
+// arcos, los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil y
 // las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
 const COMBO_KEY = 'reparena3-combos', COMBO_G = new Set(['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras']);
-const COMBO_SKIP = new Set(['rank', 'doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
+const COMBO_SKIP = new Set(['doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
 let _comboKeys = null;
 const comboKeys = () => _comboKeys || (_comboKeys = SCHEMA.filter(f => COMBO_G.has(f.g) && !COMBO_SKIP.has(f.key)).map(f => f.key));
 const comboId = () => settings.mode + '|' + settings.exercise;
@@ -914,8 +918,9 @@ function comboLoad(id = comboId()) {
   for (const k of comboKeys()) if (o[k] !== undefined) { const v = clampSetting(FIELD[k], o[k]); if (v !== settings[k]) { settings[k] = v; ch.push(k); } }
   return ch;
 }
-// Al cambiar de rango, sus valores pasan a todos los modos y ejercicios
-function comboPatchAll(vals) { const all = store(COMBO_KEY) || {}; for (const id in all) Object.assign(all[id], vals); store(COMBO_KEY, all); }
+// El rango (con su dificultad) de otro modo y ejercicio, como lo dejaste allí: { rank, ...valores } o null si aún no lo tocaste
+function comboDiff(id) { const o = (store(COMBO_KEY) || {})[id]; if (!o || !o.rank) return null; const d = { rank: clampSetting(FIELD.rank, o.rank) }; for (const k in RANK_VALS) if (o[k] !== undefined) d[k] = clampSetting(FIELD[k], o[k]); return d; }
+let comboLoading = false; // (al cargar los de un modo y ejercicio, su rango viene con sus retoques: no se vuelve a poner de serie)
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
@@ -927,10 +932,10 @@ function setSetting(key, v) {
   if (key === 'exercise' && !exOk(settings.mode, v)) settings.mode = modeFor(v);
   const ch = prev && comboId() !== prev ? comboLoad() : []; // y lo de este modo y ejercicio, como lo dejaste
   saveSettings();
-  onSettingChanged(key); ch.forEach(onSettingChanged);
+  onSettingChanged(key); comboLoading = true; try { ch.forEach(onSettingChanged); } finally { comboLoading = false; }
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -1007,7 +1012,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : g === 'ejercicio' ? `<p class="note">${BODY_NOTE}</p>` : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   const COMMON = ['entorno', 'sistema', 'perfil'];
   common.innerHTML = COMMON.map(group).join('');
@@ -7062,6 +7067,9 @@ function blockOwn(b) {
   if (b && b.set && typeof b.set === 'object') { const st = {}; for (const k in b.set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], b.set[k]); if (Object.keys(st).length) o.set = st; }
   return o;
 }
+// El rango de su ejercicio en su modo (como lo dejaste allí, con sus retoques); si aún no lo has jugado, el de ahora
+const blockExRank = b => comboDiff(b.mode + '|' + b.ex) || {};
+const blockRankOf = b => b.rank || blockExRank(b).rank || settings.rank;
 // Lo que pone el perfil del bloque (sus ajustes del juego; el modo y el ejercicio, los del bloque)
 function blockProfPatch(b) {
   const p = b.prof && profiles().find(x => x.name === b.prof), o = {}; if (!p) return o;
@@ -7111,8 +7119,9 @@ function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su perfil, sus ajustes—, como estaba)
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  // su perfil, su rango, luego lo del bloque y, por encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
-  const patch = Object.assign(blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
+  // el rango de su ejercicio (con sus retoques), su perfil, el rango elegido para el bloque, luego lo del bloque y, por
+  // encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
+  const patch = Object.assign(blockExRank(b), blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
   if (SES.orig) for (const k in patch) if (!(k in SES.orig)) SES.orig[k] = settings[k];
   Object.assign(settings, patch);
   onSettingChanged('mode'); onSettingChanged('exercise');
@@ -7210,7 +7219,8 @@ function blockFields(b) {
 function blockValue(b, k) {
   if (b.set && b.set[k] !== undefined) return b.set[k];
   if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango, por encima de su perfil)
-  const pp = blockProfPatch(b); return pp[k] !== undefined ? pp[k] : settings[k];
+  const pp = blockProfPatch(b); if (pp[k] !== undefined) return pp[k];
+  const er = blockExRank(b); return er[k] !== undefined ? er[k] : settings[k]; // (y debajo, el de su ejercicio)
 }
 function sesSetHTML(b, i) {
   const F = blockFields(b), groups = BLOCK_GROUPS.filter(g => F.some(f => f.g === g));
@@ -7330,7 +7340,7 @@ function renderSession() {
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
-    <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : 'Rango del bloque (el tuyo)', b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
+    <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const rounds = $('#sesRounds'); if (rounds && document.activeElement !== rounds) rounds.value = SES.rounds;
@@ -7338,9 +7348,9 @@ function renderSession() {
   if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}${SES.rounds > 1 ? ` × ${SES.rounds} vueltas` : ''}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 // (la lista de ejercicios del bloque, debajo de su fila: cada nombre en las líneas que haga falta)
-// El rango del bloque: el tuyo (el de Ajustes) o uno para él solo, con sus galones
+// El rango del bloque: el de su ejercicio (cada uno guarda el suyo) o uno para él solo, con sus galones
 function sesRankHTML(b, i) {
-  return `<div class="sesrank lpick" data-i="${i}" role="listbox" aria-label="Rango del bloque ${i + 1}"><button type="button" class="lp${b.rank ? '' : ' on'}" data-a="rkset" data-r="" role="option" aria-selected="${!b.rank}">El tuyo (${escS(rankName())})</button>${RANKS.map(([r, n], k) => `<button type="button" class="lp rk${r === b.rank ? ' on' : ''}" data-a="rkset" data-r="${r}" role="option" aria-selected="${r === b.rank}">${rankSvg(k)}${escS(n)}</button>`).join('')}</div>`;
+  return `<div class="sesrank lpick" data-i="${i}" role="listbox" aria-label="Rango del bloque ${i + 1}"><button type="button" class="lp${b.rank ? '' : ' on'}" data-a="rkset" data-r="" role="option" aria-selected="${!b.rank}">El de su ejercicio (${escS(rankName(blockExRank(b).rank || settings.rank))})</button>${RANKS.map(([r, n], k) => `<button type="button" class="lp rk${r === b.rank ? ' on' : ''}" data-a="rkset" data-r="${r}" role="option" aria-selected="${r === b.rank}">${rankSvg(k)}${escS(n)}</button>`).join('')}</div>`;
 }
 function sesExHTML(b, i) {
   return `<div class="sesex lpick" data-i="${i}" role="listbox" aria-label="Ejercicio del bloque ${i + 1}">${Object.keys(EX_NAMES).filter(x => blockOk(b.mode, x)).map(x => `<button type="button" class="lp${x === b.ex ? ' on' : ''}" data-a="exset" data-x="${x}" role="option" aria-selected="${x === b.ex}">${escS(EX_NAMES[x])}</button>`).join('')}</div>`;
@@ -7545,7 +7555,7 @@ function pageSections() {
 // cifrados unas horas: el servicio no puede leerlos y, sin el código, nadie sabe en qué canal están. Lo que depende de
 // cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
-const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-ranks', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify'];
+const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-rankfit', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify'];
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
 const XFER_HOURS = 12;
 const _xEnc = new TextEncoder(), _xDec = new TextDecoder();
@@ -9672,17 +9682,40 @@ function foesMenu(back) {
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
-// Rangos: elegir uno pone sus valores (los suyos de serie o los que guardaste en él); si luego retocas algo, se ve
-// «retocado» y puedes guardarlo en ese rango o volver a sus valores
-const RANK_STORE = 'reparena3-ranks', RANK = { applying: false };
+// Rangos: la dificultad. Cada modo con cada ejercicio guarda el suyo (va con sus ajustes: comboSave); elegir uno pone sus
+// valores en ese ejercicio y, si luego retocas algo a mano, se ve «retocado» y se puede volver a sus valores de serie
+const RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
-function rankVals(r = settings.rank) { const i = rankIdx(r), own = (store(RANK_STORE) || {})[r] || {}, o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], own[k] !== undefined ? own[k] : RANK_VALS[k][i]); return o; } // (al paso de cada ajuste)
-function applyRank() { RANK.applying = true; const v = rankVals(); for (const k in v) setSetting(k, v[k]); RANK.applying = false; comboPatchAll(v); } // (en todos los modos y ejercicios)
-settingHooks.push(k => { if (k === 'rank' && !RANK.applying) applyRank(); });
-const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => Math.abs(settings[k] - v[k]) > 1e-6); };
-function rankSave() { const all = store(RANK_STORE) || {}; all[settings.rank] = Object.fromEntries(Object.keys(RANK_VALS).map(k => [k, settings[k]])); store(RANK_STORE, all); }
-function rankReset() { const all = store(RANK_STORE) || {}; delete all[settings.rank]; store(RANK_STORE, all); applyRank(); }
+function rankVals(r = settings.rank) { const i = rankIdx(r), o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], RANK_VALS[k][i]); return o; }
+function applyRank() { RANK.applying = true; try { const v = rankVals(); for (const k in v) setSetting(k, v[k]); } finally { RANK.applying = false; } } // (solo en este modo y ejercicio)
+settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) applyRank(); });
+const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
+const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => rankDiff(settings[k], v[k])); };
+function rankReset() { applyRank(); }
+// Los rangos de antes eran uno para todo: el que tenías pasa a cada modo y ejercicio ya guardado (una vez)
+(function rankMigrate() {
+  if (settings.rankV === 2) return;
+  const all = store(COMBO_KEY) || {}; for (const id in all) if (all[id] && all[id].rank === undefined) all[id].rank = settings.rank;
+  store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
+})();
+// Tus rangos en los ejercicios que has jugado (los de la vista, primero el de ahora)
+function rankList() {
+  const all = store(COMBO_KEY) || {}, cur = comboId(), out = [];
+  for (const id in all) { const [m, x] = id.split('|'); if (id === cur || !MODE_NAMES[m] || !EX_NAMES[x] || !all[id].rank) continue; out.push({ id, m, x, r: clampSetting(FIELD.rank, all[id].rank) }); }
+  return out.sort((a, b) => rankIdx(b.r) - rankIdx(a.r));
+}
+// Subir o bajar de rango: tras 3 rondas ganadas seguidas con un 70 % de perfectas o más, el resumen propone subir; tras 2
+// derrotas seguidas, bajar. Nunca cambia solo: lo decides tú con un botón. Se cuenta por modo y ejercicio
+const RANKFIT_KEY = 'reparena3-rankfit';
+function rankFitAdd(win, pct) {
+  const all = store(RANKFIT_KEY) || {}, id = comboId(), L = (all[id] || []).concat({ win: !!win, pct }).slice(-3); all[id] = L; store(RANKFIT_KEY, all);
+  const i = rankIdx(); let to = null;
+  if (L.length >= 3 && L.every(r => r.win && r.pct >= 70) && i < RANKS.length - 1) to = RANKS[i + 1][0];
+  else if (L.length >= 2 && L.slice(-2).every(r => !r.win) && i > 0) to = RANKS[i - 1][0];
+  if (to) { all[id] = []; store(RANKFIT_KEY, all); } // (propuesto una vez: para la siguiente, otra racha)
+  return to;
+}
 // Lo que el rango cambia en el modo elegido, en pocas palabras
 function rankSummary() {
   const v = settings, L = [v.lives ? `${v.lives} ${v.lives === 1 ? 'vida' : 'vidas'}` : 'vidas infinitas'];
@@ -9690,15 +9723,18 @@ function rankSummary() {
   else if (settings.mode === 'arcs') L.push(`${v.arcRate} arcos/min a ${fmtNum(v.arcSpeed)} km/h`, `espera máx. ${fmtNum(v.arcMaxGap)} s`);
   else if (settings.mode === 'touch') L.push(`llegan en ${fmtNum(v.tchArrive)} s`, `${fmtNum(v.tchWindow)} s para tocar`);
   else L.push(`llegan en ${fmtNum(v.barArrive)} s`, v.barWait ? `${v.barWait} s para reventar` : 'sin límite para reventar');
-  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente'); return L.join(' · ');
+  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente');
+  if (isCombat() && settings.guard !== 'off') L.push(`defensa ${({ easy: 'fácil', normal: 'normal', hard: 'difícil' })[v.guardDiff]}`);
+  return L.join(' · ');
 }
 function rankMenu(back) {
-  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), own = !!(store(RANK_STORE) || {})[cur];
+  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), others = rankList();
   const pickRow = list => ({ t: 'btns', h: 0.066, items: list.map(([k, lab]) => ({ label: lab, badge: rankIdx(k), style: k === cur ? 'selected' : 'normal', onPress: () => { setSetting('rank', k); again(); } })) });
-  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: 'Del recluta (un galón, lo más fácil) al general (tres estrellas): cada rango pone toda la dificultad de una vez.' },
+  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: `Para ${EX_NAMES[settings.exercise]} · ${MODE_NAMES[settings.mode]}: cada ejercicio guarda el suyo. Del recluta (un galón, lo más fácil) al general (tres estrellas).` },
     pickRow(RANKS.slice(0, 4)), pickRow(RANKS.slice(4)),
-    { t: 'text', text: `${n}${touched ? ' (retocado)' : own ? ' (tuyo)' : ''}: ${rankSummary()}`, color: '#ffd166' },
-    { t: 'btns', items: [{ label: `Guardar mis ajustes en ${n}`, onPress: () => { rankSave(); say(`${n}: guardado con tus ajustes`, '#3cf0c6', 1.4); again(); } }, ...(touched || own ? [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] : [])] },
+    { t: 'text', text: `${n}${touched ? ' (retocado)' : ''}: ${rankSummary()}`, color: '#ffd166' },
+    ...(touched ? [{ t: 'btns', items: [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] }] : []),
+    ...(others.length ? [{ t: 'text', text: 'En los demás: ' + others.slice(0, 6).map(o => `${EX_SHORT[o.x] || EX_NAMES[o.x]}${o.m !== 'combat' ? ` (${MODE_NAMES[o.m]})` : ''} ${rankName(o.r).toLowerCase()}`).join(' · ') + (others.length > 6 ? ' …' : ''), color: '#a49fc8' }] : []),
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: '#ffd166' }); m.rebuild = again;
 }
@@ -9790,6 +9826,7 @@ function settingsMenu(back, tab = settingsTab) {
   if (!groups.includes(tab)) tab = groups[0]; if (tab !== settingsTab) { settingsTab = tab; uiSave('tab', tab); PREFS.resetArm = ''; }
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
+  if (tab === 'ejercicio') rows.push({ t: 'text', text: BODY_NOTE, color: '#a49fc8' });
   SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
   const simple = settings.menuLevel === 'simple'; // menú sencillo o completo, a un toque
   rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo básico (menú sencillo)', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] });
@@ -10004,6 +10041,8 @@ function endRun(win, manual) {
       RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null,
       AX && AX.medal ? [`Medalla de ${AX.medal[0]}`, AX.medal[1]] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
+  // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
+  if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
   if (SES.active && (manual || win)) go(); else showOutcome(win, go, manual); // en una sesión, entre bloques ya hay su pantalla de descanso
@@ -10086,6 +10125,9 @@ function endMenu(title, S) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
     { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
+    ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
+      { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
+      { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
     { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
   const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }

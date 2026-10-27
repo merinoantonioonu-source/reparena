@@ -26,9 +26,11 @@ const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', '
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
 // Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Ejercicio', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Tu cuerpo (recorridos)', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
 const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
-const GROUP_TAB = { sistema: 'Menú' }; // nombre corto en las pestañas de las gafas
+const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo' }; // nombre corto en las pestañas de las gafas
+// «Tu cuerpo» no es dificultad: lo que se mueve tu cuerpo en cada ejercicio (cuánto bajas, subes o aguantas); se guarda para cada uno
+const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
@@ -50,26 +52,28 @@ function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', '
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
-// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): cada uno pone de una vez las vidas, lo que
-// tardan y cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente y el ritmo de los arcos, los toques y los
-// objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
+// Rangos de dificultad (Ajustes → Partida, o «Rango ▸» del menú principal): la dificultad es el rango, y cada ejercicio
+// (en cada modo) tiene el suyo, porque puedes ser bueno en uno y no en otro. Pone de una vez las vidas, lo que tardan y
+// cuántos enemigos vienen a la vez, cómo vuelan, la dificultad creciente, la de la defensa y el ritmo de los arcos, los
+// toques y los objetivos de las barras. El cabo es como venía el juego; los galones (y luego las estrellas) dicen lo difícil que es
 const RANKS = [['recluta', 'Recluta'], ['soldado', 'Soldado'], ['cabo', 'Cabo'], ['sargento', 'Sargento'], ['teniente', 'Teniente'], ['capitan', 'Capitán'], ['general', 'General']];
 const RANK_VALS = {
   lives: [0, 5, 3, 3, 2, 2, 1], walkTime: [22, 17, 14, 11, 9, 7, 5], maxAlive: [2, 3, 5, 6, 7, 8, 10], flySpeed: [2, 3, 3.5, 4.5, 5.5, 7, 9], erratic: [50, 70, 100, 110, 130, 150, 180],
   ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3],
-  tchArrive: [4.5, 4, 3, 2.5, 2, 1.5, 1], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4]
+  tchArrive: [4.5, 4, 3, 2.5, 2, 1.5, 1], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4],
+  guardDiff: ['easy', 'easy', 'normal', 'normal', 'normal', 'hard', 'hard']
 };
 // Con las piernas (sentadillas, zancadas, peso muerto…): aguantar abajo carga el disparo, y bajar mucho, la recarga profunda
 const DEEP_EX = ['squat', 'lunge', 'jsquat', 'thruster', 'frontsq', 'dlrow'];
 const SCHEMA = [
-  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'Pone de una vez la dificultad de todo: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Luego puedes retocar lo que quieras y guardarlo en tu rango.' },
+  { key: 'rank', g: 'partida', label: 'Rango (dificultad)', short: 'Rango', type: 'choice', grid: 4, badges: true, opts: RANKS, def: 'cabo', relayout: true, hint: 'La dificultad, de una vez: vidas, enemigos (cuánto tardan, cuántos a la vez, cómo vuelan), dificultad creciente, la de la defensa y el ritmo de arcos, toques y barras. Del recluta (un galón, lo más fácil) al general (tres estrellas). Cada ejercicio, en cada modo, guarda su rango: puedes ser sargento en sentadillas y recluta en dominadas. Lo que retoques a mano (con el menú completo) se marca como «retocado».' },
   { key: 'lives', g: 'partida', label: 'Vidas', type: 'num', min: 0, max: 20, step: 1, def: 3, zero: 'Infinitas', hint: '0 = infinitas: los golpes no te eliminan.' },
   { key: 'waves', g: 'partida', label: 'Oleadas', type: 'num', min: 0, max: 50, step: 1, def: 5, zero: 'Sin fin', hint: '0 = oleadas sin fin, con jefe cada 5.' },
   { key: 'repsWave', g: 'partida', noEx: ['hang'], label: 'Repeticiones en la primera oleada', short: 'Reps 1.ª oleada', type: 'num', min: 3, max: 150, step: 1, def: 12, unit: 'reps' },
   { key: 'repsInc', g: 'partida', noEx: ['hang'], label: 'Repeticiones extra en cada oleada', short: 'Reps extra/oleada', type: 'num', min: 0, max: 40, step: 1, def: 3, unit: 'reps' },
   { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
-  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 4, unit: '% por oleada', zero: 'No', hint: 'Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen algo más seguidos y algunos más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
+  { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 4, unit: '% por oleada', zero: 'No', hint: 'Lo pone el rango (aquí, retocarlo). Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen algo más seguidos y algunos más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
@@ -154,7 +158,7 @@ const SCHEMA = [
   { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
   { key: 'swordBlock', g: 'armas', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['combat'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
   { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, en los ejercicios de pie con las manos libres (sentadillas, zancadas, sentadilla con salto), el puño cerrado delante del pecho saca un escudo en el antebrazo (con los mandos, el botón de agarre). Con pesas o con las manos apoyadas solo vale el escudo por técnica.' },
-  { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
+  { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Lo pone el rango (fácil hasta soldado, normal de cabo a teniente, difícil desde capitán; aquí, retocarlo). Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
   { key: 'knockback', g: 'armas', label: 'Retroceso al recibir impactos', short: 'Retroceso', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], hint: 'Cuánto retroceden los enemigos con cada disparo o tajo (más si es cargado o perfecto; los jefes, mucho menos). Si estaban preparando el golpe, se les retrasa.' },
 
   { key: 'arcMin', g: 'arcos', label: 'Bajada mínima bajo un arco', short: 'Bajada mínima', type: 'num', min: 5, max: 80, step: 1, def: 18, unit: 'cm', modes: ['arcs'] },
@@ -262,11 +266,11 @@ function fmtVal(f, v = settings[f.key]) {
 })();
 // Durante una sesión se guardan los valores de antes, no los del bloque en curso
 function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
-// Cada modo con cada ejercicio guarda sus ajustes de juego (la partida, el ejercicio, los enemigos, las armas, los arcos,
-// los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil, el rango y
+// Cada modo con cada ejercicio guarda sus ajustes de juego (su rango, la partida, tu cuerpo, los enemigos, las armas, los
+// arcos, los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil y
 // las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
 const COMBO_KEY = 'reparena3-combos', COMBO_G = new Set(['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras']);
-const COMBO_SKIP = new Set(['rank', 'doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
+const COMBO_SKIP = new Set(['doorH', 'doorW', 'dipH', 'dipBars', 'dipGap', 'dipLen']);
 let _comboKeys = null;
 const comboKeys = () => _comboKeys || (_comboKeys = SCHEMA.filter(f => COMBO_G.has(f.g) && !COMBO_SKIP.has(f.key)).map(f => f.key));
 const comboId = () => settings.mode + '|' + settings.exercise;
@@ -277,8 +281,9 @@ function comboLoad(id = comboId()) {
   for (const k of comboKeys()) if (o[k] !== undefined) { const v = clampSetting(FIELD[k], o[k]); if (v !== settings[k]) { settings[k] = v; ch.push(k); } }
   return ch;
 }
-// Al cambiar de rango, sus valores pasan a todos los modos y ejercicios
-function comboPatchAll(vals) { const all = store(COMBO_KEY) || {}; for (const id in all) Object.assign(all[id], vals); store(COMBO_KEY, all); }
+// El rango (con su dificultad) de otro modo y ejercicio, como lo dejaste allí: { rank, ...valores } o null si aún no lo tocaste
+function comboDiff(id) { const o = (store(COMBO_KEY) || {})[id]; if (!o || !o.rank) return null; const d = { rank: clampSetting(FIELD.rank, o.rank) }; for (const k in RANK_VALS) if (o[k] !== undefined) d[k] = clampSetting(FIELD[k], o[k]); return d; }
+let comboLoading = false; // (al cargar los de un modo y ejercicio, su rango viene con sus retoques: no se vuelve a poner de serie)
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
@@ -290,10 +295,10 @@ function setSetting(key, v) {
   if (key === 'exercise' && !exOk(settings.mode, v)) settings.mode = modeFor(v);
   const ch = prev && comboId() !== prev ? comboLoad() : []; // y lo de este modo y ejercicio, como lo dejaste
   saveSettings();
-  onSettingChanged(key); ch.forEach(onSettingChanged);
+  onSettingChanged(key); comboLoading = true; try { ch.forEach(onSettingChanged); } finally { comboLoading = false; }
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
-const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'ramp', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
+const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
@@ -370,7 +375,7 @@ function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } cat
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
 function buildForm() {
   const group = g => `
-    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
+    <div class="group" data-group="${g}"><h3>${GROUP_NAMES[g]} <button type="button" class="reset" data-reset="${g}" title="Devolver este grupo a como venía">Restablecer</button></h3>${g === 'cada' ? '<p class="note" id="animNote"></p>' : g === 'ejercicio' ? `<p class="note">${BODY_NOTE}</p>` : ''}<div class="grid">${SCHEMA.filter(f => f.g === g).map(fieldHTML).join('')}</div></div>`;
   const common = $('#commonGroups'), host = $('#settingsGroups'), sortBox = $('#exSortBox');
   const COMMON = ['entorno', 'sistema', 'perfil'];
   common.innerHTML = COMMON.map(group).join('');

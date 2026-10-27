@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -331,17 +331,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`foe kind: ground ${kg} (${[...wg]}) · fly ${kf} (${[...wf]}) · both ${kb} · picks kept ${keep}`);
     if (kg !== 'robots' || kf !== 'flyers' || kb !== 'mix' || [...wf].some(k => !['bee', 'bat'].includes(k)) || [...wg].some(k => ['bee', 'bat'].includes(k)) || !keep) errors.push('enemigos: «Qué enemigos salen» debería dejar solo los que andan o solo los voladores sin perder lo marcado');
     RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesFly', RA.SCHEMA.find(f => f.key === 'foesFly').def);
-    // cada modo y ejercicio conserva sus ajustes (y los enemigos); cambiar de rango los pone en todos
+    // cada modo y ejercicio conserva sus ajustes (y los enemigos); el rango es de cada uno: cambiarlo no toca los demás
     { storage.delete('reparena3-combos'); RA.setSetting('rank', 'cabo'); RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat');
       RA.setSetting('foesGate', 'zombie'); RA.setSetting('repsWave', 17); RA.setSetting('walkTime', 9);
       RA.setSetting('exercise', 'pushup'); RA.setSetting('foesHatch', 'crab'); RA.setSetting('repsWave', 23);
       RA.setSetting('mode', 'touch'); RA.setSetting('tchArrive', 2.5);
       RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); const sq = [RA.settings.foesGate, RA.settings.repsWave, RA.settings.walkTime];
       RA.setSetting('exercise', 'pushup'); const pu = [RA.settings.foesHatch, RA.settings.repsWave];
-      RA.setSetting('rank', 'general'); const genWalk = RA.settings.walkTime; RA.setSetting('exercise', 'squat'); const sqGen = [RA.settings.walkTime, RA.settings.foesGate, RA.settings.repsWave];
-      log(`settings per mode and exercise: squat ${sq} · push-ups ${pu} · general → squat ${sqGen} (rank walk ${genWalk})`);
+      RA.setSetting('rank', 'general'); const genWalk = RA.settings.walkTime; RA.setSetting('exercise', 'squat'); const sqGen = [RA.settings.walkTime, RA.settings.foesGate, RA.settings.repsWave, RA.settings.rank];
+      log(`settings per mode and exercise: squat ${sq} · push-ups ${pu} · general on push-ups (walk ${genWalk}) → squat ${sqGen}`);
       if (sq.join() !== 'zombie,17,9' || pu.join() !== 'crab,23') errors.push('ajustes: cada modo y ejercicio debería conservar lo que elegiste (también los enemigos)');
-      if (sqGen[0] !== genWalk || sqGen[1] !== 'zombie' || sqGen[2] !== 17) errors.push('ajustes: al cambiar de rango, sus valores deberían pasar a todos los ejercicios (y lo demás quedarse)');
+      if (sqGen[0] !== 9 || sqGen[1] !== 'zombie' || sqGen[2] !== 17 || sqGen[3] !== 'cabo' || genWalk !== 5) errors.push('ajustes: el rango debería ser de cada ejercicio (el general en flexiones no toca las sentadillas)');
       RA.setSetting('rank', 'cabo'); storage.delete('reparena3-combos'); }
     for (const k of NEW) delete RA.BEAST.kinds[k];
     RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesHatch', 'spider'); RA.setSetting('foesFly', 'drone,hornet'); }
@@ -958,7 +958,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
   RA.settingsMenu(() => RA.lobbyMenu()); frame(2);
-  for (const tab of ['Partida', 'Ejercicio', 'Enemigos', 'Armas', 'Menú', 'Tu meta']) {
+  for (const tab of ['Partida', 'Tu cuerpo', 'Enemigos', 'Armas', 'Menú', 'Tu meta']) {
     press(tab); frame(1);
     const ws = RA.activeWidgets();
     ws.filter(w => w.kind === 'slider').forEach(w => { w.drag(0.7); w.commit(); w.drag(0.0); w.commit(); });
@@ -984,19 +984,38 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
     if (!btn || mainHas) errors.push('armas: el menú principal debería llevar el botón Armas ▸ en lugar de los ajustes sueltos');
     RA.setSetting('foesGate', fg); RA.setSetting('foesFly', ff); RA.setSetting('aim', 'auto'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
-  // rangos: cada uno pone toda la dificultad; retocado se nota; se puede guardar en el rango y volver a como venía
-  { RA.setSetting('mode', 'combat'); RA.setSetting('rank', 'general'); const g = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive };
-    RA.setSetting('rank', 'recluta'); const r = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive };
+  // rangos: cada uno pone toda la dificultad (también la de la defensa); retocado se nota y se vuelve a como venía
+  { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'general'); const g = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
+    RA.setSetting('rank', 'recluta'); const r = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
     RA.lobbyMenu(); frame(1); const btn = RA.activeWidgets().find(w => /^Rango: /.test(w.label)); const badge = btn && btn.badge;
     btn.onPress(); frame(1); const picks = RA.activeWidgets().filter(w => w.badge !== undefined).length; press('Sargento'); frame(1); const sg = RA.settings.walkTime;
-    RA.setSetting('walkTime', 30); const touched = RA.rankTouched(); press('Guardar mis ajustes en Sargento'); frame(1); RA.setSetting('rank', 'cabo'); RA.setSetting('rank', 'sargento'); const kept = RA.settings.walkTime;
-    press('Volver a Sargento de serie'); frame(1); const back = RA.settings.walkTime; press('Volver'); frame(1);
-    log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · main menu badge ${badge} · ${picks} ranks with insignia · sargento llegan en ${sg} s · retocado ${touched} · saved ${kept} · back to stock ${back}`);
-    if (!(g.walk < r.walk && g.max > r.max && g.lives === 1 && r.lives === 0)) errors.push('rangos: el general debería ser más difícil que el recluta');
-    if (badge !== 0 || picks !== 7 || sg !== 11 || !touched || kept !== 30 || back !== 11) errors.push('rangos: no se eligen, no se guardan en el rango o no vuelven a como venían');
+    RA.setSetting('walkTime', 30); const touched = RA.rankTouched(); RA.rankMenu(() => RA.lobbyMenu()); frame(1); press('Volver a Sargento de serie'); frame(1); const back = RA.settings.walkTime; press('Volver'); frame(1);
+    log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · main menu badge ${badge} · ${picks} ranks with insignia · sargento llegan en ${sg} s · retocado ${touched} · back to stock ${back}`);
+    if (!(g.walk < r.walk && g.max > r.max && g.lives === 1 && r.lives === 0 && g.gd === 'hard' && r.gd === 'easy')) errors.push('rangos: el general debería ser más difícil que el recluta (también la defensa)');
+    if (badge !== 0 || picks !== 7 || sg !== 11 || !touched || back !== 11) errors.push('rangos: no se eligen o no vuelven a como venían');
     const dirty = ['recluta', 'soldado', 'cabo', 'sargento', 'teniente', 'capitan', 'general'].filter(k => { RA.setSetting('rank', k); return RA.rankTouched(); });
     if (dirty.length) errors.push('rangos: recién elegidos ya salen como retocados: ' + dirty.join(', '));
-    RA.setSetting('rank', 'cabo'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
+    // cada ejercicio guarda su rango (con sus retoques): sargento retocado en sentadillas, recluta en curl
+    RA.setSetting('rank', 'sargento'); RA.setSetting('walkTime', 25); RA.setSetting('exercise', 'curl'); RA.setSetting('rank', 'recluta'); const curl = [RA.settings.rank, RA.settings.walkTime];
+    RA.setSetting('exercise', 'squat'); const sq = [RA.settings.rank, RA.settings.walkTime, RA.rankTouched()]; RA.setSetting('exercise', 'curl'); const curl2 = RA.settings.rank;
+    log(`   per exercise: curl ${JSON.stringify(curl)} · back to squats ${JSON.stringify(sq)} · curl again ${curl2}`);
+    if (curl[0] !== 'recluta' || sq[0] !== 'sargento' || sq[1] !== 25 || !sq[2] || curl2 !== 'recluta') errors.push('rangos: cada ejercicio debería guardar su rango (y sus retoques)');
+    // subir o bajar: 3 rondas ganadas con muchas perfectas proponen subir; 2 derrotas, bajar (solo lo propone)
+    storage.delete('reparena3-rankfit'); const a1 = RA.rankFitAdd(true, 90), a2 = RA.rankFitAdd(true, 80), up = RA.rankFitAdd(true, 75), keep = RA.settings.rank;
+    const d1 = RA.rankFitAdd(false, 40), down = RA.rankFitAdd(false, 30), mixed = (RA.rankFitAdd(true, 50), RA.rankFitAdd(true, 90), RA.rankFitAdd(true, 90));
+    log(`   promotion: after 3 good wins → ${up} (before: ${a1}, ${a2}; rank still ${keep}) · after 2 defeats → ${down} (${d1}) · wins with few perfects → ${mixed}`);
+    if (a1 || a2 || up !== 'soldado' || keep !== 'recluta' || d1 || down !== null || mixed) errors.push('rangos: tras 3 rondas buenas debería proponer subir (sin cambiarlo solo) y no con pocas perfectas');
+    RA.setSetting('rank', 'soldado'); storage.delete('reparena3-rankfit'); RA.rankFitAdd(false, 40); const down2 = RA.rankFitAdd(false, 40);
+    if (down2 !== 'recluta') errors.push('rangos: tras 2 derrotas seguidas debería proponer bajar'); log(`   demotion from soldado after 2 defeats → ${down2}`);
+    { // en el resumen, el botón para subir (y al pulsarlo, sube ese ejercicio y desaparece la propuesta)
+      const S = { win: true, manual: false, hang: false, got: 12, unit: 'repeticiones', ex: 'x', sub: 'y', pct: 90, stars: 3, tiles: [[1, 'a'], [2, 'b'], [3, 'c'], [4, 'd'], [5, 'e'], [6, 'f']], chips: [], today: '', rankTo: 'cabo' };
+      RA.endMenu('¡VICTORIA!', S); frame(1); const b = RA.activeWidgets().find(w => w.label === 'Subir a Cabo'); if (b) b.onPress(); frame(1);
+      const gone = !RA.activeWidgets().some(w => /^Subir a/.test(w.label)); log(`   summary offers “Subir a Cabo” ${!!b} → rank ${RA.settings.rank}, offer gone ${gone}`);
+      if (!b || RA.settings.rank !== 'cabo' || !gone) errors.push('rangos: el resumen debería ofrecer subir de rango con un botón'); }
+    // un bloque sin rango propio juega con el de su ejercicio
+    const curlRank = RA.settings.rank; RA.setSetting('exercise', 'squat'); const bl = RA.blockExRank({ mode: 'combat', ex: 'curl' }).rank; log(`   block without its own rank → curl's ${bl} (squats: ${RA.settings.rank})`);
+    if (bl !== curlRank || bl === RA.settings.rank) errors.push('sesiones: un bloque sin rango debería jugar con el de su ejercicio');
+    storage.delete('reparena3-rankfit'); RA.setSetting('exercise', 'curl'); RA.setSetting('rank', 'cabo'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'cabo'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
   // sonido y entorno, cada uno en su submenú (y sin nada de sonido en Ajustes)
   press('Sonido'); frame(1); { const ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('sound menu sliders:', ks.join(', '));
     if (!ks.includes('volume') || !ks.includes('ambient')) errors.push('menú: el submenú de sonido no tiene los volúmenes'); }
@@ -1020,7 +1039,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`profiles: saved ${prof.length} “${prof[0].name}” · loaded lives ${RA.settings.lives} volume ${RA.settings.volume} · back in ${RA.activeWidgets().some(w => w.label === 'Perfiles  ▸') ? 'Ajustes' : '?'}`);
     if (prof.length !== 1 || RA.settings.lives !== 7 || RA.settings.volume !== 30) errors.push('perfiles: no se guardan o no se cargan');
     press('Perfiles'); frame(1); press('Borrar'); frame(1); press('¿Borrar?'); frame(1); const left = RA.profiles().length;
-    press('Volver'); frame(1); press('Menú'); frame(1); press('Volver'); frame(1); press('Ajustes'); frame(1); const tabOn = RA.activeWidgets().find(w => w.style === 'selected' && ['Partida', 'Menú', 'Ejercicio'].includes(w.label));
+    press('Volver'); frame(1); press('Menú'); frame(1); press('Volver'); frame(1); press('Ajustes'); frame(1); const tabOn = RA.activeWidgets().find(w => w.style === 'selected' && ['Partida', 'Menú', 'Tu cuerpo'].includes(w.label));
     log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
     if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
     press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
