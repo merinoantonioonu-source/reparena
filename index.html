@@ -194,7 +194,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .splist .sprow{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 10px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
 .splist .sprow > label{flex:1 1 220px;display:flex;gap:8px;align-items:flex-start;font-size:.92rem;min-width:0}
 .splist label span{white-space:normal;overflow-wrap:anywhere}
-.splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
+.splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
 .splist .sptracks label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
 .sptrk{display:flex;gap:4px;align-items:flex-start}
 .sptrk label{flex:1;min-width:0}
@@ -202,6 +202,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfav:hover{opacity:.9}
 .spfav.on{color:var(--gold);opacity:1}
 .spfav:focus-visible{outline:2px solid var(--gold);opacity:1}
+.spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
+.spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
+.spx:hover,.spx:focus-visible{opacity:1;color:var(--fg);background:var(--panel)}
+.spbpm.auto::placeholder{color:var(--muted);opacity:1}
 .spbpm{flex:none;width:4.6em;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.82rem;text-align:right;font-variant-numeric:tabular-nums}
 .spbpm:focus-visible{outline:2px solid var(--gold)}
 .splist .sptracks small,.sesmusic .tracks small{opacity:.7}
@@ -271,7 +275,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesmusic .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .sesmusic .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:.9em}
 .sesmusic .btn.tiny{padding:0 7px;min-height:0;line-height:1.6;font-size:.85em}
-.sesmusic .tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:320px;overflow:auto}
+.sesmusic .tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:4px 12px;max-height:320px;overflow:auto}
 .sesmusic .tracks label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
 .sesmusic .tracks small{color:var(--muted, #a49fc8)}
 .sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
@@ -444,7 +448,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Junto a cada favorita puedes escribir su <b>compás (BPM)</b>: cuando suene, en Toques y en Combate el juego irá a ese ritmo (por encima del de Spotify). En el juego también se guarda: marca el ritmo «Al compás» y pulsa «Guardar … BPM para esta canción». Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Junto a cada canción sale su <b>compás (BPM)</b>: se busca solo (en Deezer y, si no lo sabe, en ReccoBeats) y sale en gris («≈124»); si está mal, escribe otro encima o usa <b>×2</b> / <b>÷2</b> (a veces dan el doble o la mitad). Cuando suena, en Toques y en Combate el juego va a ese ritmo (con «Ritmo de cada canción», en Sonido ▸; el que escribas tú, siempre). En el juego también se guarda: marca el ritmo «Al compás» y pulsa «Guardar … BPM para esta canción». Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
@@ -6763,7 +6767,7 @@ async function spListTracks(id) {
       if (e.status === 403) { const l = (SP.mine || []).find(x => x.id === id); if (l) l.mine = false; throw new Error('NOT_YOURS'); }
       throw e;
     }
-    (j && j.items || []).forEach(x => { const t = x && (x.item || x.track); if (t && t.uri && t.uri.startsWith('spotify:track:')) out.push({ uri: t.uri, name: t.name, by: (t.artists || []).map(a => a.name).join(', ') }); });
+    (j && j.items || []).forEach(x => { const t = x && (x.item || x.track); if (t && t.uri && t.uri.startsWith('spotify:track:')) out.push({ uri: t.uri, name: t.name, by: (t.artists || []).map(a => a.name).join(', '), isrc: (t.external_ids && t.external_ids.isrc) || '' }); }); // (isrc: para buscar su compás)
     url = j && j.next ? j.next.replace('https://api.spotify.com/v1', '') : null;
   }
   return (SP.trk[id] = out);
@@ -6841,15 +6845,15 @@ function spVol(d) {
   SP.volTimer = setTimeout(() => { spApi('PUT', '/me/player/volume?volume_percent=' + SP.vol).catch(e => { SP.err = spErrText(e); spMenuSync(); }); }, 250);
 }
 // Ritmo de la canción que suena. Spotify dejó de dar el análisis de audio a las apps nuevas (finales de 2024): se le
-// pregunta por si acaso y, si no, a Deezer, que da el tempo de muchísimas canciones (buscándola por su código ISRC o
-// por artista y título). Sin el instante de los pulsos, se cuentan desde el principio de la canción (casi siempre
-// empieza en un pulso); «Encajar el pulso» lo afina. Devuelve null si nadie lo sabe
+// pregunta por si acaso y, si no, a los servicios de fuera (spFindBpm). Sin el instante de los pulsos, se cuentan desde el
+// principio de la canción (casi siempre empieza en un pulso); «Encajar el pulso» lo afina. Devuelve null si nadie lo sabe
 async function spTempo() {
   const st = await spApi('GET', '/me/player'), it = st && st.item; if (!it || !it.id) throw new Error('NO_DEVICE');
   const start = performance.now() / 1000 - (st.progress_ms || 0) / 1000;
-  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : start, id: it.id }; } catch (e) { /* sin permiso */ }
-  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) return { bpm: f.tempo, beat0: start, id: it.id }; } catch (e) { /* sin permiso */ }
-  const bpm = await dzTempo(it); return bpm ? { bpm, beat0: start, id: it.id } : null;
+  const known = spTrackBpm(it.uri); if (known.b) return { bpm: known.b, beat0: start, id: it.id, src: known.src };
+  try { const a = await spApi('GET', '/audio-analysis/' + it.id); if (a && a.track && a.track.tempo) { spBpmCache(it.uri, a.track.tempo, 'sp'); return { bpm: a.track.tempo, beat0: a.beats && a.beats.length ? start + a.beats[0].start : start, id: it.id, src: 'sp' }; } } catch (e) { /* sin permiso */ }
+  try { const f = await spApi('GET', '/audio-features/' + it.id); if (f && f.tempo) { spBpmCache(it.uri, f.tempo, 'sp'); return { bpm: f.tempo, beat0: start, id: it.id, src: 'sp' }; } } catch (e) { /* sin permiso */ }
+  const r = await spFindBpm(spTrackInfo(it)); return r.b ? { bpm: r.b, beat0: start, id: it.id, src: r.src } : null;
 }
 // Deezer responde sin permisos y por JSONP (su API no deja leerla con fetch desde otra web)
 function jsonp(url, ms = 6000) {
@@ -6862,19 +6866,96 @@ function jsonp(url, ms = 6000) {
     s.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb; (document.head || document.body).appendChild(s);
   });
 }
-async function dzTempo(it) {
-  const bpmOf = async id => { const t = await jsonp('https://api.deezer.com/track/' + id); return t && t.bpm > 40 ? t.bpm : 0; };
-  const isrc = it.external_ids && it.external_ids.isrc;
-  if (isrc) try { const b = await bpmOf('isrc:' + encodeURIComponent(isrc)); if (b) return b; } catch (e) { /* no está */ }
-  const artist = it.artists && it.artists[0] ? it.artists[0].name : '';
+// Lo que hace falta para buscar una canción fuera: su código ISRC (lo da Spotify), el ID de Spotify, artista y título
+const spTrackInfo = t => ({ uri: t.uri, isrc: t.isrc || (t.external_ids && t.external_ids.isrc) || '', artist: t.artist || (t.artists && t.artists[0] ? t.artists[0].name : String(t.by || '').split(',')[0].trim()), name: t.name || '' });
+// Deezer: por el código ISRC y, si no, buscando por artista y título (en bastantes canciones el BPM viene a 0: no lo sabe)
+async function dzBpm(t) {
+  const bpmOf = async id => { const x = await jsonp('https://api.deezer.com/track/' + id); return x && x.bpm > SP_BPM_MIN ? x.bpm : 0; };
+  if (t.isrc) try { const b = await bpmOf('isrc:' + encodeURIComponent(t.isrc)); if (b) return b; } catch (e) { /* no está */ }
+  if (!t.name) return 0;
   try {
-    const r = await jsonp('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(`artist:"${artist}" track:"${it.name}"`));
+    const r = await jsonp('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(`artist:"${t.artist}" track:"${t.name}"`));
     for (const x of (r && r.data) || []) { const b = await bpmOf(x.id); if (b) return b; }
   } catch (e) { /* sin conexión */ }
   return 0;
 }
-// Compás propio de cada canción: lo guardas tú (en la página, junto a la ★ de tus favoritas, o en el juego, «Guardar el
-// ritmo para esta canción») y, cuando suena, manda sobre todo, también sobre el ritmo de Spotify. Pasa por el código
+// ReccoBeats: el tempo con el ID de Spotify, de 40 en 40, sin clave. Si no responde (sin conexión o el navegador no deja
+// leerlo), no se le vuelve a preguntar en lo que queda de sesión; si pide calma (429), se deja para luego
+const RB = { off: false, wait: 0 };
+async function rbBpms(uris) {
+  const ids = uris.map(u => String(u).split(':')[2]).filter(Boolean), out = {};
+  if (RB.off || !ids.length || typeof fetch !== 'function' || Date.now() < RB.wait) return out;
+  for (let i = 0; i < ids.length; i += 40) {
+    const part = ids.slice(i, i + 40); let r, j;
+    try { r = await fetch('https://api.reccobeats.com/v1/audio-features?ids=' + part.join(','), { headers: { Accept: 'application/json' } }); }
+    catch (e) { RB.off = true; return out; }
+    if (r.status === 429) { RB.wait = Date.now() + 1000 * (+(r.headers && r.headers.get && r.headers.get('Retry-After')) || 30); return out; }
+    if (!r.ok) continue;
+    try { j = await r.json(); } catch (e) { continue; }
+    const L = Array.isArray(j) ? j : (j && (j.content || j.data || j.audio_features)) || [];
+    for (const x of L) {
+      if (!x || !(x.tempo > SP_BPM_MIN)) continue;
+      const sid = part.find(id => (x.href && String(x.href).includes(id)) || x.id === id || x.spotifyId === id) || (part.length === 1 && L.length === 1 ? part[0] : null);
+      if (sid) out['spotify:track:' + sid] = x.tempo;
+    }
+  }
+  return out;
+}
+const BPM_SRC = { dz: dzBpm, rb: rbBpms }; // (las pruebas los cambian por unos falsos)
+const BPM_NAME = { dz: 'Deezer', rb: 'ReccoBeats', sp: 'Spotify' };
+// Lo encontrado fuera se guarda por canción (no hace falta que viaje con el código: se vuelve a buscar). Lo que no se
+// encontró se vuelve a probar al cabo de un mes. bpmAuto: { uri: [bpm, fuente, cuándo] } (bpm 0: no se encontró)
+const SP_AUTO_MAX = 2000, SP_RETRY = 30 * 864e5;
+function spBpmCache(uri, bpm, src) {
+  const A = SP.cfg.bpmAuto || (SP.cfg.bpmAuto = {}); delete A[uri];
+  bpm = Math.round(+bpm || 0); A[uri] = [bpm >= SP_BPM_MIN && bpm <= SP_BPM_TOP ? bpm : 0, src || '', Date.now()];
+  const ks = Object.keys(A); for (let i = 0; i < ks.length - SP_AUTO_MAX; i++) delete A[ks[i]];
+  spSave();
+}
+const spAutoBpm = uri => { const a = uri && (SP.cfg.bpmAuto || {})[uri]; return a ? { b: a[0] || 0, src: a[1], tried: a[0] > 0 || Date.now() - a[2] < SP_RETRY } : { b: 0, src: '', tried: false }; };
+// El compás que vale para una canción: el tuyo o, si no, el encontrado fuera
+const spTrackBpm = uri => { const own = spSongBpm(uri); if (own) return { b: own, src: 'own' }; const a = spAutoBpm(uri); return { b: a.b, src: a.src }; };
+// Busca el compás de una canción: Deezer y, si no lo sabe, ReccoBeats; lo guarda (también si nadie lo sabe)
+async function spFindBpm(t) {
+  const a = spAutoBpm(t.uri); if (a.tried) return a;
+  let b = 0, src = '';
+  try { b = await BPM_SRC.dz(t); if (b) src = 'dz'; } catch (e) { /* sin conexión */ }
+  if (!b) { try { b = (await BPM_SRC.rb([t.uri]))[t.uri] || 0; if (b) src = 'rb'; } catch (e) { /* no responde */ } }
+  if (b || !RB.off) spBpmCache(t.uri, b, src); // (si ReccoBeats no respondía, no se da por buscada: se probará otra vez)
+  return { b: Math.round(b) || 0, src };
+}
+// Al abrir una lista (en la página, en la música de un bloque o en el juego) se buscan los compases que falten, poco a
+// poco: primero Deezer, una a una; las que no sepa, a ReccoBeats de 40 en 40. Lo que se va sabiendo aparece al momento
+const BPMQ = { list: [], busy: false, seen: new Set() };
+function spBpmPrefetch(T) {
+  for (const t of T || []) if (t && t.uri && !BPMQ.seen.has(t.uri) && !spSongBpm(t.uri) && !spAutoBpm(t.uri).tried) { BPMQ.seen.add(t.uri); BPMQ.list.push(spTrackInfo(t)); }
+  if (!BPMQ.busy && BPMQ.list.length) spBpmRun();
+}
+async function spBpmRun() {
+  BPMQ.busy = true; const miss = [];
+  try {
+    while (BPMQ.list.length) {
+      const t = BPMQ.list.shift(); let b = 0;
+      try { b = await BPM_SRC.dz(t); } catch (e) { /* sin conexión */ }
+      if (b) { spBpmCache(t.uri, b, 'dz'); spBpmShow(); } else miss.push(t.uri);
+      if (miss.length >= 40 || (!BPMQ.list.length && miss.length)) {
+        const batch = miss.splice(0), got = await BPM_SRC.rb(batch).catch(() => ({}));
+        for (const u of batch) if (got[u]) spBpmCache(u, got[u], 'rb'); else if (!RB.off) spBpmCache(u, 0, ''); // (si ReccoBeats no respondía, otra vez será)
+        spBpmShow();
+      }
+      await new Promise(r => setTimeout(r, 250)); // (sin agobiar a Deezer: unas 4 por segundo)
+    }
+  } finally { BPMQ.busy = false; }
+}
+// Lo encontrado, a la vista (sin redibujar mientras escribes un compás)
+function spBpmShow() {
+  clearTimeout(BPMQ.t); BPMQ.t = setTimeout(() => {
+    const a = typeof document !== 'undefined' && document.activeElement; if (a && a.classList && a.classList.contains('spbpm')) { spBpmShow(); return; }
+    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (menu && menu.spTrk && menu.rebuild) menu.rebuild();
+  }, 600);
+}
+// Compás propio de cada canción: lo guardas tú (en la página, junto a cada canción, o en el juego, «Guardar el ritmo para
+// esta canción») y, cuando suena, manda sobre todo. Pasa por el código
 const SP_BPM_MAX = 500, SP_BPM_MIN = 40, SP_BPM_TOP = 200;
 const spSongBpm = uri => { const b = uri && (SP.cfg.bpms || {})[uri]; return b >= SP_BPM_MIN && b <= SP_BPM_TOP ? b : 0; };
 function spSongBpmSet(uri, bpm) {
@@ -6884,22 +6965,31 @@ function spSongBpmSet(uri, bpm) {
   SP.cfg.bpms = B; spSave();
   const it = SP.st && SP.st.item; if (it && it.uri === uri) { SP.tempoId = null; spAutoTempo(); } // (si suena ahora, ya)
 }
-// Al cambiar de canción: con su compás guardado, ese (contado desde el principio de la canción: «Encajar el pulso» lo
-// afina); sin él, el de Spotify si está activado o, si no, el que tenías antes de la canción con compás propio
+// ×2 o ÷2: a veces los servicios dan el doble o la mitad del tempo de verdad; el resultado pasa a ser tuyo
+function spBpmScale(uri, k) { const v = spTrackBpm(uri).b; if (v) spSongBpmSet(uri, clamp(Math.round(v * k), SP_BPM_MIN, SP_BPM_TOP)); }
+// «Ritmo de cada canción» (activado si no lo quitaste): con cada canción, su compás (el tuyo o el encontrado fuera)
+const spAuto = () => SP.cfg.autoBpm !== false;
+// Al cambiar de canción: con su compás guardado (el tuyo, siempre; el encontrado fuera, con el ritmo de cada canción), ese
+// (contado desde el principio de la canción: «Encajar el pulso» lo afina); sin él, se busca y, si nadie lo sabe, vuelve el
+// que tenías antes
+function spSongTempoSet(b, src) {
+  if (!SP.songOn) { SP.songOn = true; SP.baseBpm = settings.bpm; }
+  setSetting('bpm', b); TCH.beat0 = perfNow() - ((SP.st && SP.st.progress_ms) || 0) / 1000; if (typeof BEAT !== 'undefined') BEAT.off = null;
+  if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(`Ritmo de esta canción: ${b} BPM (${src === 'own' ? 'el tuyo' : BPM_NAME[src] || 'encontrado'})`, '#ffd166', 2.5);
+  if (menu && menu.rebuild && !menu.keypad) menu.rebuild();
+}
+function spSongTempoOff() { if (SP.songOn) { SP.songOn = false; setSetting('bpm', SP.baseBpm || 0); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); } }
 function spAutoTempo() {
   const it = SP.st && SP.st.item; if (!it || !it.id || it.id === SP.tempoId || SP.tempoBusy) return;
-  const own = spSongBpm(it.uri);
-  if (own) {
-    SP.tempoId = it.id; if (!SP.songOn) { SP.songOn = true; SP.baseBpm = settings.bpm; }
-    setSetting('bpm', own); TCH.beat0 = perfNow() - (SP.st.progress_ms || 0) / 1000; if (typeof BEAT !== 'undefined') BEAT.off = null;
-    if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(`Ritmo de esta canción: ${own} BPM (el tuyo)`, '#ffd166', 2.5);
-    if (menu && menu.rebuild && !menu.keypad) menu.rebuild();
-    return;
-  }
-  if (SP.songOn) { SP.songOn = false; if (!SP.cfg.autoBpm) { setSetting('bpm', SP.baseBpm || 0); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); } }
-  if (!SP.cfg.autoBpm) { SP.tempoId = it.id; return; }
-  SP.tempoId = it.id; SP.tempoBusy = true;
-  spotifyTempo().then(m => { if (state === 'play' || state === 'rest' || (menu && menu.music !== null)) say(m, '#ffd166', 2.5); if (menu && menu.rebuild && !menu.keypad) menu.rebuild(); }).finally(() => { SP.tempoBusy = false; });
+  SP.tempoId = it.id; const own = spSongBpm(it.uri);
+  if (own) { spSongTempoSet(own, 'own'); return; }
+  if (!spAuto()) { spSongTempoOff(); return; }
+  const a = spAutoBpm(it.uri);
+  if (a.b) { spSongTempoSet(a.b, a.src); return; }
+  if (a.tried) { spSongTempoOff(); return; }
+  SP.tempoBusy = true; const id = it.id;
+  spTempo().then(r => { const cur = SP.st && SP.st.item; if (!cur || cur.id !== id) return; if (r) { spSongTempoSet(Math.round(r.bpm), r.src); TCH.beat0 = r.beat0; } else spSongTempoOff(); })
+    .catch(() => {}).finally(() => { SP.tempoBusy = false; spBpmShow(); });
 }
 function spNowText() {
   if (!spConnected()) return '';
@@ -6946,9 +7036,10 @@ function spTrackMenu(l, back, page = 0) {
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { if (e.message !== 'NOT_YOURS') SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
   else {
+    spBpmPrefetch(T); // (los compases que falten, poco a poco)
     const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1), F = spFavs(), TF = spFavFirst(T); // (tus favoritas, primero y con ★)
     rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
-    for (const t of TF.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${F.has(t.uri) ? '★ ' : ''}${t.name}${t.by ? ' — ' + t.by : ''}${spSongBpm(t.uri) ? ` · ${spSongBpm(t.uri)} BPM` : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
+    for (const t of TF.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${F.has(t.uri) ? '★ ' : ''}${t.name}${t.by ? ' — ' + t.by : ''}${spBpmTag(t.uri)}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
@@ -7005,8 +7096,15 @@ const SP_FAV_MAX = 300;
 const spFavs = () => new Set(SP.cfg.favs || []);
 function spFavToggle(uri) { const F = (SP.cfg.favs || []).filter(u => u !== uri); if (F.length === (SP.cfg.favs || []).length) F.unshift(uri); SP.cfg.favs = F.slice(0, SP_FAV_MAX); spSave(); }
 function spFavFirst(T) { const F = spFavs(); return F.size ? T.filter(t => F.has(t.uri)).concat(T.filter(t => !F.has(t.uri))) : T; }
-// el compás de la canción, para las favoritas (y las que ya lo tienen)
-const spBpmIn = (uri, F) => F.has(uri) || spSongBpm(uri) ? `<input type="number" class="spbpm" data-bpm="${escSp(uri)}" min="${SP_BPM_MIN}" max="${SP_BPM_TOP}" step="1" inputmode="numeric" placeholder="BPM" value="${spSongBpm(uri) || ''}" aria-label="Compás de la canción (BPM)" title="Su compás: cuando suene, el juego irá a este ritmo">` : '';
+// El compás de cada canción: el tuyo (escrito) o, en gris, el encontrado fuera («≈124»), que se cambia escribiendo encima;
+// ×2 y ÷2 lo corrigen cuando un servicio da el doble o la mitad. Buscando: «…»; si nadie lo sabe: «—»
+function spBpmCell(t) {
+  const own = spSongBpm(t.uri), a = spAutoBpm(t.uri), v = own || a.b, ph = a.b ? '≈' + a.b : a.tried ? '—' : BPMQ.seen.has(t.uri) ? '…' : 'BPM';
+  const tip = own ? 'Tu compás: cuando suene, el juego irá a este ritmo' : a.b ? `Encontrado en ${BPM_NAME[a.src] || 'otro servicio'}: ${a.b} BPM. Escribe otro para cambiarlo` : a.tried ? 'No se encontró: escríbelo tú (o márcalo en el juego «Al compás»)' : 'Su compás (BPM): se busca solo';
+  return `<span class="spbpmc"><input type="number" class="spbpm${!own && a.b ? ' auto' : ''}" data-bpm="${escSp(t.uri)}" min="${SP_BPM_MIN}" max="${SP_BPM_TOP}" step="1" inputmode="numeric" placeholder="${ph}" value="${own || ''}" aria-label="Compás de ${escSp(t.name)} (BPM)" title="${escSp(tip)}">${v ? `<button type="button" class="spx" data-a="bpmx" data-bpmx="2" data-u="${escSp(t.uri)}" title="El doble (${Math.min(SP_BPM_TOP, v * 2)})">×2</button><button type="button" class="spx" data-a="bpmx" data-bpmx="0.5" data-u="${escSp(t.uri)}" title="La mitad (${Math.max(SP_BPM_MIN, Math.round(v / 2))})">÷2</button>` : ''}</span>`;
+}
+// en el juego, junto al nombre: « · 128 BPM» (el tuyo) o « · ≈124 BPM» (encontrado)
+const spBpmTag = uri => { const k = spTrackBpm(uri); return k.b ? ` · ${k.src === 'own' ? '' : '≈'}${k.b} BPM` : ''; };
 const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
@@ -7015,8 +7113,8 @@ function spListsPage() {
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
-    const F = spFavs(); // (las favoritas, primero; ★ las marca)
-    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>${spBpmIn(t.uri, F)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+    const F = spFavs(); if (T) spBpmPrefetch(T); // (las favoritas, primero; ★ las marca; los compases que falten, se buscan)
+    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
   } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
@@ -7032,6 +7130,7 @@ function spListsPage() {
   });
   host.addEventListener('click', ev => {
     const f = ev.target.closest && ev.target.closest('button[data-fav]'); if (f) { spFavToggle(f.dataset.fav); spListsPage(); renderSession(); return; }
+    const x = ev.target.closest && ev.target.closest('button[data-bpmx]'); if (x) { spBpmScale(x.dataset.u, +x.dataset.bpmx); spListsPage(); renderSession(); return; }
     const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
     if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = id; SP.trkErr = ''; spListsPage();
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
@@ -7277,7 +7376,7 @@ function sesMusicHTML(b, i) {
     const l = L.find(x => x.id === SES.mList) || { name: '' }, T = SP.trk && SP.trk[SES.mList];
     h += `<div class="spin"><button type="button" class="btn small" data-a="mback">← Tus listas</button><b>${escS(l.name)}</b></div>`;
     if (!T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
-    else { const F = spFavs(); h += T.length ? `<div class="tracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>${spBpmIn(t.uri, F)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>'; } // (tus favoritas, primero, con su compás)
+    else { const F = spFavs(); spBpmPrefetch(T); h += T.length ? `<div class="tracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>'; } // (tus favoritas, primero, con su compás)
   }
   return h + '</div>';
 }
@@ -7300,6 +7399,7 @@ function sesMusicClick(btn) {
   if (btn.dataset.a === 'mlist') { SES.mList = btn.dataset.id; SES.mErr = ''; renderSession(); sesMusicLoad(); return; }
   if (btn.dataset.a === 'mback') { SES.mList = ''; SES.mErr = ''; renderSession(); return; }
   if (btn.dataset.a === 'fav') { spFavToggle(btn.dataset.fav); renderSession(); spListsPage(); return; }
+  if (btn.dataset.a === 'bpmx') { spBpmScale(btn.dataset.u, +btn.dataset.bpmx); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
   else if (btn.dataset.a === 'mclear') delete b.music;
   saveSession(); renderSession();
@@ -11340,21 +11440,25 @@ function tapTempo() {
 async function spotifyTempo() {
   try {
     const r = await spTempo(); if (!r) return 'No encuentro el ritmo de esta canción: márcalo con «Al compás»';
-    SP.tempoId = r.id; setSetting('bpm', Math.round(r.bpm)); TCH.beat0 = r.beat0; if (typeof BEAT !== 'undefined') BEAT.off = null;
-    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM`;
+    SP.tempoId = r.id; spSongTempoSet(Math.round(r.bpm), r.src); TCH.beat0 = r.beat0;
+    return `Ritmo de la canción: ${Math.round(r.bpm)} BPM${BPM_NAME[r.src] ? ` (${BPM_NAME[r.src]})` : ''}`;
   } catch (e) { return spErrText(e); }
 }
 function tempoRows(back) {
-  const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm, it = spConnected() && SP.st && SP.st.item, own = it ? spSongBpm(it.uri) : 0;
-  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${own && own === P ? ' (el que guardaste para esta canción)' : auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
-  // «Al compás» siempre está (con el de Spotify puesto, tocarlo vuelve a marcarlo tú); con el ritmo de Spotify, además,
-  // «Encajar el pulso»: un toque solo encaja el pulso (el tempo ya lo da la canción)
+  const P = settings.bpm, auto = spConnected() && spAuto(), it = spConnected() && SP.st && SP.st.item, kb = it ? spTrackBpm(it.uri) : { b: 0 }, own = kb.src === 'own' ? kb.b : 0;
+  const why = kb.b && kb.b === P ? (own ? ' (el que guardaste para esta canción)' : ` (el de esta canción, de ${BPM_NAME[kb.src] || 'fuera'})`) : auto ? ' (el de cada canción)' : '';
+  const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${why} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de cada canción' : ''), color: '#ffd166' }];
+  // «Al compás» siempre está (con el ritmo de cada canción puesto, tocarlo vuelve a marcarlo tú); con el de cada canción,
+  // además, «Encajar el pulso»: un toque solo encaja el pulso (el tempo ya lo da la canción)
   const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
   if (auto && P) items.push({ label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } });
-  if (spConnected()) items.push({ label: auto ? 'Ritmo de Spotify ✓' : 'Ritmo de Spotify', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
-  // el compás de la canción que suena: guardarlo (tras marcarlo al compás o con el de Spotify) o quitarlo
-  const songItems = !it || !it.uri ? [] : own ? [{ label: 'Quitar el ritmo de esta canción', onPress: () => { spSongBpmSet(it.uri, 0); back(); } }]
-    : P ? [{ label: `Guardar ${P} BPM para esta canción`, style: 'primary', onPress: () => { spSongBpmSet(it.uri, P); say(`«${it.name}»: ${P} BPM cada vez que suene`, '#ffd166', 2.2); back(); } }] : [];
+  if (spConnected()) items.push({ label: auto ? 'Ritmo de cada canción ✓' : 'Ritmo de cada canción', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
+  // el compás de la canción que suena: corregirlo (×2, ÷2: a veces los servicios dan el doble o la mitad), guardarlo (tras
+  // marcarlo al compás) o quitarlo
+  const songItems = !it || !it.uri ? [] : [
+    ...(kb.b ? [{ label: `×2 (${Math.min(SP_BPM_TOP, kb.b * 2)})`, onPress: () => { spBpmScale(it.uri, 2); back(); } }, { label: `÷2 (${Math.max(SP_BPM_MIN, Math.round(kb.b / 2))})`, onPress: () => { spBpmScale(it.uri, 0.5); back(); } }] : []),
+    ...(own ? [{ label: 'Quitar el ritmo de esta canción', onPress: () => { spSongBpmSet(it.uri, 0); back(); } }]
+      : P && P !== kb.b ? [{ label: `Guardar ${P} BPM para esta canción`, style: 'primary', onPress: () => { spSongBpmSet(it.uri, P); say(`«${it.name}»: ${P} BPM cada vez que suene`, '#ffd166', 2.2); back(); } }] : [])];
   if (P) items.push({ label: 'Sin ritmo', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } setSetting('bpm', 0); back(); } });
   rows.push({ t: 'btns', items }); if (songItems.length) rows.push({ t: 'btns', items: songItems });
   return rows;
