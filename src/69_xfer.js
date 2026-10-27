@@ -29,7 +29,7 @@ function xferPack() {
   const d = {};
   for (const k of XFER_KEYS) {
     let v = store(k); if (v === null || v === undefined) continue;
-    if (k === 'reparena3-spotify') { const { clientId, lists, picks } = v; v = { clientId, lists, picks }; }
+    if (k === 'reparena3-spotify') { const { clientId, lists, picks, favs } = v; v = { clientId, lists, picks, favs }; }
     d[k] = v;
   }
   return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
@@ -82,7 +82,7 @@ function xferApply(p, reload = true) {
     if (k === 'reparena3-history') {
       const mine = store(k) || [], seen = new Set(mine.map(r => `${r.date}|${r.ex}|${r.reps}`));
       store(k, mine.concat(v.filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`))).sort((a, b) => (a.date || 0) - (b.date || 0)).slice(-400));
-    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}));
+    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}, v.favs ? { favs: v.favs } : {}));
     else store(k, v);
   }
   if (reload) setTimeout(() => location.reload(), 300);

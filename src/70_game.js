@@ -1298,14 +1298,25 @@ function armStep(kind, side, t, dt) {
   return null;
 }
 // Los dos brazos a la vez (barra o kettlebell): cada uno con su paso, y la repetición cuenta cuando los dos llegan
-// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra
-const PAIR_WIN = 0.6;
+// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra. Con la barra las dos suben juntas aunque el
+// seguimiento no lo vea igual en las dos (una algo más baja, o que llega un instante después): cuando una completa, vale
+// si la otra ya está arriba aguantando o ha subido al menos el 60 % del recorrido; si no, se le espera PAIR_WIN segundos
+const PAIR_WIN = 1.0;
+function pairNear(kind, side) {
+  const d = (kind === 'press' ? DET.pr : DET.curl)[side], range = (kind === 'press' ? settings.pressRange : settings.curlRange) / 100;
+  return hands[side].ok && (d.state === 'hold' || (d.state === 'rising' && d.max - d.bottom >= range * 0.6));
+}
 function pairStep(kind, t, dt) {
-  const P = DET.pair;
+  const P = DET.pair, D = kind === 'press' ? DET.pr : DET.curl;
   for (const side of ['left', 'right']) {
     const ev = armStep(kind, side, t, dt); if (!ev) continue;
     if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
+    const o = side === 'left' ? 'right' : 'left', od = D[o];
     if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
+    else if (!P.side && pairNear(kind, o)) { // la otra ya va arriba: cuenta ya (y la otra no contará otra vez al bajar)
+      const hold = od.state === 'hold', pow = Math.max(ev.pow || 1, hold ? od.pow || 1 : 1);
+      od.state = 'top'; onCharge(); onRep({ perfect: ev.perfect && hold && !!(od.ev && od.ev.perfect), fast: ev.fast, pow });
+    }
     else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
   }
   if (P.side) {
@@ -2096,7 +2107,7 @@ function soundMenu(back) {
   const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
@@ -2373,9 +2384,7 @@ function updateOutcome(dt) {
 }
 function outcomeClear() { OUT.t = -1; OUT.cleared = false; OUT.veil.visible = false; OUT.black.visible = false; OUT.title.mesh.visible = false; }
 // El resumen: una ficha con el número grande (repeticiones o segundos colgado), las estrellas y el porcentaje de perfectas,
-// seis casillas con lo demás y los logros; debajo, los botones. Si no pulsas nada, a los END_AUTO s se abre solo el menú
-// principal (la barra de abajo lo va contando)
-const END_AUTO = 12, END = { t: -1, bar: null };
+// seis casillas con lo demás y los logros; debajo, los botones. Se queda hasta que pulses uno (sin cuenta atrás)
 function summaryDraw(S, c, x, y, w, h) {
   const gold = '#ffd166', teal = '#3cf0c6', pink = '#ff4fa3', ink = '#eeeaff', dim = '#a49fc8';
   c.textBaseline = 'middle'; c.textAlign = 'center';
@@ -2411,18 +2420,8 @@ function endMenu(title, S) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
     { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
-    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] },
-    { t: 'canvas', h: 0.03, draw: (c, x, y, w, h) => { c.fillStyle = '#a49fc8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '500 22px ' + FB; c.fillText('El menú principal se abre solo en unos segundos', x + w / 2, y + h * 0.3); rr(c, x + 40, y + h * 0.72, w - 80, 8, 4); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill(); },
-      mount: (g, x0, cy, cw, h) => { const b = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.006), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false, transparent: true })); const W = cw - 80 / (1024 / MW); b.position.set(x0 + 40 / (1024 / MW), cy - h * 0.22, 0.002); b.renderOrder = RO.widget; b.userData = { x0: b.position.x, W }; g.add(b); END.bar = b; } }];
-  END.t = 0; const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => { const t = END.t; endMenu(title, S); END.t = t; }; m.endMenu = true;
-}
-// El resumen cuenta hacia el menú principal (y la barra se va llenando)
-function endAutoStep(dt) {
-  if (END.t < 0) return;
-  if (state !== 'end' || !menu || !menu.endMenu) { END.t = -1; END.bar = null; return; }
-  END.t += dt; const k = Math.min(1, END.t / END_AUTO), b = END.bar;
-  if (b) { const w = Math.max(1e-3, b.userData.W * k); b.scale.x = w; b.position.x = b.userData.x0 + w / 2; }
-  if (k >= 1) { END.t = -1; lobbyMenu(); }
+    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
+  const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }
 function exitAll() {
   endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
@@ -2436,7 +2435,7 @@ function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
-  arenaGlide(dt); endAutoStep(dt);
+  arenaGlide(dt);
   if (state === 'calib') {
     arenaFollow(dt);
     const ok = settings.exercise === 'twist' ? head.p.y > 0.55 && hands.left.ok && hands.right.ok : isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));

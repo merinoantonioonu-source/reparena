@@ -325,9 +325,9 @@ function spTrackMenu(l, back, page = 0) {
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { if (e.message !== 'NOT_YOURS') SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
   else {
-    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
+    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1), F = spFavs(), TF = spFavFirst(T); // (tus favoritas, primero y con ★)
     rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
-    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
+    for (const t of TF.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${F.has(t.uri) ? '★ ' : ''}${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
@@ -379,6 +379,12 @@ function spInitPage() {
 // si no eliges ninguna, suenan las listas marcadas (varias, mezcladas). Los nombres largos ocupan las líneas que haga falta
 const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
 const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Canciones favoritas (★, las marcas tú, en RepArena: no tocan Spotify): al abrir una lista salen las primeras
+const SP_FAV_MAX = 300;
+const spFavs = () => new Set(SP.cfg.favs || []);
+function spFavToggle(uri) { const F = (SP.cfg.favs || []).filter(u => u !== uri); if (F.length === (SP.cfg.favs || []).length) F.unshift(uri); SP.cfg.favs = F.slice(0, SP_FAV_MAX); spSave(); }
+function spFavFirst(T) { const F = spFavs(); return F.size ? T.filter(t => F.has(t.uri)).concat(T.filter(t => !F.has(t.uri))) : T; }
+const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
@@ -386,7 +392,8 @@ function spListsPage() {
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
-    h += T ? (T.length ? `<div class="sptracks">${T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+    const F = spFavs(); // (las favoritas, primero; ★ las marca)
+    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label></div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
   } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
@@ -400,6 +407,7 @@ function spListsPage() {
     SP.started = false; spSave(); spMenuSync();
   });
   host.addEventListener('click', ev => {
+    const f = ev.target.closest && ev.target.closest('button[data-fav]'); if (f) { spFavToggle(f.dataset.fav); spListsPage(); renderSession(); return; }
     const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
     if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = id; SP.trkErr = ''; spListsPage();
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }

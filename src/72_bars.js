@@ -208,6 +208,15 @@ function barSlot(idx, out, side = 0) {
   w.addScaledVector(_ba, 0.42 * idx); w.y += 0.06;
   return out.copy(arena.worldToLocal(w));
 }
+// Hacia dónde está «delante» para los que llegan (en el mundo, desde su sitio w): en la barra, hacia donde miras (o la
+// normal de la puerta, si se parece); en el remo, hacia los pies
+const _bf = new V3();
+function barFront(w, dir) {
+  const e = eqPose();
+  if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bf); if (_bf.dot(dir) < 0) _bf.negate(); if (_bf.dot(dir) > 0.5) dir.copy(_bf); }
+  else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+  return dir;
+}
 class HeadTarget {
   constructor(spec) {
     const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
@@ -234,13 +243,14 @@ class HeadTarget {
     arena.add(this.root);
     this.side = barNextSide(); // por un lado (izquierda y derecha, por turnos: los dos brazos por igual) o al centro
     barSlot(this.slotIndex(), this.slot, this.side);
-    if (this.side) { // por los lados: entra por su lado, algo por encima, y se para apartado del centro
-      this.pos.copy(this.slot).addScaledVector(barLat(_ba), this.side * 2.6); this.pos.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.4, 0.7);
+    if (this.side) { // por los lados: llega en diagonal, desde delante y desde su lado (algo por encima), y se para apartado
+      // del centro; así se le ve venir sin girar mucho la cabeza (de lado del todo, en el remo había que mirar a un costado)
+      const F = barFront(arena.localToWorld(barTopPoint(_bw)), _bq), L = barLat(_ba).applyAxisAngle(_up, arena.rotation.y); // (delante, desde el centro; barLat da el eje en el arena)
+      const w = arena.localToWorld(_bw.copy(this.slot)); w.addScaledVector(F, 1.9).addScaledVector(L, this.side * 1.5); w.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.5, 0.8);
+      this.pos.copy(arena.worldToLocal(w));
       if (!this.bubble) { this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos))); if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9, 'wasp'); }
     } else if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
-      const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
-      if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
-      else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+      const w = arena.localToWorld(_bw.copy(this.slot)), dir = barFront(w, _ba);
       w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
       this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto

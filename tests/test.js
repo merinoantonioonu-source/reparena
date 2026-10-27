@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -382,14 +382,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`technique shield: charge ${fill && fill.map(v => v.toFixed(2)).join(' → ')} · hit absorbed ${shieldHit && shieldHit.taken2 === shieldHit.taken} · stunned ${shieldHit && shieldHit.stun > 0} · charge after ${shieldHit && shieldHit.charge} · shields ${RA.stats.shields}`);
     if (!fill || fill[1] < 1) errors.push('defensa: cuatro repeticiones perfectas deberían llenar el escudo');
     if (!shieldHit || !shieldHit.done || shieldHit.taken2 !== shieldHit.taken || !(shieldHit.stun > 0) || shieldHit.charge !== 0) errors.push('defensa: con el escudo lleno, el golpe no debería hacer daño, el enemigo debería quedar aturdido y el escudo, gastarse'); }
-  // Defensa 3 y 4: el puño cerrado delante del pecho (manos libres) o las dos manos juntas (pesas): subido mientras el
-  // enemigo prepara el golpe es una parada (rebota y queda aturdido); mantenido desde antes, solo bloquea
-  for (const ex of ['squat', 'curl2']) {
+  // Defensa 3: el puño cerrado delante del pecho (de pie, manos libres): subido mientras el enemigo prepara el golpe es
+  // una parada (rebota y queda aturdido); mantenido desde antes, solo bloquea
+  for (const ex of ['squat']) {
     let mode = 'parry', parryAt = -1, blockFrom = -1, warned = false, shown = false;
     await runConfig(`defensa: guardia (${ex})`, { ...base, mode: 'combat', exercise: ex, guard: 'full', guardDiff: 'normal', foeKind: 'ground', foesGate: 'robot', waves: 1, repsWave: 60, walkTime: 6, maxAlive: 1 }, t => {
       RA.PV.crouch = false; const e = RA.enemies.find(e => e.alive && e.type === 'robot');
       if (e && e.state === 'windup' && e.st > 0.2) warned = warned || RA.GV.warn.some(w => w.visible && w.material.opacity > 0.3);
-      if (mode === 'guard' || RA.PV.guard) shown = shown || (ex === 'squat' ? RA.GV.shield.left.visible : RA.GV.big.visible);
+      if (mode === 'guard' || RA.PV.guard) shown = shown || RA.GV.shield.left.visible;
       if (mode === 'parry') { RA.PV.guard = !!e && (e.state === 'windup' || e.state === 'strike') && !(e.stunT > 0); if (RA.stats.parries >= 1) { mode = 'block'; blockFrom = t; } }
       else if (mode === 'block') { RA.PV.guard = true; if (RA.stats.blocks >= 1) { mode = 'done'; RA.PV.guard = false; RA.endRun(false, true); } }
     }, 120, s => '', true);
@@ -398,25 +398,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!warned) errors.push(`defensa (${ex}): mientras prepara el golpe, el enemigo debería brillar avisando`);
     if (!shown) errors.push(`defensa (${ex}): con la guardia subida debería verse el escudo`);
     if (RA.stats.parries < 1 || RA.stats.blocks < 1 || RA.stats.taken) errors.push(`defensa (${ex}): la guardia debería parar (subida a tiempo) y bloquear (mantenida) sin recibir daño`); }
-  // Defensa 5: manos ocupadas (flexiones contra arañas): quieto en tu postura, la burbuja para los golpes hasta que se
-  // acaba la energía; una perfecta suelta la onda que aparta a las de cerca; apartar la cabeza de golpe esquiva
-  { let waveTry = 0, dodge = null, broke = false;
-    await runConfig('defensa: burbuja, onda y esquiva (flexiones)', { ...base, mode: 'combat', exercise: 'pushup', guard: 'full', foeKind: 'ground', foesHatch: 'spider', waves: 1, repsWave: 60, walkTime: 5, maxAlive: 2 }, t => {
-      RA.PV.crouch = false; broke = broke || RA.GUARD.broke;
-      const near = RA.enemies.find(e => e.alive && e.type === 'spider' && e.mode === 'rear');
-      if (near && !RA.stats.waves && waveTry++ < 50) { RA.onCharge(); RA.onRep({ perfect: true }); }
-      if (dodge === null && RA.stats.blocks >= 1 && RA.state === 'play') {
-        const G = RA.GUARD, h = RA.head.p, f = { type: 'flyer', alive: true, center: o => o.set(h.x, h.y, h.z - 1) };
-        G.hist.length = 0; G.hist.push({ t: t - 0.3, x: h.x - 0.25, y: h.y, z: h.z }, { t: t - 0.15, x: h.x - 0.1, y: h.y, z: h.z }, { t, x: h.x, y: h.y, z: h.z });
-        const up = G.up; G.up = null; dodge = RA.guardAbsorb(f); G.up = up;
-      }
-      if (dodge !== null && broke && RA.stats.taken >= 1) RA.endRun(false, true);
-    }, 150, s => '', true);
-    log(`busy hands: bubble blocks ${RA.stats.blocks} parries ${RA.stats.parries} · waves ${RA.stats.waves} · dodge ${dodge} (${RA.stats.dodges}) · energy ran out ${broke} · taken ${RA.stats.taken}`);
-    if (RA.stats.blocks + RA.stats.parries < 1) errors.push('defensa: quieto en la flexión, la burbuja debería parar los golpes');
-    if (!RA.stats.waves) errors.push('defensa: una flexión perfecta con una araña a punto de atacar debería soltar la onda expansiva');
-    if (!dodge) errors.push('defensa: apartar la cabeza de golpe debería esquivar');
-    if (!broke) errors.push('defensa: la burbuja debería gastar la energía (sin repeticiones, acaba cayendo)'); }
+  // Defensa 4: con pesas (curl con barra: las manos juntas delante del pecho en cada repetición) o con las manos apoyadas
+  // (flexiones, quieto en la postura) no hay gestos: ni escudo ni burbuja, solo el escudo por técnica
+  for (const ex of ['curl2', 'pushup']) {
+    let up = 0, shown = false;
+    await runConfig(`defensa: sin gestos (${ex})`, { ...base, mode: 'combat', exercise: ex, guard: 'full', foeKind: 'ground', foesGate: 'robot', foesHatch: 'spider', waves: 1, repsWave: 60, walkTime: 5, maxAlive: 2 }, t => {
+      RA.PV.crouch = false; RA.PV.guard = RA.state === 'play'; // (las manos juntas delante del pecho todo el rato)
+      if (RA.GUARD.up) up++; shown = shown || RA.GV.shield.left.visible || RA.GV.shield.right.visible;
+      if (t > 25) RA.endRun(false, true);
+    }, 60, s => '', true);
+    RA.PV.guard = false;
+    log(`no gestures (${ex}): guard up frames ${up} · shield shown ${shown}`);
+    if (up || shown) errors.push(`defensa (${ex}): con pesas o con las manos apoyadas no debería subirse la guardia ni verse el escudo`); }
   RA.setSetting('foeKind', 'both'); RA.setSetting('foesHatch', 'spider'); // (lo que tocaron las pruebas de la defensa)
   // el diablillo (con un modelo de mentira): golpes variados (gancho, tajos…), cada uno con su marca de parada; derribado
   // cae de espaldas y se levanta con sus animaciones; y el lanzador te tira piedras: te dan si no te mueves, se esquivan
@@ -519,9 +512,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`defeat: ended ${RA.state} after ${(i / 60).toFixed(0)} s · 1 s later: black ${dark.toFixed(2)}, title ${title}, summary already ${menuEarly} · then summary “${titleRow && titleRow.text}” with ${['Otra ronda', 'Menú principal'].filter(l => lw.includes(l)).join(' + ')} · behind it solid black ${solid} (radius ${R.toFixed(2)}, menu inside ${menuIn}) · enemies left ${RA.enemies.length}`);
     if (RA.state !== 'end' || dark < 0.99 || !title || menuEarly || !lw.includes('Otra ronda') || !lw.includes('Menú principal') || !titleRow || titleRow.text !== 'DERROTA') errors.push('derrota: no funde a negro, no avisa claramente o no sale solo el resumen con sus opciones');
     if (!solid || !menuIn || RA.enemies.length) errors.push('derrota: el negro no es total y definitivo detrás del resumen');
-    // si no pulsas nada, el resumen da paso solo al menú principal
-    { let k = 0; for (; k < 60 * 20 && RA.state === 'end'; k++) frame(1); log(`summary card: ${RA.menu ? 'menu' : 'none'} · opened the main menu by itself after ${(k / 60).toFixed(1)} s (state ${RA.state})`);
-      if (RA.state !== 'lobby') errors.push('resumen: debería abrirse solo el menú principal al cabo de unos segundos'); }
+    // el resumen se queda (sin cuenta atrás) hasta que pulsas: «Menú principal» lleva al menú
+    { for (let k = 0; k < 60 * 20; k++) frame(1); const still = RA.state === 'end' && !!RA.menu && RA.activeWidgets().some(w => w.label === 'Otra ronda');
+      press('Menú principal'); frame(2); log(`summary card: still there after 20 s ${still} · after pressing Menú principal: ${RA.state}`);
+      if (!still) errors.push('resumen: debería quedarse delante, sin cuenta atrás, hasta que pulses algo');
+      if (RA.state !== 'lobby') errors.push('resumen: «Menú principal» debería llevar al menú principal'); }
     if (O.veil.visible || O.black.visible) errors.push('derrota: el fundido no se quita al volver al menú');
     // terminarla tú: también a negro, y el resumen enseguida
     RA.setSetting('lives', 3); RA.startPreview(); frame(3); press('EMPEZAR'); for (let k = 0; k < 600 && RA.state !== 'play'; k++) frame(1);
@@ -690,6 +685,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (oldCalls || other !== 'NOT_YOURS' || !L10 || L10.mine !== false || mineFlags !== 10) errors.push('Spotify: las canciones deberían pedirse en /items y las listas de otros usuarios quedar marcadas');
     if (/Lista 10/.test(htmlL) || !/te gustan/.test(htmlL) || (htmlL.match(/data-a="mlist"/g) || []).length !== 11) errors.push('Spotify: el selector del bloque debería enseñar tus canciones que te gustan y tus listas, sin las de otros usuarios');
     if ((htmlF.match(/data-m="trk"/g) || []).length !== 4 || !/mback/.test(htmlF) || /data-a="mlist"/.test(htmlF)) errors.push('Spotify: dentro de una lista deberían verse solo sus canciones (y volver a tus listas)');
+    { // favoritas (★): al abrir una lista salen las primeras, en el bloque y en el juego (con ★); y van en el envío por código
+      const T = RA.SP.trk.L1, last = T[T.length - 1]; RA.spFavToggle(last.uri); RA.SES.mList = 'L1';
+      const hb = RA.sesMusicHTML(RA.SES.blocks[0], 0), firstB = (/data-uri="([^"]+)"/.exec(hb) || [])[1], starOn = /class="spfav on"/.test(hb);
+      RA.spTrackMenu({ id: 'L1', name: 'Lista 1', uri: 'spotify:playlist:L1' }, () => {}); const gl = RA.activeWidgets().map(w => w.label).find(l => /Canción|L1-/.test(l) || /^★/.test(l)) || '';
+      const inPack = /favs/.test(JSON.stringify(RA.xferPack())); RA.spFavToggle(last.uri); const off = !(RA.SP.cfg.favs || []).length; RA.SES.mList = '';
+      log(`   favourites: first in the block picker ${firstB === last.uri} (star on ${starOn}) · first in game “${gl}” · in the code transfer ${inPack} · toggled off ${off}`);
+      if (firstB !== last.uri || !starOn || !/^★/.test(gl) || !inPack || !off) errors.push('Spotify: las canciones favoritas deberían salir las primeras al abrir una lista (bloque y juego, con ★) y pasar por el código'); }
     log(`spotify: lists in game ${page1}+${page2} (of 11) · from a song → ${JSON.stringify(fromSong && fromSong.body)} · block music ${(mus || []).length} songs → play ${JSON.stringify(play && play.body)} · repeat ${rep && rep.path} · shuffle ${shuf && shuf.path} · next block with the same songs restarts them ${n1 > n0} · page picker: chips ${(html.match(/class="chip"/g) || []).length}, tracks ${(html.match(/data-m="trk"/g) || []).length}, checked ${(html.match(/ checked/g) || []).length}`);
     if (page1 !== 8 || page2 !== 3 || !liked1 || l10) errors.push(`Spotify: en el juego deberían salir tus canciones que te gustan y tus listas (no las de otros usuarios), de 8 en 8 (${page1}+${page2}, me gusta ${liked1}, ajena ${l10})`);
     if (!fromSong || !fromSong.body || fromSong.body.context_uri !== 'spotify:playlist:L9' || !fromSong.body.offset || fromSong.body.offset.uri !== 'spotify:track:L9-3') errors.push('Spotify: tocar una canción debería poner su lista empezando por ella');
@@ -699,6 +701,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     { await sleep(600); calls.length = 0; RA.SP.busy = false; RA.SP.started = false; RA.SP.st = { is_playing: false, device: { id: 'D1', name: 'PC' } }; RA.SP.cfg.picks = [{ uri: 'spotify:track:L3-1', name: 'X' }, { uri: 'spotify:track:L5-4', name: 'Y' }];
       RA.spToggle(); await waitFor(() => calls.some(c => c.path.startsWith('/me/player/play'))); const pp = calls.find(c => c.path.startsWith('/me/player/play'));
       log(`   picked songs → Play plays ${JSON.stringify(pp && pp.body)}`); if (!pp || JSON.stringify(pp.body && pp.body.uris) !== JSON.stringify(['spotify:track:L3-1', 'spotify:track:L5-4'])) errors.push('Spotify: con canciones elegidas, Play debería poner esas, en su orden'); }
+    { // el ritmo: «Al compás» siempre se ve, también con el ritmo de Spotify puesto (y entonces, además, «Encajar el pulso»)
+      const b0 = RA.settings.bpm, a0 = RA.SP.cfg.autoBpm; RA.SP.cfg.autoBpm = true; RA.setSetting('bpm', 120);
+      const L = RA.tempoRows(() => {}).flatMap(r => r.items || []).map(i => i.label); RA.SP.cfg.autoBpm = a0; RA.setSetting('bpm', b0);
+      log(`   rhythm with Spotify's tempo on: ${L.join(' · ')}`); if (!L.includes('Al compás') || !L.includes('Encajar el pulso')) errors.push('ritmo: con el de Spotify puesto debería seguir viéndose «Al compás»'); }
     await sleep(700); globalThis.fetch = realFetch; RA.SP.cfg = cfg0; RA.SP.st = st0; RA.SP.mine = null; RA.SES.blocks = []; RA.SES.mList = ''; }
   // ---- Bloques con perfil y ajustes propios (⚙); sesiones guardadas con nombre (y por el código) ----
   { const w0 = RA.settings.walkTime, l0 = RA.settings.lives, prof0 = storage.get('reparena3-profiles'), ses0 = storage.get('reparena3-session'), sv0 = storage.get('reparena3-sessions');
@@ -872,22 +878,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra (algo más arriba) pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
   }
   RA.setSetting('dipBars', '2');
-  // por los lados: llegan por un lado y se paran apartados del centro, alternando (los dos brazos por igual); y nunca dos
-  // a la vez: espaciados una repetición (±15 %)
+  // por los lados: llegan en diagonal (desde delante y su lado, a la vista) y se paran apartados del centro, alternando
+  // (los dos brazos por igual); y nunca dos a la vez: espaciados una repetición (±15 %)
   for (const [ex, target, sides] of [['pullup', 'bubbles', 100], ['row', 'bugs', 100], ['pullup', 'bubbles', 0], ['row', 'bubbles', 50]]) {
-    const B = { lat: [], from: [], arr: [], seen: new Set(), arrived: new Set() };
+    const B = { lat: [], from: [], ang: [], arr: [], seen: new Set(), arrived: new Set() };
     await runConfig(`Barras ${ex} ${target}${sides ? ` por los lados ${sides} %` : ''}`, { ...bars, exercise: ex, barTarget: target, barMix: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
       pullSim(4.2)(t); // (más despacio que el hueco entre objetivos: así llegan todos y esperan)
       const ax = new THREE.Vector3(); { const e = RA.eqPose(); const c = Math.cos(e.yaw), s_ = Math.sin(e.yaw); ax.set(c, 0, -s_).applyAxisAngle(new THREE.Vector3(0, 1, 0), -RA.arena.rotation.y); }
       for (const e of RA.enemies) { if (e.type !== 'target') continue;
-        if (!B.seen.has(e)) { B.seen.add(e); B.from.push(Math.abs(e.pos.clone().sub(e.slot).dot(ax))); }
+        if (!B.seen.has(e)) { B.seen.add(e); const d = e.pos.clone().sub(e.slot); d.y = 0; B.from.push(Math.abs(d.dot(ax))); if (e.side) B.ang.push(Math.acos(Math.min(1, Math.abs(d.dot(ax)) / (d.length() || 1))) * 180 / Math.PI); } // (ang: 0° = de lado del todo)
         if (e.mode === 'wait' && !B.arrived.has(e)) { B.arrived.add(e); B.arr.push(t); if (e.slotIndex() === 0) { const top = new THREE.Vector3(); RA.barTopPoint(top); B.lat.push(e.slot.clone().sub(top).dot(ax)); } } }
     }, 420, s => '');
     const gaps = B.arr.slice(1).map((x, i) => x - B.arr[i]), G = ex === 'row' ? 2.6 : 3.2, L = B.lat.filter(x => x < -0.1).length, R = B.lat.filter(x => x > 0.1).length;
-    log(`bars ${ex} ${target} sides ${sides}: stops ${B.lat.map(x => x.toFixed(2)).join(' ')} (left ${L}, right ${R}) · came from ${B.from.slice(0, 4).map(x => x.toFixed(1)).join(' ')} m to the side · gaps between arrivals ${gaps.map(x => x.toFixed(1)).join(' ')}`);
+    log(`bars ${ex} ${target} sides ${sides}: stops ${B.lat.map(x => x.toFixed(2)).join(' ')} (left ${L}, right ${R}) · came from ${B.from.slice(0, 4).map(x => x.toFixed(1)).join(' ')} m to the side${B.ang.length ? `, side ones at ${Math.min(...B.ang).toFixed(0)}–${Math.max(...B.ang).toFixed(0)}° from straight sideways` : ''} · gaps between arrivals ${gaps.map(x => x.toFixed(1)).join(' ')}`);
     const Cn = B.lat.filter(x => Math.abs(x) < 0.05).length;
-    if (sides === 100 && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
-    const nLat = B.from.filter(x => x > 2).length, nMid = B.from.filter(x => x < 1).length;
+    if (sides === 100 && (!B.lat.length || B.lat.some(x => Math.abs(Math.abs(x) - 0.2) > 0.03) || Math.abs(L - R) > 1 || Math.min(...B.from) < 1.2)) errors.push(`barras (${ex}): por los lados deberían llegar de un lado, pararse a 20 cm del centro y alternar`);
+    if (B.ang.some(a => a < 25 || a > 65)) errors.push(`barras (${ex}): los de los lados deberían llegar en diagonal, desde delante y su lado (${B.ang.map(a => a.toFixed(0)).join(' ')}°)`);
+    const nLat = B.from.filter(x => x > 1.2).length, nMid = B.from.filter(x => x < 0.8).length;
     if (sides === 50 && (nLat < 3 || Math.abs(nLat - nMid) > 1 || Math.abs(L - R) > 1 || B.lat.some(x => Math.abs(x) >= 0.05 && Math.abs(Math.abs(x) - 0.2) > 0.03))) errors.push(`barras (${ex}): con el 50 % por los lados deberían mezclarse los del centro con los de los lados (por los lados ${nLat}, al centro ${nMid}; paradas a la izquierda ${L}, a la derecha ${R})`);
     if (!sides && B.lat.some(x => Math.abs(x) > 0.05)) errors.push('barras: sin «por los lados» deberían pararse en el centro');
     if (gaps.length < 3 || Math.min(...gaps) < G * 0.7) errors.push(`barras (${ex}): llegan dos casi a la vez (huecos ${gaps.map(x => x.toFixed(1)).join(' ')})`);
@@ -1082,6 +1089,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.state !== 'end' || RA.SES.results.length !== 3) errors.push('la sesión no juega los tres bloques');
   if (!storedDuring || storedDuring.mode !== 'combat' || storedDuring.exercise !== 'squat') errors.push('durante la sesión se guardan los ajustes del bloque');
   if (RA.settings.mode !== 'combat' || RA.settings.exercise !== 'squat' || RA.settings.waves !== 5) errors.push('al acabar la sesión no se restauran los ajustes');
+  // vueltas y rango por bloque: dos bloques × 2 vueltas; el segundo, de general (sus vidas, mientras dura), y al acabar, tu rango
+  { const rk0 = RA.settings.rank, lv0 = RA.settings.lives, gen = RA.rankVals('general');
+    RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 4 }, { mode: 'arcs', ex: 'squat', n: 4, rank: 'general' }]; RA.SES.rounds = 2; RA.SES.rest = 1;
+    const lbl = (RA.lobbyMenu(), frame(2), (RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)) || {}).label || '');
+    RA.startSession(); frame(2); const seen = [], rankIn = {};
+    for (let i = 0; i < 20000 && (RA.SES.active || RA.state !== 'end'); i++) { // (un bloque perdido también pasa al siguiente)
+      const k = RA.SES.round + ':' + RA.SES.idx; if (RA.state === 'play' && seen[seen.length - 1] !== k) { seen.push(k); rankIn[k] = [RA.settings.rank, RA.settings.lives]; }
+      RA.PV.crouch = RA.state === 'play' && (i % 70) < 35; frame(1);
+    }
+    RA.PV.crouch = false; const R = RA.SES.results;
+    log(`session rounds: lobby “${lbl}” · played ${seen.join(' ')} · results ${R.length} (rounds ${R.map(r => r.round).join('')}) · block 2 rank ${JSON.stringify(rankIn['0:1'])} (general lives ${gen.lives}) · after: rank ${RA.settings.rank} lives ${RA.settings.lives}`);
+    if (seen.join(' ') !== '0:0 0:1 1:0 1:1' || R.length !== 4 || !/× 2/.test(lbl)) errors.push('sesión: con 2 vueltas debería jugar los bloques dos veces seguidas');
+    if (!rankIn['0:1'] || rankIn['0:1'][0] !== 'general' || rankIn['0:1'][1] !== gen.lives || (rankIn['0:0'] && rankIn['0:0'][0] !== rk0)) errors.push('sesión: el rango del bloque debería ponerse solo mientras se juega ese bloque');
+    if (RA.settings.rank !== rk0 || RA.settings.lives !== lv0) errors.push('sesión: al acabar, el rango y sus ajustes deberían volver a los tuyos');
+    RA.SES.rounds = 1; }
   // ---- sonidos propios: cualquier efecto o bucle con su archivo en sounds/ suena en lugar del sintetizado ----
   { const C = RA.AUD.C, used = [], mk = C.createBufferSource.bind(C);
     C.createBufferSource = () => { const n = mk(); const st = n.start; n.start = function (...a) { used.push(this.buffer && this.buffer.tag); return st.apply(this, a); }; return n; };
@@ -1310,9 +1332,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('demo drawings:', bad.length ? bad.join(' · ') : 'all ok'); if (bad.length) errors.push('caricaturas: ' + bad.join(' · '));
     RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.startPreview(); frame(3);
     const inMenu = () => { let n = 0; RA.menu && RA.menu.group.traverse(o => { if (o.material === RA.DEMOP.mesh.material) n++; }); return n; };
-    const m1 = inMenu(); press('EMPEZAR'); frame(10); const waitVis = RA.DEMOV.head.visible, st = RA.state;
+    const m1 = inMenu(); press('EMPEZAR'); frame(40); const waitVis = RA.DEMOV.head.visible, st = RA.state;
+    // en la espera, a la derecha del panel del centro y a su altura (no por encima, casi fuera de la vista)
+    const cm = RA.center.mesh, rel = RA.DEMOV.head.position.clone().sub(cm.position).applyQuaternion(cm.quaternion.clone().invert()), beside = cm.visible && rel.x > 0.5 && Math.abs(rel.y) < 0.08 && Math.abs(rel.z) < 0.08;
     for (let i = 0; i < 300 && RA.state !== 'play'; i++) frame(1);
-    log('demo next to the lobby menu', m1, '· during', st, 'visible', waitVis, '· in play hidden', !RA.DEMOV.head.visible, '· texture alive', !RA.DEMOP.tex.disposed);
+    log('demo next to the lobby menu', m1, '· during', st, 'visible', waitVis, `(beside the centre panel ${beside}: ${rel.x.toFixed(2)}, ${rel.y.toFixed(2)}, ${rel.z.toFixed(2)})`, '· in play hidden', !RA.DEMOV.head.visible, '· texture alive', !RA.DEMOP.tex.disposed);
+    if (!beside) errors.push('caricatura: en la espera debería salir a la derecha del panel del centro, a su altura');
     if (m1 !== 1 || !waitVis || RA.DEMOV.head.visible) errors.push('la caricatura no aparece junto al menú o en la espera');
     RA.exitAll(); frame(1); }
 
@@ -1776,6 +1801,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('curl con barra XR: solo la izquierda', oneArm, 'reps', oneMsg, 'avisos · las dos', twoArms, 'reps');
   if (oneArm || !oneMsg) errors.push('curl con barra: subiendo un solo brazo no debería contar (y debería avisar)');
   if (twoArms < 4) errors.push('curl con barra: subiendo las dos manos juntas no cuenta');
+  // con la barra, el seguimiento puede ver una mano más baja (aquí, al 75 % del recorrido) y un instante después: cuenta igual
+  { const r0 = RA.stats.reps, p0 = RA.stats.partial;
+    for (let c = 0; c < 4; c++) for (let i = 0; i < 80; i++) { XRS.hands.left.y = i >= 20 && i < 50 ? 1.42 : 0.95; XRS.hands.right.y = i >= 26 && i < 52 ? 1.15 : 0.95; frame(1, 16, xrFrame); }
+    const uneven = RA.stats.reps - r0, msgs = RA.stats.partial - p0;
+    log(`curl con barra XR: one hand seen lower and later → ${uneven} reps, ${msgs} warnings`);
+    if (uneven < 4 || msgs) errors.push('curl con barra: con las dos manos subiendo (una vista algo más baja o más tarde) debería contar sin avisar'); }
   // aguantando la barra a la altura de los hombros, el disparo se carga (como abajo en la sentadilla) y sale al bajarla
   { const r0 = RA.stats.reps; let pow = 0, early = false;
     for (let i = 0; i < 240; i++) { const up = i >= 10 && i < 180; for (const sd of ['left', 'right']) XRS.hands[sd].y = up ? 1.42 : 0.95; frame(1, 16, xrFrame);

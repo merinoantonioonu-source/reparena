@@ -196,6 +196,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .splist label span{white-space:normal;overflow-wrap:anywhere}
 .splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
 .splist .sptracks label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.sptrk{display:flex;gap:4px;align-items:flex-start}
+.sptrk label{flex:1;min-width:0}
+.spfav{flex:none;width:24px;height:24px;margin-top:-2px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);opacity:.45;font-size:16px;line-height:24px;cursor:pointer}
+.spfav:hover{opacity:.9}
+.spfav.on{color:var(--gold);opacity:1}
+.spfav:focus-visible{outline:2px solid var(--gold);opacity:1}
 .splist .sptracks small,.sesmusic .tracks small{opacity:.7}
 .spin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0}
 .spin b{overflow-wrap:anywhere}
@@ -225,7 +231,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .ib.on{border-color:var(--teal);color:var(--teal)}
 .sesrow .ib:disabled{opacity:.35;cursor:default}
 .sesrow .ib .badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--teal);color:#0d0a1c;font-size:10px;font-weight:700;line-height:16px;text-align:center}
-.sesex{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
+.sesopts{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:14px}
+.sesopts .spfield{flex:1 1 220px;margin-bottom:6px}
+.sesopts .hint{font-size:.8rem;color:var(--muted)}
+.sesrank .lp.rk{display:inline-flex;align-items:center;gap:6px}
+.sesrank .lp svg{width:22px;height:22px;flex:none}
+.sesex,.sesrank{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.2em;text-align:left}
 .sesgrip{display:inline-flex;align-items:center;gap:1px;align-self:stretch;margin:-7px 0 -7px -8px;padding:0 2px 0 4px;border:0;border-radius:12px 0 0 12px;background:none;color:var(--muted);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .sesgrip svg{width:18px;height:18px}
@@ -431,7 +442,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
@@ -464,18 +475,21 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras. Con los galones de cada bloque le pones un rango solo para él (puedes ser sargento en sentadillas y recluta en dominadas); sin elegir, juega con el tuyo.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
       <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
       <button class="btn small" id="btnSesClear">Vaciar</button>
     </div>
-    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <div class="sesopts">
+      <div class="spfield"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+      <div class="spfield"><label for="sesRounds">Vueltas a la sesión</label><input id="sesRounds" type="number" min="1" max="20" step="1" inputmode="numeric" aria-describedby="sesRoundsHint"><small id="sesRoundsHint" class="hint">Al acabar el último bloque, tras el descanso, vuelve a empezar (1 = una sola vez)</small></div>
+    </div>
     <p class="estimate" id="sesSummary"></p>
     <div class="profiles">
       <h3>Sesiones guardadas</h3>
-      <p class="note">Guarda la sesión de ahora (sus bloques con su perfil, sus ajustes propios y su música, y el descanso) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
+      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, su perfil, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
       <div class="profsave"><input id="sessName" type="text" maxlength="40" placeholder="Nombre de la sesión" aria-label="Nombre de la sesión"><button class="btn small alt" id="btnSessSave">Guardar sesión</button></div>
       <p class="status" id="sessStatus" aria-live="polite"></p>
       <div class="proflist" id="sessSaved"></div>
@@ -610,7 +624,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>B</kbd> guardia (puño delante del pecho; con pesas, las dos manos juntas) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>B</kbd> guardia (puño delante del pecho, en sentadillas y zancadas) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
@@ -774,7 +788,7 @@ const SCHEMA = [
   { key: 'swordHand', g: 'armas', label: 'Mano de la espada', short: 'Mano', type: 'choice', opts: [['right', 'Derecha'], ['left', 'Izquierda']], def: 'right', modes: ['combat', 'touch'], cond: () => swordSet() && settings.sword === 'one', hint: 'Con una sola espada y las pistolas activadas, en la otra mano llevas el bláster.' },
   { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
   { key: 'swordBlock', g: 'armas', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['combat'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
-  { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, según el ejercicio, el puño cerrado delante del pecho (manos libres), las dos manos juntas delante de la cara (pesas), apartar la cabeza o una repetición profunda (manos ocupadas) o el botón de agarre de los mandos.' },
+  { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, en los ejercicios de pie con las manos libres (sentadillas, zancadas, sentadilla con salto), el puño cerrado delante del pecho saca un escudo en el antebrazo (con los mandos, el botón de agarre). Con pesas o con las manos apoyadas solo vale el escudo por técnica.' },
   { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
   { key: 'knockback', g: 'armas', label: 'Retroceso al recibir impactos', short: 'Retroceso', type: 'num', min: 0, max: 200, step: 10, def: 100, unit: '%', modes: ['combat'], hint: 'Cuánto retroceden los enemigos con cada disparo o tajo (más si es cargado o perfecto; los jefes, mucho menos). Si estaban preparando el golpe, se les retrasa.' },
 
@@ -3905,14 +3919,16 @@ function texAvg(t) {
 /* ---------- Contornos de tinta ---------- */
 // Una copia de la malla con sus caras de atrás, empujada hacia fuera en la pantalla: asoma como un borde negro alrededor de
 // la figura. Las normales de las esquinas se promedian (aOutN) para que el borde no se abra en los cantos de las cajas
+// (faceless: sin tinta en la cabeza, para los que llevan userData.noFaceInk —el diablillo y el lanzador—: de lejos, el borde
+// de grosor fijo en pantalla se colaba por los huecos de la cara y la llenaba de manchas negras; aOutK lo apaga allí)
 const OUTL = { w: { value: 0.006 }, mats: {} };
-function outlMat(skin) {
-  const k = skin ? 's' : 'n'; if (OUTL.mats[k]) return OUTL.mats[k];
+function outlMat(skin, faceless) {
+  const k = (skin ? 's' : 'n') + (faceless ? 'f' : ''); if (OUTL.mats[k]) return OUTL.mats[k];
   const m = new THREE.MeshBasicMaterial({ color: 0x1b1222, side: THREE.BackSide, skinning: skin, toneMapped: false });
   if (m.color.convertSRGBToLinear) m.color.convertSRGBToLinear(); // (tinta de verdad: el color del material va en lineal; si no, salía gris violáceo)
   m.onBeforeCompile = sh => {
     sh.uniforms.uOutW = OUTL.w;
-    sh.vertexShader = 'attribute vec3 aOutN;\nuniform float uOutW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+    sh.vertexShader = (faceless ? '#define OUT_K\nattribute float aOutK;\n' : '') + 'attribute vec3 aOutN;\nuniform float uOutW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
 	vec3 oN = aOutN;
 	#ifdef USE_SKINNING
 		oN = ( bindMatrixInverse * ( skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW ) * bindMatrix * vec4( oN, 0.0 ) ).xyz;
@@ -3921,9 +3937,13 @@ function outlMat(skin) {
 		oN = mat3( instanceMatrix ) * oN;
 	#endif
 	vec2 oD = ( projectionMatrix * vec4( normalize( normalMatrix * oN ), 0.0 ) ).xy;
-	gl_Position.xy += normalize( oD + vec2( 1e-5 ) ) * uOutW * gl_Position.w;`);
+	float oK = 1.0;
+	#ifdef OUT_K
+		oK = aOutK;
+	#endif
+	gl_Position.xy += normalize( oD + vec2( 1e-5 ) ) * uOutW * oK * gl_Position.w;`);
   };
-  m.customProgramCacheKey = () => 'comic-outline';
+  m.customProgramCacheKey = () => 'comic-outline' + (faceless ? 'f' : '');
   return (OUTL.mats[k] = m);
 }
 function outN(g) {
@@ -3937,6 +3957,17 @@ function outN(g) {
   for (let i = 0; i < cnt; i++) { const a = acc.get(keys[i]), l = Math.hypot(a[0], a[1], a[2]) || 1; out[i * 3] = a[0] / l; out[i * 3 + 1] = a[1] / l; out[i * 3 + 2] = a[2] / l; }
   g.setAttribute('aOutN', new THREE.BufferAttribute(out, 3)); return true;
 }
+// Cuánta tinta lleva cada vértice: 0 en lo que mueve la cabeza (el hueso Head y los que cuelgan de él), 1 en el resto
+function outK(mesh) {
+  const g = mesh.geometry; if (g.attributes.aOutK) return true;
+  const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, sk = mesh.skeleton; if (!si || !sw || !sk) return false;
+  const head = sk.bones.find(b => /^head$/i.test(b.name)); if (!head) return false;
+  const ids = new Set(); head.traverse(b => { const i = sk.bones.indexOf(b); if (i >= 0) ids.add(i); });
+  const out = new Float32Array(si.count);
+  const I = ['getX', 'getY', 'getZ', 'getW']; // (r128: sin getComponent)
+  for (let v = 0; v < si.count; v++) { let w = 0; for (const f of I) if (ids.has(si[f](v))) w += sw[f](v); out[v] = 1 - clamp(w * 1.6, 0, 1); } // (el cuello, a medias)
+  g.setAttribute('aOutK', new THREE.BufferAttribute(out, 1)); return true;
+}
 function outlAdd(mesh) {
   if (COMIC.ol.has(mesh) || mesh.userData.isOutline || !(mesh.isMesh || mesh.isSkinnedMesh)) return;
   const mt = mesh.material; COMIC.ol.set(mesh, null);
@@ -3944,7 +3975,7 @@ function outlAdd(mesh) {
   if (mesh.isInstancedMesh && mesh.count > 64) return; // (la vegetación: miles de copias)
   if (!outN(mesh.geometry)) return;
   let o;
-  if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, outlMat(true)); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; }
+  if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, outlMat(true, !!mesh.userData.noFaceInk && outK(mesh))); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; }
   else if (mesh.isInstancedMesh) { o = new THREE.InstancedMesh(mesh.geometry, outlMat(false), mesh.instanceMatrix.count); o.instanceMatrix = mesh.instanceMatrix; o.onBeforeRender = () => { o.count = mesh.count; }; }
   else o = new THREE.Mesh(mesh.geometry, outlMat(false));
   o.userData.isOutline = true; o.frustumCulled = mesh.frustumCulled; o.renderOrder = mesh.renderOrder; o.raycast = () => {}; o.visible = comicOn();
@@ -4971,7 +5002,7 @@ function beastRig(kind) {
       mat = D.own ? new THREE.MeshStandardMaterial({ map: B.map, emissive: 0x000000, roughness: 0.85, metalness: 0, skinning: true, side: D.ownTex ? THREE.DoubleSide : THREE.FrontSide })
         : new THREE.MeshStandardMaterial({ map: B.maps[v], normalMap: B.normal, roughnessMap: B.orm, metalnessMap: B.orm, emissiveMap: B.emissive, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1, metalness: 1, skinning: true });
       const still = mat.clone(); still.skinning = false; still.userData.keepMap = true; mat.still = still; // las armas no tienen piel: van pegadas a un hueso de la mano
-      model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; } });
+      model.traverse(m => { if (m.isMesh) { m.material = m.isSkinnedMesh || !D.own ? mat : still; m.castShadow = true; m.frustumCulled = false; if (kind === 'imp') m.userData.noFaceInk = true; } }); // (el diablillo y el lanzador: la cara, sin tinta de cómic)
     }
     const root = new THREE.Group(); root.add(model);
     if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z
@@ -6105,10 +6136,10 @@ function drawCenter() {
       c.fillStyle = '#ffffff'; c.font = `${BAR.phase === 'count' ? 120 : 80}px ${FD}`; c.fillText(BAR.phase === 'count' ? String(Math.max(1, Math.ceil(3 - BAR.t))) : 'QUIETO', W / 2, 230);
     }
   } else if (state === 'between') {
-    const nb = SES.blocks[SES.idx + 1];
+    const nx = sesNext(), nb = nx && SES.blocks[nx.i];
     c.textAlign = 'left'; c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.fillText('DESCANSO', 44, 68);
     c.textAlign = 'right'; c.fillStyle = '#ffffff'; c.font = `110px ${FD}`; c.fillText(String(Math.max(0, Math.ceil(SES.wait))), W - 50, 150);
-    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(`Bloque ${SES.idx + 2} de ${SES.blocks.length}:`, 44, 150);
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; c.font = `500 36px ${FB}`; c.fillText(nx ? `Bloque ${nx.i + 1} de ${SES.blocks.length}${SES.rounds > 1 ? ` · vuelta ${nx.r + 1}/${SES.rounds}` : ''}:` : '', 44, 150);
     if (nb) { c.fillStyle = '#ffd166'; fitFont(c, blockLabel(nb), W - 300, 40, '500 %px ' + FB); c.fillText(blockLabel(nb), 44, 210); }
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
@@ -6201,7 +6232,7 @@ function drawBoard() {
   }
   const N = settings.waves, hang = settings.exercise === 'hang';
   // arriba: oleada, puntos y vidas
-  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
+  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length}${SES.rounds > 1 ? ` V${SES.round + 1}/${SES.rounds}` : ''} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
   c.textAlign = 'left'; fitFont(c, wv, 340, 30, '%px ' + FD); const ww = c.measureText(wv).width + 44;
   boardPill(c, 32, 24, ww, 54, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
   c.textAlign = 'center'; c.font = `54px ${FD}`; glowText(c, String(score), W / 2 + 60, 52, BC.gold, 16);
@@ -6516,7 +6547,8 @@ const DEMO_W = 0.5, DEMO_H = 0.3;
 const DEMOP = (() => { const p = makePanel(DEMO_W, DEMO_H, 640); (p.mesh.material.userData = p.mesh.material.userData || {}).keep = true; return p; })();
 const DEMOV = { t: 0, drawT: 0, ex: '', mode: '', meshes: new Set(), head: null };
 // Panel que sigue a la cabeza mientras calibras, cuentas atrás, te cuelgas o descansas entre bloques
-DEMOV.head = new THREE.Mesh(DEMOP.mesh.geometry, DEMOP.mesh.material); DEMOV.head.visible = false; DEMOV.head.renderOrder = 29; scene.add(DEMOV.head);
+const DEMO_HS = 1.15, _dmR = new V3(); // (el de la espera, algo más grande: se lee mejor con las gafas)
+DEMOV.head = new THREE.Mesh(DEMOP.mesh.geometry, DEMOP.mesh.material); DEMOV.head.visible = false; DEMOV.head.renderOrder = 29; DEMOV.head.scale.setScalar(DEMO_HS); scene.add(DEMOV.head);
 // Copia del panel colgada de un menú (a su derecha); se va con el menú al cerrarlo
 function demoAttach(m, ex = settings.exercise, mode = settings.mode) {
   if (!settings.demo || !m || !m.group) return;
@@ -6525,7 +6557,7 @@ function demoAttach(m, ex = settings.exercise, mode = settings.mode) {
   mesh.position.set(MW / 2 + DEMO_W * mesh.scale.x / 2 + 0.02, (m.H || 0.6) / 2 - DEMO_H * mesh.scale.x / 2, 0); m.group.add(mesh);
   DEMOV.ex = ex; DEMOV.mode = mode; DEMOV.drawT = 0;
 }
-function demoWaitEx() { if (state === 'between' && SES.blocks[SES.idx + 1]) { const b = SES.blocks[SES.idx + 1]; return [b.ex, b.mode]; } return [settings.exercise, settings.mode]; }
+function demoWaitEx() { const nx = state === 'between' && sesNext(); if (nx) { const b = SES.blocks[nx.i]; return [b.ex, b.mode]; } return [settings.exercise, settings.mode]; }
 function updateDemo(dt) {
   DEMOV.t += dt;
   const wait = !!settings.demo && ['calib', 'ready', 'mount', 'between'].includes(state) && !(menu && !menu.wrist);
@@ -6534,9 +6566,13 @@ function updateDemo(dt) {
   DEMOV.head.visible = wait;
   if (wait) {
     const [ex, mode] = demoWaitEx(); DEMOV.ex = ex; DEMOV.mode = mode;
-    const tgt = hudLocal(_hl.set(0, center.mesh.visible ? 0.2 : 0, -1.05), new V3());
-    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(hudQ()); DEMOV.head.userData.init = true; }
-    const k = 1 - Math.exp(-dt * 4); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(hudQ(), k);
+    // a la derecha del panel del centro (el que dice qué viene: calibración, ¡prepárate!, descanso…), a su altura y girado
+    // como él; antes iba por encima y quedaba casi fuera de la vista. Sin ese panel, delante
+    let tgt, q;
+    if (center.mesh.visible) { q = center.mesh.quaternion; tgt = _dmR.set(1, 0, 0).applyQuaternion(q).multiplyScalar(0.25 * CENTER_SC + DEMO_W * DEMO_HS / 2 + 0.04).add(center.mesh.position); }
+    else { q = hudQ(); tgt = hudLocal(_hl.set(0, 0, -1.05), _dmR); }
+    if (!DEMOV.head.userData.init) { DEMOV.head.position.copy(tgt); DEMOV.head.quaternion.copy(q); DEMOV.head.userData.init = true; }
+    const k = 1 - Math.exp(-dt * 6); DEMOV.head.position.lerp(tgt, k); DEMOV.head.quaternion.slerp(q, k);
   } else DEMOV.head.userData.init = false;
   if (!any) return;
   DEMOV.drawT -= dt; if (DEMOV.drawT > 0) return; DEMOV.drawT = 1 / 12; // basta para que se vea fluido y no pesa en las gafas (cada dibujo se vuelve a subir a la tarjeta)
@@ -6881,9 +6917,9 @@ function spTrackMenu(l, back, page = 0) {
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spListTracks(l.id).catch(e => { if (e.message !== 'NOT_YOURS') SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spTrk === l.id) again(page); }); } }
   else {
-    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1);
+    const N = 8, pages = Math.max(1, Math.ceil(T.length / N)), p = clamp(page, 0, pages - 1), F = spFavs(), TF = spFavFirst(T); // (tus favoritas, primero y con ★)
     rows.push({ t: 'text', text: T.length ? 'Toca una canción para que la lista empiece por ella' : 'Esta lista no tiene canciones que se puedan poner', color: '#a49fc8' });
-    for (const t of T.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
+    for (const t of TF.slice(p * N, p * N + N)) rows.push({ t: 'btns', items: [{ label: `${F.has(t.uri) ? '★ ' : ''}${t.name}${t.by ? ' — ' + t.by : ''}`, onPress: () => spDo(async () => { if (!l.liked) return spPlayList(l, t.uri, false); const k = T.indexOf(t); await spPlayTracks(T.slice(k).concat(T.slice(0, k))); SP.block = null; }) }] });
     if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
@@ -6935,6 +6971,12 @@ function spInitPage() {
 // si no eliges ninguna, suenan las listas marcadas (varias, mezcladas). Los nombres largos ocupan las líneas que haga falta
 const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
 const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Canciones favoritas (★, las marcas tú, en RepArena: no tocan Spotify): al abrir una lista salen las primeras
+const SP_FAV_MAX = 300;
+const spFavs = () => new Set(SP.cfg.favs || []);
+function spFavToggle(uri) { const F = (SP.cfg.favs || []).filter(u => u !== uri); if (F.length === (SP.cfg.favs || []).length) F.unshift(uri); SP.cfg.favs = F.slice(0, SP_FAV_MAX); spSave(); }
+function spFavFirst(T) { const F = spFavs(); return F.size ? T.filter(t => F.has(t.uri)).concat(T.filter(t => !F.has(t.uri))) : T; }
+const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
@@ -6942,7 +6984,8 @@ function spListsPage() {
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
-    h += T ? (T.length ? `<div class="sptracks">${T.map(t => `<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+    const F = spFavs(); // (las favoritas, primero; ★ las marca)
+    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label></div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
   } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
@@ -6956,6 +6999,7 @@ function spListsPage() {
     SP.started = false; spSave(); spMenuSync();
   });
   host.addEventListener('click', ev => {
+    const f = ev.target.closest && ev.target.closest('button[data-fav]'); if (f) { spFavToggle(f.dataset.fav); spListsPage(); renderSession(); return; }
     const b = ev.target.closest && ev.target.closest('button[data-sp]'); if (!b) return;
     if (b.dataset.sp === 'open') { const id = b.dataset.id; SP.openList = id; SP.trkErr = ''; spListsPage();
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
@@ -6968,15 +7012,17 @@ function spListsPage() {
 
 /* =================== SESIÓN DE ENTRENAMIENTO: BLOQUES ENCADENADOS =================== */
 // Una sesión es una lista de bloques {mode, ex, n} (en Combate, también foes: robots, voladores o mezcla): n repeticiones (en colgado, segundos). Cada bloque se juega
-// como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen.
+// como una partida repartida en oleadas de unas 10 repeticiones; entre bloques hay descanso y al final, un resumen. Se puede
+// dar varias vueltas (rounds): al acabar el último bloque, tras el descanso, vuelve al primero.
 // Mientras dura, la sesión cambia modo, ejercicio y oleadas sin tocar los ajustes guardados.
 const SES_KEY = 'reparena3-session';
-const SES = { blocks: [], rest: 60, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, exOpen: -1, mList: '', mErr: '', name: '' };
-const MUSIC_MAX = 50; // (canciones por bloque, como mucho)
+const SES = { blocks: [], rest: 60, rounds: 1, round: 0, rankOpen: -1, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, exOpen: -1, mList: '', mErr: '', name: '' };
+const MUSIC_MAX = 50, ROUNDS_MAX = 20; // (canciones por bloque y vueltas a la sesión, como mucho)
 // Ajustes que puede tener cada bloque (su perfil o los suyos propios, con el engranaje): los del juego, sin el modo, el
 // ejercicio ni las oleadas, que los pone el bloque. El sonido, el entorno y el menú no cambian de un bloque a otro
 const BLOCK_GROUPS = ['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras'];
-const blockKeyOk = k => FIELD[k] && BLOCK_GROUPS.includes(FIELD[k].g) && !['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'rest', 'rank'].includes(k); // (el rango no: cambia muchos a la vez)
+const blockKeyOk = k => FIELD[k] && BLOCK_GROUPS.includes(FIELD[k].g) && !['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'rest', 'rank'].includes(k); // (el rango va aparte: cambia muchos a la vez)
+const rankOk = r => RANKS.some(o => o[0] === r);
 const SESS_KEY = 'reparena3-sessions', SESS_MAX = 12; // sesiones guardadas con nombre
 const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
@@ -6985,6 +7031,7 @@ const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.m
 function sesClean(list) { return (list || []).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b), ...blockMusic(b), ...blockOwn(b) })); }
 function blockOwn(b) {
   const o = {}; if (b && typeof b.prof === 'string' && b.prof.trim()) o.prof = b.prof.trim().slice(0, 40);
+  if (b && rankOk(b.rank)) o.rank = b.rank; // (su rango: puedes ser bueno en un ejercicio y no en otro)
   if (b && b.set && typeof b.set === 'object') { const st = {}; for (const k in b.set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], b.set[k]); if (Object.keys(st).length) o.set = st; }
   return o;
 }
@@ -7006,14 +7053,19 @@ const foeCatNow = () => { const k = settings.foeKind, g = k !== 'fly' && (foeLis
 function blockExtra(b) { if (b.mode !== 'combat') return {}; const o = { foes: foeCat(b.foes) || foeCatNow() }; if (b.aim) o.aim = clampSetting(FIELD.aim, b.aim); return o; }
 // Lo que el bloque cambia en los ajustes mientras se juega
 function blockSettings(b) { const { foes: c, ...o } = blockExtra(b); return c ? Object.assign(o, foeCatPatch(c)) : o; }
-function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest }); }
+function saveSession() { store(SES_KEY, { blocks: SES.blocks, rest: SES.rest, rounds: SES.rounds }); }
+const roundsOf = v => clamp(Math.round(+v) || 1, 1, ROUNDS_MAX);
+// El bloque que viene después del de ahora: el siguiente o, acabada la vuelta, el primero de la siguiente (null: se acabó)
+function sesNext() { return SES.idx + 1 < SES.blocks.length ? { i: SES.idx + 1, r: SES.round } : SES.round + 1 < SES.rounds ? { i: 0, r: SES.round + 1 } : null; }
+const roundTxt = (r = SES.round) => SES.rounds > 1 ? ` · vuelta ${r + 1}/${SES.rounds}` : '';
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.prof ? ` · perfil «${b.prof}»` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
+function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.rank ? ` · ${rankName(b.rank).toLowerCase()}` : ''}${b.prof ? ` · perfil «${b.prof}»` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
-  let t = SES.rest * Math.max(0, SES.blocks.length - 1);
+  let t = 0; // (una vuelta; luego, todas, con los descansos entre bloques y entre vueltas)
   for (const b of SES.blocks) { const w = splitWaves(b.n, b.ex === 'hang' ? 25 : 10); t += (b.ex === 'hang' ? b.n : b.n * (b.mode === 'arcs' ? 60 / settings.arcRate : repTimeOf(b.ex, b.mode))) + settings.rest * (w.length - 1); }
+  t = t * SES.rounds + SES.rest * Math.max(0, SES.blocks.length * SES.rounds - 1);
   return Math.max(1, Math.round(t / 60));
 }
 
@@ -7024,6 +7076,7 @@ function sessionMinutes() {
   const mig = b => b && LEGACY_MODES[b.mode] ? { ...b, mode: 'combat', ...LEGACY_MODES[b.mode] } : b;
   if (Array.isArray(s.blocks)) SES.blocks = sesClean(s.blocks.map(mig));
   if (isFinite(s.rest)) SES.rest = clamp(Math.round(s.rest), 0, 600);
+  if (s.rounds) SES.rounds = roundsOf(s.rounds);
 })();
 
 /* ---------- Durante el juego ---------- */
@@ -7031,8 +7084,8 @@ function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
   if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su perfil, sus ajustes—, como estaba)
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  // su perfil, luego lo del bloque y, por encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
-  const patch = Object.assign(blockProfPatch(b), { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
+  // su perfil, su rango, luego lo del bloque y, por encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
+  const patch = Object.assign(blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
   if (SES.orig) for (const k in patch) if (!(k in SES.orig)) SES.orig[k] = settings[k];
   Object.assign(settings, patch);
   onSettingChanged('mode'); onSettingChanged('exercise');
@@ -7045,23 +7098,23 @@ function startSession() {
     setSetting('mode', 'bars'); setSetting('exercise', b.ex); startPlace(lobbyMenu, `Para la sesión, coloca ${eqName().the}`); return;
   }
   SES.orig = {}; SES_KEYS.forEach(k => { SES.orig[k] = settings[k]; });
-  Object.assign(SES, { active: true, results: [], stop: false });
+  Object.assign(SES, { active: true, results: [], stop: false, round: 0 });
   applyBlock(0); beginRun();
 }
 // Se llama al terminar la partida de un bloque (en lugar del menú de fin)
 function sessionBlockDone(win, manual) {
   const b = SES.blocks[SES.idx];
-  SES.results.push({ b, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, kcal: runStatsKcal(), score, win, manual });
-  if (SES.stop || SES.idx + 1 >= SES.blocks.length) { finishSession(); return; }
+  SES.results.push({ b, round: SES.round, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, kcal: runStatsKcal(), score, win, manual });
+  if (SES.stop || !sesNext()) { finishSession(); return; }
   state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
   betweenMenu();
 }
 function betweenMenu() {
-  const r = SES.results[SES.results.length - 1], nb = SES.blocks[SES.idx + 1];
+  const r = SES.results[SES.results.length - 1], nx = sesNext(), nb = SES.blocks[nx.i];
   const m = openMenu([
-    { t: 'title', text: `BLOQUE ${SES.idx + 1}/${SES.blocks.length} ${r.win ? 'SUPERADO' : 'TERMINADO'}` },
+    { t: 'title', text: `BLOQUE ${SES.idx + 1}/${SES.blocks.length} ${r.win ? 'SUPERADO' : 'TERMINADO'}${SES.rounds > 1 ? ` · VUELTA ${SES.round + 1}/${SES.rounds}` : ''}` },
     { t: 'text', text: `${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)} · ${r.perfect} perfectas · ${r.score} puntos` },
-    { t: 'text', text: `Siguiente: ${blockLabel(nb)}`, color: '#ffd166' },
+    { t: 'text', text: `Siguiente${nx.r !== SES.round ? ` (empieza la vuelta ${nx.r + 1}/${SES.rounds})` : ''}: ${blockLabel(nb)}`, color: '#ffd166' },
     { t: 'btns', items: [{ label: 'Empezar ya', style: 'primary', onPress: () => nextBlock(false) }, { label: 'Repetir bloque', onPress: () => { SES.results.pop(); nextBlock(true); } }], h: 0.08 },
     { t: 'btns', items: [{ label: 'Terminar sesión', style: 'danger', onPress: finishSession }] }
   ]);
@@ -7070,19 +7123,23 @@ function betweenMenu() {
 function sessionStep(dt) { // descanso entre bloques
   SES.wait -= dt; if (SES.wait <= 0) nextBlock(false);
 }
-function nextBlock(repeat) { hideMenu(); center.mesh.visible = false; applyBlock(repeat ? SES.idx : SES.idx + 1); beginRun(); }
+function nextBlock(repeat) {
+  hideMenu(); center.mesh.visible = false;
+  if (repeat) applyBlock(SES.idx); else { const nx = sesNext(); if (!nx) { finishSession(); return; } SES.round = nx.r; applyBlock(nx.i); }
+  beginRun();
+}
 function finishSession() {
-  const R = SES.results, all = R.length === SES.blocks.length && !SES.stop;
+  const R = SES.results, total = SES.blocks.length * SES.rounds, all = R.length === total && !SES.stop, rounds = SES.rounds;
   endSession(); hideMenu(); center.mesh.visible = false; state = 'end'; boardDirty = true; spRoundEnd();
   const tot = R.reduce((a, r) => ({ reps: a.reps + (r.b.ex === 'hang' ? 0 : r.reps), secs: a.secs + (r.b.ex === 'hang' ? r.reps : 0), time: a.time + r.time, kcal: a.kcal + r.kcal, score: a.score + r.score }), { reps: 0, secs: 0, time: 0, kcal: 0, score: 0 });
-  const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
+  const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}${rounds > 1 ? ` (vuelta ${r.round + 1})` : ''}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
   if (all) SND.victory();
   // la misma ficha que al acabar una ronda, con el total de la sesión (y la lista de bloques debajo)
   const perf = R.reduce((a, r) => a + (r.perfect || 0), 0), won = R.filter(r => r.win).length, pr = tot.reps ? perf / tot.reps : 0;
-  const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques`,
-    sub: all ? 'Todos los bloques hechos' : `${R.length} de ${SES.blocks.length} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
-    tiles: [[`${won}/${SES.blocks.length}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
+  const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques${rounds > 1 ? ` × ${rounds} vueltas` : ''}`,
+    sub: all ? (rounds > 1 ? `Las ${rounds} vueltas hechas` : 'Todos los bloques hechos') : `${R.length} de ${total} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
+    tiles: [[`${won}/${total}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
     chips: [], today: progressLine(), lines };
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', S);
 }
@@ -7096,15 +7153,15 @@ function endSession() {
 const savedSessions = () => (store(SESS_KEY) || []).filter(x => x && x.name && Array.isArray(x.blocks));
 function sessSave(name) {
   name = String(name || '').trim().slice(0, 40); if (!name || !SES.blocks.length) return false;
-  const L = savedSessions(), i = L.findIndex(x => x.name.toLowerCase() === name.toLowerCase()), x = { name, date: Date.now(), rest: SES.rest, blocks: JSON.parse(JSON.stringify(SES.blocks)) };
+  const L = savedSessions(), i = L.findIndex(x => x.name.toLowerCase() === name.toLowerCase()), x = { name, date: Date.now(), rest: SES.rest, rounds: SES.rounds, blocks: JSON.parse(JSON.stringify(SES.blocks)) };
   if (i >= 0) L[i] = x; else { if (L.length >= SESS_MAX) return false; L.push(x); }
   store(SESS_KEY, L); SES.name = name; return true;
 }
-function sessLoad(i) { const x = savedSessions()[i]; if (!x) return false; SES.blocks = sesClean(x.blocks); if (isFinite(x.rest)) SES.rest = clamp(Math.round(x.rest), 0, 600); SES.name = x.name; saveSession(); return true; }
+function sessLoad(i) { const x = savedSessions()[i]; if (!x) return false; SES.blocks = sesClean(x.blocks); if (isFinite(x.rest)) SES.rest = clamp(Math.round(x.rest), 0, 600); SES.rounds = roundsOf(x.rounds); SES.name = x.name; saveSession(); return true; }
 function sessDelete(i) { const L = savedSessions(); L.splice(i, 1); store(SESS_KEY, L); }
 function sessionsMenu(back) {
   const L = savedSessions(), rows = [{ t: 'title', text: 'SESIONES GUARDADAS' }, { t: 'text', text: L.length ? 'Elige una: sus bloques pasan a ser la sesión de ahora' : 'Aún no hay sesiones guardadas: en la página, arma una y pulsa Guardar sesión', color: '#a49fc8' }];
-  L.forEach((x, i) => rows.push({ t: 'btns', items: [{ label: `${x.name} (${x.blocks.length} ${x.blocks.length === 1 ? 'bloque' : 'bloques'})`, onPress: () => { if (sessLoad(i)) { say(`Sesión «${x.name}» lista: pulsa EMPEZAR SESIÓN`, '#3cf0c6', 2); back(); } } }] }));
+  L.forEach((x, i) => rows.push({ t: 'btns', items: [{ label: `${x.name} (${x.blocks.length} ${x.blocks.length === 1 ? 'bloque' : 'bloques'}${x.rounds > 1 ? ` × ${x.rounds} vueltas` : ''})`, onPress: () => { if (sessLoad(i)) { say(`Sesión «${x.name}» lista: pulsa EMPEZAR SESIÓN`, '#3cf0c6', 2); back(); } } }] }));
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
   const m = openMenu(rows, { accent: MC.prof }); m.rebuild = () => sessionsMenu(back);
 }
@@ -7113,7 +7170,7 @@ function sessionRows() {
   const saved = savedSessions().length ? [{ t: 'btns', items: [{ label: `Sesiones guardadas (${savedSessions().length})  ▸`, accent: MC.prof, onPress: () => { const b = menu && menu.rebuild; sessionsMenu(b || lobbyMenu); } }] }] : [];
   if (!SES.blocks.length) return saved;
   const txt = SES.blocks.map(b => `${b.n} ${b.ex === 'hang' ? 's colgado' : EX_NAMES[b.ex].toLowerCase()}`).join(' → ');
-  return [{ t: 'text', text: `Sesión: ${txt}`, color: '#ffd166' }, { t: 'btns', items: [{ label: `EMPEZAR SESIÓN (${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, ~${sessionMinutes()} min)`, style: 'primary', onPress: startSession }] }, ...saved];
+  return [{ t: 'text', text: `Sesión: ${txt}${SES.rounds > 1 ? ` (× ${SES.rounds} vueltas)` : ''}`, color: '#ffd166' }, { t: 'btns', items: [{ label: `EMPEZAR SESIÓN (${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}${SES.rounds > 1 ? ` × ${SES.rounds}` : ''}, ~${sessionMinutes()} min)`, style: 'primary', onPress: startSession }] }, ...saved];
 }
 
 /* ---------- Editor de la página ---------- */
@@ -7123,7 +7180,11 @@ function blockFields(b) {
   const keep = { mode: settings.mode, exercise: settings.exercise }; settings.mode = b.mode; settings.exercise = b.ex;
   try { return SCHEMA.filter(f => blockKeyOk(f.key) && fieldVisible(f) && f.type !== 'text'); } finally { Object.assign(settings, keep); }
 }
-function blockValue(b, k) { if (b.set && b.set[k] !== undefined) return b.set[k]; const pp = blockProfPatch(b); return pp[k] !== undefined ? pp[k] : settings[k]; }
+function blockValue(b, k) {
+  if (b.set && b.set[k] !== undefined) return b.set[k];
+  if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango, por encima de su perfil)
+  const pp = blockProfPatch(b); return pp[k] !== undefined ? pp[k] : settings[k];
+}
 function sesSetHTML(b, i) {
   const F = blockFields(b), groups = BLOCK_GROUPS.filter(g => F.some(f => f.g === g));
   let h = `<div class="sesset" data-i="${i}"><p class="note">Ajustes de este bloque (${escS(EX_NAMES[b.ex])} · ${escS(MODE_NAMES[b.mode])}): lo que cambies aquí vale solo para él, por encima de ${b.prof ? `su perfil «${escS(b.prof)}»` : 'tus ajustes'}. • = propio de este bloque.</p>`;
@@ -7179,7 +7240,7 @@ function sesMusicHTML(b, i) {
     const l = L.find(x => x.id === SES.mList) || { name: '' }, T = SP.trk && SP.trk[SES.mList];
     h += `<div class="spin"><button type="button" class="btn small" data-a="mback">← Tus listas</button><b>${escS(l.name)}</b></div>`;
     if (!T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
-    else h += T.length ? `<div class="tracks">${T.map(t => `<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>';
+    else { const F = spFavs(); h += T.length ? `<div class="tracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label></div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>'; } // (tus favoritas, primero)
   }
   return h + '</div>';
 }
@@ -7200,6 +7261,7 @@ function sesMusicClick(btn) {
   const b = SES.blocks[SES.musicOpen]; if (!b) return;
   if (btn.dataset.a === 'mlist') { SES.mList = btn.dataset.id; SES.mErr = ''; renderSession(); sesMusicLoad(); return; }
   if (btn.dataset.a === 'mback') { SES.mList = ''; SES.mErr = ''; renderSession(); return; }
+  if (btn.dataset.a === 'fav') { spFavToggle(btn.dataset.fav); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
   else if (btn.dataset.a === 'mclear') delete b.music;
   saveSession(); renderSession();
@@ -7212,11 +7274,25 @@ const SES_ICON = {
   dup: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
   del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12M10 7V5h4v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
   set: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8 3.5-2.1-.6-.5-1.3 1-1.9-1.6-1.6-1.9 1-1.3-.5L13 4h-2l-.6 2.1-1.3.5-1.9-1-1.6 1.6 1 1.9-.5 1.3L4 11v2l2.1.6.5 1.3-1 1.9 1.6 1.6 1.9-1 1.3.5.6 2.1h2l.6-2.1 1.3-.5 1.9 1 1.6-1.6-1-1.9.5-1.3L20 13z" fill="currentColor"/></svg>',
-  music: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="17" r="2.5" fill="currentColor"/><circle cx="17" cy="15" r="2.5" fill="currentColor"/></svg>'
+  music: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="17" r="2.5" fill="currentColor"/><circle cx="17" cy="15" r="2.5" fill="currentColor"/></svg>',
+  rank: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10l7-4 7 4M5 16l7-4 7 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/></svg>'
 };
+// Los galones de cada rango, como en el juego (drawRank): del recluta al sargento, galones; luego, estrellas
+function rankSvg(i) {
+  const S = 20, c = 12, w = S * 0.14, chev = dy => `<path d="M${c - S * 0.44} ${c + dy + S * 0.17}L${c} ${c + dy - S * 0.17}L${c + S * 0.44} ${c + dy + S * 0.17}"/>`;
+  let g = '';
+  if (i <= 3) {
+    const n = Math.min(3, i + 1), up = i === 3 ? S * 0.14 : 0; for (let k = 0; k < n; k++) g += chev((k - (n - 1) / 2) * S * 0.3 - up);
+    if (i === 3) { const r = S * 0.6, cy = c - S * 0.32, a0 = 0.28 * Math.PI, a1 = 0.72 * Math.PI; g += `<path d="M${c + r * Math.cos(a0)} ${cy + r * Math.sin(a0)}A${r} ${r} 0 0 1 ${c + r * Math.cos(a1)} ${cy + r * Math.sin(a1)}"/>`; }
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg>`;
+  }
+  const n = i - 3, R = S * 0.24 * [1.7, 1.25, 1][n - 1], star = sx => { let d = ''; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = (k % 2 ? 0.45 : 1) * R; d += `${k ? 'L' : 'M'}${(c + sx + Math.cos(a) * rad).toFixed(2)} ${(c + Math.sin(a) * rad).toFixed(2)}`; } return `<path d="${d}Z"/>`; };
+  for (let k = 0; k < n; k++) g += star((k - (n - 1) / 2) * S * (n === 2 ? 0.52 : 0.46)); // (las pocas, más grandes: se ven igual de bien)
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="${n === 3 ? '#ffd166' : 'currentColor'}">${g}</g></svg>`;
+}
 const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<button type="button" class="ib${on ? ' on' : ''}" data-a="${a}" aria-label="${label} ${i + 1}" title="${label}"${extra}>${icon}${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
 // Cada bloque, en una sola fila: modo, ejercicio (un botón que abre la lista debajo; nombres de hasta dos líneas), enemigos,
-// cantidad, perfil y los iconos: ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
+// cantidad, perfil y los iconos: rango, ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
 // de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
@@ -7226,25 +7302,30 @@ function renderSession() {
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
-    <span class="ibs">${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
+    <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : 'Rango del bloque (el tuyo)', b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
+  const rounds = $('#sesRounds'); if (rounds && document.activeElement !== rounds) rounds.value = SES.rounds;
   const sum = $('#sesSummary');
-  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
+  if (sum) sum.innerHTML = SES.blocks.length ? `${SES.blocks.length} ${SES.blocks.length === 1 ? 'bloque' : 'bloques'}${SES.rounds > 1 ? ` × ${SES.rounds} vueltas` : ''}, unos <strong>${sessionMinutes()} min</strong> con descansos. En el juego, pulsa EMPEZAR SESIÓN en el menú.` : '';
 }
 // (la lista de ejercicios del bloque, debajo de su fila: cada nombre en las líneas que haga falta)
+// El rango del bloque: el tuyo (el de Ajustes) o uno para él solo, con sus galones
+function sesRankHTML(b, i) {
+  return `<div class="sesrank lpick" data-i="${i}" role="listbox" aria-label="Rango del bloque ${i + 1}"><button type="button" class="lp${b.rank ? '' : ' on'}" data-a="rkset" data-r="" role="option" aria-selected="${!b.rank}">El tuyo (${escS(rankName())})</button>${RANKS.map(([r, n], k) => `<button type="button" class="lp rk${r === b.rank ? ' on' : ''}" data-a="rkset" data-r="${r}" role="option" aria-selected="${r === b.rank}">${rankSvg(k)}${escS(n)}</button>`).join('')}</div>`;
+}
 function sesExHTML(b, i) {
   return `<div class="sesex lpick" data-i="${i}" role="listbox" aria-label="Ejercicio del bloque ${i + 1}">${Object.keys(EX_NAMES).filter(x => blockOk(b.mode, x)).map(x => `<button type="button" class="lp${x === b.ex ? ' on' : ''}" data-a="exset" data-x="${x}" role="option" aria-selected="${x === b.ex}">${escS(EX_NAMES[x])}</button>`).join('')}</div>`;
 }
 // Duplicar un bloque: la copia, justo debajo, con todo (perfil, ajustes propios y canciones), lista para editarla
 function sesDup(i) {
   if (SES.blocks.length >= 20 || !SES.blocks[i]) return false;
-  SES.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(SES.blocks[i]))); SES.exOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
+  SES.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(SES.blocks[i]))); SES.exOpen = SES.rankOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
 }
 // Cambiar un bloque de sitio (al soltarlo tras arrastrarlo, o con las flechas)
 function sesMove(from, to) {
   to = clamp(to, 0, SES.blocks.length - 1); if (from === to || !SES.blocks[from]) return false;
-  SES.blocks.splice(to, 0, SES.blocks.splice(from, 1)[0]); SES.exOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
+  SES.blocks.splice(to, 0, SES.blocks.splice(from, 1)[0]); SES.exOpen = SES.rankOpen = SES.setOpen = SES.musicOpen = -1; saveSession(); renderSession(); return true;
 }
 // Arrastrar por el asa (ratón, dedo o lápiz): la fila sigue al puntero y una línea marca dónde caerá; al soltar, se mueve allí
 function sesDragInit(host) {
@@ -7299,21 +7380,24 @@ function sesInitPage() {
     const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
     if (btn.closest('.sesmusic')) { sesMusicClick(btn); return; }
     if (btn.closest('.sesset')) { sesSetClick(btn); return; }
+    if (btn.closest('.sesrank')) { const b = SES.blocks[+btn.closest('.sesrank').dataset.i]; if (b) { if (rankOk(btn.dataset.r)) b.rank = btn.dataset.r; else delete b.rank; SES.rankOpen = -1; saveSession(); renderSession(); } return; }
     if (btn.closest('.sesex')) { const b = SES.blocks[+btn.closest('.sesex').dataset.i]; if (b && btn.dataset.x) { sesSetEx(b, btn.dataset.x); SES.exOpen = -1; saveSession(); renderSession(); } return; }
     const i = +btn.closest('.sesrow').dataset.i;
     if (btn.dataset.a === 'ex') { SES.exOpen = SES.exOpen === i ? -1 : i; renderSession(); return; }
+    if (btn.dataset.a === 'rank') { SES.rankOpen = SES.rankOpen === i ? -1 : i; renderSession(); return; }
     if (btn.dataset.a === 'dup') { sesDup(i); return; }
     if (btn.dataset.a === 'music') { SES.musicOpen = SES.musicOpen === i ? -1 : i; renderSession(); if (SES.musicOpen === i) sesMusicLoad(); return; }
     if (btn.dataset.a === 'set') { SES.setOpen = SES.setOpen === i ? -1 : i; renderSession(); return; }
     if (btn.dataset.a !== 'del') return;
     SES.blocks.splice(i, 1);
-    SES.exOpen = SES.setOpen = SES.musicOpen = -1; // (los paneles abiertos irían a otro bloque)
+    SES.exOpen = SES.rankOpen = SES.setOpen = SES.musicOpen = -1; // (los paneles abiertos irían a otro bloque)
     saveSession(); renderSession();
   });
   $('#btnSesAdd').addEventListener('click', () => { if (SES.blocks.length >= 20) return; const ex = blockOk(settings.mode, settings.exercise) ? settings.exercise : 'squat'; const b = { mode: blockOk(settings.mode, ex) ? settings.mode : 'combat', ex, n: ex === 'hang' ? 30 : 20 }; SES.blocks.push({ ...b, ...blockExtra(b) }); saveSession(); renderSession(); });
   $('#btnSesExample').addEventListener('click', () => { SES.blocks = SES_EXAMPLE.map(b => ({ ...b })); saveSession(); renderSession(); });
   $('#btnSesClear').addEventListener('click', () => { SES.blocks = []; saveSession(); renderSession(); });
   $('#sesRest').addEventListener('change', ev => { SES.rest = clamp(Math.round(+ev.target.value) || 0, 0, 600); saveSession(); renderSession(); });
+  $('#sesRounds').addEventListener('change', ev => { SES.rounds = roundsOf(ev.target.value); saveSession(); renderSession(); });
   const ss = $('#btnSessSave'), sh = $('#sessSaved'), st = $('#sessStatus');
   if (ss) ss.addEventListener('click', () => { const n = $('#sessName').value; const ok = sessSave(n); st.textContent = ok ? `Guardada como «${n.trim()}».` : !SES.blocks.length ? 'Añade algún bloque antes de guardar.' : !n.trim() ? 'Escribe un nombre.' : `Como mucho ${SESS_MAX} sesiones: borra alguna.`; renderSessions(); });
   if (sh) sh.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('button[data-s]'); if (!b) return; const i = +b.dataset.i, x = savedSessions()[i]; if (!x) return;
@@ -7457,7 +7541,7 @@ function xferPack() {
   const d = {};
   for (const k of XFER_KEYS) {
     let v = store(k); if (v === null || v === undefined) continue;
-    if (k === 'reparena3-spotify') { const { clientId, lists, picks } = v; v = { clientId, lists, picks }; }
+    if (k === 'reparena3-spotify') { const { clientId, lists, picks, favs } = v; v = { clientId, lists, picks, favs }; }
     d[k] = v;
   }
   return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
@@ -7510,7 +7594,7 @@ function xferApply(p, reload = true) {
     if (k === 'reparena3-history') {
       const mine = store(k) || [], seen = new Set(mine.map(r => `${r.date}|${r.ex}|${r.reps}`));
       store(k, mine.concat(v.filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`))).sort((a, b) => (a.date || 0) - (b.date || 0)).slice(-400));
-    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}));
+    } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}, v.favs ? { favs: v.favs } : {}));
     else store(k, v);
   }
   if (reload) setTimeout(() => location.reload(), 300);
@@ -8852,14 +8936,25 @@ function armStep(kind, side, t, dt) {
   return null;
 }
 // Los dos brazos a la vez (barra o kettlebell): cada uno con su paso, y la repetición cuenta cuando los dos llegan
-// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra
-const PAIR_WIN = 0.6;
+// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra. Con la barra las dos suben juntas aunque el
+// seguimiento no lo vea igual en las dos (una algo más baja, o que llega un instante después): cuando una completa, vale
+// si la otra ya está arriba aguantando o ha subido al menos el 60 % del recorrido; si no, se le espera PAIR_WIN segundos
+const PAIR_WIN = 1.0;
+function pairNear(kind, side) {
+  const d = (kind === 'press' ? DET.pr : DET.curl)[side], range = (kind === 'press' ? settings.pressRange : settings.curlRange) / 100;
+  return hands[side].ok && (d.state === 'hold' || (d.state === 'rising' && d.max - d.bottom >= range * 0.6));
+}
 function pairStep(kind, t, dt) {
-  const P = DET.pair;
+  const P = DET.pair, D = kind === 'press' ? DET.pr : DET.curl;
   for (const side of ['left', 'right']) {
     const ev = armStep(kind, side, t, dt); if (!ev) continue;
     if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
+    const o = side === 'left' ? 'right' : 'left', od = D[o];
     if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
+    else if (!P.side && pairNear(kind, o)) { // la otra ya va arriba: cuenta ya (y la otra no contará otra vez al bajar)
+      const hold = od.state === 'hold', pow = Math.max(ev.pow || 1, hold ? od.pow || 1 : 1);
+      od.state = 'top'; onCharge(); onRep({ perfect: ev.perfect && hold && !!(od.ev && od.ev.perfect), fast: ev.fast, pow });
+    }
     else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
   }
   if (P.side) {
@@ -9650,7 +9745,7 @@ function soundMenu(back) {
   const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : []), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
@@ -9927,9 +10022,7 @@ function updateOutcome(dt) {
 }
 function outcomeClear() { OUT.t = -1; OUT.cleared = false; OUT.veil.visible = false; OUT.black.visible = false; OUT.title.mesh.visible = false; }
 // El resumen: una ficha con el número grande (repeticiones o segundos colgado), las estrellas y el porcentaje de perfectas,
-// seis casillas con lo demás y los logros; debajo, los botones. Si no pulsas nada, a los END_AUTO s se abre solo el menú
-// principal (la barra de abajo lo va contando)
-const END_AUTO = 12, END = { t: -1, bar: null };
+// seis casillas con lo demás y los logros; debajo, los botones. Se queda hasta que pulses uno (sin cuenta atrás)
 function summaryDraw(S, c, x, y, w, h) {
   const gold = '#ffd166', teal = '#3cf0c6', pink = '#ff4fa3', ink = '#eeeaff', dim = '#a49fc8';
   c.textBaseline = 'middle'; c.textAlign = 'center';
@@ -9965,18 +10058,8 @@ function endMenu(title, S) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
     { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
-    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] },
-    { t: 'canvas', h: 0.03, draw: (c, x, y, w, h) => { c.fillStyle = '#a49fc8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '500 22px ' + FB; c.fillText('El menú principal se abre solo en unos segundos', x + w / 2, y + h * 0.3); rr(c, x + 40, y + h * 0.72, w - 80, 8, 4); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill(); },
-      mount: (g, x0, cy, cw, h) => { const b = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.006), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false, transparent: true })); const W = cw - 80 / (1024 / MW); b.position.set(x0 + 40 / (1024 / MW), cy - h * 0.22, 0.002); b.renderOrder = RO.widget; b.userData = { x0: b.position.x, W }; g.add(b); END.bar = b; } }];
-  END.t = 0; const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => { const t = END.t; endMenu(title, S); END.t = t; }; m.endMenu = true;
-}
-// El resumen cuenta hacia el menú principal (y la barra se va llenando)
-function endAutoStep(dt) {
-  if (END.t < 0) return;
-  if (state !== 'end' || !menu || !menu.endMenu) { END.t = -1; END.bar = null; return; }
-  END.t += dt; const k = Math.min(1, END.t / END_AUTO), b = END.bar;
-  if (b) { const w = Math.max(1e-3, b.userData.W * k); b.scale.x = w; b.position.x = b.userData.x0 + w / 2; }
-  if (k >= 1) { END.t = -1; lobbyMenu(); }
+    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
+  const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }
 function exitAll() {
   endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
@@ -9990,7 +10073,7 @@ function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   stateT += dt;
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
-  arenaGlide(dt); endAutoStep(dt);
+  arenaGlide(dt);
   if (state === 'calib') {
     arenaFollow(dt);
     const ok = settings.exercise === 'twist' ? head.p.y > 0.55 && hands.left.ok && hands.right.ok : isSeated() ? head.p.y > 0.55 && head.p.y < 1.5 : !isFloor() ? head.p.y > 1.1 : isSupine() ? head.p.y < 0.6 && head.p.y > 0.03 : (head.p.y < 1.0 && head.p.y > (settings.exercise === 'superman' ? 0.04 : 0.15));
@@ -10440,6 +10523,15 @@ function barSlot(idx, out, side = 0) {
   w.addScaledVector(_ba, 0.42 * idx); w.y += 0.06;
   return out.copy(arena.worldToLocal(w));
 }
+// Hacia dónde está «delante» para los que llegan (en el mundo, desde su sitio w): en la barra, hacia donde miras (o la
+// normal de la puerta, si se parece); en el remo, hacia los pies
+const _bf = new V3();
+function barFront(w, dir) {
+  const e = eqPose();
+  if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bf); if (_bf.dot(dir) < 0) _bf.negate(); if (_bf.dot(dir) > 0.5) dir.copy(_bf); }
+  else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+  return dir;
+}
 class HeadTarget {
   constructor(spec) {
     const K = TGT[spec.kind]; this.K = K; this.type = 'target'; this.kind = spec.kind; this.bubble = !K.rig;
@@ -10466,13 +10558,14 @@ class HeadTarget {
     arena.add(this.root);
     this.side = barNextSide(); // por un lado (izquierda y derecha, por turnos: los dos brazos por igual) o al centro
     barSlot(this.slotIndex(), this.slot, this.side);
-    if (this.side) { // por los lados: entra por su lado, algo por encima, y se para apartado del centro
-      this.pos.copy(this.slot).addScaledVector(barLat(_ba), this.side * 2.6); this.pos.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.4, 0.7);
+    if (this.side) { // por los lados: llega en diagonal, desde delante y desde su lado (algo por encima), y se para apartado
+      // del centro; así se le ve venir sin girar mucho la cabeza (de lado del todo, en el remo había que mirar a un costado)
+      const F = barFront(arena.localToWorld(barTopPoint(_bw)), _bq), L = barLat(_ba).applyAxisAngle(_up, arena.rotation.y); // (delante, desde el centro; barLat da el eje en el arena)
+      const w = arena.localToWorld(_bw.copy(this.slot)); w.addScaledVector(F, 1.9).addScaledVector(L, this.side * 1.5); w.y += eqKind() === 'door' ? rand(0.15, 0.35) : rand(0.5, 0.8);
+      this.pos.copy(arena.worldToLocal(w));
       if (!this.bubble) { this.buzz = buzzLoop(spec.kind, arena.localToWorld(_bw.copy(this.pos))); if (K.wasp) SND.hiss(arena.localToWorld(_bw.copy(this.pos)), K.boss ? 0.6 : 0.9, 'wasp'); }
     } else if (this.bubble) { // llega flotando desde delante: en la barra, desde donde miras; en el remo, desde los pies y desde arriba
-      const e = eqPose(), w = arena.localToWorld(_bw.copy(this.slot)), dir = _ba;
-      if (eqKind() === 'door') { dir.copy(fwdH()); eqAxes(e, null, _bq); if (_bq.dot(dir) < 0) _bq.negate(); if (_bq.dot(dir) > 0.5) dir.copy(_bq); }
-      else { dir.set(e.x - w.x, 0, e.z - w.z); if (dir.lengthSq() < 1e-4) eqAxes(e, null, dir); dir.normalize(); }
+      const w = arena.localToWorld(_bw.copy(this.slot)), dir = barFront(w, _ba);
       w.addScaledVector(dir, 3.2).add(_bq.set(rand(-0.5, 0.5) * -dir.z, eqKind() === 'door' ? rand(0.1, 0.4) : rand(0.6, 1.0), rand(-0.5, 0.5) * dir.x));
       this.pos.copy(arena.worldToLocal(w));
     } else { // sale de una compuerta y vuela recto
@@ -11184,9 +11277,10 @@ async function spotifyTempo() {
 function tempoRows(back) {
   const P = settings.bpm, auto = spConnected() && SP.cfg.autoBpm;
   const rows = [{ t: 'text', text: P ? `Ritmo: ${P} BPM${auto ? ' (el de cada canción de Spotify)' : ''} · ${settings.mode === 'touch' ? 'los objetivos llegan' : 'los enemigos se mueven'} en el pulso` : 'Ritmo libre · toca «Al compás» 4 veces siguiendo la música' + (spConnected() ? ' o usa el de Spotify' : ''), color: '#ffd166' }];
-  // con el ritmo de Spotify, un toque al compás solo encaja el pulso (el tempo ya lo da la canción)
-  const items = [auto && P ? { label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } }
-    : { label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  // «Al compás» siempre está (con el de Spotify puesto, tocarlo vuelve a marcarlo tú); con el ritmo de Spotify, además,
+  // «Encajar el pulso»: un toque solo encaja el pulso (el tempo ya lo da la canción)
+  const items = [{ label: TCH.taps.length && perfNow() - TCH.taps[TCH.taps.length - 1] < 3.5 ? `Al compás (${TCH.taps.length})` : 'Al compás', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } tapTempo(); back(); } }];
+  if (auto && P) items.push({ label: 'Encajar el pulso', onPress: () => { TCH.beat0 = perfNow(); if (typeof BEAT !== 'undefined') BEAT.off = null; SND.tick(); back(); } });
   if (spConnected()) items.push({ label: auto ? 'Ritmo de Spotify ✓' : 'Ritmo de Spotify', style: auto ? 'primary' : undefined, onPress: () => { SP.cfg.autoBpm = true; spSave(); spotifyTempo().then(m => { say(m, '#ffd166', 3); back(); }); } });
   if (P) items.push({ label: 'Sin ritmo', onPress: () => { if (spConnected()) { SP.cfg.autoBpm = false; spSave(); } setSetting('bpm', 0); back(); } });
   rows.push({ t: 'btns', items });
@@ -11461,30 +11555,26 @@ function swordCutTest(x) {
 // Contra los golpes de los enemigos (solo en Combate y sin espadas, que tienen sus bloqueos):
 // · Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y
 //   aparta al enemigo (vale con cualquier ejercicio, sin gestos).
-// · Con gestos (Defensa completa), según lo que tengas en las manos:
-//   - manos libres (sentadillas, zancadas): el puño cerrado delante del pecho saca un escudo en el antebrazo;
-//   - pesas: las dos manos juntas delante de la cara o el pecho; en el curl, aguantar arriba; en el press, los brazos
-//     arriba paran a los voladores; en el swing, la kettlebell aparta a los que tienes delante;
-//   - manos ocupadas (flexiones, planchas, superman, fondos): apartar la cabeza de golpe esquiva, una repetición
-//     perfecta o profunda suelta una onda que aparta a los de cerca y aguantar bien la postura levanta una burbuja;
-//   - con los mandos: el botón de agarre, en cualquier ejercicio.
+// · Con gestos (Defensa completa), solo en los ejercicios de pie con las manos libres (sentadillas, zancadas, sentadilla
+//   con salto): el puño cerrado delante del pecho saca un escudo en el antebrazo (con los mandos, el botón de agarre).
+//   Con pesas o con las manos apoyadas no hay gestos: el propio ejercicio los hacía sin querer (en el curl con barra,
+//   las manos juntas delante del pecho subían la guardia en cada repetición).
 //   La guardia gasta energía mientras la mantienes con un enemigo encima y al parar un golpe; las repeticiones la recargan. Subida durante la
 //   preparación del golpe es una parada (el enemigo rebota y queda aturdido); mantenida desde mucho antes, solo bloquea.
 const GDIFF = {
-  easy: { perf: 0.34, rep: 0.1, streak: 0.15, enP: 0.3, en: 0.2, drain: 0.05, block: 0.15, parry: 0.1, win: 1.6, stun: 2.2, dodge: 0.1 },
-  normal: { perf: 0.25, rep: 0.07, streak: 0.1, enP: 0.25, en: 0.15, drain: 0.1, block: 0.25, parry: 0.15, win: 1.1, stun: 1.8, dodge: 0.14 },
-  hard: { perf: 0.17, rep: 0.05, streak: 0.08, enP: 0.2, en: 0.1, drain: 0.16, block: 0.35, parry: 0.2, win: 0.75, stun: 1.4, dodge: 0.18 }
+  easy: { perf: 0.34, rep: 0.1, streak: 0.15, enP: 0.3, en: 0.2, drain: 0.05, block: 0.15, parry: 0.1, win: 1.6, stun: 2.2 },
+  normal: { perf: 0.25, rep: 0.07, streak: 0.1, enP: 0.25, en: 0.15, drain: 0.1, block: 0.25, parry: 0.15, win: 1.1, stun: 1.8 },
+  hard: { perf: 0.17, rep: 0.05, streak: 0.08, enP: 0.2, en: 0.1, drain: 0.16, block: 0.35, parry: 0.2, win: 0.75, stun: 1.4 }
 };
-const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, still: 0, need: 1, hist: [], histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false };
+const GUARD = { charge: 0, en: 1, broke: false, up: null, side: null, pos: new V3(), upT: 0, flash: 0, drawn: '', ready: false, tip: false };
 const gDiff = () => GDIFF[settings.guardDiff] || GDIFF.normal;
 const guardOn = () => isCombat() && !!settings.guard && settings.guard !== 'off';
-const gestureOn = () => guardOn() && settings.guard === 'full' && !swordActive();
-// Qué se tiene en las manos: libres, pesas u ocupadas (apoyadas en el suelo o en el banco)
-const guardFam = () => handsFree() || settings.exercise === 'jsquat' ? 'fist' : holdsWeights() ? 'weights' : 'busy';
-function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, still: 0, histT: 0, waveCD: 0, flash: 0, drawn: '', ready: false, tip: false, tipB: false }); GUARD.hist.length = 0; }
+// Los gestos, solo de pie y con las manos libres
+const guardHandsFree = () => handsFree() || settings.exercise === 'jsquat';
+const gestureOn = () => guardOn() && settings.guard === 'full' && !swordActive() && guardHandsFree();
+function guardReset() { Object.assign(GUARD, { charge: 0, en: 1, broke: false, up: null, side: null, upT: 0, flash: 0, drawn: '', ready: false, tip: false }); }
 
 /* ---------- Lo que se ve ---------- */
-const G_TEAL = new THREE.Color(0x3cf0c6), G_LOW = new THREE.Color(0xff8a3d), G_WHITE = new THREE.Color(0xffffff);
 // El escudo: un trozo de esfera (abombado hacia el enemigo, los bordes curvándose hacia ti) con una rejilla de hexágonos
 // de energía roja: las celdas brillan más en sus bordes, el contorno del escudo se enciende y alguna celda titila. El eje
 // largo (y) va a lo largo del antebrazo. Con poca energía se apaga y parpadea; al parar un golpe, destello blanco
@@ -11515,23 +11605,12 @@ function guardShield() {
   });
   const g = new THREE.Mesh(shieldGeo, m); g.renderOrder = 21; g.visible = false; g.userData.u = m.uniforms; scene.add(g); return g;
 }
-const GV = { shield: { left: guardShield(), right: guardShield() }, big: guardShield(), warn: [], waves: [], q: new THREE.Quaternion(), qOk: false };
-GV.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
+const GV = { shield: { left: guardShield(), right: guardShield() }, warn: [], q: new THREE.Quaternion(), qOk: false };
 GV.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }));
-// En el suelo (flexiones, planchas, superman), mirando abajo, la burbuja alrededor de la cabeza apenas se veía: allí es una
-// cúpula sobre ti y, en el suelo, un aro que se va llenando mientras aguantas quieto (lleno: burbuja puesta)
-GV.dome = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }));
-GV.pad = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.57, 72, 1), new THREE.ShaderMaterial({
-  transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uP: { value: 0 }, uCol: { value: new THREE.Color(0x3cf0c6) }, uA: { value: 0.5 } },
-  vertexShader: 'varying vec2 vQ; void main(){ vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: `uniform float uP; uniform vec3 uCol; uniform float uA; varying vec2 vQ;
-    void main(){ float a = fract(atan(vQ.x, vQ.y) / 6.28318 + 1.0); float on = step(a, uP); gl_FragColor = vec4(uCol, uA * mix(0.22, 1.0, on)); }`
-}));
-GV.pad.rotation.x = -Math.PI / 2;
-for (const m of [GV.bubble, GV.ring, GV.dome, GV.pad]) { m.visible = false; m.renderOrder = 21; scene.add(m); }
-function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.big.visible = GV.bubble.visible = GV.ring.visible = GV.dome.visible = GV.pad.visible = false; for (const w of GV.warn) w.visible = false; }
+GV.ring.visible = false; GV.ring.renderOrder = 21; scene.add(GV.ring);
+function guardHide() { GV.shield.left.visible = GV.shield.right.visible = GV.ring.visible = false; for (const w of GV.warn) w.visible = false; }
 const guardLow = () => isFloor() && head.p.y < 1.0; // tumbado o en plancha, mirando al suelo
-// el centro de la cúpula, en el suelo bajo tu cabeza (algo por delante: ahí están las manos)
+// en el suelo bajo tu cabeza (algo por delante: ahí están las manos)
 const guardFloorAt = out => out.set(head.p.x, 0.012, head.p.z).addScaledVector(_gdF.copy(fwdH()), 0.12);
 
 /* ---------- Detectar la guardia ---------- */
@@ -11541,31 +11620,12 @@ function gFront(p, lo, hi) { const dx = p.x - head.p.x, dz = p.z - head.p.z, al 
 // puño cerrado: las puntas de los dedos cerca de la muñeca
 function gFist(h) { if (!h.isHand) return false; let n = 0, s = 0; for (const j of [9, 14, 19, 24]) { const J = h.J[j]; if (J && J.ok) { s += J.p.distanceTo(h.wrist); n++; } } return n >= 3 && s / n < 0.1; }
 const gGrip = h => !h.isHand && h.pad && h.pad.buttons && h.pad.buttons[1] && h.pad.buttons[1].pressed;
-// Busca la guardia de ahora: { kind, side, pos }; kind: 'grip', 'fist', 'guard' (manos juntas), 'curl', 'up' (brazos
-// arriba: solo para voladores) o 'bubble'
-function guardDetect(dt) {
+// Busca la guardia de ahora: { kind, side, pos }; kind: 'grip' (mandos) o 'fist'
+function guardDetect() {
   _gdF.copy(fwdH());
   for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gGrip(h)) return { kind: 'grip', side: s, pos: h.wrist }; }
-  const fam = guardFam(), L = hands.left, R = hands.right, ex = settings.exercise;
-  if (fam === 'fist') {
-    for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gFist(h) && gFront(h.wrist, -0.7, 0.12)) return { kind: 'fist', side: s, pos: _gdP.copy(h.wrist) }; }
-    return null;
-  }
-  if (fam === 'weights') {
-    if (L.ok && R.ok && L.wrist.distanceTo(R.wrist) < 0.3) { _gdP.lerpVectors(L.wrist, R.wrist, 0.5); if (gFront(_gdP, -0.65, 0.15)) return { kind: 'guard', side: null, pos: _gdP }; }
-    if (ex === 'curl' || ex === 'curl2') for (const s of ['left', 'right']) if (DET.curl[s].state === 'hold' && hands[s].ok) return { kind: 'curl', side: s, pos: hands[s].wrist };
-    if (ex === 'press' || ex === 'press2' || ex === 'thruster') {
-      const up = s => (hands[s].ok && hands[s].wrist.y > head.p.y + 0.1) || (ex !== 'thruster' && !hands[s].ok && DET.pr[s].state === 'top');
-      if (up('left') || up('right')) return { kind: 'up', side: null, pos: _gdP.copy(head.p).add(_gdQ.set(0, 0.32, 0)) };
-    }
-    return null;
-  }
-  // manos ocupadas: aguantar bien la postura levanta la burbuja (en el superman, arriba; en la plancha lateral, la
-  // cadera arriba; en el resto, quieto en tu postura)
-  const away = isSeated() ? head.p.y > 1.5 : head.p.y > 1.0;
-  const hold = ex === 'superman' ? DET.su.state === 'up' : ex === 'splank' ? DET.sp.state === 'hold' && !DET.sp.awayT && state === 'play' : !away && head.speed < 0.06;
-  GUARD.still = hold ? GUARD.still + dt : 0; GUARD.need = ex === 'superman' || ex === 'splank' ? 0.4 : 1.0;
-  return GUARD.still > GUARD.need ? { kind: 'bubble', side: null, pos: head.p } : null;
+  for (const s of ['left', 'right']) { const h = hands[s]; if (h.ok && gFist(h) && gFront(h.wrist, -0.7, 0.12)) return { kind: 'fist', side: s, pos: _gdP.copy(h.wrist) }; }
+  return null;
 }
 
 /* ---------- Cada fotograma ---------- */
@@ -11591,38 +11651,20 @@ function guardWarnSpr(i) {
 function guardStep(dt, t) {
   if (!guardOn() || !['play', 'rest'].includes(state)) { guardHide(); GUARD.up = null; return; }
   const G = GUARD, D = gDiff();
-  G.waveCD = Math.max(0, G.waveCD - dt); G.flash = Math.max(0, G.flash - dt * 4);
-  // la cabeza de los últimos instantes (para la esquiva)
-  G.histT -= dt; if (G.histT <= 0) { G.histT = 0.05; G.hist.push({ t, x: head.p.x, y: head.p.y, z: head.p.z }); if (G.hist.length > 16) G.hist.shift(); }
+  G.flash = Math.max(0, G.flash - dt * 4);
   // la guardia: gasta energía mientras la mantienes; sin energía cae y no vuelve hasta recargar un poco
-  const g = gestureOn() && !G.broke ? guardDetect(dt) : null;
+  const g = gestureOn() && !G.broke ? guardDetect() : null;
   if (g) {
     if (G.up !== g.kind || G.side !== g.side) G.upT = 0; else G.upT += dt;
     G.up = g.kind; G.side = g.side; G.pos.copy(g.pos);
     if (enemies.some(guardNear)) G.en = Math.max(0, G.en - D.drain * dt); // (sin nadie cerca, mantenerla no gasta)
     if (G.en <= 0) { G.broke = true; guardBreakFx(); say('¡Sin energía! Las repeticiones la recargan', '#ff8a3d', 1.6); G.up = null; G.side = null; }
-  } else {
-    if (G.up === 'bubble') guardBreakFx(); // la burbuja estalla al perder la postura
-    G.up = null; G.side = null; G.upT = 0;
-  }
-  // el escudo o la burbuja, del color de la energía que queda (y blanco un instante al parar un golpe)
-  guardHide(); const col = _gdC.copy(G_LOW).lerp(G_TEAL, clamp(G.en * 2, 0, 1)).lerp(G_WHITE, G.flash);
-  const low = guardLow(), busy = gestureOn() && guardFam() === 'busy';
-  if (busy && low && !G.broke) { // el aro del suelo: cuánto falta para la burbuja (o, puesta, lleno y latiendo)
-    guardFloorAt(GV.pad.position); GV.pad.visible = true; const u = GV.pad.material.uniforms;
-    u.uP.value = G.up === 'bubble' ? 1 : clamp(G.still / G.need, 0, 1); u.uCol.value.copy(col); u.uA.value = G.up === 'bubble' ? 0.75 + 0.2 * Math.sin(t * 4) : 0.55;
-  }
-  if (G.up === 'bubble' && low) {
-    GV.dome.visible = true; guardFloorAt(GV.dome.position); GV.dome.rotation.y = t * 0.3; GV.dome.scale.set(1, 0.85, 1).multiplyScalar(1 + G.flash * 0.15);
-    GV.dome.material.color.copy(col); GV.dome.material.opacity = 0.55 + G.flash * 0.45;
-    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
-  } else if (G.up === 'bubble') {
-    if (!G.tipB) { G.tipB = true; say('¡Burbuja! Te protege mientras aguantes la postura', '#3cf0c6', 2.0); }
-    GV.bubble.visible = true; GV.bubble.position.copy(head.p); GV.bubble.rotation.y = t * 0.4; GV.bubble.scale.setScalar(1 + G.flash * 0.25 + Math.sin(t * 5) * 0.015);
-    GV.bubble.material.color.copy(col); GV.bubble.material.opacity = 0.22 + G.flash * 0.5;
-  } else if (G.up) {
-    const big = G.up === 'guard' || G.up === 'up', m = big ? GV.big : GV.shield[G.side || 'right'];
-    m.visible = true; guardShieldPose(m, G, dt); m.scale.setScalar((big ? 1.35 : G.up === 'curl' ? 0.85 : 1) * (1 + G.flash * 0.2) * smooth(Math.min(1, G.upT / 0.12 + 0.3)));
+  } else { G.up = null; G.side = null; G.upT = 0; }
+  // el escudo en el antebrazo (blanco un instante al parar un golpe)
+  guardHide(); const low = guardLow();
+  if (G.up) {
+    const m = GV.shield[G.side || 'right'];
+    m.visible = true; guardShieldPose(m, G, dt); m.scale.setScalar((1 + G.flash * 0.2) * smooth(Math.min(1, G.upT / 0.12 + 0.3)));
     const u = m.userData.u, lowE = clamp(G.en * 2.5, 0, 1); u.uT.value = t; u.uFlash.value = G.flash;
     u.uA.value = (0.35 + 0.65 * lowE) * (lowE < 1 && Math.sin(t * 25) > 0.3 ? 0.55 : 1); // (con poca energía, más tenue y parpadeando)
   } else GV.qOk = false;
@@ -11644,42 +11686,37 @@ function guardStep(dt, t) {
     w.material.color.setRGB(1, 0.75 - 0.6 * k, 0.2 - 0.15 * k); w.material.opacity = 0.3 + 0.45 * k;
     const s = sz * (0.8 + 0.25 * Math.sin(t * (18 + 20 * k))); w.scale.set(s, s, 1);
   }
-  updateGuardWaves(dt);
   // en el marcador, cuando cambia lo bastante
   const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
-const _gdC = new THREE.Color();
 // Dónde va el escudo: delante del antebrazo, entre él y el enemigo que ataca (o, si no, hacia delante), con su eje largo a
-// lo largo del antebrazo (con las manos juntas o sin saber hacia dónde va el brazo, de pie); se gira con suavidad
+// lo largo del antebrazo (sin saber hacia dónde va el brazo, de pie); se gira con suavidad
 const _shX = new V3(), _shY = new V3(), _shZ = new V3(), _shM = new THREE.Matrix4(), _shQ = new THREE.Quaternion(), _shE = new V3();
 function guardShieldPose(m, G, dt) {
   // hacia dónde mirar: al que está preparando el golpe más cerca (si no, al más cercano; si no, al frente)
   let best = null, bd = 1e9;
   for (const e of enemies) { if (!e.alive) continue; const k = guardThreat(e), c = e.center(_shE), d = c.distanceTo(head.p) - (k >= 0 ? 10 : 0); if (d < bd) { bd = d; best = c.clone(); } }
-  if (G.up === 'up') _shZ.set(0, 1, 0); else if (best) { _shZ.subVectors(best, G.pos); _shZ.y *= 0.5; if (_shZ.lengthSq() < 1e-4) _shZ.copy(_gdF); _shZ.normalize(); } else _shZ.copy(_gdF);
+  if (best) { _shZ.subVectors(best, G.pos); _shZ.y *= 0.5; if (_shZ.lengthSq() < 1e-4) _shZ.copy(_gdF); _shZ.normalize(); } else _shZ.copy(_gdF);
   // el antebrazo: de la muñeca hacia el codo (el +Z de la muñeca, en las manos y en los mandos)
   const h = G.side ? hands[G.side] : null, arm = _shY.set(0, 0, 0);
-  if (h && h.ok && G.up !== 'guard') arm.set(0, 0, 1).applyQuaternion(h.wristQ);
+  if (h && h.ok) arm.set(0, 0, 1).applyQuaternion(h.wristQ);
   arm.addScaledVector(_shZ, -arm.dot(_shZ)); // (en el plano del escudo)
-  if (arm.lengthSq() < 0.09) { arm.set(0, 1, 0).addScaledVector(_shZ, -_shZ.y); if (G.up === 'up') arm.copy(_gdF); } // (si no, de pie)
+  if (arm.lengthSq() < 0.09) arm.set(0, 1, 0).addScaledVector(_shZ, -_shZ.y); // (si no, de pie)
   arm.normalize(); _shX.crossVectors(arm, _shZ).normalize(); arm.crossVectors(_shZ, _shX);
   _shQ.setFromRotationMatrix(_shM.makeBasis(_shX, arm, _shZ));
   if (!GV.qOk) { GV.q.copy(_shQ); GV.qOk = true; } else GV.q.slerp(_shQ, Math.min(1, dt * 14));
   m.quaternion.copy(GV.q);
   // sitio: el centro del antebrazo y, desde ahí, unos centímetros hacia el enemigo
   m.position.copy(G.pos);
-  if (h && h.ok && G.up !== 'guard' && G.up !== 'up') m.position.copy(h.wrist).addScaledVector(_shE.set(0, 0, 1).applyQuaternion(h.wristQ), 0.11);
-  m.position.addScaledVector(_shZ, G.up === 'up' ? 0 : 0.09);
+  if (h && h.ok) m.position.copy(h.wrist).addScaledVector(_shE.set(0, 0, 1).applyQuaternion(h.wristQ), 0.11);
+  m.position.addScaledVector(_shZ, 0.09);
 }
 
 // Cómo defenderse en este ejercicio (sale la primera vez que un enemigo prepara un golpe)
 function guardTip() {
   if (!gestureOn()) return G_TIPTECH;
   if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
-  const f = guardFam();
-  if (f === 'fist') return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
-  if (f === 'weights') return settings.exercise === 'fraise' ? '¡Te va a golpear! Sube la pesa al frente y aguántala: escudo' : '¡Te va a golpear! Junta las manos delante de la cara: guardia';
-  return '¡Te va a golpear! Quédate quieto en la postura: burbuja · o aparta la cabeza';
+  return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
 }
 const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escudo';
 
@@ -11688,19 +11725,13 @@ const G_TIPTECH = '¡Te va a golpear! Las repeticiones perfectas llenan el escud
 function guardAbsorb(src) {
   if (!guardOn() || !src || !(src.rock || src.type === 'robot' || src.type === 'spider' || src.type === 'flyer') || !['play', 'rest'].includes(state)) return false;
   const G = GUARD, D = gDiff();
-  // con gesto: subida durante la preparación, parada (rebota y queda aturdido); mantenida desde antes, bloqueo. Los
-  // brazos arriba del press solo paran a los que vienen volando
-  if (G.up && (G.up !== 'up' || src.type === 'flyer' || src.rock)) {
-    const parry = G.upT <= D.win, sh = G.up === 'guard' || G.up === 'up' ? GV.big : GV.shield[G.side || 'right'], p = G.up === 'bubble' ? guardPoint(src, new V3()) : sh.visible ? sh.position.clone() : G.pos.clone(); // (el destello, en el escudo)
+  // con gesto: subida durante la preparación, parada (rebota y queda aturdido); mantenida desde antes, bloqueo
+  if (G.up) {
+    const parry = G.upT <= D.win, sh = GV.shield[G.side || 'right'], p = sh.visible ? sh.position.clone() : G.pos.clone(); // (el destello, en el escudo)
     G.en = Math.max(0, G.en - (parry ? D.parry : D.block)); if (G.en <= 0) G.broke = true;
     guardHitFx(p, parry, G.side); guardRepel(src, parry ? 0.6 : 0.3, parry ? D.stun : 0);
     if (parry) stats.parries = (stats.parries || 0) + 1; else stats.blocks = (stats.blocks || 0) + 1;
-    say(parry ? '¡PARADA! Contraataca' : G.up === 'bubble' ? '¡La burbuja aguanta!' : '¡Bloqueado!', parry ? '#3cf0c6' : '#ffffff', 1.1);
-    return true;
-  }
-  // esquiva: con las manos ocupadas, apartar la cabeza de golpe justo antes
-  if (gestureOn() && guardFam() === 'busy' && guardDodged(src, D)) {
-    stats.dodges = (stats.dodges || 0) + 1; SND.whoosh(head.p); say('¡Esquivada!', '#3cf0c6', 1.0); score += 50; boardDirty = true;
+    say(parry ? '¡PARADA! Contraataca' : '¡Bloqueado!', parry ? '#3cf0c6' : '#ffffff', 1.1);
     return true;
   }
   // el escudo por técnica: para el golpe solo y aparta al enemigo
@@ -11725,60 +11756,24 @@ function guardRepel(e, dist, stun) {
   else if (e.type === 'spider') { e.bounce = dist * 0.35; e.parryT = stun; }
   else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1)); e.parryT = stun; }
 }
-function guardDodged(src, D) {
-  const H = GUARD.hist; if (H.length < 3 || !src.center) return false;
-  const now = H[H.length - 1]; let old = null; for (const h of H) if (now.t - h.t <= 0.55) { old = h; break; }
-  if (!old || old === now) return false;
-  const c = src.center(_gdQ), dx = c.x - head.p.x, dz = c.z - head.p.z, l = Math.hypot(dx, dz) || 1;
-  const mx = head.p.x - old.x, mz = head.p.z - old.z, lat = Math.abs((mx * dz - mz * dx) / l), down = old.y - head.p.y;
-  return lat > D.dodge || (src.type === 'flyer' && down > D.dodge * 1.2); // a los voladores, también agachando la cabeza
-}
 function guardHitFx(p, parry, side) {
   SND.swordBlock(p, false); fx.sparks(p, parry ? 30 : 16, [1, 0.85, 0.4], 3, 0.04); fx.glow(p, [1, 1, 1], parry ? 0.8 : 0.5, 0.12); comicHit(p);
   if (side) { haptic(side, 1, 80); haptic(side === 'left' ? 'right' : 'left', 0.35, 40); } else hapticBoth(parry ? 0.7 : 0.4, 60);
   GUARD.flash = 1; score += parry ? 150 : 50; boardDirty = true;
 }
 function guardBreakFx() {
-  const p = GUARD.up === 'bubble' ? head.p.clone().addScaledVector(fwd(), 0.3) : GUARD.pos.clone();
+  const p = GUARD.pos.clone();
   fx.sparks(p, 10, [0.25, 0.95, 0.8], 1.6, 0.03); SND.pop(p, false);
 }
 
 /* ---------- Con cada repetición ---------- */
-// Carga el escudo por técnica (las perfectas, mucho; las rachas, un extra) y recarga la energía de la guardia; con las
-// manos ocupadas, la perfecta o profunda suelta la onda; en el swing, la kettlebell aparta a los que tienes delante
+// Carga el escudo por técnica (las perfectas, mucho; las rachas, un extra) y recarga la energía de la guardia
 function guardOnRep(opts) {
   if (!guardOn()) return;
   const G = GUARD, D = gDiff(), was = G.charge;
   G.charge = Math.min(1, G.charge + (opts.perfect ? D.perf : D.rep) + (combo > 0 && combo % 5 === 0 ? D.streak : 0));
   if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); say('¡ESCUDO LISTO! Parará el siguiente golpe', '#3cf0c6', 1.4); }
   G.en = Math.min(1, G.en + (opts.perfect ? D.enP : D.en)); if (G.broke && G.en >= 0.3) G.broke = false;
-  if (!gestureOn()) return;
-  if (settings.exercise === 'swing') guardWave(true);
-  else if (guardFam() === 'busy' && (opts.perfect || (opts.pow || 1) >= 2)) guardWave(false);
-}
-// Onda expansiva: aparta a los que están cerca (y les quita el golpe que preparaban); front: solo los de delante
-function guardWave(front) {
-  if (GUARD.waveCD > 0) return;
-  _gdF.copy(fwdH()); let any = false;
-  for (const e of enemies) {
-    if (!e.alive) continue;
-    const c = e.center(_gdQ), dx = c.x - head.p.x, dz = c.z - head.p.z, d = Math.hypot(dx, dz) || 1e-3;
-    const R = e.type === 'robot' ? 1.8 * Math.max(1, e.sc) : e.type === 'spider' ? 0.75 : isTiny() ? 0.6 : 1.4;
-    if (d > R || (front && (dx * _gdF.x + dz * _gdF.z) / d < 0.3)) continue;
-    any = true;
-    if (e.type === 'robot') e.shove(0.55 * (e.K.boss ? 0.4 : 1));
-    else if (e.type === 'spider') { e.shove(0.15); if (e.mode === 'rear' && !e.boss) { e.mode = 'run'; e.st = 0; e.run = false; e.runT = 0.5; } }
-    else if (e.type === 'flyer') { e.shove(0.6 * (isTiny() ? 0.42 : 1)); if (e.windT > 0 && e.windT < 0.45) { e.windT = 0; e.retreat = Math.max(e.retreat, 0.6); } }
-  }
-  if (!any) return;
-  GUARD.waveCD = 1.2; stats.waves = (stats.waves || 0) + 1; SND.whoosh(head.p);
-  let w = GV.waves.find(o => !o.m.visible);
-  if (!w) { const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48), new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 20; scene.add(m); w = { m, t: 0 }; GV.waves.push(w); }
-  w.t = 0; w.m.visible = true; w.m.position.set(head.p.x, Math.max(0.03, head.p.y - (isFloor() || head.p.y < 1.0 ? 0.25 : 1.1)), head.p.z); w.m.scale.setScalar(0.2);
-  say(front ? '¡Apartados!' : '¡Onda expansiva!', '#3cf0c6', 0.9, false);
-}
-function updateGuardWaves(dt) {
-  for (const w of GV.waves) if (w.m.visible) { w.t += dt; const k = w.t / 0.4; w.m.scale.setScalar(0.2 + k * 1.6); w.m.material.opacity = 0.6 * (1 - k); if (k >= 1) w.m.visible = false; }
 }
 
 /* ---------- En el marcador ---------- */
@@ -12027,8 +12022,8 @@ function previewInput(dt) {
     const h = hands[s], up = PV.keys[key]; h.ok = true; h.isHand = false; h.wristQ.copy(camera.quaternion);
     h.wrist.copy(camera.position).addScaledVector(r, sg * (up ? 0.45 : 0.22)).addScaledVector(f, up ? 0.15 : 0.05); h.wrist.y = up ? camera.position.y : 0.08;
   }
-  // B: guardia (el puño izquierdo cerrado delante del pecho; con pesas, las dos manos juntas delante de la cara)
-  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of holdsWeights() ? [['left', -1], ['right', 1]] : [['left', -1]]) {
+  // B: guardia (el puño izquierdo cerrado delante del pecho)
+  if ((PV.keys.KeyB || PV.guard) && GAME_STATES.includes(state)) for (const [s, sg] of [['left', -1]]) {
     const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(camera.position).addScaledVector(f, 0.3).addScaledVector(r, sg * 0.06); h.wrist.y -= 0.25;
     for (const j of [9, 14, 19, 24]) { const J = h.J[j]; J.ok = true; J.p.copy(h.wrist).addScaledVector(f, 0.05); }
   }

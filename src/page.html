@@ -196,6 +196,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .splist label span{white-space:normal;overflow-wrap:anywhere}
 .splist .sptracks{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 12px;max-height:340px;overflow:auto;padding:6px 2px}
 .splist .sptracks label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.sptrk{display:flex;gap:4px;align-items:flex-start}
+.sptrk label{flex:1;min-width:0}
+.spfav{flex:none;width:24px;height:24px;margin-top:-2px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);opacity:.45;font-size:16px;line-height:24px;cursor:pointer}
+.spfav:hover{opacity:.9}
+.spfav.on{color:var(--gold);opacity:1}
+.spfav:focus-visible{outline:2px solid var(--gold);opacity:1}
 .splist .sptracks small,.sesmusic .tracks small{opacity:.7}
 .spin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0}
 .spin b{overflow-wrap:anywhere}
@@ -225,7 +231,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .ib.on{border-color:var(--teal);color:var(--teal)}
 .sesrow .ib:disabled{opacity:.35;cursor:default}
 .sesrow .ib .badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--teal);color:#0d0a1c;font-size:10px;font-weight:700;line-height:16px;text-align:center}
-.sesex{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
+.sesopts{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:14px}
+.sesopts .spfield{flex:1 1 220px;margin-bottom:6px}
+.sesopts .hint{font-size:.8rem;color:var(--muted)}
+.sesrank .lp.rk{display:inline-flex;align-items:center;gap:6px}
+.sesrank .lp svg{width:22px;height:22px;flex:none}
+.sesex,.sesrank{margin:-4px 0 4px 26px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
 .sesn{font-family:var(--display);color:var(--teal);min-width:1.2em;text-align:left}
 .sesgrip{display:inline-flex;align-items:center;gap:1px;align-self:stretch;margin:-7px 0 -7px -8px;padding:0 2px 0 4px;border:0;border-radius:12px 0 0 12px;background:none;color:var(--muted);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .sesgrip svg{width:18px;height:18px}
@@ -431,7 +442,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
@@ -464,18 +475,21 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
-    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras.</p>
+    <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras. Con los galones de cada bloque le pones un rango solo para él (puedes ser sargento en sentadillas y recluta en dominadas); sin elegir, juega con el tuyo.</p>
     <div class="seslist" id="sesList"></div>
     <div class="actions">
       <button class="btn alt small" id="btnSesAdd">Añadir bloque</button>
       <button class="btn small" id="btnSesExample">Cargar ejemplo</button>
       <button class="btn small" id="btnSesClear">Vaciar</button>
     </div>
-    <div class="spfield" style="margin-top:14px"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+    <div class="sesopts">
+      <div class="spfield"><label for="sesRest">Descanso entre bloques (segundos)</label><input id="sesRest" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+      <div class="spfield"><label for="sesRounds">Vueltas a la sesión</label><input id="sesRounds" type="number" min="1" max="20" step="1" inputmode="numeric" aria-describedby="sesRoundsHint"><small id="sesRoundsHint" class="hint">Al acabar el último bloque, tras el descanso, vuelve a empezar (1 = una sola vez)</small></div>
+    </div>
     <p class="estimate" id="sesSummary"></p>
     <div class="profiles">
       <h3>Sesiones guardadas</h3>
-      <p class="note">Guarda la sesión de ahora (sus bloques con su perfil, sus ajustes propios y su música, y el descanso) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
+      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, su perfil, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
       <div class="profsave"><input id="sessName" type="text" maxlength="40" placeholder="Nombre de la sesión" aria-label="Nombre de la sesión"><button class="btn small alt" id="btnSessSave">Guardar sesión</button></div>
       <p class="status" id="sessStatus" aria-live="polite"></p>
       <div class="proflist" id="sessSaved"></div>
@@ -511,7 +525,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <div id="stage" hidden>
   <div class="cross" id="cross" hidden></div>
   <div class="pbar">
-    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>B</kbd> guardia (puño delante del pecho; con pesas, las dos manos juntas) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
+    <span><kbd>Espacio</kbd> mantener = bajar (sentadilla/flexión), subir (barras) o curl · <kbd>F</kbd> soltarte de la barra · <kbd>H</kbd> manos arriba (colocar la barra) · <kbd>Q</kbd> <kbd>E</kbd> brazo izquierdo/derecho (plancha) · <kbd>R</kbd> encoger brazos (superman) · <kbd>B</kbd> guardia (puño delante del pecho, en sentadillas y zancadas) · <kbd>T</kbd> gatillo (pistolas) · <kbd>G</kbd> mano al diamante (Toques; Espacio lleva la cabeza a la ameba) · <kbd>P</kbd> perfecta · <kbd>X</kbd> a medias · <kbd>Esc</kbd> menú · arrastra para mirar · <kbd>W A S D</kbd> moverte · clic en los botones</span>
     <button class="btn" id="btnExitPreview">Salir de la prueba</button>
   </div>
 </div>
