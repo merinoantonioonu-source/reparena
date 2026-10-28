@@ -194,7 +194,8 @@ let boardDirty = true;
 const layoutHooks = []; // lo que se recoloca con la arena (el bosque de día)
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
-function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'gate') : settings.board; }
+function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'left') : settings.board; }
+const boardSideS = () => boardMode() === 'left' ? -1 : boardMode() === 'right' ? 1 : 0; // (a qué lado va el marcador, si va a un lado)
 function layoutArena() {
   const D = arenaDepth(), push = isTiny(), low = isFloor() || settings.exercise === 'inchworm', gs = gateScale(), arcs = settings.mode === 'arcs';
   const sp = Math.max(3.6 * gs, D * 0.42);
@@ -233,7 +234,8 @@ function layoutArena() {
     board.mesh.position.set(0, 0.075, 0); board.mesh.rotation.set(-tilt, 0, 0); board.mesh.scale.setScalar(0.7);
   } else if (forestOn()) {
     // en el bosque, un cartel de madera clavado en dos postes, a un lado
-    rig.position.set(-1.35, 0, -2.3); rig.rotation.y = Math.atan2(1.35, 2.3);
+    const bs = boardSideS(), big = bs ? 1.7 : 1, bx = (bs || -1) * 1.35 * (bs ? 1.6 : 1), bz = -2.3 * (bs ? 1.45 : 1); // (a un lado: más grande, el doble a la vista)
+    rig.position.set(bx, 0, bz); rig.rotation.y = Math.atan2(-bx, -bz); rig.scale.setScalar(big);
     for (const s of [-1, 1]) k.add('bark', G.cyl(0.05, 0.06, 2.35, 8), C_DEAD, s * 0.55, 1.17, -0.06);
     for (let i = 0; i < 3; i++) k.add('bark', G.box(1.22, 0.19, 0.04), C_DEAD, 0, 1.71 + i * 0.19, -0.04, 0, 0, (i - 1) * 0.02);
     rig.add(k.build({ bark: M.bark }, { cast: true }));
@@ -242,6 +244,17 @@ function layoutArena() {
     // remo: tumbado mirando al techo; placeRowBoard lo pone encima de tu cara al colgarte
     rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
     board.mesh.position.set(0, 0, 0); board.mesh.rotation.set(0, 0, 0); board.mesh.scale.setScalar(0.9);
+  } else if (boardSideS()) {
+    // a un lado: por delante (a unos 47° y 4 m), el doble de grande a la vista que sobre las compuertas, girado hacia ti y
+    // algo inclinado; justo por fuera de la compuerta de ese lado (no tapa lo que sale de ella) y siempre a la vista
+    const s = boardSideS(), R = 4.0, W = 2.6, H = W * 0.445, yc = 2.05, edge = Math.atan((sp + 1.3 * gs) / D), a = clamp(edge + Math.atan(W / 2 / R) + 0.03, 0.82, 1.15);
+    const cx = s * R * Math.sin(a), cz = -R * Math.cos(a);
+    rig.position.set(cx, 0, cz); rig.rotation.y = Math.atan2(-cx, -cz);
+    for (const p of [-1, 1]) k.add('steel', G.box(0.14, yc + H / 2, 0.14), C.dark, p * (W / 2 + 0.14), (yc + H / 2) / 2, -0.12);
+    const tilt = Math.atan((yc - 1.6) / R) * 0.8;
+    k.add('steel', G.box(W + 0.18, H + 0.18, 0.1), C.gun, 0, yc, -0.07, tilt, 0, 0);
+    rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
+    board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else if (boardMode() === 'gate') {
     // por encima de la baliza de la compuerta (hasta 4,3 m): desde los ojos, también en cuclillas, no la tapa nada
     const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.75 * gs + H / 2;

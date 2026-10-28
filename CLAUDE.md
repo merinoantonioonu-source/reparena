@@ -73,7 +73,9 @@ No las cambies sin preguntarle.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 - Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**.
-- Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos.
+- Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
+  mientras se ve, no sale nada (ni enemigos ni orbes).
+- Arcos: el arco de plancha llega más despacio (velocidad propia), con un aviso grande delante y sin que lo adelante nada.
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.
@@ -84,13 +86,16 @@ No las cambies sin preguntarle.
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
+  - Por defecto (VR), a un lado (izquierda o derecha, configurable), el doble de grande y siempre a la vista, por fuera de
+    las compuertas.
   - Diseño elegido (C): rosco doble (fuera, la oleada con la muesca del récord; dentro, la racha en 10 tramos), oleadas en
     puntos, un solo hueco para mensajes a 48 px o más. En el relámpago, el borde es una mecha. Nada de cargas ni escudo en
     el marcador: se ven en el juego (bola en la mano, celdas del bláster, brazalete del escudo en el antebrazo).
 - Las celebraciones (`cheer`) van solo al marcador; delante de la cara, solo lo que pide hacer algo ya o colocarse.
 - Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura) **nunca se ladean
   con la cabeza**: siempre derechos de pie y colgado.
-  - Pendiente de decidir con el usuario: cómo orientarlos tumbado y en plancha, mirando al suelo o al techo.
+  - Tumbado y en plancha: en el suelo bajo la cara o en el techo, de cara a los ojos, con lo de arriba del texto hacia la
+    cabeza y fijos (ladearla no los gira). Igual para todos los avisos de la vista.
 - Los avisos de lo que se hace mal salen grandes, impresos en el suelo, durante unos 4 s.
 - Al perder todas las vidas: fundido en negro, aviso claro de derrota y resumen automático con «Otra ronda» y «Menú
   principal».

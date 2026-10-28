@@ -1035,7 +1035,7 @@ class Arc {
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.maxUp = -1; this.fast = false;
     this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
-    Object.assign(this, { speed: arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
     if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
@@ -1047,7 +1047,8 @@ class Arc {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
     if (this.spin) { const tau = Math.max(0, this.tReach - this.t); this.tilt = this.tiltEnd + this.spin * tau * Math.min(1, tau / 1.2); this.o.bar.rotation.z = this.tilt; }
     const appear = Math.min(1, this.t / 0.4); this.o.grp.scale.set(appear, 1, 1);
-    this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); }
+    this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); if (this.o.ends) for (const e of this.o.ends) e.scale.setScalar(rand(0.22, 0.38)); }
+    if (this.o.ends && Math.random() < dt * 6 && Math.abs(this.z - HL.z) < 6) { const e = this.o.ends[Math.random() < 0.5 ? 0 : 1]; fx.sparks(e.getWorldPosition(tmpB), 3, [1, 0.6, 0.3], 1.2, 0.02); } // (chispas en los extremos de la barra)
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
@@ -1081,7 +1082,7 @@ class Arc {
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false);
     if (perfect) SND.perfect();
   }
-  dispose() { arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
+  dispose() { arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); if (this.o.ends) this.o.ends.forEach(e => e.material.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
 }
 
 /* =================== DISPAROS =================== */
@@ -1957,8 +1958,12 @@ function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
+    ARX.minNext = 0;
     if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
-    else if (spec.kind === 'plank') { arcs.push(new Arc(0, 0, false, 0, false, 0, true)); say('¡Arco de plancha! Manos al suelo, pies atrás', '#ffd166', 2.4); }
+    else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
+      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 2.5;
+      bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
+    }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
     else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
@@ -2463,6 +2468,23 @@ function waveIntro(i) {
   P.tex.needsUpdate = true; WIN.t = 0;
   hudLocal(_wiP.set(0, 0.02, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ()); // (donde salen los avisos, delante de ti)
 }
+// Un aviso grande delante de ti, algo por encima de la vista (no tapa lo que llega por la pista): lo que exige mucho más
+// que lo normal y hay que preparar ya (el arco de plancha)
+const BIGN = { t: -1, dur: 2.8 };
+BIGN.p = makePanel(1.2, 0.5, 1024, { depthTest: false }); BIGN.p.mesh.renderOrder = RO.menu - 1; BIGN.p.mesh.visible = false; scene.add(BIGN.p.mesh);
+function bigNotice(t1, t2, col) {
+  const P = BIGN.p, c = P.ctx, W = P.W, H = P.H; c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
+  rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,10,28,0.85)'; c.fill(); c.lineWidth = 8; c.strokeStyle = col; c.stroke();
+  fitFont(c, t1, W - 70, 110, '%px ' + FD); c.save(); c.shadowColor = col; c.shadowBlur = 30; c.fillStyle = col; c.fillText(t1, W / 2, H * 0.38); c.restore();
+  fitFont(c, t2, W - 80, 64, '600 %px ' + FB); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.74);
+  P.tex.needsUpdate = true; BIGN.t = 0; hudLocal(_wiP.set(0, 0.32, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ());
+}
+function updateBigNotice(dt) {
+  if (BIGN.t < 0) return; if (!GAME_STATES.includes(state) || state === 'paused') { BIGN.t = -1; BIGN.p.mesh.visible = false; return; }
+  BIGN.t += dt; const t = BIGN.t, a = t < 0.25 ? t / 0.25 : Math.max(0, Math.min(1, (BIGN.dur - t) / 0.5)), m = BIGN.p.mesh;
+  m.material.opacity = a; m.visible = a > 0.01; m.scale.setScalar(1 + 0.06 * Math.sin(t * 12) * Math.max(0, 1 - t / 1.2)); // (late al salir)
+  if (t >= BIGN.dur) { BIGN.t = -1; m.visible = false; }
+}
 function waveIntroClear() { WIN.t = -1; WIN.veil.visible = false; WIN.p.mesh.visible = false; }
 function updateWaveIntro(dt) {
   if (WIN.t < 0) return;
@@ -2545,7 +2567,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt * perkSpawnK();
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap)) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse

@@ -344,18 +344,15 @@ const arcLineMat = new THREE.LineBasicMaterial({ color: 0xffd0c8, transparent: t
 function arcFrame(H) {
   const key = H.toFixed(2); if (ARC_FRAMES[key]) return ARC_FRAMES[key].clone();
   const k = new Kit();
+  // un marco fino y limpio: dos postes delgados con una línea de luz por dentro, un pie pequeño y un dintel fino (sin las
+  // franjas de peligro: lo que avisa es la barra)
   for (const s of [-1, 1]) {
-    k.add('steel', G.box(0.24, H, 0.34), C.dark, s * 1.13, H / 2, 0);
-    k.add('steel', G.box(0.5, 0.1, 0.62), C.gun, s * 1.13, 0.05, 0);
-    k.add('steel', G.box(0.3, 0.06, 0.4), C.gun, s * 1.13, H * 0.33, 0);
-    k.add('steel', G.box(0.3, 0.06, 0.4), C.gun, s * 1.13, H * 0.66, 0);
-    for (let i = 0; i < 5; i++) k.add('paint', G.box(0.25, 0.12, 0.35), i % 2 ? C.black : C.hazard, s * 1.13, 0.2 + i * 0.12, 0);
-    k.add('glow', G.box(0.02, H - 0.25, 0.04), C.red, s * 1.0, H / 2, 0);
-    k.add('steel', G.cyl(0.03, 0.03, H - 0.2, 8), C.chrome, s * 1.28, H / 2, 0.12);
+    k.add('steel', G.box(0.1, H, 0.14), C.dark, s * 1.1, H / 2, 0);
+    k.add('steel', G.box(0.26, 0.05, 0.3), C.gun, s * 1.1, 0.025, 0);
+    k.add('glow', G.box(0.012, H - 0.2, 0.03), C.red, s * 1.045, H / 2, 0);
   }
-  k.add('steel', G.box(2.5, 0.22, 0.38), C.dark, 0, H + 0.05, 0);
-  k.add('paint', G.box(2.3, 0.1, 0.4), C.hazard, 0, H - 0.1, 0);
-  for (let i = 0; i < 3; i++) k.add('glow', G.sph(0.04, 8, 6), C.red, (i - 1) * 0.6, H + 0.18, 0.1);
+  k.add('steel', G.box(2.32, 0.08, 0.14), C.dark, 0, H + 0.04, 0);
+  k.add('glow', G.box(2.1, 0.012, 0.03), C.red, 0, H - 0.005, 0);
   const g = k.build({ steel: M.steel, paint: M.paint, glow: M.glow }, { cast: true, receive: true });
   ARC_FRAMES[key] = g; return g.clone();
 }
@@ -403,7 +400,8 @@ function makeArcObj(barY, H, tilt = 0, low = false) {
   const grp = new THREE.Group(); grp.add(arcFrame(H));
   const bar = new THREE.Group(); bar.position.y = barY; bar.rotation.z = tilt; grp.add(bar);
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb0a0, toneMapped: false });
-  const core = new THREE.Mesh(G.cylRaw(0.016, 0.016, 2.0, 8), coreMat); core.rotation.z = Math.PI / 2; bar.add(core);
+  const core = new THREE.Mesh(G.cylRaw(0.02, 0.02, 2.0, 8), coreMat); core.rotation.z = Math.PI / 2; bar.add(core);
+  const ends = [-1, 1].map(s => { const e = glowSprite(0xffc8a0, 0.3, 0.9); e.position.x = s * 0.99; bar.add(e); return e; }); // (chisporrotean en los extremos)
   const glowMat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0xff2a14, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
   for (let i = 0; i < 3; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 0.26), glowMat); p.rotation.x = i * Math.PI / 3; bar.add(p); }
   for (const s of [-1, 1]) { const e = new THREE.Mesh(G.box(0.1, 0.12, 0.2), M.steel); tint(e.geometry, C.gun); e.position.x = s * 0.98; bar.add(e); }
@@ -416,7 +414,7 @@ function makeArcObj(barY, H, tilt = 0, low = false) {
     for (let i = 0; i < p.count; i++) if (p.getY(i) < 0) p.setY(i, Math.min(ch / 2 - 0.02, p.getY(i) + Math.tan(tilt) * p.getX(i)));
     p.needsUpdate = true;
   }
-  return { grp, bar, coreMat, glowMat, curtainMat, curtain, lines };
+  return { grp, bar, coreMat, glowMat, curtainMat, curtain, lines, ends };
 }
 function zapLines(lines) {
   for (const l of lines) {
