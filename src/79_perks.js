@@ -31,16 +31,19 @@ function perkWaveCleared() {
 const perkPool = () => Object.keys(PERKS).filter(k => !PK.has.has(k) && (!PERKS[k].ok || PERKS[k].ok()));
 function perkMenu() {
   if (!PK.offer) return;
-  const rows = [{ t: 'title', text: 'ELIGE UNA MEJORA', color: '#ffd166' }, { t: 'text', text: 'Dura lo que queda de ronda. Si no eliges, te toca una al azar', color: '#a49fc8' }];
+  const rows = [{ t: 'title', text: 'ELIGE UNA MEJORA', color: '#ffd166' }, { t: 'text', text: 'Dura lo que queda de ronda. La oleada siguiente espera a que elijas', color: '#a49fc8' }];
   for (const k of PK.offer) rows.push({ t: 'btns', items: [{ label: PERKS[k].name, accent: PERKS[k].col, onPress: () => perkTake(k) }], h: 0.075 }, { t: 'text', text: PERKS[k].desc });
   const m = openMenu(rows, { accent: '#ffd166' }); m.perks = true; m.rebuild = perkMenu;
 }
 function perkTake(k, random) {
   PK.has.add(k); PK.offer = null; if (menu && menu.perks) hideMenu();
+  if (state === 'rest' && !random) stateT = Math.min(stateT, Math.max(0, settings.rest - 3)); // (elegida tarde: 3 s para prepararte)
   if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1;
   cheer(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
 }
-// Se acaba el descanso: la que no elegiste, al azar; el cofre se va
+// Con cartas por elegir, la oleada siguiente no empieza (no hay que elegir con prisas)
+const perkWaits = () => state === 'rest' && perksOn() && (!!PK.offer || PK.offerT > 0);
+// Se acaba el descanso (o se corta): la que no elegiste, al azar; el cofre se va
 function perkRestEnd() {
   PK.offerT = -1;
   if (PK.offer) perkTake(pick(PK.offer), true);
@@ -234,5 +237,7 @@ function perkStep(dt, t) {
   if (state === 'paused') return;
   for (const e of enemies) if (e.frostT > 0) { e.frostT -= dt; if (Math.random() < dt * 6) fx.glow(e.center(tmpA), [0.6, 0.9, 1], isTiny() ? 0.12 : 0.4, 0.2); }
   if (PK.offerT > 0 && state === 'rest') { PK.offerT -= dt; if (PK.offerT <= 0) { const pool = perkPool(); if (pool.length) { PK.offer = pool.sort(() => Math.random() - 0.5).slice(0, 3); perkMenu(); } } }
+  // si se cierra o se va el panel de las cartas sin elegir, vuelve a salir al rato (la oleada siguiente lo espera)
+  if (PK.offer && state === 'rest') { if (menu && menu.perks && !menu.closed) PK.reT = 0; else if ((PK.reT = (PK.reT || 0) + dt) > 2) { PK.reT = 0; perkMenu(); if (stateT >= settings.rest) say('Elige una mejora para seguir', '#ffd166', 1.6); } }
   ghostStep(dt); goldStep(dt, t); rushStep(dt); beatLightStep(dt); chestStep(dt, t);
 }

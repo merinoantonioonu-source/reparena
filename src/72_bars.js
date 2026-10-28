@@ -160,7 +160,9 @@ void main() {
   vec3 col = film * (0.5 + 1.4 * fr) + vec3(spec);
   gl_FragColor = vec4(col, clamp(0.25 + 0.72 * fr + spec, 0.0, 1.0) * uOpacity);
 }`;
-const bubbleMat = () => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uPh: { value: rand(0, 6) }, uOpacity: { value: 1 } }, vertexShader: BUBBLE_VS, fragmentShader: BUBBLE_FS, transparent: true, depthWrite: false });
+// (escribe su profundidad: las Quest recolocan cada imagen al último movimiento de la cabeza según la profundidad, y sin
+// ella la pompa se recolocaba como si estuviera al fondo: de cerca, y con la cabeza moviéndose al remar, iba a saltos)
+const bubbleMat = () => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uPh: { value: rand(0, 6) }, uOpacity: { value: 1 } }, vertexShader: BUBBLE_VS, fragmentShader: BUBBLE_FS, transparent: true, depthWrite: true });
 // Gotas de colores al reventar
 const BUBBLE_SPLASH = [[1, 0.45, 0.85], [0.45, 0.85, 1], [1, 0.95, 0.45], [0.55, 1, 0.6]];
 // línea que baja del objetivo hacia tu cara: indica dónde está aunque quede por encima de la vista
@@ -226,7 +228,7 @@ class HeadTarget {
     if (this.bubble) {
       this.root = new THREE.Group();
       this.mat = bubbleMat();
-      this.shell = new THREE.Mesh(bubbleGeo, this.mat); this.shell.scale.setScalar(K.r); this.root.add(this.shell);
+      this.shell = new THREE.Mesh(bubbleGeo, this.mat); this.shell.scale.setScalar(K.r); this.shell.renderOrder = 2; this.root.add(this.shell); // (después de su brillo de dentro, que si no taparía)
       this.core = glowSprite(0xffffff, K.r * (K.boss ? 1.0 : 1.3), 0.25); this.root.add(this.core);
       if (K.boss) { // un ojo atrapado dentro que te sigue
         this.eye = new THREE.Group(); this.root.add(this.eye);
@@ -368,7 +370,7 @@ class HeadTarget {
     this.alive = false; const c = this.center(new V3()), big = !!this.K.boss; this.deadAt = c.clone();
     if (this.bubble) { // revienta salpicando gotas irisadas y un destello de película
       SND.pop(c, big); for (const col of BUBBLE_SPLASH) fx.droplets(c, big ? 14 : 8, col, big ? 2.4 : 1.9, big ? 0.04 : 0.032);
-      fx.glow(c, [1, 1, 1], big ? 0.9 : 0.5, 0.12); fx.glow(c, pick(BUBBLE_SPLASH), big ? 0.6 : 0.35, 0.25); fx.sparks(c, 14, [0.8, 0.9, 1], 1.4, 0.02);
+      fx.glow(c, [1, 1, 1], big ? 0.5 : 0.3, 0.1); // (solo revienta: sin chispas ni estrellas de cómic)
     }
     else if (this.K.wasp) { fx.ichor(c, big ? 30 : 20, big ? 1.8 : 1.3); fx.glow(c, [0.6, 1, 0.3], big ? 0.5 : 0.3, 0.12); SND.squish(c); rigDebris(this.inst, c, big ? 2.4 : 1.7, 0, { main: M.robotStaticWasp }); }
     else { fx.explosion(c, big ? 0.7 : 0.35, big); SND.explosion(c, big); rigDebris(this.inst, c, big ? 2.4 : 1.6, 0.5, { main: M.carbonStatic }); }

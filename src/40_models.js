@@ -483,7 +483,7 @@ function updateGloves(dt) {
     else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
     // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
     // viendo donde estaba en vez de parpadear
-    const held = h.isHand && !h.ok && h.lostT < 0.3, show = h.isHand && (h.ok || held), J = h.J;
+    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J;
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
       g.palm.visible = false;
@@ -504,6 +504,39 @@ function updateGloves(dt) {
     g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(J[0].s); g.palm.quaternion.copy(J[0].q);
     const size = J[11].ok ? J[0].s.distanceTo(J[11].s) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
   }
+}
+
+/* ---------- Mandos como manos ---------- */
+// La mano que se pinta (y con la que se juega) sale del mando: un puño de boxeo que apunta hacia donde apunta el mando, con
+// el dorso arriba y algo hacia fuera. El gatillo dobla el índice; el agarre, los otros tres y el pulgar (los dos a la vez:
+// puño cerrado). En el marco de la mano: origen en la muñeca, −Z hacia los dedos, +Y el dorso (como las articulaciones de
+// las gafas). Por dedo: x del nudillo, z del nudillo y largo de las tres falanges
+const PH_F = [[0.024, -0.085, [0.042, 0.025, 0.022]], [0.008, -0.09, [0.046, 0.028, 0.023]], [-0.008, -0.085, [0.042, 0.026, 0.022]], [-0.022, -0.077, [0.033, 0.02, 0.02]]];
+const PH_OPEN = [[0.12, 0.15, 0.1], [0.45, 0.55, 0.35]], PH_FIST = [1.45, 1.6, 1.1]; // (índice suelto: apunta; los demás, relajados)
+const _phM = new THREE.Matrix4(), _phQ = new Q4(), _phR = new Q4(), _phP = new V3(), _phD = new V3(), _phX = new V3(1, 0, 0), _phY = new V3(), _phZ = new V3(), _phB = new THREE.Matrix4(), _phO = new V3();
+function padHand(h, side, t) {
+  const ts = side === 'right' ? 1 : -1, dt = clamp(t - (h.vt || t), 0, 0.1); h.vt = t; h.virt = true;
+  const k = 1 - Math.exp(-dt * 25); h.cI = (h.cI || 0) + ((h.trig ? 1 : 0) - (h.cI || 0)) * k; h.cG = (h.cG || 0) + ((h.grip ? 1 : 0) - (h.cG || 0)) * k;
+  // del marco de la mano al del mando: el dorso, girado un poco hacia fuera; la muñeca, detrás de la palma (que envuelve el mando)
+  _phR.setFromAxisAngle(_phD.set(0, 0, 1), -ts * 0.5); _phQ.copy(h.wristQ).multiply(_phR); _phO.set(0, 0.01, 0.055);
+  const J = h.J, put = (i, p, q, r) => { const A = J[i]; A.p.copy(p).add(_phO).applyQuaternion(_phQ).add(h.wrist); A.s.copy(A.p); A.q.copy(_phQ).multiply(q); A.r = r; A.ok = true; };
+  const boneQ = (dir, out) => { _phZ.copy(dir).negate(); _phY.crossVectors(_phZ, _phX).normalize(); _phB.makeBasis(_phD.crossVectors(_phY, _phZ), _phY, _phZ); return out.setFromRotationMatrix(_phB); }; // (−Z a lo largo del hueso, dorso arriba)
+  const idQ = new Q4(), q = new Q4(); put(0, _phP.set(0, 0, 0), idQ, 0.02);
+  PH_F.forEach(([x, z, L], f) => {
+    const c = f === 0 ? h.cI : h.cG, b = 5 + f * 5, open = PH_OPEN[f === 0 ? 0 : 1], xs = -ts * x; // (el índice, del lado del pulgar)
+    put(b, _phP.set(xs * 0.5, 0, -0.025), idQ, 0.01); // metacarpo (no se pinta)
+    const p = new V3(xs, 0, z), d = new V3(0, 0, -1); let ang = 0;
+    for (let j = 0; j < 3; j++) {
+      ang += open[j] + (PH_FIST[j] - open[j]) * c; d.set(0, -Math.sin(ang), -Math.cos(ang)); // (se dobla hacia la palma)
+      put(b + 1 + j, p, boneQ(d, q), [0.0095, 0.0085, 0.0075][j]); p.addScaledVector(d, L[j]);
+    }
+    put(b + 4, p, q, 0.0065);
+  });
+  // el pulgar: suelto, hacia delante y al lado; con el agarre, cruzado sobre el índice y el corazón
+  const c = h.cG, base = new V3(-ts * 0.022, -0.012, -0.022), tips = [[-ts * 0.045, -0.022, -0.05], [-ts * 0.058, -0.022, -0.082], [-ts * 0.064, -0.018, -0.11]], fist = [[-ts * 0.04, -0.03, -0.055], [-ts * 0.03, -0.045, -0.085], [-ts * 0.006, -0.05, -0.1]];
+  put(1, base, idQ, 0.012); let prev = base.clone();
+  for (let j = 0; j < 3; j++) { const a = tips[j], b = fist[j], p = new V3(a[0], a[1], a[2]).lerp(new V3(b[0], b[1], b[2]), c); boneQ(_phD.subVectors(p, prev).normalize(), q); J[1 + j].q.copy(_phQ).multiply(q); put(2 + j, p, q, [0.0105, 0.009, 0.0075][j]); prev = p; }
+  h.tip.copy(J[9].p); // (pulsar los menús con la punta del índice que se ve)
 }
 
 /* ---------- Construcción inicial ---------- */
