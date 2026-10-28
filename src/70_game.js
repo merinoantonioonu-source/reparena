@@ -2063,7 +2063,8 @@ function foesMenu(back) {
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
 // Rangos: la dificultad. Cada modo con cada ejercicio guarda el suyo (va con sus ajustes: comboSave); elegir uno pone sus
-// valores en ese ejercicio y, si luego retocas algo a mano, se ve «retocado» y se puede volver a sus valores de serie
+// valores en ese ejercicio. Lo que cambias a mano en un rango se queda como valor de ese rango en ese ejercicio (en la
+// tabla de 67_dev, la misma que ve el desarrollador): es lo que se pone cada vez que empiezas ese ejercicio con ese rango
 const RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
@@ -2072,20 +2073,19 @@ function rankVals(r = settings.rank) { const i = rankIdx(r), o = {}; for (const 
 function applyRank() { RANK.applying = true; try { const v = rankVals(); for (const k in v) setSetting(k, v[k]); } finally { RANK.applying = false; } } // (solo en este modo y ejercicio)
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) applyRank(); });
 const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
-const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => rankDiff(settings[k], v[k])); };
-function rankReset() { applyRank(); }
+// lo que tocas tú (no lo que pone el rango, un perfil, el ejercicio al cargarse ni el bloque de una sesión), a la tabla
+settingHooks.push(k => {
+  if (RANK.applying || comboLoading || SES.active || !FIELD[k] || !devRows().includes(k)) return;
+  const i = rankIdx(), fa = (devFact().v || {})[k], base = clampSetting(FIELD[k], fa && fa[i] !== undefined && fa[i] !== null ? fa[i] : devBase(k, i));
+  devSet(k, i, rankDiff(settings[k], base) ? settings[k] : null); // (igual que el de serie: la casilla vuelve a «de serie»)
+});
+
 // Los rangos de antes eran uno para todo: el que tenías pasa a cada modo y ejercicio ya guardado (una vez)
 (function rankMigrate() {
   if (settings.rankV === 2) return;
   const all = store(COMBO_KEY) || {}; for (const id in all) if (all[id] && all[id].rank === undefined) all[id].rank = settings.rank;
   store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
 })();
-// Tus rangos en los ejercicios que has jugado (los de la vista, primero el de ahora)
-function rankList() {
-  const all = store(COMBO_KEY) || {}, cur = comboId(), out = [];
-  for (const id in all) { const [m, x] = id.split('|'); if (id === cur || !MODE_NAMES[m] || !EX_NAMES[x] || !all[id].rank) continue; out.push({ id, m, x, r: clampSetting(FIELD.rank, all[id].rank) }); }
-  return out.sort((a, b) => rankIdx(b.r) - rankIdx(a.r));
-}
 // Subir o bajar de rango: tras 3 rondas ganadas seguidas con un 70 % de perfectas o más, el resumen propone subir; tras 2
 // derrotas seguidas, bajar. Nunca cambia solo: lo decides tú con un botón. Se cuenta por modo y ejercicio
 const RANKFIT_KEY = 'reparena3-rankfit';
@@ -2096,28 +2096,6 @@ function rankFitAdd(win, pct) {
   else if (L.length >= 2 && L.slice(-2).every(r => !r.win) && i > 0) to = RANKS[i - 1][0];
   if (to) { all[id] = []; store(RANKFIT_KEY, all); } // (propuesto una vez: para la siguiente, otra racha)
   return to;
-}
-// Lo que el rango cambia en el modo elegido, en pocas palabras
-function rankSummary() {
-  const v = settings, L = [v.lives ? `${v.lives} ${v.lives === 1 ? 'vida' : 'vidas'}` : 'vidas infinitas'];
-  if (isCombat()) L.push(`llegan en ${fmtNum(v.walkTime)} s`, `${v.maxAlive} a la vez`, `vuelo a ${fmtNum(v.flySpeed)} km/h`);
-  else if (settings.mode === 'arcs') L.push(`${v.arcRate} arcos/min a ${fmtNum(v.arcSpeed)} km/h`, `espera máx. ${fmtNum(v.arcMaxGap)} s`);
-  else if (settings.mode === 'touch') L.push(`llegan en ${fmtNum(v.tchArrive)} s`, `${fmtNum(v.tchWindow)} s para tocar`);
-  else L.push(`llegan en ${fmtNum(v.barArrive)} s`, v.barWait ? `${v.barWait} s para reventar` : 'sin límite para reventar');
-  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente');
-  if (isCombat() && settings.guard !== 'off') L.push(`defensa ${({ easy: 'fácil', normal: 'normal', hard: 'difícil' })[v.guardDiff]}`);
-  return L.join(' · ');
-}
-function rankMenu(back) {
-  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), others = rankList();
-  const pickRow = list => ({ t: 'btns', h: 0.066, items: list.map(([k, lab]) => ({ label: lab, badge: rankIdx(k), style: k === cur ? 'selected' : 'normal', onPress: () => { setSetting('rank', k); again(); } })) });
-  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: `Para ${EX_NAMES[settings.exercise]} · ${MODE_NAMES[settings.mode]}: cada ejercicio guarda el suyo. Del recluta (un galón, lo más fácil) al general (tres estrellas).` },
-    pickRow(RANKS.slice(0, 4)), pickRow(RANKS.slice(4)),
-    { t: 'text', text: `${n}${touched ? ' (retocado)' : ''}: ${rankSummary()}`, color: '#ffd166' },
-    ...(touched ? [{ t: 'btns', items: [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] }] : []),
-    ...(others.length ? [{ t: 'text', text: 'En los demás: ' + others.slice(0, 6).map(o => `${EX_SHORT[o.x] || EX_NAMES[o.x]}${o.m !== 'combat' ? ` (${MODE_NAMES[o.m]})` : ''} ${rankName(o.r).toLowerCase()}`).join(' · ') + (others.length > 6 ? ' …' : ''), color: '#a49fc8' }] : []),
-    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows, { accent: '#ffd166' }); m.rebuild = again;
 }
 // Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
 const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
@@ -2146,7 +2124,6 @@ function lobbyMenu() {
     ...[0, 2].map(k => ({ t: 'btns', items: M.slice(k, k + 2).map(modeBtn) })),
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
     { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); lobbyMenu(); } })) },
-    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
     ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] }] : []),
     ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] }] : [])];
   const eyeF = (menuFull() ? [] : devEye()).filter(k => FIELD[k] && fieldVisible(FIELD[k]));
@@ -2209,10 +2186,9 @@ function settingsMenu(back, tab = settingsTab) {
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   if (tab === 'ejercicio') rows.push({ t: 'text', text: BODY_NOTE, color: '#a49fc8' });
   SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
-  // el desarrollador: menú completo o el del jugador, a un toque, y sus retoques de este rango, a la tabla
-  if (DEV.on) { const simple = !menuFull(), i = rankIdx(), own = devRows().filter(k => rankDiff(settings[k], devVal(k, i)));
-    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } },
-      ...(own.length ? [{ label: `Guardar ${own.length} retoque${own.length > 1 ? 's' : ''} en la tabla (${rankName()})`, style: 'primary', onPress: () => { own.forEach(k => devSet(k, i, settings[k])); say(`Tabla: ${own.length} valor${own.length > 1 ? 'es' : ''} de ${rankName()} guardado${own.length > 1 ? 's' : ''}`, '#ffd166', 2); settingsMenu(back, tab); } }] : [])] }); }
+  // el desarrollador: menú completo o el del jugador, a un toque (lo que cambias va solo a la tabla, en este rango)
+  if (DEV.on) { const simple = !menuFull();
+    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] }); }
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) settingsMenu(back, tab); } }] }); // (cinco toques: modo desarrollador)
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
@@ -2422,7 +2398,7 @@ function endRun(win, manual) {
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
-  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName() + (rankTouched() ? ' (retocado)' : ''),
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName(),
     sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
