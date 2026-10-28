@@ -8967,7 +8967,7 @@ class Spider {
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
     this.target = oneArm() ? new V3(Math.sign(hatch.x) * rand(0.3, 0.4), 0, rand(-0.3, 0)) : new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s)); // en la plancha atacan por el costado
-    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / dv('walkTime'));
+    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / (dv('walkTime') * (settings.exercise === 'inchworm' ? IW_SLOW : 1))); // (en el inchworm, mucho más despacio)
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
     Object.assign(this, { threatT: rand(1.2, 2.5), close: 0, rage: 0, hopFrom: new V3(), hopTo: new V3(), hopped: false, startD: Math.max(0.1, this.pos.distanceTo(this.target)) });
@@ -8983,6 +8983,11 @@ class Spider {
     this.eyeGlow = glowSprite(0xff2208, 0.05, 0); this.eyeGlow.position.set(0, 0.015, 0.05); this.B.body.add(this.eyeGlow);
   }
   center(out) { this.B.body.getWorldPosition(out); return out; }
+  // La onda del inchworm: sale despedida hacia su trampilla y vuelve a empezar desde allí
+  sendHome() {
+    if (!this.alive || this.mode === 'dying' || this.mode === 'emerge') return;
+    this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(this.home.x, 0, this.home.z); this.rear = 0; this.stunT = 0; this.parryT = 0.8; this.threatT = rand(1.5, 3);
+  }
   idealFoot(L, out) {
     const d = L.d, s = this.s, reach = (d.L * 1.1) * 0.7 * s, cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
     L.hipW.copy(d.hip); this.B.body.localToWorld(L.hipW); arena.worldToLocal(L.hipW);
@@ -9817,57 +9822,100 @@ function twistStep(t, dt) {
 // las dos últimas, en posición de flexión; las dos del medio cambian de sitio en cada repetición. De pie, te doblas y
 // caminas con las manos tocando las huellas en orden (cada mano, las suyas); en las últimas, la flexión carga y al subir
 // dispara a las arañas; luego vuelves caminando y te pones de pie, y las huellas del medio se recolocan.
+// Cada huella es un contorno; al posar la mano en ella (con margen: no hace falta acertar dentro) destella, echa chispas y
+// se rellena de color sólido: a la ida, el de su mano; a la vuelta, dorado. Al acabar la vuelta, al despegar las manos del
+// suelo, sale una onda expansiva que devuelve a los bichos a su trampilla. Como hay que caminar con las manos, los bichos
+// llegan mucho más despacio (IW_SLOW)
 // La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
 const iwReachM = () => settings.iwReach > 0 ? Math.max(0.8, settings.iwReach / 100) : clamp(calibRef * 0.8, 1.0, 1.6);
 const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
+const IW_SLOW = 2.6, IW_REACH = 0.3, IW_GOLD = new THREE.Color(0xffd166); // (los bichos, 2,6 veces más lentos; el margen de la huella, hasta 30 cm)
 const IW = { group: new THREE.Group(), prints: [], mats: [] };
 IW.group.visible = false; arena.add(IW.group);
-for (let i = 0; i < 6; i++) {
-  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, c = mkCanvas(128), x = c.getContext('2d');
+// la huella: la mano (en espejo para la izquierda) con su número; hueca (contorno) o rellena
+function iwPrintTex(side, n, filled) {
+  const c = mkCanvas(128), x = c.getContext('2d');
   x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
-  x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); x.fill(); // palma
-  for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.beginPath(); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.fill(); x.restore(); }
-  x.restore(); x.fillStyle = '#10101a'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
-  const mat = new THREE.MeshBasicMaterial({ map: texFrom(c), color: side === 'left' ? 0x4aa8ff : 0xff9a3c, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+  const shape = () => { x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.moveTo(7, 0); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.restore(); } };
+  if (filled) { x.fillStyle = '#ffffff'; shape(); x.fill(); }
+  else { x.fillStyle = 'rgba(255,255,255,0.16)'; shape(); x.fill(); x.lineWidth = 6; x.strokeStyle = '#ffffff'; shape(); x.stroke(); }
+  x.restore(); x.fillStyle = filled ? '#10101a' : '#ffffff'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
+  return texFrom(c);
+}
+for (let i = 0; i < 6; i++) {
+  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, col = new THREE.Color(side === 'left' ? 0x4aa8ff : 0xff9a3c);
+  const tex = { hollow: iwPrintTex(side, n, false), full: iwPrintTex(side, n, true) };
+  const mat = new THREE.MeshBasicMaterial({ map: tex.hollow, color: col, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; IW.group.add(m); IW.mats.push(mat);
-  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, m });
+  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, back: false, flash: 0, m, tex, col });
+}
+// La mano llega a la huella: destella, echa chispas y se rellena (a la ida, de su color; a la vuelta, dorada)
+function iwHit(p, back) {
+  if (back) p.back = true; else p.done = true; p.flash = 1;
+  const w = arena.localToWorld(_iww.set(p.x, 0.03, p.z)), c = back ? IW_GOLD : p.col;
+  fx.sparks(w, 14, [c.r, c.g, c.b], 1.3, 0.02); fx.glow(w, [c.r, c.g, c.b], 0.22, 0.25); SND.tick(); haptic(p.side, 0.45, 35);
+}
+// Al despegar las manos del suelo tras la vuelta: una onda expansiva en el suelo que devuelve a los bichos a su trampilla
+const IWW = { m: null, t: -1 };
+function iwWave() {
+  if (!IWW.m) { IWW.m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0x7af7ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); IWW.m.rotation.x = -Math.PI / 2; IWW.m.renderOrder = 20; scene.add(IWW.m); }
+  IWW.t = 0; IWW.m.visible = true; IWW.m.position.set(head.p.x, 0.03, head.p.z); IWW.m.scale.setScalar(0.2);
+  fx.glow(IWW.m.position.clone().add(_iww.set(0, 0.1, 0)), [0.5, 0.95, 1], 0.6, 0.25); SND.whoosh(head.p); hapticBoth(0.6, 90);
+  let n = 0; for (const e of enemies) { if (!e.alive) continue; n++; if (e.type === 'spider' && e.sendHome) e.sendHome(); else if (e.shove) e.shove(1.2); }
+  stats.waves = (stats.waves || 0) + 1; say(n ? '¡ONDA EXPANSIVA! Vuelven a su trampilla' : '¡Onda expansiva!', '#7af7ff', 1.4, false);
+}
+function iwWaveStep(dt) {
+  if (!IWW.m || IWW.t < 0) return;
+  IWW.t += dt; const k = IWW.t / 0.6; IWW.m.scale.setScalar(0.2 + k * 2.2); IWW.m.material.opacity = 0.8 * (1 - k);
+  if (k >= 1) { IWW.t = -1; IWW.m.visible = false; }
 }
 // Las seis huellas, en la arena: las primeras y las últimas siempre igual; las del medio, a una distancia y un lado distintos cada vez
 function iwLayout() {
   const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, zm = lerp(z0, z2, rand(0.38, 0.62));
   const mz = () => clamp(zm + rand(-0.13, 0.13), z2 + 0.27, z0 - 0.27); // nunca pegadas a las primeras ni a las últimas
   const pos = [[-0.17, z0], [0.17, z0], [-rand(0.11, 0.27), mz()], [rand(0.11, 0.27), mz()], [-0.2, z2], [0.2, z2]];
-  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = false; p.m.position.set(p.x, 0.006, p.z); });
-  Object.assign(DET.iw, { pair: 0, phase: 'stand' });
+  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = p.back = false; p.flash = 0; p.m.position.set(p.x, 0.006, p.z); });
+  // el margen de cada huella: hasta IW_REACH, sin llegar a la vecina de la misma mano (si no, una contaría por otra)
+  for (const p of IW.prints) { let d = 9; for (const o of IW.prints) if (o !== p && o.side === p.side) d = Math.min(d, Math.hypot(o.x - p.x, o.z - p.z)); p.reach = clamp(d * 0.85, 0.16, IW_REACH); }
+  Object.assign(DET.iw, { pair: 0, phase: 'stand', bpair: 1 });
 }
 const _iww = new V3();
 function iwStep(t, dt) {
   const W = DET.iw, standing = head.p.y > calibRef - 0.22;
   if (W.phase === 'stand' && !standing) W.phase = 'walk';
   if ((W.phase === 'stand' || W.phase === 'walk') && W.pair < 3) { // la siguiente pareja de huellas: cada mano, la suya
-    for (const p of IW.prints) {
-      if (p.pair !== W.pair || p.done) continue; const h = hands[p.side]; if (!h.ok) continue;
-      arena.worldToLocal(_iww.copy(h.wrist)); if (_iww.y < 0.22 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < 0.22) { p.done = true; SND.tick(); haptic(p.side, 0.3, 25); }
-    }
+    for (const p of IW.prints) if (p.pair === W.pair && !p.done && iwOn(p)) iwHit(p, false);
     if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
   }
   if (W.phase === 'plank') {
     const req = dv('pushDepth') / 100, before = stats.reps;
     vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
-    if (stats.reps > before) W.phase = 'back'; // disparó: ahora, de vuelta y de pie
+    if (stats.reps > before) { W.phase = 'back'; W.bpair = 1; for (const p of IW.prints) if (p.pair === 2) iwHit(p, true); } // disparó: ahora, de vuelta (las últimas, ya pisadas) y de pie
     else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
   } else if (W.phase === 'walk' && standing) { if (W.pair > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
-  else if (W.phase === 'back' && standing) iwLayout(); // de pie otra vez: nuevas huellas
-}
-function iwVisual(t) {
-  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
-  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8);
-  for (const p of IW.prints) {
-    const next = (W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done, fin = W.phase === 'plank' && p.pair === 2;
-    p.m.material.opacity = next ? pulse : fin ? 0.95 : p.done ? 0.35 : W.phase === 'back' ? 0.25 : 0.55;
-    p.m.scale.setScalar(next ? 1.12 : 1);
+  else if (W.phase === 'back') {
+    // la vuelta: otra vez por las huellas, al revés (las del medio y las primeras)
+    if (W.bpair >= 0) { for (const p of IW.prints) if (p.pair === W.bpair && !p.back && iwOn(p)) iwHit(p, true); if (IW.prints.filter(p => p.pair === W.bpair).every(p => p.back)) W.bpair--; }
+    // hecha la vuelta, al despegar las manos del suelo (o ya de pie), la onda
+    if (W.bpair < 0 && !W.waved && (standing || ['left', 'right'].every(s => !hands[s].ok || arena.worldToLocal(_iww.copy(hands[s].wrist)).y > 0.3))) { W.waved = true; iwWave(); }
+    if (standing) { iwLayout(); W.waved = false; } // de pie otra vez: nuevas huellas
   }
 }
+// ¿La mano de esta huella está sobre ella? (con margen: no hace falta acertar dentro)
+function iwOn(p) { const h = hands[p.side]; if (!h.ok) return false; arena.worldToLocal(_iww.copy(h.wrist)); return _iww.y < 0.25 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < (p.reach || 0.22); }
+function iwVisual(t) {
+  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
+  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8), dt = Math.min(0.1, t - (IW.lastT || t)); IW.lastT = t;
+  for (const p of IW.prints) {
+    const next = ((W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done) || (W.phase === 'back' && p.pair === W.bpair && !p.back), full = p.done || p.back, mat = p.m.material;
+    const tex = full ? p.tex.full : p.tex.hollow; if (mat.map !== tex) { mat.map = tex; mat.needsUpdate = true; }
+    p.flash = Math.max(0, p.flash - dt * 3);
+    mat.color.copy(p.back ? IW_GOLD : p.col).lerp(_iwWhite, p.flash * 0.7); // (destella en blanco y se queda de su color)
+    mat.opacity = next ? pulse : full ? 0.95 : 0.6;
+    p.m.scale.setScalar((next ? 1.12 : 1) * (1 + 0.35 * p.flash));
+  }
+}
+const _iwWhite = new THREE.Color(1, 1, 1);
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -10904,7 +10952,7 @@ function gameStep(dt, t) {
   else if (state === 'mount') barMountStep(dt);
   // (el marcador se redibuja cada segundo: lleva el tiempo de hoy)
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') { stats.time += dt; if ((stats.time | 0) !== ((stats.time - dt) | 0)) boardDirty = true; } if (state === 'play') stats.work += dt; runDetectors(t, dt); }
-  iwVisual(t);
+  iwVisual(t); iwWaveStep(dt);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt * perkSpawnK();
