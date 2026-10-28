@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { punchStep, PUNCH, FRONT_MIN, SP_FADE, spBlockEnd, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm };
@@ -58,6 +58,7 @@ const errors = [];
 const origWarn = console.warn; console.warn = (...a) => { errors.push('WARN ' + a.join(' ')); };
 vm.runInThisContext(src, { filename: 'game.js' });
 const RA = window.__RA;
+Object.assign(RA.SP_FADE, { out: 0, in: 0 }); // (sin los fundidos de Spotify en las pruebas, salvo en la suya: en el juego duran 2,5 s y 1,5 s)
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let T = 0;
 function frame(n = 1, dtMs = 33, xrFrame) {
@@ -1066,6 +1067,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
     if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
     press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
+  // ---- Nunca detrás de ti, y a golpes se apartan ----
+  if (!process.env.ONLY || /front|punch/.test(process.env.ONLY)) {
+    const saved = { ...RA.settings }, V = THREE.Vector3, sq = squatSim(2.4), T = { t: 0 }, step = (n, sim) => { for (let i = 0; i < n; i++) { if (sim) sim(T.t); frame(1); T.t += 0.033; } };
+    applyCfg({ mode: 'combat', exercise: 'squat', aim: 'auto', foesGate: 'robot', foesFly: 'drone', lives: 0, waves: 1, repsWave: 40, repsInc: 0, rest: 0, walkTime: 4, perks: 0, surprises: 0 });
+    RA.startPreview(); frame(3); press('EMPEZAR');
+    while (T.t < 30 && RA.state !== 'play') step(1);
+    step(450); // (sin repeticiones no se dispara: que lleguen a sus puestos)
+    RA.PV.keys.KeyW = true; step(30); RA.PV.keys.KeyW = false; // avanzas 1,5 m hacia ellos
+    let worst = -9, seen = 0;
+    for (let i = 0; i < 500; i++) { step(1); for (const e of RA.enemies) if (e.alive && (e.out || e.type === 'flyer') && e.pos) { seen++; worst = Math.max(worst, e.pos.z - RA.HL.z); } }
+    log(`never behind you: after stepping 1.5 m forward, enemies checked ${seen} times · closest to your side ${worst.toFixed(2)} m (must stay below −${RA.FRONT_MIN})`);
+    if (!seen || worst > -RA.FRONT_MIN + 0.02) errors.push('los enemigos no deberían ponerse a tu altura ni detrás de ti (también si avanzas)');
+    // un puñetazo rápido al que tienes delante lo echa atrás y lo aturde, sin quitarle vida
+    const e = RA.enemies.find(x => x.alive && x.type === 'robot' && x.out && ['walk', 'windup', 'strike'].includes(x.state)); // (no uno que ya retrocede tras golpear)
+    let stun = 0, hp0 = 0, hp1 = 0, back = 0, slow = 0;
+    if (e) {
+      const h = RA.hands.left, c = e.center(new V()), dir = c.clone().sub(RA.head.p).normalize(); hp0 = e.hp; const away = () => Math.hypot(e.pos.x - RA.HL.x, e.pos.z - RA.HL.z), d0 = away();
+      h.ok = true; h.wrist.copy(c).addScaledVector(dir, -0.28); RA.PUNCH.left.ok = false; RA.PUNCH.left.cd = 0; RA.punchStep(0.016);
+      h.wrist.addScaledVector(dir, 0.07); RA.punchStep(0.016); stun = e.stunT || 0; hp1 = e.hp;
+      // otra, despacio: no cuenta
+      const e2 = RA.enemies.find(x => x.alive && x.type === 'robot' && x.out && x !== e);
+      if (e2) { const c2 = e2.center(new V()), d2 = c2.clone().sub(RA.head.p).normalize(); e2.stunT = 0; RA.PUNCH.left.ok = false; RA.PUNCH.left.cd = 0; h.wrist.copy(c2).addScaledVector(d2, -0.2); RA.punchStep(0.016); h.wrist.addScaledVector(d2, 0.005); RA.punchStep(0.016); slow = e2.stunT || 0; }
+      step(8); back = away() - d0; // (más lejos de ti)
+    }
+    log(`punch: robot ${!!e} · stunned ${stun.toFixed(2)} s · pushed back ${(back * 100).toFixed(0)} cm · hp ${hp0} → ${hp1} · a slow touch stuns ${slow.toFixed(2)} s`);
+    if (!e || stun <= 0 || back < 0.1 || hp1 !== hp0 || slow > 0) errors.push('golpe: un puñetazo rápido debería echar atrás al enemigo y aturdirlo, sin quitarle vida (y uno lento, no)');
+    for (const k in saved) if (RA.settings[k] !== saved[k]) RA.setSetting(k, saved[k]);
+    RA.lobbyMenu(); frame(2); }
   // ---- Para que no aburra (79_perks): mejoras entre oleadas, carrera contra el récord, sorpresas y la música que manda ----
   if (!process.env.ONLY || /perks/.test(process.env.ONLY)) {
     const saved = { ...RA.settings }; // (se devuelven tal cual al acabar: las pruebas siguientes cuentan con ellos)
@@ -1472,9 +1501,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.exitAll(); frame(2); }
   // al terminar la partida, Spotify se pausa y vuelve el ambiente; al empezar la siguiente, la música sigue
   { RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); SPOT.playing = true; await RA.spRefresh(); RA.startPreview(); frame(2);
-    RA.beginRun(); frame(30); RA.endRun(true, true); await sleep(30); frame(2); const paused = !SPOT.playing, amb = !RA.ambMute();
-    RA.beginRun(); await sleep(30); frame(2); const resumed = SPOT.playing;
-    log(`spotify between games: paused at the end ${paused} · ambience back ${amb} · resumed on the next game ${resumed}`);
+    // (fundidos cortos para la prueba: el volumen baja en pasos hasta 0, se pausa y vuelve a su volumen; al seguir, sube)
+    Object.assign(RA.SP_FADE, { out: 100, in: 100 }); const vStart = SPOT.vol;
+    RA.beginRun(); frame(30); await sleep(300); const n0 = SPOT.calls.length; // (lo que quedara de un fundido anterior, terminado)
+    RA.endRun(true, true); await sleep(300); frame(2); const paused = !SPOT.playing, amb = !RA.ambMute();
+    const vols = SPOT.calls.slice(n0).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), iP = SPOT.calls.slice(n0).indexOf('PUT /v1/me/player/pause');
+    const v0 = vols[0] ? Math.round(vols[0] / 0.8) : 0, fadeOk = vols.length >= 6 && vols.slice(0, 5).every((v, i, a) => !i || v <= a[i - 1]) && vols[4] === 0 && iP > 0 && vols[5] === v0 && SPOT.vol === v0;
+    RA.beginRun(); await sleep(300); frame(2); const resumed = SPOT.playing, upOk = SPOT.vol === v0;
+    // en una sesión: al acabar un bloque con su canción, si el siguiente trae otra, la de este se va apagando (y si trae la misma, sigue)
+    SPOT.playing = true; await RA.spRefresh(); const m1 = [{ uri: 'spotify:track:A1' }], m2 = [{ uri: 'spotify:track:B2' }];
+    RA.spBlockEnd({ music: m1 }, { music: m1 }); await sleep(200); const same = SPOT.playing; const n1 = SPOT.calls.length;
+    RA.spBlockEnd({ music: m1 }, { music: m2 }); await sleep(300); const bv = SPOT.calls.slice(n1).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), blockFade = !SPOT.playing && bv.length >= 5 && bv[4] === 0;
+    log(`spotify between blocks: same songs keep playing ${same} · other songs next → fades ${bv.slice(0, 6).join('→')} and pauses ${!SPOT.playing}`);
+    if (!same || !blockFade) errors.push('Spotify: al acabar un bloque, si el siguiente trae otra canción, la de este debería apagarse poco a poco (y si trae la misma, seguir)');
+    Object.assign(RA.SP_FADE, { out: 0, in: 0 }); SPOT.vol = vStart; SPOT.playing = true; await RA.spRefresh();
+    log(`spotify between games: paused at the end ${paused} after fading ${vols.slice(0, 6).join('→')} (back to ${SPOT.vol}) · ambience back ${amb} · resumed on the next game ${resumed}, volume back ${upOk}`);
+    if (!fadeOk || !upOk) errors.push('Spotify: al acabar, la canción debería apagarse poco a poco (y volver a su volumen) en vez de cortarse');
     if (!paused || !amb || !resumed) errors.push('Spotify: al terminar la partida debería pausarse (y oírse el ambiente) y al empezar otra, seguir sonando');
     RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');

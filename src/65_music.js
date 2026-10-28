@@ -188,7 +188,27 @@ async function spPlayTracks(tracks) {
 function spBlockMusic(b) {
   const tr = b && Array.isArray(b.music) ? b.music : []; if (!tr.length || !spConnected()) return false;
   const key = tr.map(t => t.uri).join(','); if (SP.block === key && spPlaying()) return true;
-  SP.block = key; SP.resume = false; spDo(() => spPlayTracks(tr)); return true;
+  SP.block = key; SP.resume = false; SP.want = 'block'; // (lo que quedara en cola de la ronda —pausar la del bloque anterior o seguirla—, ya no)
+  // la que sonaba se va bajando y la del bloque entra subiendo (no a golpe)
+  spDo(async () => { const v0 = spVolNow(), fade = SP_FADE.in > 0; if (spPlaying()) await spFadeOut(v0, SP_FADE.in); else if (fade) await spVolTry(0); await spPlayTracks(tr); await spFadeIn(v0); });
+  return true;
+}
+// Fundidos: la canción no se corta de golpe. En las gafas el volumen se cambia en su reproductor (suave, en 20 pasos);
+// en otro dispositivo, por la Web API en pocos pasos (cada uno es una petición). Si el reproductor no deja cambiar el
+// volumen, sin fundido. El volumen elegido (SP.cfg.vol) no se toca: se vuelve a él
+const SP_FADE = { out: 2500, in: 1500 };
+const spWait = ms => new Promise(r => setTimeout(r, ms));
+const spCanFade = () => spConnected() && !(SP.st && SP.st.device && SP.st.device.supports_volume === false && !spHereNow());
+async function spVolTry(v) { if (!spCanFade()) return; try { if (spHereNow() && SPP.player && SPP.player.setVolume) await SPP.player.setVolume(v / 100); else await spApi('PUT', '/me/player/volume?volume_percent=' + Math.round(v)); if (SP.st && SP.st.device) SP.st.device.volume_percent = Math.round(v); } catch (e) { /* sin fundido */ } }
+// (un fundido nuevo deja a medias el anterior: nunca hay dos peleándose por el volumen; devuelve si llegó al final)
+async function spFade(from, to, ms) { const id = SP.fadeN = (SP.fadeN || 0) + 1; if (!spCanFade() || !(ms > 0)) return true; /* (0: sin fundido) */ const n = spHereNow() && SPP.player && SPP.player.setVolume ? 20 : 5; for (let i = 1; i <= n; i++) { if (SP.fadeN !== id) return false; await spVolTry(from + (to - from) * i / n); await spWait(ms / n); } return SP.fadeN === id; }
+const spFadeOut = (v0, ms = SP_FADE.out) => spFade(v0, 0, ms);
+const spFadeIn = (v0, ms = SP_FADE.in) => spFade(0, v0, ms);
+// Al acabar un bloque de la sesión con su música, si el siguiente trae otra: la de este se va apagando en el descanso
+function spBlockEnd(b, next) {
+  const key = x => x && Array.isArray(x.music) ? x.music.map(t => t.uri).join(',') : '';
+  if (!spConnected() || !key(b) || !key(next) || key(b) === key(next) || !spPlaying()) return;
+  SP.block = null; spRoundQueue('pause');
 }
 function spToggle() {
   spDo(async () => {
@@ -207,7 +227,14 @@ function spRoundQueue(want) {
   SP.want = want;
   SP.roundQ = (SP.roundQ || Promise.resolve()).then(async () => {
     if (SP.want !== want || !spConnected()) return;
-    try { await spApi('PUT', want === 'pause' ? '/me/player/pause' : '/me/player/play'); if (SP.st) SP.st.is_playing = want === 'play'; SP.err = ''; } catch (e) { SP.err = spErrText(e); }
+    // con fundido: al pausar, baja poco a poco (y, ya en pausa, vuelve a su volumen); al seguir, entra subiendo
+    const v0 = spVolNow();
+    try {
+      const fade = SP_FADE.out > 0;
+      if (want === 'pause') { const done = await spFadeOut(v0); if (SP.want !== want || !done) { if (done && fade) await spVolTry(v0); return; } await spApi('PUT', '/me/player/pause'); if (fade) await spVolTry(v0); }
+      else { if (SP_FADE.in > 0) await spVolTry(0); await spApi('PUT', '/me/player/play'); await spFadeIn(v0); }
+      if (SP.st) SP.st.is_playing = want === 'play'; SP.err = '';
+    } catch (e) { SP.err = spErrText(e); await spVolTry(v0); }
     spMenuSync(); setTimeout(spRefresh, 500);
   });
 }

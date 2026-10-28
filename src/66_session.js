@@ -99,6 +99,7 @@ function sessionBlockDone(win, manual) {
   const b = SES.blocks[SES.idx];
   SES.results.push({ b, round: SES.round, reps: b.ex === 'hang' ? Math.round(stats.hold) : stats.reps, perfect: stats.perfect, kills: stats.kills, time: stats.time, kcal: runStatsKcal(), score, win, manual });
   if (SES.stop || !sesNext()) { finishSession(); return; }
+  if (typeof spBlockEnd === 'function') spBlockEnd(b, SES.blocks[sesNext().i]); // su canción se apaga poco a poco si el siguiente trae otra
   state = 'between'; SES.wait = SES.rest; center.mesh.visible = true; drawCenter(); boardDirty = true;
   betweenMenu();
 }

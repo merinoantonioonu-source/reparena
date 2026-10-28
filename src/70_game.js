@@ -88,8 +88,12 @@ const SOLIDS = { list: [], t: -1 };
 function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : []); }
 const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
 const GAMEF = { n: 0 };
+// Nunca detrás de ti (ni a tu altura): en la arena, delante es −z; su centro, al menos FRONT_MIN por delante de tus ojos (de lado sí pueden ponerse)
+const FRONT_MIN = 0.3;
+function frontKeep(p, r = 0) { const lim = HL.z - FRONT_MIN - r; if (p.z > lim) p.z = lim; }
 // Nadie se mete en algo sólido: si un empujón (de otro, de un disparo, del golpe) lo mete, sale por el lado más corto
 function solidPush(e) {
+  if (isCombat() && !isTiny()) frontKeep(e.pos);
   for (const c of solidsNow()) {
     if (!e.out && c.g === e.gate) continue;
     const dx = e.pos.x - c.x, dz = e.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + e.radius;
@@ -114,22 +118,24 @@ const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heav
 const SHOVE_K = 7, knockK = () => (settings.knockback >= 0 ? settings.knockback : 100) / 100;
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
-  const want = Math.atan2(r.pos.x, -r.pos.z); // hacia dónde le pilla de camino
+  const want = Math.atan2(r.pos.x - HL.x, -(r.pos.z - HL.z)); // hacia dónde le pilla de camino (alrededor de donde estás ahora)
   let best = null, bestC = Infinity;
   // en tu habitación, ni en un mueble ni detrás de una pared; con la habitación llena, antes cerca del puesto de otro (ya se
   // apartan al andar) que en un mueble; si ni así queda ninguno (escaneo raro), sin mirarla
   for (const [room, apart] of [[true, true], ...(roomPlan() ? [[true, false]] : []), [false, true]]) for (let row = 0; row < 3 && !best; row++) {
     const R = robotStop(r.K) + row * ROW_GAP;
     for (let a = -SLOT_ARC; a <= SLOT_ARC + 1e-6; a += 0.1) {
-      _rs.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
+      _rs.set(HL.x + Math.sin(a) * R, 0, HL.z - Math.cos(a) * R);
       if (apart && others.some(o => o.slot.distanceTo(_rs) < r.radius + o.radius + 0.65)) continue; // también entre filas: al retroceder tras golpear no choca con los de atrás
       if (room && roomBlocked(_rs.x, _rs.z, r.radius)) continue;
+      if (isCombat() && !isTiny() && _rs.z > HL.z - FRONT_MIN) continue; // (ni a tu altura: de ahí lo echa frontKeep y no llegaría nunca)
       const c = Math.abs(a - want) + Math.abs(a) * 0.3 + Math.random() * 0.12;
       if (c < bestC) { bestC = c; best = { a, row, p: _rs.clone() }; }
     }
   }
-  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(robotStop(r.K) + 3 * ROW_GAP) };
-  r.slot.copy(best.p); r.row = best.row; r.slotOk = true;
+  if (!best) best = { a: want, row: 3, p: new V3(Math.sin(want), 0, -Math.cos(want)).multiplyScalar(robotStop(r.K) + 3 * ROW_GAP).add(_rv.set(HL.x, 0, HL.z)) };
+  if (isCombat() && !isTiny()) frontKeep(best.p);
+  r.slot.copy(best.p); r.row = best.row; r.slotOk = true; r.slotAt = new V3(HL.x, 0, HL.z);
 }
 const _rs = new V3(), _rd = new V3(), _rv = new V3(), _rp = new V3();
 // Los que tienen piernas solo se desplazan andando: por debajo de esta velocidad (m/s) se quedan quietos, y por encima
@@ -292,7 +298,8 @@ class Robot {
       case 'walk': {
         if (!active) break;
         // cada poco busca un puesto mejor (al morir otro, los de atrás avanzan)
-        this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } }
+        this.slotT -= dt; if (this.slotT <= 0) { this.slotT = 0.6; if (this.row > 0 || this.stuckT > 1 || (this.slotAt && Math.hypot(HL.x - this.slotAt.x, HL.z - this.slotAt.z) > 0.5)) { this.slotOk = false; robotSlot(this); this.stuckT = 0; } } // (también si te has movido)
+        if (this.out && this.stunT > 0) { faceTo = faceP; this.vel.set(0, 0, 0); break; } // aturdido (un golpe, el escudo): no avanza, y el empujón lo aleja
         if (!this.out) { this.gate.openT = Math.max(this.gate.openT, 0.8); if (Math.hypot(this.exit.x - this.pos.x, this.exit.z - this.pos.z) < 0.35) this.out = true; }
         const to = _rd.subVectors(this.out ? this.slot : this.exit, this.pos); to.y = 0; const d = this.out ? to.length() : to.length() + this.exit.distanceTo(this.slot);
         if (d < 0.12 || (d < 0.3 && this.out && this.vel.lengthSq() < V_STEP * V_STEP)) { // (ya parado, no se recoloca por unos centímetros)
@@ -940,6 +947,7 @@ class Flyer {
       if (d > 1e-3) this.pos.addScaledVector(to, k / d);
     }
     if (this.gate) gateKeep(this);
+    if (isCombat()) frontKeep(this.pos, push ? 0.05 : 0.15); // (los voladores tampoco se van detrás)
     this.root.position.copy(this.pos);
     const look = arena.worldToLocal(tmpA.copy(head.p)); this.root.lookAt(arena.localToWorld(tmpA.set(look.x, this.pos.y + (look.y - this.pos.y) * 0.3, look.z)));
     const lat = ((this.pos.x - this.last.x) * right.x + (this.pos.z - this.last.z) * right.z) / Math.max(dt, 1e-3);
@@ -2506,7 +2514,7 @@ function gameStep(dt, t) {
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
     updateProjectiles(dt); updateRocks(dt);
-    updateGates(dt, t); guardStep(dt, t);
+    updateGates(dt, t); guardStep(dt, t); punchStep(dt); // (el puñetazo, 77_guard)
   }
   if (SPLEGS.fem) {
     SPLEGS.n = 0; for (const e of enemies) if (e.type === 'spider') e.drawLegs();
