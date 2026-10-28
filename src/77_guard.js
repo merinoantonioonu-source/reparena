@@ -203,6 +203,40 @@ function guardRepel(e, dist, stun) {
   else if (e.type === 'spider') { e.bounce = dist * 0.35; e.parryT = stun; }
   else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1)); e.parryT = stun; }
 }
+/* ---------- Golpe: un puñetazo (o con la pesa o el mando que lleves) aparta al que tienes cerca ---------- */
+// En Combate, de pie o sentado (en el suelo, las manos están apoyadas) y sin espadas (que cortan): la mano que va deprisa
+// hacia un enemigo (más de PUNCH_V respecto a la cabeza: al agacharte baja todo el cuerpo y eso no cuenta) y llega a su
+// cuerpo lo echa hacia atrás y lo deja un momento aturdido (y, si estaba atacando, le corta el golpe). No hace daño: las oleadas piden las mismas repeticiones. Cada
+// mano, un golpe cada PUNCH_CD; cada enemigo, uno cada PUNCH_E
+const PUNCH_V = 1.8, PUNCH_CD = 0.45, PUNCH_E = 0.6, PUNCH_R = 0.3;
+const PUNCH = { left: { last: new V3(), hl: new V3(), ok: false, cd: 0 }, right: { last: new V3(), hl: new V3(), ok: false, cd: 0 }, n: 0, t: 0 };
+const punchOn = () => isCombat() && !!settings.punch && !isFloor() && settings.exercise !== 'inchworm' && !swordActive();
+const _puV = new V3(), _puH = new V3(), _puC = new V3(), _puD = new V3();
+function punchStep(dt) {
+  if (!punchOn() || !['play', 'rest', 'ready'].includes(state) || !(dt > 0)) { PUNCH.left.ok = PUNCH.right.ok = false; return; }
+  PUNCH.t += dt;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], P = PUNCH[s]; P.cd -= dt;
+    if (!h.ok) { P.ok = false; continue; }
+    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
+    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
+    const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;
+    for (const e of enemies) {
+      if (!e.alive || e.state === 'emerge' || (e.punchT && PUNCH.t < e.punchT)) continue;
+      e.center(_puC); const r = (e.radius || 0.35) * (e.type === 'flyer' ? 1.3 : 1) + PUNCH_R, d = _puD.subVectors(_puC, h.wrist), dl = d.length();
+      if (dl > r || (dl > 0.05 && d.dot(_puV) / (dl * sp) < 0.3)) continue; // (la mano llega a su cuerpo, y va hacia él)
+      P.cd = PUNCH_CD; e.punchT = PUNCH.t + PUNCH_E; PUNCH.n++;
+      // si estaba preparando o soltando su golpe, se lo cortas (no te da)
+      if (e.type === 'robot' && (e.state === 'windup' || e.state === 'strike')) { if (e.zone) blockCancel(e); e.zone = null; e.state = 'walk'; e.st = 0; e.vel.set(0, 0, 0); }
+      const k = clamp(sp / 4, 0.6, 1.4); guardRepel(e, 0.55 * k, 0.5);
+      const hit = h.wrist.clone().lerp(_puC, 0.5);
+      fx.sparks(hit, 14, [1, 0.85, 0.5], 2.5, 0.035); fx.glow(hit, [1, 0.9, 0.7], 0.35, 0.08); comicHit(hit);
+      if (e.type === 'robot' && !(e.K && e.K.beast3d)) SND.metalHit(hit, false); else SND.squish(hit);
+      haptic(s, 0.9, 60); score += 25; boardDirty = true; if (PUNCH.n <= 2) say('¡Golpe!', '#ffd166', 0.6, false);
+      break;
+    }
+  }
+}
 function guardHitFx(p, parry, side) {
   SND.swordBlock(p, false); fx.sparks(p, parry ? 30 : 16, [1, 0.85, 0.4], 3, 0.04); fx.glow(p, [1, 1, 1], parry ? 0.8 : 0.5, 0.12); comicHit(p);
   if (side) { haptic(side, 1, 80); haptic(side === 'left' ? 'right' : 'left', 0.35, 40); } else hapticBoth(parry ? 0.7 : 0.4, 60);
