@@ -32,14 +32,42 @@ function drawIcon(c, k, x, y, S, col) {
   }
   c.restore();
 }
-// Galones del rango: del recluta al sargento, galones (uno, dos, tres; el sargento con su arco debajo); el teniente, el capitán y
-// el general, estrellas (una, dos y tres, las del general doradas)
+// Galones del rango, como piezas de metal con relieve (no líneas): del recluta al sargento, cheurones (uno, dos, tres; el
+// sargento con su arco debajo), plateados hasta el soldado y dorados desde el cabo; el teniente y el capitán, estrellas
+// talladas; el general, tres estrellas doradas dentro de una corona de laurel. col: el color del canto (contraste con el fondo)
+const RANK_METAL = [['#e7b98a', '#8a5a2e'], ['#eef1f6', '#7d8494'], ['#ffe39a', '#a8741c'], ['#ffe39a', '#a8741c'], ['#ffe39a', '#a8741c'], ['#ffe39a', '#a8741c'], ['#fff2b8', '#b8801a']];
+function rankMetal(c, i, S) { const [a, b] = RANK_METAL[clamp(i, 0, 6)], g = c.createLinearGradient(0, -S * 0.5, 0, S * 0.5); g.addColorStop(0, a); g.addColorStop(0.55, b); g.addColorStop(1, a); return g; }
 function drawRank(c, i, x, y, S, col) {
-  c.save(); c.translate(x, y); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = S * 0.14; c.lineJoin = 'round'; c.lineCap = 'round';
-  const chev = dy => { c.beginPath(); c.moveTo(-S * 0.44, dy + S * 0.17); c.lineTo(0, dy - S * 0.17); c.lineTo(S * 0.44, dy + S * 0.17); c.stroke(); };
-  const star = (sx, r) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.45 : r; c.lineTo(sx + Math.cos(a) * rad, Math.sin(a) * rad); } c.closePath(); c.fill(); };
-  if (i <= 3) { const n = Math.min(3, i + 1), up = i === 3 ? S * 0.14 : 0; for (let k = 0; k < n; k++) chev((k - (n - 1) / 2) * S * 0.3 - up); if (i === 3) { c.beginPath(); c.arc(0, -S * 0.32, S * 0.6, 0.28 * Math.PI, 0.72 * Math.PI); c.stroke(); } }
-  else { const n = i - 3; if (n === 3) c.fillStyle = '#ffd166'; for (let k = 0; k < n; k++) star((k - (n - 1) / 2) * S * 0.46, S * 0.24); }
+  c.save(); c.translate(x, y); c.lineJoin = 'round'; const metal = rankMetal(c, i, S), edge = col || 'rgba(20,12,26,0.9)';
+  const shape = path => { path(); c.fillStyle = metal; c.fill(); c.lineWidth = Math.max(1.5, S * 0.035); c.strokeStyle = edge; c.stroke();
+    c.save(); c.translate(0, -S * 0.018); c.lineWidth = Math.max(1, S * 0.018); c.strokeStyle = 'rgba(255,255,255,0.55)'; path(); c.stroke(); c.restore(); }; // (un bisel de luz arriba: relieve)
+  const chev = dy => shape(() => { const w = S * 0.46, t = S * 0.13, h = S * 0.19; c.beginPath(); c.moveTo(-w, dy + h); c.lineTo(0, dy - h + 0.001); c.lineTo(w, dy + h); c.lineTo(w, dy + h + t); c.lineTo(0, dy - h + t); c.lineTo(-w, dy + h + t); c.closePath(); });
+  const star = (sx, sy, r) => shape(() => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.46 : r; c.lineTo(sx + Math.cos(a) * rad, sy + Math.sin(a) * rad); } c.closePath(); });
+  if (i <= 3) { const n = Math.min(3, i + 1), up = i === 3 ? S * 0.12 : 0; for (let k = 0; k < n; k++) chev((k - (n - 1) / 2) * S * 0.27 - up - S * 0.05);
+    if (i === 3) shape(() => { c.beginPath(); c.arc(0, -S * 0.36, S * 0.66, 0.27 * Math.PI, 0.73 * Math.PI); c.arc(0, -S * 0.36, S * 0.54, 0.71 * Math.PI, 0.29 * Math.PI, true); c.closePath(); }); }
+  else { const n = i - 3; if (n === 3) { // la corona de laurel del general
+      for (const s of [-1, 1]) for (let k = 0; k < 6; k++) { const a = Math.PI / 2 + s * (0.5 + k * 0.38), lx = Math.cos(a) * S * 0.52, ly = Math.sin(a) * S * 0.44 - S * 0.02;
+        shape(() => { c.beginPath(); c.ellipse(lx, ly, S * 0.09, S * 0.042, a + s * Math.PI / 2.2, 0, TAU); }); } }
+    for (let k = 0; k < n; k++) star((k - (n - 1) / 2) * S * (n === 3 ? 0.3 : 0.46), n === 3 ? -S * 0.04 : 0, S * (n === 3 ? 0.17 : 0.25)); }
+  c.restore();
+}
+// El rango en el marcador: un escudo de campo oscuro con el canto de su metal y sus galones dentro
+function drawRankShield(c, i, x, y, S) {
+  c.save(); c.translate(x, y); const w = S * 0.5, path = () => { c.beginPath(); c.moveTo(-w, -S * 0.5); c.lineTo(w, -S * 0.5); c.lineTo(w, S * 0.08); c.quadraticCurveTo(w, S * 0.38, 0, S * 0.55); c.quadraticCurveTo(-w, S * 0.38, -w, S * 0.08); c.closePath(); };
+  path(); const f = c.createLinearGradient(0, -S * 0.5, 0, S * 0.55); f.addColorStop(0, '#2a2150'); f.addColorStop(1, '#120c24'); c.fillStyle = f; c.fill();
+  c.lineWidth = S * 0.07; c.strokeStyle = rankMetal(c, i, S); c.stroke(); c.lineWidth = S * 0.015; c.strokeStyle = 'rgba(0,0,0,0.6)'; c.stroke();
+  c.restore(); drawRank(c, i, x, y + S * 0.02, S * 0.74);
+}
+// La medalla del resumen: oro, plata o bronce, colgada de su cinta, con el canto en relieve y una estrella en medio
+function drawMedal(c, kind, x, y, R) {
+  const M = { oro: ['#fff0a8', '#d9a520', '#8a5a0e'], plata: ['#ffffff', '#c3c9d4', '#6d7484'], bronce: ['#f4c79a', '#c07a3e', '#6e3f18'] }[kind]; if (!M) return;
+  c.save(); c.translate(x, y);
+  for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * R * 0.15, -R * 0.75); c.lineTo(s * R * 0.75, -R * 1.9); c.lineTo(s * R * 0.25, -R * 1.9); c.lineTo(-s * R * 0.25, -R * 0.75); c.closePath(); c.fillStyle = s < 0 ? '#3cf0c6' : '#ff4fa3'; c.fill(); } // la cinta
+  const g = c.createRadialGradient(-R * 0.3, -R * 0.35, R * 0.1, 0, 0, R); g.addColorStop(0, M[0]); g.addColorStop(0.6, M[1]); g.addColorStop(1, M[2]);
+  c.shadowColor = M[1]; c.shadowBlur = R * 0.5; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fillStyle = g; c.fill(); c.shadowBlur = 0;
+  c.lineWidth = R * 0.08; c.strokeStyle = M[2]; c.beginPath(); c.arc(0, 0, R * 0.8, 0, TAU); c.stroke();
+  c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? R * 0.22 : R * 0.5; c.lineTo(Math.cos(a) * rad, Math.sin(a) * rad); } c.closePath();
+  const sg = c.createLinearGradient(0, -R * 0.5, 0, R * 0.5); sg.addColorStop(0, M[0]); sg.addColorStop(1, M[2]); c.fillStyle = sg; c.fill(); c.lineWidth = R * 0.03; c.strokeStyle = M[2]; c.stroke();
   c.restore();
 }
 class Btn {
@@ -302,7 +330,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
 // Con el ajuste «Atril», o en el ordenador, queda fijo delante de ti.
 let menu = null, menuAnchor = null;
 const wristMenuOn = () => xrActive && !preview && settings.menuWhere === 'wrist';
-const MW = 0.76, PAD = 0.022, GAP = 0.01, LABW = 0.24;
+const MW = 0.9, PAD = 0.022, GAP = 0.01, LABW = 0.28; // (90 cm de ancho: cabe a la distancia del brazo sin girar la cabeza)
 // Capas del atril: son paneles semitransparentes casi pegados y, sin un orden fijo, el fondo
 // tapaba botones según desde dónde se mirara. Se dibujan siempre fondo → botones → teclado → teclas.
 const RO = { menu: 20, widget: 21, keypad: 22, key: 23 };
@@ -922,7 +950,7 @@ function drawBoard() {
     boardDay2(c, W, 352);
     board.tex.needsUpdate = true; return;
   }
-  const N = settings.waves, hang = settings.exercise === 'hang', RX = W - 44, live = ['play', 'rest', 'ready'].includes(state);
+  const N = nWaves(), hang = settings.exercise === 'hang', RX = W - 44, live = ['play', 'rest', 'ready'].includes(state);
   if (RUSH.on) boardFuse(c, W, H, RUSH.dur > 0 ? RUSH.left / RUSH.dur : 0); // el relámpago: el borde es una mecha que se consume
   // arriba: la oleada en puntos (y el bloque de la sesión), los puntos y las vidas
   let x = 44; c.textAlign = 'left';
@@ -932,8 +960,8 @@ function drawBoard() {
   c.textAlign = 'center'; c.font = `60px ${FD}`; const sc = String(score); glowText(c, sc, W / 2 + 40, 56, RUSH.on ? '#ffffff' : BC.gold, 16);
   if (RUSH.on) { c.textAlign = 'left'; const sw = c.measureText(sc).width; c.font = `48px ${FD}`; glowText(c, '×2', W / 2 + 40 + sw / 2 + 22, 56, BC.gold, 14); }
   c.textAlign = 'right';
-  if (!settings.lives) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
-  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
+  if (!nLives()) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
+  else if (nLives() <= 8) { let s = ''; for (let i = 0; i < nLives(); i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
   else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
   // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
   // medio, tus repeticiones (en colgado, los segundos)
@@ -954,7 +982,7 @@ function drawBoard() {
     const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)}`, up = RAMP.note ? (RAMP.up ? ' · ▲ un poco más' : ' · igual') : '';
     const D = boardDay(), goal = settings.goalMin, g2 = ghostAt(), gt = g2 && g2.best ? (g2.beat ? `¡Récord! +${g2.n - g2.best}` : `Récord: vas ${g2.n - g2.g >= 0 ? '+' : '−'}${Math.abs(g2.n - g2.g)}`) : D.best ? `Tu mejor día: ${D.best}` : '';
     const line = (t, col, y) => { if (!t) return; c.fillStyle = col; fitFont(c, t, 560, 48, '600 %px ' + FB); c.fillText(t, RX, y); };
-    line(nx + up, RAMP.up ? BC.gold : BC.ink, 228); line(`Hoy: ${Math.floor(D.time / 60)} de ${goal} min${D.time >= goal * 60 ? ' ✓' : ''}`, BC.ink, 296); line(gt, g2 && g2.n >= g2.g ? BC.teal : '#ff8a3d', 364);
+    line(nx + up, RAMP.up ? BC.gold : BC.ink, 214); line(`Hoy: ${Math.floor(D.time / 60)} de ${goal} min${D.time >= goal * 60 ? ' ✓' : ''}`, BC.ink, 272); line(gt, g2 && g2.n >= g2.g ? BC.teal : '#ff8a3d', 330);
   } else if (state === 'mount') say1(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', BC.teal, 64);
   else if (state === 'calib') say1('CALIBRANDO', BC.teal, 72);
   else if (state === 'ready') say1(String(Math.max(1, Math.ceil(3 - stateT))), BC.gold, 160, 260);
@@ -965,9 +993,11 @@ function drawBoard() {
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump || nextArcPlank || nextArcMace)) say1(nextArcMace ? '¡MAZA!' : nextArcPlank ? '¡PLANCHA!' : nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && live && state !== 'rest') {
-    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right';
-    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
-    if (gd !== null) { const t2 = `fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`; c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; fitFont(c, t2, 560, 48, '600 %px ' + FB); c.fillText(t2, RX, 392); }
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
+    c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
+  // abajo a la derecha, el rango: su escudo con los galones y el nombre
+  { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
+    glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }
   board.tex.needsUpdate = true;
 }

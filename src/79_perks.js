@@ -12,7 +12,7 @@ const PERKS = {
   shield: { name: 'Escudo', col: '#5ab8ff', desc: 'Para el primer golpe de cada oleada' },
   frost: { name: 'Escarcha', col: '#9fe8ff', desc: 'Cada perfecta deja más lentos 3 s a los que están cerca del impacto' },
   wave: { name: 'Onda', col: '#a68bff', desc: 'Cada perfecta empuja hacia atrás a los que están cerca del impacto' },
-  life: { name: 'Corazón', col: '#ff4fa3', desc: 'Cada 10 perfectas recuperas una vida (si te falta alguna)', ok: () => settings.lives > 0 },
+  life: { name: 'Corazón', col: '#ff4fa3', desc: 'Cada 10 perfectas recuperas una vida (si te falta alguna)', ok: () => nLives() > 0 },
   gold: { name: 'Doble o nada', col: '#ffd166', desc: 'Las perfectas valen el doble de puntos' },
   combo: { name: 'Combo de hierro', col: '#ff8a3d', desc: 'El primer golpe de cada oleada no te rompe el combo' },
   calm: { name: 'Calma', col: '#7ee081', desc: 'Los enemigos se mueven un 15 % más despacio' }
@@ -57,8 +57,8 @@ function perkWaveStart(i) {
 }
 const perkPtsK = perfect => (perfect && perkHas('gold') ? 2 : 1) * (RUSH.on ? 2 : 1);
 function perkOnRep(perfect) {
-  if (!perfect || !perkHas('life') || !settings.lives) return;
-  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; cheer('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
+  if (!perfect || !perkHas('life') || !nLives()) return;
+  if (++PK.perfN % 10 === 0 && lives < nLives()) { lives++; cheer('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
 }
 // El golpe que para el escudo (después de la guardia, que es cosa tuya)
 function perkAbsorb() {
@@ -221,7 +221,7 @@ function chestOpen() {
   fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
   const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
   if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
-  else if (settings.lives && lives < settings.lives) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
+  else if (nLives() && lives < nLives()) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
   else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); }
   boardDirty = true;
 }

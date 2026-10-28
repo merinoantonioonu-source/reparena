@@ -395,10 +395,11 @@ function makeSawObj(barY) {
   const ch = Math.max(0.05, barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = ch / 2 + 0.01; grp.add(curtain);
   return { grp, bar, coreMat, glowMat, curtainMat, curtain, lines, saws };
 }
-function makeArcObj(barY, H, tilt = 0, low = false) {
+// hw: media separación entre los extremos (1 = 2 m); el marco y la barra se estiran a lo ancho
+function makeArcObj(barY, H, tilt = 0, low = false, hw = 1) {
   if (low) return makeSawObj(barY);
-  const grp = new THREE.Group(); grp.add(arcFrame(H));
-  const bar = new THREE.Group(); bar.position.y = barY; bar.rotation.z = tilt; grp.add(bar);
+  const grp = new THREE.Group(), fr = arcFrame(H); fr.scale.x = hw; grp.add(fr);
+  const bar = new THREE.Group(); bar.position.y = barY; bar.rotation.z = tilt; bar.scale.x = hw; grp.add(bar);
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb0a0, toneMapped: false });
   const core = new THREE.Mesh(G.cylRaw(0.02, 0.02, 2.0, 8), coreMat); core.rotation.z = Math.PI / 2; bar.add(core);
   const ends = [-1, 1].map(s => { const e = glowSprite(0xffc8a0, 0.3, 0.9); e.position.x = s * 0.99; bar.add(e); return e; }); // (chisporrotean en los extremos)
@@ -408,10 +409,10 @@ function makeArcObj(barY, H, tilt = 0, low = false) {
   const lines = [0, 1].map(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 3), 3)); const l = new THREE.Line(g, arcLineMat); l.frustumCulled = false; bar.add(l); return l; });
   const curtainMat = new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2010, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
   // la cortina de energía va por encima de la barra; en las vallas, por debajo (hasta el suelo)
-  const ch = low ? Math.max(0.05, barY - 0.02) : Math.max(0.05, H - barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = low ? ch / 2 + 0.01 : barY + ch / 2 + 0.02; grp.add(curtain);
+  const ch = low ? Math.max(0.05, barY - 0.02) : Math.max(0.05, H - barY - 0.05), curtain = new THREE.Mesh(new THREE.PlaneGeometry(2.0, ch), curtainMat); curtain.position.y = low ? ch / 2 + 0.01 : barY + ch / 2 + 0.02; curtain.scale.x = hw; grp.add(curtain);
   if (tilt) { // cortina trapezoidal: el borde de abajo sigue a la barra inclinada
     const p = curtain.geometry.attributes.position;
-    for (let i = 0; i < p.count; i++) if (p.getY(i) < 0) p.setY(i, Math.min(ch / 2 - 0.02, p.getY(i) + Math.tan(tilt) * p.getX(i)));
+    for (let i = 0; i < p.count; i++) if (p.getY(i) < 0) p.setY(i, Math.min(ch / 2 - 0.02, p.getY(i) + Math.tan(tilt) * hw * p.getX(i)));
     p.needsUpdate = true;
   }
   return { grp, bar, coreMat, glowMat, curtainMat, curtain, lines, ends };

@@ -245,19 +245,17 @@ function layoutArena() {
     rig.position.set(0, 2.4, -1.2); rig.rotation.set(Math.PI / 2, 0, 0);
     board.mesh.position.set(0, 0, 0); board.mesh.rotation.set(0, 0, 0); board.mesh.scale.setScalar(0.9);
   } else if (boardSideS()) {
-    // a un lado: por delante (a unos 47° y 4 m), el doble de grande a la vista que sobre las compuertas, girado hacia ti y
-    // algo inclinado; justo por fuera de la compuerta de ese lado (no tapa lo que sale de ella) y siempre a la vista
-    const s = boardSideS(), R = 4.0, W = 2.6, H = W * 0.445, yc = 2.05, edge = Math.atan((sp + 1.3 * gs) / D), a = clamp(edge + Math.atan(W / 2 / R) + 0.03, 0.82, 1.15);
+    // a un lado, flotando (sin postes): por delante (a unos 50° y 5 m), grande (unas dos veces y media lo que se veía sobre
+    // las compuertas), girado hacia ti y algo inclinado; justo por fuera de la compuerta de ese lado (no tapa lo que sale de
+    // ella) y siempre a la vista
+    const s = boardSideS(), R = 5.0, W = 4.2, H = W * 0.445, yc = 2.15, edge = Math.atan((sp + 1.3 * gs) / D), a = clamp(edge + Math.atan(W / 2 / R) + 0.03, 0.85, 1.2);
     const cx = s * R * Math.sin(a), cz = -R * Math.cos(a);
     rig.position.set(cx, 0, cz); rig.rotation.y = Math.atan2(-cx, -cz);
-    for (const p of [-1, 1]) k.add('steel', G.box(0.14, yc + H / 2, 0.14), C.dark, p * (W / 2 + 0.14), (yc + H / 2) / 2, -0.12);
     const tilt = Math.atan((yc - 1.6) / R) * 0.8;
-    k.add('steel', G.box(W + 0.18, H + 0.18, 0.1), C.gun, 0, yc, -0.07, tilt, 0, 0);
-    rig.add(k.build({ steel: boardFrameMat }, { cast: true }));
     board.mesh.position.set(0, yc, -0.01); board.mesh.rotation.set(tilt, 0, 0); board.mesh.scale.setScalar(W);
   } else if (boardMode() === 'gate') {
     // por encima de la baliza de la compuerta (hasta 4,3 m): desde los ojos, también en cuclillas, no la tapa nada
-    const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85), H = W * 0.445, yc = 4.75 * gs + H / 2;
+    const W = clamp(D * 0.36, 1.8, 4.2) * Math.max(gs, 0.85) * 3, H = W * 0.445, yc = 4.75 * gs + H / 2; // (tres veces más grande que antes: se lee desde lejos)
     rig.position.set(0, 0, -D - 0.35);
     for (const s of [-1, 1]) k.add('steel', G.box(0.2, yc + H / 2, 0.2), C.dark, s * (W / 2 + 0.18), (yc + H / 2) / 2, -0.15);
     const tilt = Math.atan((yc - 1.6) / D) * 0.8;

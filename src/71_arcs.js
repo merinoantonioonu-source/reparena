@@ -23,6 +23,21 @@ function arxClean() {
 }
 function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
+/* ---------- Al compás de la música ---------- */
+// Con ritmo (el de cada canción de Spotify o uno marcado) y «Arcos al compás»: cada obstáculo sale cuando, a su velocidad,
+// llegará a ti justo en un pulso; el hueco hasta el siguiente se cuenta en pulsos (en compases de dos si es largo) y la
+// barra late con el pulso. arxBeatTick va en cada fotograma: dice si acaba de pasar el pulso de llegada del siguiente
+function arxBeatTick() {
+  const P = arxBeatP(); if (!P) { ARX.bk = -1; return true; }
+  const spec = spawnQueue[0], sp = spec && spec.kind === 'plank' ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : arxSpeed();
+  const k = Math.floor(beatNow() + (HL.z + arenaDepth() - 0.9) / Math.max(0.3, sp) / P), hit = ARX.bk >= 0 && k !== ARX.bk; ARX.bk = k; return hit;
+}
+function arxBeatGap(sec) {
+  const P = arxBeatP(); if (!P) return sec;
+  let n = Math.max(1, Math.round(sec / P)); if (n >= 4) n = Math.round(n / 2) * 2; return (n - 0.5) * P; // (medio pulso antes: espera al de llegada)
+}
+const arxBeatGlow = () => { const P = arxBeatP(); if (!P) return 1; const f = ((beatNow() % 1) + 1) % 1; return 0.7 + 0.6 * Math.pow(1 - f, 3); };
+
 /* ---------- Coreografías ---------- */
 // Cada pieza es una lista de obstáculos con su hueco hasta el siguiente (en veces el intervalo medio); se eligen según los
 // porcentajes de Ajustes → Arcos (vallas, inclinados, dobles, obstáculos nuevos) y se encadenan hasta completar la oleada
@@ -158,12 +173,16 @@ const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
 function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); orbRingMat.color.setHex(on ? 0xff7fc4 : 0xffd166); }
 class ArcOrb {
   constructor() {
-    const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
+    // la altura: unos por encima de la cabeza (estirar el brazo o saltar), otros muy abajo (agacharse a fondo o bajar la mano
+    // casi al suelo) y el resto, a la altura de la cara
+    const D = arenaDepth(), r = Math.random() * 100, band = r < settings.arcOrbHigh ? 'high' : r < settings.arcOrbHigh + settings.arcOrbLow ? 'low' : 'mid'; this.band = band;
+    const Y = () => band === 'high' ? clamp(calibRef + rand(0.15, 0.4), 1.5, 2.3) : band === 'low' ? clamp(calibRef - rand(0.75, 1.05), 0.3, 0.95) : clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1);
+    this.pos = new V3(rand(-0.6, 0.6), Y(), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
     this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.gem.scale.y = 1.25; this.grp.add(this.gem); this.gem.add(new THREE.Mesh(orbCoreGeo, orbCoreMat));
     // vuelo: dos vaivenes de frecuencias que no encajan, en horizontal y en vertical, que crecen al acercarse: no se puede prever
     this.fl = [rand(1.2, 1.9), rand(2.6, 3.5), rand(1.0, 1.6), rand(2.2, 3.1)].map(f => ({ f, p: rand(0, TAU) })); this.amp = 1;
     // y cruza en diagonal hacia el otro lado de la pista (y a otra altura), por una curva que no es la misma cada vez
-    this.z0 = this.pos.z; this.x1 = -Math.sign(this.pos.x || 1) * rand(0.2, 0.7); this.y1 = clamp(calibRef + rand(-0.6, 0.1), 0.5, 2.0) - this.pos.y; this.ease = Math.floor(rand(0, 3));
+    this.z0 = this.pos.z; this.x1 = -Math.sign(this.pos.x || 1) * rand(0.2, 0.7); this.y1 = band === 'mid' ? clamp(calibRef + rand(-0.6, 0.1), 0.5, 2.0) - this.pos.y : rand(-0.12, 0.12); this.ease = Math.floor(rand(0, 3));
     this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
     this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
     this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
@@ -172,7 +191,7 @@ class ArcOrb {
   update(dt, t) {
     this.pos.z += this.speed * dt; const D = arenaDepth(), sw = this.amp * clamp(settings.arcOrbSwing / 100, 0, 1), k = sw * clamp((this.pos.z + D) / Math.max(1, D), 0.3, 1), F = this.fl;
     const p = clamp((this.pos.z - this.z0) / Math.max(0.5, HL.z - this.z0), 0, 1), e = this.ease === 0 ? p * p : this.ease === 1 ? 1 - (1 - p) * (1 - p) : smooth(p);
-    this.grp.position.set(clamp(this.pos.x + sw * (this.x1 - this.pos.x) * e + k * (0.3 * Math.sin(F[0].f * t + F[0].p) + 0.12 * Math.sin(F[1].f * t + F[1].p)), -0.9, 0.9), clamp(this.pos.y + sw * this.y1 * e + k * (0.15 * Math.sin(F[2].f * t + F[2].p) + 0.06 * Math.sin(F[3].f * t + F[3].p)), 0.45, 2.1), this.pos.z);
+    this.grp.position.set(clamp(this.pos.x + sw * (this.x1 - this.pos.x) * e + k * (0.3 * Math.sin(F[0].f * t + F[0].p) + 0.12 * Math.sin(F[1].f * t + F[1].p)), -0.9, 0.9), clamp(this.pos.y + sw * this.y1 * e + k * (0.15 * Math.sin(F[2].f * t + F[2].p) + 0.06 * Math.sin(F[3].f * t + F[3].p)), 0.28, 2.35), this.pos.z);
     const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
     this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
     this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);

@@ -110,10 +110,12 @@ function solidPush(e) {
 const beatP = () => isCombat() && settings.bpm > 0 ? 60 / settings.bpm : 0;
 // El pulso va con el reloj del juego, enganchado al reloj real al empezar y al volver de la pausa (el compás marcado lo da el reloj real)
 const BEAT = { last: -1, hit: false, t: 0, off: null };
-const beatNow = () => { const P = beatP(); return P ? (BEAT.t + (BEAT.off || 0) - TCH.beat0) / P : 0; }; // pulsos desde la referencia (con decimales)
+// En Arcos, con «Arcos al compás», el mismo pulso decide cuándo llega cada arco (ver arxBeatTick)
+const arxBeatP = () => settings.mode === 'arcs' && settings.arcBeat && settings.bpm > 0 ? 60 / settings.bpm : 0, beatAny = () => beatP() || arxBeatP();
+const beatNow = () => { const P = beatAny(); return P ? (BEAT.t + (BEAT.off || 0) - TCH.beat0) / P : 0; }; // pulsos desde la referencia (con decimales)
 function beatStep(dt) {
   BEAT.t += dt; if (BEAT.off === null) BEAT.off = perfNow() - BEAT.t;
-  const P = beatP(); if (!P) { BEAT.hit = false; return; } const k = Math.floor(beatNow()); BEAT.hit = k !== BEAT.last && BEAT.last >= 0; BEAT.last = k;
+  const P = beatAny(); if (!P) { BEAT.hit = false; return; } const k = Math.floor(beatNow()); BEAT.hit = k !== BEAT.last && BEAT.last >= 0; BEAT.last = k;
 }
 const SWORD_WALK = 3.5, swordWalk = () => swordSet() && !bareHands(), walkT = () => swordWalk() ? Math.min(dv('walkTime'), SWORD_WALK) : dv('walkTime');
 // Con espadas se acercan hasta tenerte al alcance de la hoja
@@ -1031,10 +1033,16 @@ class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
   // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
   constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0, plank = false) {
-    const H = arMode ? 2.25 : 2.55;
+    const H = arMode ? 2.25 : 2.55, tl = !!tilt && !spin && !jump && !plank, top = calibRef + HEAD_TOP;
+    // inclinados: su propia bajada (en el lado alto) y la separación entre los extremos; más separados, el lado alto queda
+    // más lejos y hay que cargar más el peso en esa pierna. La barra nunca se mete en el suelo por el lado bajo
+    if (tl && settings.arcTiltDrop > 0) drop = settings.arcTiltDrop / 100 * rand(0.85, 1.15);
+    const hw = tl ? clamp(settings.arcTiltW / 200, 0.7, 1.6) : 1, shift = tl ? clamp(settings.arcShift / 100, 0.15, hw - 0.15) : settings.arcShift / 100;
+    if (tl) tilt = Math.sign(tilt) * Math.min(Math.abs(tilt), Math.atan(Math.max(0.05, top - drop - 0.15) / (shift + hw)));
+    this.hw = hw; if (tl) this.leanX = Math.sign(tilt) * shift;
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.maxUp = -1; this.fast = false;
-    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
-    this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
+    this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump, hw); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
     if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
@@ -1042,7 +1050,7 @@ class Arc {
     if (!second) gates[1].openT = 1.6;
     zapLines(this.o.lines);
   }
-  barAt(x) { return this.barY + Math.tan(this.tilt) * clamp(x, -1, 1); } // altura de la barra sobre tu cabeza
+  barAt(x) { return this.barY + Math.tan(this.tilt) * clamp(x, -this.hw, this.hw); } // altura de la barra sobre tu cabeza
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.o.grp.position.z = this.z;
     if (this.spin) { const tau = Math.max(0, this.tReach - this.t); this.tilt = this.tiltEnd + this.spin * tau * Math.min(1, tau / 1.2); this.o.bar.rotation.z = this.tilt; }
@@ -1050,13 +1058,13 @@ class Arc {
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); if (this.o.ends) for (const e of this.o.ends) e.scale.setScalar(rand(0.22, 0.38)); }
     if (this.o.ends && Math.random() < dt * 6 && Math.abs(this.z - HL.z) < 6) { const e = this.o.ends[Math.random() < 0.5 ? 0 : 1]; fx.sparks(e.getWorldPosition(tmpB), 3, [1, 0.6, 0.3], 1.2, 0.02); } // (chispas en los extremos de la barra)
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
-    const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
+    const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
-    const flick = 0.75 + Math.random() * 0.25;
-    this.o.glowMat.opacity = (danger ? 1 : 0.7) * flick; this.o.curtainMat.opacity = danger ? 0.32 + 0.15 * Math.sin(t * 30) : 0.18;
+    const flick = (0.75 + Math.random() * 0.25) * arxBeatGlow();
+    this.o.glowMat.opacity = Math.min(1, (danger ? 1 : 0.7) * flick); this.o.curtainMat.opacity = danger ? 0.32 + 0.15 * Math.sin(t * 30) : 0.18;
     this.o.coreMat.color.setHex(danger ? 0xffffff : 0xffb0a0);
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
-    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(clamp(HL.x, -0.95, 0.95), this.barAt(HL.x), this.z)));
+    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(clamp(HL.x, 0.05 - this.hw, this.hw - 0.05), this.barAt(HL.x), this.z)));
     // valla: mientras pasa por debajo de ti (con algo de margen, el salto dura poco) cuenta lo más alto que llegaste
     if (this.jump) { if (!this.judged && Math.abs(this.z - hz) < 0.4 && inLane) { this.checked = true; this.maxUp = Math.max(this.maxUp, up); if (JUMP.fastT < 0.6) this.fast = true; } }
     else if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; const top = HL.y + HEAD_TOP, b = this.barAt(HL.x); if (top > b) this.hit = true; this.minClear = Math.min(this.minClear, b - top); }
@@ -1890,7 +1898,23 @@ function updatePistol(dt) {
 }
 
 /* =================== OLEADAS =================== */
-function isBossWave(i) { return settings.waves ? i === settings.waves - 1 : (i + 1) % 5 === 0; }
+function isBossWave(i) { return nWaves() ? i === nWaves() - 1 : (i + 1) % 5 === 0; }
+// La escalera de enemigos: cada uno tiene su dureza (1, los más fáciles de tumbar y lentos; 4, los más duros). En las
+// primeras oleadas (y en los rangos bajos) salen solo los fáciles de entre los que elegiste, y cada pocas oleadas entra
+// uno más duro, que se anuncia. Las oleadas piden las mismas repeticiones: los duros aguantan más disparos y salen menos
+const FOE_TIER = { zombie: 1, zgreen: 1, puglin: 1, mushroom: 1, crab: 1, drone: 1, bee: 1, robot: 2, imp: 2, skeleton: 2, sharky: 2, alien: 2, spider: 2, skull: 2, hornet: 2, bat: 2,
+  zchubby: 3, raptor: 3, thrower: 3, demon: 3, greendemon: 3, mako: 3, alientall: 3, cthulhu: 3, cyclops: 4, yeti: 4, captain: 4 };
+const LADDER = { seen: new Set(), fresh: [] };
+const ladderOn = () => !!settings.foeLadder && isCombat();
+function ladderTop(i) {
+  const r = rankIdx(), start = r <= 2 ? 1 : r <= 4 ? 2 : 3, N = nWaves(), p = N > 1 ? i / (N - 1) : Math.min(1, i / 9);
+  return Math.min(4, start + Math.round(p * (4 - start)));
+}
+function ladderPick(list, i) {
+  if (!ladderOn() || list.length < 2) return list;
+  const top = ladderTop(i), ok = list.filter(k => (FOE_TIER[k] || 2) <= top);
+  return ok.length ? ok : list.filter(k => (FOE_TIER[k] || 2) === Math.min(...list.map(k => FOE_TIER[k] || 2)));
+}
 function buildWave(i) {
   if (isBars()) return buildBarWave(i);
   if (settings.mode === 'touch') return buildTouchWave(i);
@@ -1920,14 +1944,15 @@ function buildWave(i) {
   // los de tierra (de las compuertas o, en el suelo, de las trampillas) y los voladores: repartidos entre los elegidos (en
   // Ajustes → Enemigos), bien mezclados; los drones, el doble que cada uno de los demás voladores (como antes, uno de cada
   // tres, avispones). Si solo sale una clase de tierra, el jefe es de esa clase
-  const G = groundList().length ? groundList() : [tiny ? 'spider' : 'robot'], FL = flyList().filter(k => k !== 'dragon');
-  const FK = FL.length ? FL : ['drone', 'hornet'], W = k => k === 'drone' ? 2 : 1;
+  const G0 = groundList().length ? groundList() : [tiny ? 'spider' : 'robot'], FL = flyList().filter(k => k !== 'dragon');
+  const G = ladderPick(G0, i), FK = ladderPick(FL.length ? FL : ['drone', 'hornet'], i), W = k => k === 'drone' ? 2 : 1, heavyOk = !ladderOn() || ladderTop(i) >= 2;
+  if (i === 0) LADDER.seen.clear(); LADDER.fresh = [...(F !== 'flyers' ? G : []), ...(F !== 'robots' ? FK : [])].filter(k => !LADDER.seen.has(k)); LADDER.fresh.forEach(k => LADDER.seen.add(k)); if (i === 0) LADDER.fresh = [];
   const deal = ks => { const acc = {}, sum = ks.reduce((a, k) => a + W(k), 0); ks.forEach(k => acc[k] = Math.random() * 0.5); return () => { let g = ks[0], top = -Infinity; for (const k of ks) { acc[k] += W(k) / sum; if (acc[k] > top) { top = acc[k]; g = k; } } acc[g] -= 1; return g; }; };
   const nextG = deal(G), nextF = deal(FK);
   if (isBossWave(i)) {
     const b = Math.max(4, Math.round(total * 0.3)), ground = F === 'robots' || (F === 'mix' && Math.floor(i / 5) % 2 === 0);
     const gb = k => tiny ? (k === 'spider' ? 'titan' : 'h' + k + 'boss') : { robot: 'titan', imp: 'impboss', puglin: 'impboss', thrower: 'impboss', zombie: 'zombieboss', raptor: 'raptorboss' }[k] || k + 'boss';
-    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : !tiny && G.includes('captain') ? 'captainboss' : G.length === 1 ? gb(G[0]) : G.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G));
+    const kind = !ground ? (flyList().includes('dragon') ? 'dragon' : 'carrier') : !tiny && G0.includes('captain') ? 'captainboss' : G0.length === 1 ? gb(G0[0]) : G0.includes(tiny ? 'spider' : 'robot') ? 'titan' : gb(pick(G)); // (el jefe, de entre todos los elegidos)
     boss = { kind, hp: b }; total -= b;
   }
   let k = 0;
@@ -1935,11 +1960,11 @@ function buildWave(i) {
     let kind, hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
       const g = nextG();
-      if (tiny) { if (g === 'spider') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
+      if (tiny) { if (g === 'spider') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
       else if (g === 'imp' || g === 'puglin') { kind = g; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
       else if (g === 'thrower') { kind = 'impthrow'; hp = 2 + Math.floor(i / 3); }
       else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
-      else if (g === 'robot') { kind = k % 3 === 2 ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
+      else if (g === 'robot') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
       else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' || g === 'captain' ? 3 : 2) + Math.floor(i / 3); } // zombis, monstruitos y piratas
     }
     else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
@@ -2008,9 +2033,9 @@ function resetWorld() {
 }
 function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { combat: foesHas('robots') ? 'walkTime' : 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
 function summaryText() {
-  const n = settings.waves ? `${settings.waves} oleadas` : 'oleadas sin fin';
+  const n = nWaves() ? `${nWaves()} oleadas` : settings.toFail ? 'al fallo' : 'oleadas sin fin';
   const first = settings.exercise === 'hang' ? `${hangSecs(0)} s colgado la primera (+${settings.hangInc})` : `${waveReps(0)} reps la primera (+${settings.repsInc})`;
-  return `${n} · ${first} · vidas ${settings.lives || '∞'} · descanso ${settings.rest} s`;
+  return `${n} · ${first} · vidas ${nLives() || '∞'} · descanso ${settings.rest} s`;
 }
 // Los ejercicios del modo, de cuatro en cuatro por fila (de tres si son muchos, para que se lean), en lista o por zona del cuerpo
 function exerciseRows(back) {
@@ -2121,6 +2146,7 @@ function lobbyMenu() {
     ...sessionRows(),
     { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
     { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
+    { t: 'field', key: 'toFail', after: () => lobbyMenu() },
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
     // enemigos y armas, juntos en una fila (el menú queda más corto y al alcance)
     ...(isCombat() || armsAny() ? [{ t: 'btns', items: [
@@ -2263,7 +2289,7 @@ function warmStep() {
 function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
-  waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
+  waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
@@ -2345,14 +2371,14 @@ function hurtPlayer(src) {
   if (perkAbsorb()) return; // el escudo de las mejoras (79_perks)
   hapticBoth(0.9, 120);
   if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
-  if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
-  if (!(src instanceof Arc) && !(src && src.silent)) cheer(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
+  if (nLives()) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
+  if (!(src instanceof Arc) && !(src && src.silent)) cheer(nLives() ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
 }
 // Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
@@ -2380,6 +2406,7 @@ function progressLine(P = progress()) {
 }
 function endRun(win, manual) {
   const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
+  const failBest = h.filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); // (al fallo: la oleada más lejana)
   saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
@@ -2393,13 +2420,14 @@ function endRun(win, manual) {
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
   const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName() + (rankTouched() ? ' (retocado)' : ''),
-    sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${settings.waves ? ` de ${settings.waves}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
+    sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
-    chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
+    chips: [settings.toFail && got ? (waveIdx + 1 > failBest && failBest ? [`¡Récord al fallo: oleada ${waveIdx + 1}!`, '#ffd166'] : [`Al fallo: oleada ${waveIdx + 1}${failBest ? ` · tu récord, ${failBest}` : ''}`, '#a68bff']) : null, got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
       RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null,
-      AX && AX.medal ? [`Medalla de ${AX.medal[0]}`, AX.medal[1]] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
+      AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
+  S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
   if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
@@ -2457,14 +2485,15 @@ WIN.veil.renderOrder = RO.menu - 2; WIN.veil.visible = false; scene.add(WIN.veil
 WIN.p = makePanel(1.2, 0.5, 1024, { depthTest: false }); WIN.p.mesh.renderOrder = RO.menu - 1; WIN.p.mesh.visible = false; scene.add(WIN.p.mesh);
 const waveIntroOn = i => i > 0 && !isBars();
 function waveIntro(i) {
-  const P = WIN.p, c = P.ctx, W = P.W, H = P.H, N = settings.waves, rk = rampK(), last = N && i >= N - 1;
+  const P = WIN.p, c = P.ctx, W = P.W, H = P.H, N = nWaves(), rk = rampK(), last = N && i >= N - 1;
   c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
   rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,10,28,0.82)'; c.fill(); c.lineWidth = 6; c.strokeStyle = 'rgba(255,209,102,0.7)'; c.stroke(); // (un panel, no letras sueltas)
   const t1 = last ? '¡ÚLTIMA OLEADA!' : N ? `OLEADA ${i + 1} DE ${N}` : `OLEADA ${i + 1}`;
   fitFont(c, t1, W - 60, 120, '%px ' + FD); c.save(); c.shadowColor = '#ffd166'; c.shadowBlur = 30; c.fillStyle = '#ffd166'; c.fillText(t1, W / 2, H * 0.3); c.restore();
   const t2 = `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
-  const t3 = rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
-  if (t3) { fitFont(c, t3, W - 80, 48, '600 %px ' + FB); c.fillStyle = '#3cf0c6'; c.fillText(t3, W / 2, H * 0.87); }
+  const nw = LADDER.fresh.map(k => (FOE_GATE.concat(FOE_HATCH, FOE_FLY).find(o => o[0] === k) || [k, k])[1]).join(', '); // (el que entra en juego)
+  const t3 = nw ? `Entra en juego: ${nw}` : rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
+  if (t3) { fitFont(c, t3, W - 80, 48, '600 %px ' + FB); c.fillStyle = nw ? '#ff8a3d' : '#3cf0c6'; c.fillText(t3, W / 2, H * 0.87); }
   P.tex.needsUpdate = true; WIN.t = 0;
   hudLocal(_wiP.set(0, 0.02, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ()); // (donde salen los avisos, delante de ti)
 }
@@ -2494,7 +2523,7 @@ function updateWaveIntro(dt) {
   WIN.p.mesh.material.opacity = a; WIN.p.mesh.visible = a > 0.01; WIN.p.mesh.scale.setScalar(1 + 0.08 * Math.max(0, 1 - t / 0.5));
   if (t >= WIN.dur) waveIntroClear();
 }
-// El resumen: una ficha con el número grande (repeticiones o segundos colgado), las estrellas y el porcentaje de perfectas,
+// El resumen: una ficha con el número grande (repeticiones o segundos colgado), la medalla y el porcentaje de perfectas,
 // seis casillas con lo demás y los logros; debajo, los botones. Se queda hasta que pulses uno (sin cuenta atrás)
 function summaryDraw(S, c, x, y, w, h) {
   const gold = '#ffd166', teal = '#3cf0c6', pink = '#ff4fa3', ink = '#eeeaff', dim = '#a49fc8';
@@ -2505,11 +2534,11 @@ function summaryDraw(S, c, x, y, w, h) {
   const hy = y + 92, hh = h * 0.36; rr(c, x + 10, hy, w - 20, hh, 26); c.fillStyle = 'rgba(255,209,102,0.07)'; c.fill(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,209,102,0.35)'; c.stroke();
   const nx = x + w * 0.3; c.save(); c.shadowColor = gold; c.shadowBlur = 24; c.fillStyle = gold; fitFont(c, String(S.got), w * 0.42, Math.round(hh * 0.62), '%px ' + FD); c.fillText(String(S.got), nx, hy + hh * 0.43); c.restore();
   c.fillStyle = ink; fitFont(c, S.unit, w * 0.42, 30, '500 %px ' + FB); c.fillText(S.unit, nx, hy + hh * 0.82);
-  // estrellas y perfectas
-  const sx = x + w * 0.72, star = (cx, cy, r, on) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * 0.45 : r; c.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } c.closePath(); c.fillStyle = on ? gold : 'rgba(255,255,255,0.12)'; c.fill(); };
-  for (let k = 0; k < 3; k++) star(sx + (k - 1) * hh * 0.34, hy + hh * 0.33, hh * 0.15, k < S.stars);
+  // la medalla conseguida (oro, plata o bronce, con su cinta) y las perfectas; sin medalla, su hueco vacío
+  const sx = x + w * 0.72, mR = hh * 0.2, my = hy + hh * 0.42;
+  if (S.medal) drawMedal(c, S.medal, sx, my, mR); else { c.setLineDash([10, 8]); c.lineWidth = 4; c.strokeStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.arc(sx, my, mR, 0, TAU); c.stroke(); c.setLineDash([]); }
   if (S.pct !== null) {
-    const bw = w * 0.36, bx = sx - bw / 2, by = hy + hh * 0.66; rr(c, bx, by, bw, 18, 9); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    const bw = w * 0.36, bx = sx - bw / 2, by = hy + hh * 0.72; rr(c, bx, by, bw, 18, 9); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
     if (S.pct > 0) { rr(c, bx, by, Math.max(18, bw * S.pct / 100), 18, 9); c.fillStyle = teal; c.fill(); }
     c.fillStyle = ink; fitFont(c, `${S.pct} % perfectas`, bw, 28, '600 %px ' + FB); c.fillText(`${S.pct} % perfectas`, sx, by + 44);
   } else { c.fillStyle = ink; c.font = '600 28px ' + FB; c.fillText(S.win ? '¡Aguantaste!' : '¡Sigue así!', sx, hy + hh * 0.72); }
@@ -2529,7 +2558,7 @@ function summaryDraw(S, c, x, y, w, h) {
 }
 function endMenu(title, S) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
-    { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
+    { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, S.medal ? `Medalla de ${S.medal}` : null, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
@@ -2566,14 +2595,14 @@ function gameStep(dt, t) {
   if (state === 'play') {
     spawnTimer -= dt * perkSpawnK();
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
-    beatStep(dt); // con ritmo, los enemigos salen en el pulso
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap)) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
       rampWaveEnd(!BAR.failed);
-      if (BAR.failed) { const last = settings.waves && waveIdx >= settings.waves - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
-      else if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
+      if (BAR.failed) { const last = nWaves() && waveIdx >= nWaves() - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
+      else if (nWaves() && waveIdx >= nWaves() - 1) endRun(true);
       else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
       else startWave(waveIdx + 1);
     }
