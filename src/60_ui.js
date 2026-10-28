@@ -628,11 +628,19 @@ let hurtT = 0;
 const _hl = new V3();
 function headLocal(off, out) { return out.copy(off).applyQuaternion(head.q).add(head.p); }
 // Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura del ejercicio) siguen
-// adónde miras al girar o al subir y bajar la vista, pero nunca se ladean con la cabeza: el texto, siempre derecho. Solo
-// tumbado o en plancha (mirando al suelo o al techo) siguen, de momento, a la cabeza entera
-const _vq = new Q4(), _ve = new THREE.Euler(0, 0, 0, 'YXZ');
+// adónde miras al girar o al subir y bajar la vista, pero nunca se ladean con la cabeza: el texto, siempre derecho.
+// Tumbado o en plancha (mirando al suelo o al techo) salen en el suelo bajo tu cara o en el techo, de cara a tus ojos, con
+// la parte de arriba del texto hacia tu cabeza: hacia donde apuntaba lo alto de tu cabeza al tumbarte (LIE.up, en
+// horizontal), que ya no cambia aunque la ladees; una vez empezada la partida, además, fijos (FIXV)
+const _vq = new Q4(), _ve = new THREE.Euler(0, 0, 0, 'YXZ'), LIE = { on: false, up: new V3() }, _lyX = new V3(), _lyY = new V3(), _lyZ = new V3(), _lyM = new THREE.Matrix4();
 function viewQ() {
-  if ((isFloor() || isSupine() || settings.exercise === 'row') && Math.abs(fwd().y) > 0.6) return _vq.copy(head.q);
+  const f = fwd();
+  if ((isFloor() || isSupine() || settings.exercise === 'row') && Math.abs(f.y) > 0.6) {
+    if (!LIE.on) { LIE.on = true; LIE.up.set(0, 1, 0).applyQuaternion(head.q); LIE.up.y = 0; if (LIE.up.lengthSq() < 1e-4) LIE.up.set(0, 0, -1); LIE.up.normalize(); }
+    _lyZ.copy(f).negate(); _lyY.copy(LIE.up).addScaledVector(_lyZ, -LIE.up.dot(_lyZ)).normalize(); _lyX.crossVectors(_lyY, _lyZ);
+    return _vq.setFromRotationMatrix(_lyM.makeBasis(_lyX, _lyY, _lyZ));
+  }
+  if (LIE.on && Math.abs(f.y) < 0.45) LIE.on = false; // (de pie o sentado otra vez: la próxima vez que te tumbes, se vuelve a tomar)
   _ve.setFromQuaternion(head.q, 'YXZ'); _ve.z = 0; return _vq.setFromEuler(_ve);
 }
 function viewLocal(off, out) { return out.copy(off).applyQuaternion(viewQ()).add(head.p); }

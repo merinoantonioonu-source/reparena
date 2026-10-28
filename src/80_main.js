@@ -104,6 +104,7 @@ function previewInput(dt) {
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
     else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
+    else if (nx && nx.kind === 'mace') { target = PV.crouch ? PV.baseY - (settings.arcMaceDrop / 100 + 0.38) : PV.baseY; PV.jumping = false; } // la maza: Espacio, por debajo de la bola
     else PV.jumping = false;
   }
   // Toques: Espacio lleva la cabeza a la ameba que toca y la devuelve después
@@ -266,7 +267,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateFX(dt); updateBolts(dt);
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
-  updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt);
+  updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt); updateBigNotice(dt);
   updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); updateComic(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);

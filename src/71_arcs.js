@@ -9,8 +9,8 @@ const ARX_GHOST = 'reparena3-arcghost';
 // los obstáculos nuevos, por turnos (empezando por uno al azar): así salen los tres
 const ARX_NEW = ['laser', 'walls', 'wheel']; let arxNewN = Math.floor(Math.random() * 3);
 const arxNewKind = () => ARX_NEW[(arxNewN++) % 3];
-// la fiebre acelera lo que llega: la primera, un 20 %; cada una de las siguientes de la ronda, un 10 % más (hasta un 50 %)
-const arxMul = () => ARX.fever ? Math.min(1.5, 1.2 + 0.1 * (ARX.feverN - 1)) : 1;
+// la fiebre acelera lo que llega: la primera, un 20 %; cada una de las siguientes de la ronda, «Fiebre +» más (hasta el doble)
+const arxMul = () => ARX.fever ? Math.min(2, 1.2 + (settings.arcFeverUp >= 0 ? settings.arcFeverUp : 10) / 100 * (ARX.feverN - 1)) : 1;
 const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul();
 function arxReset() {
   ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
@@ -73,7 +73,10 @@ class ArcObs {
     } else if (kind === 'mace') {
       // la maza: una bola de pinchos colgada de una cadena que se balancea de lado a lado; en lo más bajo pasa a la altura
       // de tu cabeza. No se para: hay que mirar su ritmo y apartarse al lado por el que no pasa (o agacharse a tiempo: unos 35 cm)
-      const L = 2.0; Object.assign(this, { L, piv: calibRef + HEAD_TOP - 0.02 + L, A: rand(0.42, 0.55), w: TAU / rand(1.5, 2.1), ph: rand(0, TAU), drop: 0.01, tilt: 0.01, leanX: 0, bx: 0, by: 0, lastS: 0 });
+      // la bola pasa «Bajada de la maza» por debajo de lo alto de tu cabeza: en lo más bajo de su vaivén o, las que giran en
+      // círculo (un péndulo cónico, hacia los lados y hacia ti y hacia atrás), siempre a esa altura
+      const L = 2.0, H = calibRef + HEAD_TOP - (settings.arcMaceDrop >= 0 ? settings.arcMaceDrop : 20) / 100, round = Math.random() * 100 < settings.arcMaceRound, A = round ? rand(0.32, 0.42) : rand(0.42, 0.55);
+      Object.assign(this, { L, H, round, A, piv: round ? H + L * Math.cos(A) : H + L, w: TAU / (round ? rand(1.8, 2.4) : rand(1.5, 2.1)), ph: rand(0, TAU), drop: 0.01, tilt: 0.01, leanX: 0, bx: 0, by: 0, bz: 0, lastS: 0, reach: round ? L * Math.sin(A) : 0 });
       const beam = new THREE.Mesh(G.box(2.4, 0.12, 0.14), M.steel); tint(beam.geometry, C.gun); beam.position.y = this.piv + 0.06; this.grp.add(beam);
       for (const s of [-1, 1]) { const post = new THREE.Mesh(G.cyl(0.05, 0.06, this.piv + 0.12, 10), M.steel); tint(post.geometry, C.gun); post.position.set(s * 1.2, (this.piv + 0.12) / 2, 0); this.grp.add(post); }
       this.arm = new THREE.Group(); this.arm.position.y = this.piv; this.grp.add(this.arm);
@@ -106,17 +109,20 @@ class ArcObs {
     else if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
     if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.kind === 'mace' ? this.bx : this.gapX(1.2), 1.2, this.z)));
-    if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; if (bad) this.hit = true; }
-    if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
+    const reach = this.reach || 0; // (la maza que gira pasa por delante y por detrás de su viga)
+    if (!this.judged && Math.abs(this.z - hz) < 0.15 + reach && inLane) { this.checked = true; if (bad) this.hit = true; }
+    if (!this.judged && this.z > hz + 0.15 + reach) { this.judged = true; this.resolve(); }
     if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
   }
   // la maza: el ángulo de la cadena y dónde está la bola (en el sitio de la pista); al pasar por lo más bajo cerca de ti, silba
   swing(t) {
-    const a = this.A * Math.sin(this.w * this.t + this.ph); this.arm.rotation.z = a; this.ball.rotation.x = this.t * 0.7;
-    this.bx = this.L * Math.sin(a); this.by = this.piv - this.L * Math.cos(a);
-    const s = Math.sign(a); if (s !== this.lastS && this.lastS && Math.abs(this.z - HL.z) < 3) SND.whoosh(arena.localToWorld(tmpA.set(this.bx, this.by, this.z)), 'arc'); this.lastS = s;
+    const ph = this.w * this.t + this.ph;
+    if (this.round) { const r = this.L * Math.sin(this.A); this.bx = r * Math.sin(ph); this.bz = r * Math.cos(ph); this.by = this.H; }
+    else { const a = this.A * Math.sin(ph); this.bx = this.L * Math.sin(a); this.by = this.piv - this.L * Math.cos(a); this.bz = 0; }
+    this.arm.quaternion.setFromUnitVectors(_mcD.set(0, -1, 0), _mcB.set(this.bx, this.by - this.piv, this.bz).normalize()); this.ball.rotation.x = this.t * 0.7;
+    const s = Math.sign(this.bx); if (s !== this.lastS && this.lastS && Math.abs(this.z - HL.z) < 3) SND.whoosh(arena.localToWorld(tmpA.set(this.bx, this.by, this.z + this.bz)), 'arc'); this.lastS = s;
   }
-  maceHits() { return Math.hypot(HL.x - this.bx, HL.y - this.by) < MACE.r + 0.14; } // (la bola, con sus pinchos, y tu cabeza)
+  maceHits() { return Math.abs(this.z + this.bz - HL.z) < 0.2 && Math.hypot(HL.x - this.bx, HL.y - this.by) < MACE.r + 0.14; } // (la bola, con sus pinchos, y tu cabeza)
   resolve() {
     if (!(state === 'play' || state === 'rest')) return;
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
@@ -131,6 +137,7 @@ class ArcObs {
 }
 
 // La maza, compartida por todas: bola de acero oscuro con 12 pinchos y eslabones de cadena
+const _mcD = new V3(), _mcB = new V3();
 const MACE = (() => {
   const r = 0.16, ball = new THREE.IcosahedronGeometry(r, 1), spk = [], ico = new THREE.IcosahedronGeometry(1, 0), P = ico.attributes.position, seen = [];
   for (let i = 0; i < P.count; i++) { const v = new V3(P.getX(i), P.getY(i), P.getZ(i)).normalize(); if (seen.some(o => o.distanceTo(v) < 0.01)) continue; seen.push(v);
@@ -155,14 +162,17 @@ class ArcOrb {
     this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.gem.scale.y = 1.25; this.grp.add(this.gem); this.gem.add(new THREE.Mesh(orbCoreGeo, orbCoreMat));
     // vuelo: dos vaivenes de frecuencias que no encajan, en horizontal y en vertical, que crecen al acercarse: no se puede prever
     this.fl = [rand(1.2, 1.9), rand(2.6, 3.5), rand(1.0, 1.6), rand(2.2, 3.1)].map(f => ({ f, p: rand(0, TAU) })); this.amp = 1;
+    // y cruza en diagonal hacia el otro lado de la pista (y a otra altura), por una curva que no es la misma cada vez
+    this.z0 = this.pos.z; this.x1 = -Math.sign(this.pos.x || 1) * rand(0.2, 0.7); this.y1 = clamp(calibRef + rand(-0.6, 0.1), 0.5, 2.0) - this.pos.y; this.ease = Math.floor(rand(0, 3));
     this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
     this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
     this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
     this.trailT = 0; this.ph = rand(0, TAU); this.grp.position.copy(this.pos); arena.add(this.grp);
   }
   update(dt, t) {
-    this.pos.z += this.speed * dt; const D = arenaDepth(), k = this.amp * clamp((this.pos.z + D) / Math.max(1, D), 0.3, 1), F = this.fl;
-    this.grp.position.set(clamp(this.pos.x + k * (0.2 * Math.sin(F[0].f * t + F[0].p) + 0.09 * Math.sin(F[1].f * t + F[1].p)), -0.85, 0.85), clamp(this.pos.y + k * (0.11 * Math.sin(F[2].f * t + F[2].p) + 0.05 * Math.sin(F[3].f * t + F[3].p)), 0.45, 2.1), this.pos.z);
+    this.pos.z += this.speed * dt; const D = arenaDepth(), sw = this.amp * clamp(settings.arcOrbSwing / 100, 0, 1), k = sw * clamp((this.pos.z + D) / Math.max(1, D), 0.3, 1), F = this.fl;
+    const p = clamp((this.pos.z - this.z0) / Math.max(0.5, HL.z - this.z0), 0, 1), e = this.ease === 0 ? p * p : this.ease === 1 ? 1 - (1 - p) * (1 - p) : smooth(p);
+    this.grp.position.set(clamp(this.pos.x + sw * (this.x1 - this.pos.x) * e + k * (0.3 * Math.sin(F[0].f * t + F[0].p) + 0.12 * Math.sin(F[1].f * t + F[1].p)), -0.9, 0.9), clamp(this.pos.y + sw * this.y1 * e + k * (0.15 * Math.sin(F[2].f * t + F[2].p) + 0.06 * Math.sin(F[3].f * t + F[3].p)), 0.45, 2.1), this.pos.z);
     const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
     this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
     this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);
@@ -186,32 +196,57 @@ class ArcOrb {
 }
 const _ao = new V3(), _ao2 = new V3();
 
-/* ---------- Sensación de avance: rayas en la pista y farolas que pasan a tu lado ---------- */
+/* ---------- Sensación de avance: una rejilla de neón en la pista y arcos de luz a los lados que pasan junto a ti ---------- */
+// La pista: líneas de luz (de lado a lado cada metro y tres a lo largo) que corren hacia ti a la velocidad de los arcos y se
+// apagan a lo lejos. A los lados, en vez de farolas, arcos de luz finos que suben desde el suelo y se inclinan un poco hacia
+// dentro (sin entrar en la pista). Todo con el color de la racha: turquesa, dorado (5 seguidos) y rosa en fiebre; la arena
+// también se tiñe un poco (una luz de ambiente de ese color)
 const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
-const dashMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false, transparent: true, opacity: 0.7 }), postTopMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
-const ARX_DASH = [], ARX_POST = [], DASH_GAP = 1.4, POST_GAP = 4;
-for (let i = 0; i < 14; i++) for (const s of [-1, 1]) { const m = new THREE.Mesh(G.box(0.05, 0.008, 0.55), dashMat); m.position.set(s * 0.95, 0.01, 0); ARX_DECO.add(m); ARX_DASH.push(m); }
-for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
-  const g = new THREE.Group(), p = new THREE.Mesh(G.cyl(0.025, 0.035, 1.7, 8), M.steel); tint(p.geometry, C.gun); p.position.y = 0.85; g.add(p);
-  const top = new THREE.Mesh(G.box(0.16, 0.05, 0.08), postTopMat); top.position.set(-s * 0.05, 1.7, 0); g.add(top); g.position.set(s * 1.55, 0, 0); ARX_DECO.add(g); ARX_POST.push(g);
+const gridMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+  uniforms: { uCol: { value: new THREE.Color(0x3cf0c6) }, uScroll: { value: 0 }, uLen: { value: 12 }, uK: { value: 0.8 } },
+  vertexShader: 'varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform vec3 uCol; uniform float uScroll; uniform float uLen; uniform float uK; varying vec2 vU;
+    void main(){
+      float z = vU.y * uLen - uScroll, x = (vU.x - 0.5) * 2.2;
+      float across = smoothstep(0.455, 0.49, abs(fract(z) - 0.5)); // (cerca de cada metro)
+      float along = max(1.0 - smoothstep(0.0, 0.02, abs(abs(x) - 0.55)), 1.0 - smoothstep(0.0, 0.015, abs(x))) * 0.7;
+      float edge = 1.0 - smoothstep(0.0, 0.03, abs(abs(x) - 1.08));
+      float far = 1.0 - smoothstep(0.5, 1.0, vU.y); // (a lo lejos se apaga; cerca de ti, del todo)
+      gl_FragColor = vec4(uCol * (max(max(across, along), edge) * uK * far), 1.0);
+    }`
+});
+const ARX_GRID = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), gridMat); ARX_GRID.rotation.x = -Math.PI / 2; ARX_GRID.position.y = 0.009; ARX_DECO.add(ARX_GRID);
+const archMat = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const archGeo = new THREE.TorusGeometry(1, 0.02, 5, 20, Math.PI / 2);
+const ARX_POST = [], POST_GAP = 3.2;
+for (let i = 0; i < 8; i++) for (const s of [-1, 1]) {
+  const g = new THREE.Group(), a = new THREE.Mesh(archGeo, archMat); a.scale.set(0.45, 2.6, 1); a.position.x = 1.1; g.add(a); // (de x 1,55 en el suelo a 1,1 arriba, a 2,6 m)
+  const tip = glowSprite(0x3cf0c6, 0.22, 0.8); tip.position.set(1.1, 2.6, 0); g.add(tip); g.userData.tip = tip;
+  g.scale.x = s; ARX_DECO.add(g); ARX_POST.push(g);
 }
+const ARX_TINT = new THREE.HemisphereLight(0x3cf0c6, 0x000000, 0); scene.add(ARX_TINT); // (siempre en la escena, a 0 fuera de los Arcos: así no se recompilan los materiales)
+const _tintC = new THREE.Color(0x3cf0c6), _tintT = new THREE.Color();
 let arxScroll = 0;
-function arxFeverLook(on) { const c = on ? 0xff4fa3 : 0x3cf0c6; dashMat.color.setHex(c); postTopMat.color.setHex(c); orbFeverLook(on); }
+function arxFeverLook(on) { orbFeverLook(on); }
 function arxDeco(dt, t) {
-  const on = settings.mode === 'arcs' && !!settings.arcMove && !isFloor() && ['ready', 'play', 'rest'].includes(state); ARX_DECO.visible = on; if (!on) return;
+  const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
+  // el color de la racha, con suavidad
+  _tintT.setHex(ARX.fever ? 0xff4fa3 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) : 0) - ARX_TINT.intensity) * Math.min(1, dt * 3);
+  if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
-  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3;
-  ARX_DASH.forEach((m, i) => { m.position.z = z0 + ((Math.floor(i / 2) * DASH_GAP + arxScroll) % span); });
-  ARX_POST.forEach((g, i) => { g.position.z = z0 + ((Math.floor(i / 2) * POST_GAP + arxScroll) % span); });
-  if (ARX.fever) { const k = 0.6 + 0.4 * Math.sin(t * 10); dashMat.opacity = k; }
-  else dashMat.opacity = 0.7;
+  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8;
+  ARX_GRID.scale.y = len; ARX_GRID.position.z = -D + len / 2 + 0.4; Object.assign(gridMat.uniforms.uLen, { value: len }); gridMat.uniforms.uScroll.value = -arxScroll; gridMat.uniforms.uCol.value.copy(_tintC); gridMat.uniforms.uK.value = pulse;
+  archMat.color.copy(_tintC); archMat.opacity = 0.35 + 0.25 * pulse;
+  ARX_POST.forEach((g, i) => { g.position.z = z0 + ((Math.floor(i / 2) * POST_GAP + arxScroll) % span); g.userData.tip.material.color.copy(_tintC); });
 }
 
 /* ---------- Cada fotograma, metas y fantasma ---------- */
 function arxStep(dt, t) {
   arxDeco(dt, t);
   if (settings.mode !== 'arcs') return;
-  if (ARX.orbT > 0 && state === 'play') { ARX.orbT -= dt; if (ARX.orbT <= 0) ARX.orbs.push(new ArcOrb()); }
+  if (ARX.orbT > 0 && state === 'play' && WIN.t < 0) { ARX.orbT -= dt; /* (con el panel entre oleadas delante, nada) */ if (ARX.orbT <= 0) ARX.orbs.push(new ArcOrb()); }
   for (const o of ARX.orbs) if (o.alive) o.update(dt, t); ARX.orbs = ARX.orbs.filter(o => o.alive);
   if (state !== 'play') return;
   ARX.dist += arxSpeed() * dt; ARX.tlT += dt;
