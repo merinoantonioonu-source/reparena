@@ -49,7 +49,7 @@ function barMounted() {
   }
   center.mesh.visible = false; SND.charge();
   if (settings.exercise === 'row') placeRowBoard(true);
-  if (BAR.resume) { BAR.resume = false; state = 'play'; stateT = 0; say('¡Sigue!', '#3cf0c6', 1.2); }
+  if (BAR.resume) { BAR.resume = false; state = 'play'; stateT = 0; cheer('¡Sigue!', '#3cf0c6', 1.2); }
   else startWave(BAR.nextWave);
   BAR.started = true;
 }
@@ -78,7 +78,7 @@ function barFall() {
   const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
+  cheer(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
   if (BAR.lastFall) warnFloor(`${door ? '¡AL CHARCO!' : '¡TE SOLTASTE!'} (${BAR.lastFall})`, '#ff8a3d');
   barToMount(0, true);
 }
@@ -105,7 +105,7 @@ function barDetect(t, dt) {
       score += 10; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true;
       const s = Math.floor(BAR.hold), left = Math.ceil(BAR.need - BAR.hold);
       if (left > 0 && left <= 3) SND.beep(1 + (3 - left) * 0.25);
-      else if (left > 0 && s % 10 === 0) { say(`¡${s} s!`, '#3cf0c6', 1.0); SND.combo(); }
+      else if (left > 0 && s % 10 === 0) { cheer(`¡${s} s!`, '#3cf0c6', 1.0); SND.combo(); }
     }
     return;
   }
@@ -129,7 +129,7 @@ function barDetect(t, dt) {
 function barRep(opts) {
   if (state !== 'play' || settings.exercise === 'hang' || BAR.contact) return; // ya contó al reventarlo con la cabeza
   registerRep(opts.perfect, false);
-  if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
+  if (combo % 10 !== 0) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   let tg = frontTarget();
   if (!tg && spawnQueue.length) { spawnFromQueue(); spawnTimer = barGap(); tg = frontTarget(); } // ninguna repetición se pierde

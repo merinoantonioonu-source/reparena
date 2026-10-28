@@ -873,6 +873,36 @@ function boardDay2(c, W, y) {
   else if (D.n > D.best) item(x2, '¡RÉCORD!', BC.gold, `${D.n}${u} (+${D.n - D.best})`, BC.gold, 1, BC.pink, BC.gold);
   else item(x2, 'RÉCORD', BC.pink, `${D.n} / ${D.best}${u}`, BC.ink, D.n / (D.best + 1), BC.pink, BC.gold);
 }
+// El rosco: el fondo, el relleno (con su punta dorada si vas por delante de tu récord) y la muesca blanca de tu récord
+function boardRing(c, x, y, R, lw, k, c0, c1, notch, ahead) {
+  c.save(); c.lineCap = 'round'; c.lineWidth = lw; c.strokeStyle = comicOn() ? 'rgba(20,12,26,0.55)' : 'rgba(255,255,255,0.10)'; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke();
+  if (k > 0) { const g = c.createLinearGradient(x - R, y - R, x + R, y + R); g.addColorStop(0, c0); g.addColorStop(1, c1); if (!comicOn()) { c.shadowColor = c0; c.shadowBlur = 14; } c.strokeStyle = g; c.beginPath(); c.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, k)); c.stroke();
+    if (ahead) { const a = -Math.PI / 2 + TAU * Math.min(1, k); c.shadowColor = BC.gold; c.shadowBlur = 20; c.fillStyle = BC.gold; c.beginPath(); c.arc(x + Math.cos(a) * R, y + Math.sin(a) * R, lw * 0.62, 0, TAU); c.fill(); } }
+  c.restore();
+  if (notch !== undefined) { const a = -Math.PI / 2 + TAU * notch, r0 = R - lw * 0.85, r1 = R + lw * 0.85; c.save(); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.beginPath(); c.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); c.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); c.stroke(); c.restore(); }
+}
+// La racha en 10 tramos; cada vuelta completa, otro color (dorado, rosa, blanco)
+function boardSegs(c, x, y, R, lw, n, lap) {
+  const col = [BC.gold, BC.pink, '#ffffff'][clamp(lap, 0, 2)], gap = 0.07; c.save(); c.lineWidth = lw; c.lineCap = 'butt';
+  for (let i = 0; i < 10; i++) { const a0 = -Math.PI / 2 + TAU * i / 10 + gap, a1 = -Math.PI / 2 + TAU * (i + 1) / 10 - gap; const on = i < n; c.strokeStyle = on ? col : comicOn() ? 'rgba(20,12,26,0.5)' : 'rgba(255,255,255,0.10)'; c.shadowBlur = on && !comicOn() ? 12 : 0; c.shadowColor = col; c.beginPath(); c.arc(x, y, R, a0, a1); c.stroke(); }
+  c.restore();
+}
+// El relámpago: el borde se vuelve una mecha dorada que se consume (k: lo que queda), con la chispa en la punta
+function boardFuse(c, W, H, k) {
+  const m = 8, w = W - 2 * m, h = H - 2 * m, per = 2 * (w + h), s = per * clamp(k, 0, 1); c.save();
+  c.lineWidth = 10; c.strokeStyle = 'rgba(255,209,102,0.18)'; rr(c, m, m, w, h, 26); c.stroke();
+  c.setLineDash([s, per]); c.strokeStyle = BC.gold; if (!comicOn()) { c.shadowColor = BC.gold; c.shadowBlur = 18; } rr(c, m, m, w, h, 26); c.stroke(); c.setLineDash([]);
+  let px, py; if (s < w) { px = m + s; py = m; } else if (s < w + h) { px = m + w; py = m + s - w; } else if (s < 2 * w + h) { px = m + w - (s - w - h); py = m + h; } else { px = m; py = m + h - (s - 2 * w - h); }
+  c.shadowColor = '#ffffff'; c.shadowBlur = 22; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(px, py, 9, 0, TAU); c.fill(); c.restore();
+}
+// Una frase grande a la derecha; si no cabe a buen tamaño, en dos líneas (nunca por debajo de 48 px)
+function boardSay(c, t, col, x, y, maxW, size) {
+  c.textAlign = 'right'; c.textBaseline = 'middle'; const fs = fitFont(c, t, maxW, size, '%px ' + FD);
+  if (fs >= 56 || t.indexOf(' ') < 0) { glowText(c, t, x, y, col, 12); return; }
+  const sp = [...t.matchAll(/ /g)].map(m => m.index), mid = t.length / 2, cut = sp.reduce((a, b) => Math.abs(b - mid) < Math.abs(a - mid) ? b : a);
+  const l1 = t.slice(0, cut), l2 = t.slice(cut + 1), f2 = Math.min(fitFont(c, l1, maxW, Math.min(size, 72), '%px ' + FD), fitFont(c, l2, maxW, Math.min(size, 72), '%px ' + FD));
+  c.font = `${f2}px ${FD}`; glowText(c, l1, x, y - f2 * 0.58, col, 12); glowText(c, l2, x, y + f2 * 0.58, col, 12);
+}
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
   c.clearRect(0, 0, W, H); boardFrame(c, W, H);
@@ -884,52 +914,52 @@ function drawBoard() {
     boardDay2(c, W, 352);
     board.tex.needsUpdate = true; return;
   }
-  const N = settings.waves, hang = settings.exercise === 'hang';
-  // arriba: oleada, puntos y vidas
-  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length}${SES.rounds > 1 ? ` V${SES.round + 1}/${SES.rounds}` : ''} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
-  c.textAlign = 'left'; fitFont(c, wv, 340, 30, '%px ' + FD); const ww = c.measureText(wv).width + 44;
-  boardPill(c, 32, 24, ww, 54, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
-  c.textAlign = 'center'; c.font = `54px ${FD}`; glowText(c, String(score), W / 2 + 60, 52, BC.gold, 16);
+  const N = settings.waves, hang = settings.exercise === 'hang', RX = W - 44, live = ['play', 'rest', 'ready'].includes(state);
+  if (RUSH.on) boardFuse(c, W, H, RUSH.dur > 0 ? RUSH.left / RUSH.dur : 0); // el relámpago: el borde es una mecha que se consume
+  // arriba: la oleada en puntos (y el bloque de la sesión), los puntos y las vidas
+  let x = 44; c.textAlign = 'left';
+  if (SES.active) { const t = `B${SES.idx + 1}/${SES.blocks.length}`; c.font = `48px ${FD}`; c.fillStyle = BC.teal; c.fillText(t, 32, 56); x = 32 + c.measureText(t).width + 30; }
+  if (N > 0 && N <= 10) for (let i = 0; i < N; i++) { const cx = x + i * 40, wi = Math.min(waveIdx, N - 1), done = i < wi || (i === wi && state === 'rest'); c.beginPath(); c.arc(cx, 54, 13, 0, TAU); if (done) { c.fillStyle = BC.teal; c.fill(); } else if (i === wi) { c.lineWidth = 5; c.strokeStyle = BC.teal; c.stroke(); c.beginPath(); c.arc(cx, 54, 6, 0, TAU); c.fillStyle = BC.teal; c.fill(); } else { c.fillStyle = 'rgba(255,255,255,0.12)'; c.fill(); } }
+  else { const t = N ? `${Math.min(waveIdx + 1, N)}/${N}` : String(waveIdx + 1); c.font = `48px ${FD}`; c.fillStyle = BC.teal; c.fillText('◉ ' + t, x - 12, 56); }
+  c.textAlign = 'center'; c.font = `60px ${FD}`; const sc = String(score); glowText(c, sc, W / 2 + 40, 56, RUSH.on ? '#ffffff' : BC.gold, 16);
+  if (RUSH.on) { c.textAlign = 'left'; const sw = c.measureText(sc).width; c.font = `48px ${FD}`; glowText(c, '×2', W / 2 + 40 + sw / 2 + 22, 56, BC.gold, 14); }
   c.textAlign = 'right';
-  if (!settings.lives) { c.font = `34px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', W - 44, 52); }
-  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 48, '%px ' + FB); glowText(c, s, W - 40, 52, BC.pink, 10); }
-  else { c.font = `36px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, W - 40, 52); }
-  // izquierda: el número grande (y el combo, si va bien) y la barra de la oleada
-  const big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
-  c.textAlign = 'left'; c.font = `170px ${FD}`; glowText(c, big, 40, 186, '#ffffff', 18);
-  if (combo >= 3 && !hang) { const bw = c.measureText(big).width; c.font = `44px ${FD}`; c.fillStyle = BC.gold; c.fillText(`×${combo}`, 60 + bw, 230); }
-  c.fillStyle = BC.lil; c.font = `26px ${FD}`; c.fillText(hang ? 'SEGUNDOS' : 'REPS', 46, 292);
-  const wk = state !== 'play' ? 0 : hang ? BAR.hold / Math.max(1, BAR.need) : waveTarget ? waveDone / waveTarget : 0;
-  boardBar(c, 196, 284, 300, 16, wk, BC.teal, '#7af7ff');
-  // derecha: lo que pasa ahora (una frase grande) y la carga
-  c.textAlign = 'right'; const RX = W - 40, big2 = (t, col, size = 70, y = 160) => { fitFont(c, t, 470, size, '%px ' + FD); glowText(c, t, RX, y, col, 12); };
+  if (!settings.lives) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
+  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
+  else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
+  // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
+  // medio, tus repeticiones (en colgado, los segundos)
+  const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
+  let wk = hang ? (state === 'play' ? BAR.hold / Math.max(1, BAR.need) : state === 'rest' ? 1 : 0) : waveTarget ? waveDone / waveTarget : 0;
+  if (state === 'rest' && settings.rest > 0) wk = clamp(stateT / settings.rest, 0, 1); // (en el descanso, la cuenta atrás)
+  else if (state === 'between') wk = SES.rest > 0 ? clamp(1 - SES.wait / SES.rest, 0, 1) : 1;
+  const gh = state === 'play' && !hang ? ghostAt() : null, gold = RUSH.on;
+  let notch, ahead = false;
+  if (gh) { const k = (gh.g - (stats.reps - waveDone)) / Math.max(1, waveTarget); ahead = gh.beat || stats.reps >= gh.g; if (k > 0) notch = Math.min(0.995, k); }
+  boardRing(c, ox, oy, 140, 26, wk, gold ? BC.gold : BC.teal, gold ? '#fff3c4' : '#7af7ff', notch, ahead && wk > 0);
+  if (!hang) { const lap = combo > 0 && combo % 10 === 0 ? combo / 10 - 1 : Math.floor(combo / 10); boardSegs(c, ox, oy, 104, 18, combo > 0 && combo % 10 === 0 ? 10 : combo % 10, lap); }
+  c.textAlign = 'center'; fitFont(c, big, 160, 120, '%px ' + FD); glowText(c, big, ox, oy + 8, '#ffffff', 16);
+  // derecha: un solo hueco para lo que pasa ahora (no se pisan: va lo más importante)
+  const say1 = (t, col, size = 84, y = 250) => boardSay(c, t, col, RX, y, 560, size);
   if (state === 'rest') {
-    big2(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, BC.teal, 58, 140);
-    const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)} reps`, up = RAMP.note ? (RAMP.up ? ` · ▲ +${Math.round(rampK() * 100)} %` : ' · = igual') : '';
-    c.fillStyle = RAMP.up ? BC.gold : BC.ink; fitFont(c, nx + up, 470, 32, '500 %px ' + FB); c.fillText(nx + up, RX, 214);
-  } else if (state === 'mount') big2(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', BC.teal, 50);
-  else if (state === 'calib') big2('CALIBRANDO', BC.teal, 54);
-  else if (state === 'ready') big2(String(Math.max(1, Math.ceil(3 - stateT))), BC.gold, 120, 170);
-  else if (state === 'paused') big2('PAUSA', BC.gold, 80);
-  else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
-  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
-  else if (RUSH.on) big2(`⚡ RELÁMPAGO ${Math.max(0, Math.ceil(RUSH.left))}`, BC.gold, 52); // (79_perks: todo vale el doble)
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
+    say1(`DESCANSO ${Math.max(0, Math.ceil(settings.rest - stateT))}`, BC.teal, 72, 150);
+    const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)}`, up = RAMP.note ? (RAMP.up ? ' · ▲ un poco más' : ' · igual') : '';
+    const D = boardDay(), goal = settings.goalMin, g2 = ghostAt(), gt = g2 && g2.best ? (g2.beat ? `¡Récord! +${g2.n - g2.best}` : `Récord: vas ${g2.n - g2.g >= 0 ? '+' : '−'}${Math.abs(g2.n - g2.g)}`) : D.best ? `Tu mejor día: ${D.best}` : '';
+    const line = (t, col, y) => { if (!t) return; c.fillStyle = col; fitFont(c, t, 560, 48, '600 %px ' + FB); c.fillText(t, RX, y); };
+    line(nx + up, RAMP.up ? BC.gold : BC.ink, 228); line(`Hoy: ${Math.floor(D.time / 60)} de ${goal} min${D.time >= goal * 60 ? ' ✓' : ''}`, BC.ink, 296); line(gt, g2 && g2.n >= g2.g ? BC.teal : '#ff8a3d', 364);
+  } else if (state === 'mount') say1(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', BC.teal, 64);
+  else if (state === 'calib') say1('CALIBRANDO', BC.teal, 72);
+  else if (state === 'ready') say1(String(Math.max(1, Math.ceil(3 - stateT))), BC.gold, 160, 260);
+  else if (state === 'paused') say1('PAUSA', BC.gold, 96);
+  else if (state === 'between') say1(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 72);
+  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); say1(msg.text, msg.color, 84); c.globalAlpha = 1; }
+  else if (RUSH.on) say1('⚡ ×2', BC.gold, 120, 260);
+  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) say1(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
-  if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
-    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right'; c.font = `500 34px ${FB}`;
-    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; c.fillText(t1, RX, 236);
-    if (gd !== null) { c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; c.fillText(`fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`, RX, 278); }
+  if (settings.mode === 'arcs' && live && state !== 'rest') {
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right';
+    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
+    if (gd !== null) { const t2 = `fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`; c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; fitFont(c, t2, 560, 48, '600 %px ' + FB); c.fillText(t2, RX, 392); }
   }
-  let ch = null; const live = ['play', 'ready'].includes(state);
-  if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ ${n}` : '⚔ 0', n ? BC.teal : '#ff8a3d']; }
-  else if (throwAim() && live) { const n = throwCount(); ch = [`✋ ${n}`, n ? BC.teal : BC.lil]; }
-  else if (pistolOn() && live) ch = [`▮ ${GUN.ammo}`, GUN.ammo ? BC.teal : '#ff8a3d'];
-  else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
-  if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
-  guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
-  perkBoard(c); // la carrera contra tu récord
-  // abajo: lo de hoy
-  boardDay2(c, W, 356);
   board.tex.needsUpdate = true;
 }

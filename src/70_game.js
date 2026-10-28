@@ -16,10 +16,15 @@ const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
 // Avisos de corrección (naranja o rojo): además, grandes en el suelo durante 4 s y apuntados para la pausa
 const WARN_COLS = ['#ff8a3d', '#ff3b5c', '#ff4a6a'];
+// Avisos: lo que pide hacer algo ya (o colocarte) sale delante de ti; las celebraciones y lo que pasa (cheer), solo en el
+// marcador. Con los avisos de la vista apagados, todo va al marcador. Los de lo que haces mal, además, impresos en el suelo
+const SAYT = { t: 0 }; // (lo que le queda al último aviso, esté donde esté: para no repetir los recordatorios)
 function say(text, color = '#ffffff', dur = 1.4, toast = true) {
-  msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur);
+  SAYT.t = dur;
+  if (toast && settings.toasts && GAME_STATES.includes(state)) showToast(text, color, dur); else { msg = { text, color, t: dur }; boardDirty = true; }
   if (WARN_COLS.includes(color) && GAME_STATES.includes(state)) warnFloor(text, color);
 }
+const cheer = (text, color, dur) => say(text, color, dur, false);
 
 /* ---------- Barra de vida flotante ---------- */
 const barBgMat = new THREE.MeshBasicMaterial({ color: 0x120d1c, transparent: true, opacity: 0.85, depthWrite: false });
@@ -474,7 +479,7 @@ class Robot {
     const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
     Object.assign(this, { state: 'down', st: 0, atk: null, react: 0, restart: true, downAnim: anim, downT: anim ? c.Hit_Knockback.duration + c.LayToIdle.duration : 1.0 });
     this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
-    this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
+    this.stagger = 1; cheer('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
   // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
   shove(dist) {
@@ -1064,15 +1069,15 @@ class Arc {
       const need = settings.jumpHeight / 100;
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
       const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
-      say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
+      say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
-    if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
+    if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
     registerRep(perfect, false); arxClean();
-    say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);
+    say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false);
     if (perfect) SND.perfect();
   }
   dispose() { arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
@@ -1148,7 +1153,7 @@ function onKilled(e) {
   stats.kills++;
   const pts0 = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300), pts = pts0 * perkKillK(e); // (dorado ×3, relámpago ×2)
   score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
-  if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
+  if (e.K && e.K.boss || e.boss) cheer('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
 }
 
@@ -1157,16 +1162,16 @@ function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
   score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
-  if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
+  if (combo > 0 && combo % 10 === 0) { cheer(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   registerRep(opts.perfect, true, side); guardOnRep(opts);
-  if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
+  if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
-  if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  if (pow > 1) cheer(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
@@ -1194,7 +1199,7 @@ function onPower(pow, deep) {
   if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
   chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
   if (deep) { SND.perfect(); fx.glow(head.p.clone().addScaledVector(fwd(), 0.5), [1, 0.25, 0.95], 0.5, 0.2); }
-  say(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
+  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
@@ -1534,7 +1539,7 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'dips') {
     // fondos en silla: la cabeza baja al doblar los codos y sube al estirarlos
     const d = DET.di, req = dv('dipDepth') / 100;
-    if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
@@ -1560,7 +1565,7 @@ function runDetectors(t, dt) {
     const P = DET.sp, y = head.p.y, drop = settings.splDrop / 100, hold = settings.splHold;
     // el tiempo solo corre durante la oleada; en el descanso cambias de lado y se toma la nueva postura
     if (state !== 'play') { P.t0 = t; P.sec = 0; P.dev = 0; P.state = 'hold'; if (y < 1.0) P.ref += (y - P.ref) * Math.min(1, dt * 1.5); return; }
-    if (y > P.ref + 0.4) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Ponte en plancha lateral', '#ff8a3d', 1.2); P.t0 = t; P.sec = 0; return; }
+    if (y > P.ref + 0.4) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Ponte en plancha lateral', '#ff8a3d', 1.2); P.t0 = t; P.sec = 0; return; }
     P.awayT = 0; P.warnT -= dt;
     if (P.state === 'hold') {
       if (Math.abs(y - P.ref) < drop * 0.5) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
@@ -1577,7 +1582,7 @@ function runDetectors(t, dt) {
     // S.ref es la altura de la cabeza tumbado: baja enseguida y sube despacio cuando no estás arriba, así se
     // corrige sola si al calibrar la cabeza estaba más alta o más baja que al hacer el ejercicio.
     const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
-    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
     S.awayT = 0; S.warnT -= dt;
     // quieto y sin subir el tronco: esa es tu altura tumbado
     S.stillT = head.speed < 0.05 ? S.stillT + dt : 0;
@@ -1614,7 +1619,7 @@ function runDetectors(t, dt) {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado.
     // En el remo en plancha, la mancuerna tiene que subir el recorrido del remo
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
-    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
+    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
     // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
     const lifted = s => hands[s].ok && hands[s].wrist.y > P[s].floor + LIFT;
@@ -1637,7 +1642,7 @@ function runDetectors(t, dt) {
     iwStep(t, dt);
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = dv('pushDepth') / 100;
-    if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
   }
@@ -2313,7 +2318,7 @@ function startWave(i) {
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = ''; perkWaveStart(i);
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
-  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
@@ -2321,7 +2326,7 @@ function hurtPlayer(src) {
   hapticBoth(0.9, 120);
   if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
-  if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
+  if (!(src instanceof Arc) && !(src && src.silent)) cheer(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
@@ -2475,6 +2480,7 @@ function exitAll() {
 /* =================== LÓGICA POR FOTOGRAMA =================== */
 function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
+  if (SAYT.t > 0) SAYT.t -= dt;
   stateT += dt;
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   arenaGlide(dt);
