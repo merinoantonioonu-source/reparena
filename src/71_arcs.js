@@ -18,9 +18,9 @@ function arxReset() {
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); say('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); cheer('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
-function arxHit() { if (ARX.fever) say('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
+function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
 /* ---------- Coreografías ---------- */
 // Cada pieza es una lista de obstáculos con su hueco hasta el siguiente (en veces el intervalo medio); se eligen según los
@@ -93,7 +93,7 @@ class ArcObs {
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
-    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, true); SND.perfect();
+    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
   }
   dispose() {
     arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose());

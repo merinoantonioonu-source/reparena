@@ -87,7 +87,7 @@ function vortexEngulf() {
   VX.engulfT = 1.4; SND.engulf(at); hapticBoth(1, 350);
   for (let i = 0; i < 30; i++) fx.trail(at.clone().add(new V3(rand(-0.5, 0.5), rand(0, 1.4), rand(-0.5, 0.5))), [0.9, 0.3, 0.6], 0.08, 0.6);
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say('¡TE ENGULLÓ EL REMOLINO!', '#ff6ab4', 2); BAR.failed = true;
+  cheer('¡TE ENGULLÓ EL REMOLINO!', '#ff6ab4', 2); BAR.failed = true;
 }
 function updateVortex(dt, t) {
   const on = vortexOn() && state !== 'idle' && eqKind() === 'door';

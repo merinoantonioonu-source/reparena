@@ -96,6 +96,7 @@ function guardWarnSpr(i) {
   return GV.warn[i];
 }
 function guardStep(dt, t) {
+  braceStep(dt, t);
   if (!guardOn() || !['play', 'rest'].includes(state)) { guardHide(); GUARD.up = null; return; }
   const G = GUARD, D = gDiff();
   G.flash = Math.max(0, G.flash - dt * 4);
@@ -133,8 +134,6 @@ function guardStep(dt, t) {
     w.material.color.setRGB(1, 0.75 - 0.6 * k, 0.2 - 0.15 * k); w.material.opacity = 0.3 + 0.45 * k;
     const s = sz * (0.8 + 0.25 * Math.sin(t * (18 + 20 * k))); w.scale.set(s, s, 1);
   }
-  // en el marcador, cuando cambia lo bastante
-  const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
 // Dónde va el escudo: delante del antebrazo, entre él y el enemigo que ataca (o, si no, hacia delante), con su eje largo a
 // lo largo del antebrazo (sin saber hacia dónde va el brazo, de pie); se gira con suavidad
@@ -184,8 +183,8 @@ function guardAbsorb(src) {
   // el escudo por técnica: para el golpe solo y aparta al enemigo
   if (G.charge >= 1) {
     G.charge = 0; G.ready = false; const p = guardPoint(src, new V3());
-    guardHitFx(p, true, null); guardRepel(src, 0.5, 1.0); stats.shields = (stats.shields || 0) + 1;
-    say('¡ESCUDO! Lo has repelido', '#3cf0c6', 1.2);
+    guardHitFx(p, true, null); guardRepel(src, 0.5, 1.0); stats.shields = (stats.shields || 0) + 1; braceBreakFx();
+    cheer('¡ESCUDO! Lo has repelido', '#3cf0c6', 1.2);
     return true;
   }
   return false;
@@ -253,17 +252,38 @@ function guardOnRep(opts) {
   if (!guardOn()) return;
   const G = GUARD, D = gDiff(), was = G.charge;
   G.charge = Math.min(1, G.charge + (opts.perfect ? D.perf : D.rep) + (combo > 0 && combo % 5 === 0 ? D.streak : 0));
-  if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); say('¡ESCUDO LISTO! Parará el siguiente golpe', '#3cf0c6', 1.4); }
+  if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); cheer('¡ESCUDO LISTO!', '#3cf0c6', 1.4); }
   G.en = Math.min(1, G.en + (opts.perfect ? D.enP : D.en)); if (G.broke && G.en >= 0.3) G.broke = false;
 }
 
-/* ---------- En el marcador ---------- */
-function guardBoard(c, RX) {
-  if (!guardOn() || !['play', 'rest', 'ready'].includes(state)) return;
-  const G = GUARD, two = gestureOn(), w = two ? 160 : 330, y = 322;
-  c.textAlign = 'left'; c.font = `500 20px ${FB}`;
-  const x1 = RX - (two ? 2 * w + 30 : w);
-  c.fillStyle = G.charge >= 1 ? BC.teal : BC.lil; c.fillText(G.charge >= 1 ? 'ESCUDO LISTO' : 'ESCUDO', x1, y - 16);
-  boardBar(c, x1, y, w, 12, G.charge, BC.teal, '#7af7ff');
-  if (two) { const x2 = RX - w; c.fillStyle = G.broke ? '#ff8a3d' : BC.lil; c.fillText(G.broke ? 'SIN ENERGÍA' : 'GUARDIA', x2, y - 16); boardBar(c, x2, y, w, 12, G.en, G.broke ? '#ff8a3d' : BC.gold, '#ffe9a8'); }
+/* ---------- El brazalete: el escudo por técnica, en tu antebrazo ---------- */
+// En vez de una barra en el marcador: una banda de luz alrededor del antebrazo (el izquierdo; si no se ve, el derecho), en
+// tantos tramos como perfectas pide el escudo, que se llena con cada repetición. Llena, se pone blanca y late (y el
+// anillo gira a tu alrededor); al parar un golpe se rompe en chispas y vuelve a empezar
+const BRACE = (() => {
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    uniforms: { uK: { value: 0 }, uN: { value: 4 }, uFull: { value: 0 }, uT: { value: 0 } },
+    vertexShader: 'varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform float uK; uniform float uN; uniform float uFull; uniform float uT; varying vec2 vU;
+      void main(){
+        float seg = fract(vU.x * uN), gap = step(0.07, seg) * step(seg, 0.93), on = step(vU.x, uK); // (alrededor del brazo, uv.x de 0 a 1)
+        float edge = smoothstep(0.0, 0.3, vU.y) * smoothstep(1.0, 0.7, vU.y);
+        vec3 lit = mix(vec3(0.24, 0.94, 0.78), vec3(1.0), uFull * (0.45 + 0.35 * sin(uT * 7.0)));
+        gl_FragColor = vec4(mix(vec3(0.16, 0.22, 0.32), lit, on), mix(0.3, 0.95, on) * (0.5 + 0.5 * edge) * gap);
+      }`
+  });
+  const g = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.039, 0.045, 40, 1, true), m); g.visible = false; g.renderOrder = 21; scene.add(g);
+  return { g, u: m.uniforms, k: 0 };
+})();
+const _brA = new V3(), _brY = new V3(0, 1, 0);
+function braceStep(dt, t) {
+  const h = hands.left.ok ? hands.left : hands.right.ok ? hands.right : null;
+  if (!h || !guardOn() || !['play', 'rest'].includes(state)) { BRACE.g.visible = false; return; }
+  const G = GUARD, u = BRACE.u; BRACE.k += (G.charge - BRACE.k) * Math.min(1, dt * 8); // (se llena con suavidad)
+  _brA.set(0, 0, 1).applyQuaternion(h.wristQ); // hacia el codo (el +Z de la muñeca, en las manos y en los mandos)
+  BRACE.g.position.copy(h.wrist).addScaledVector(_brA, 0.075); BRACE.g.quaternion.setFromUnitVectors(_brY, _brA);
+  BRACE.g.scale.setScalar(G.charge >= 1 ? 1 + 0.06 * Math.sin(t * 7) : 1);
+  u.uK.value = BRACE.k; u.uN.value = Math.max(2, Math.round(1 / gDiff().perf)); u.uFull.value = G.charge >= 1 ? 1 : 0; u.uT.value = t; BRACE.g.visible = true;
 }
+function braceBreakFx() { if (!BRACE.g.visible) return; fx.sparks(BRACE.g.position, 22, [0.4, 1, 0.9], 1.8, 0.025); BRACE.k = 0; }

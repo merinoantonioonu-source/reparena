@@ -38,7 +38,7 @@ function perkMenu() {
 function perkTake(k, random) {
   PK.has.add(k); PK.offer = null; if (menu && menu.perks) hideMenu();
   if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1;
-  say(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
+  cheer(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
 }
 // Se acaba el descanso: la que no elegiste, al azar; el cofre se va
 function perkRestEnd() {
@@ -55,15 +55,15 @@ function perkWaveStart(i) {
 const perkPtsK = perfect => (perfect && perkHas('gold') ? 2 : 1) * (RUSH.on ? 2 : 1);
 function perkOnRep(perfect) {
   if (!perfect || !perkHas('life') || !settings.lives) return;
-  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; say('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
+  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; cheer('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
 }
 // El golpe que para el escudo (después de la guardia, que es cosa tuya)
 function perkAbsorb() {
   if (PK.shield <= 0) return false;
-  PK.shield--; say('¡ESCUDO!', '#5ab8ff', 1.1); SND.zap(head.p); hapticBoth(0.5, 80);
+  PK.shield--; cheer('¡ESCUDO!', '#5ab8ff', 1.1); SND.zap(head.p); hapticBoth(0.5, 80);
   fx.glow(head.p.clone().addScaledVector(fwd(), 0.4), [0.35, 0.7, 1], 0.6, 0.25); return true;
 }
-const perkKeepCombo = () => { if (PK.comboSave > 0 && combo >= 3) { PK.comboSave--; say('Combo a salvo', '#ff8a3d', 1); return true; } return false; };
+const perkKeepCombo = () => { if (PK.comboSave > 0 && combo >= 3) { PK.comboSave--; cheer('Combo a salvo', '#ff8a3d', 1); return true; } return false; };
 // Al llegar un disparo perfecto: escarcha y onda alrededor del impacto
 function perkOnHit(target, p) {
   if (!p.perfect || !(perkHas('frost') || perkHas('wave'))) return;
@@ -98,9 +98,14 @@ function ghostStep(dt) {
   if (!ghostOn() || !['play', 'rest'].includes(state)) return;
   GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
   const B = GH.best, n = ghostNow();
-  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; say('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
 }
-// Lo que pone el marcador: cuántas llevas de más (o de menos) que tu récord en este momento
+// Para el marcador: dónde ibas en tu mejor ronda en este momento (g), lo que llevas ahora (n) y tu récord (best)
+function ghostAt() {
+  const B = GH.best; if (!ghostOn() || !B || !B.n || !B.tl || !B.tl.length) return null;
+  return { g: B.tl[Math.min(B.tl.length - 1, GH.tl.length)] || 0, n: ghostNow(), best: B.n, beat: GH.beat };
+}
+// Cuántas llevas de más (o de menos) que tu récord en este momento
 function ghostText() {
   const B = GH.best; if (!ghostOn() || !B || !B.n) return null; const n = ghostNow();
   if (GH.beat) return [`¡RÉCORD! +${n - B.n}`, '#ffd166'];
@@ -124,7 +129,7 @@ function perkSpawned(e) {
 const perkKillK = e => (e.golden ? 3 : 1) * (RUSH.on ? 2 : 1);
 function perkOnKill(e) {
   if (!e.golden) return; const c = e.center(new V3());
-  say('¡DORADO! ×3', '#ffd166', 1.6); SND.combo(); fx.sparks(c, 50, [1, 0.82, 0.3], 3.5, 0.05); fx.glow(c, [1, 0.8, 0.3], isTiny() ? 0.5 : 2, 0.3);
+  cheer('¡DORADO! ×3', '#ffd166', 1.6); SND.combo(); fx.sparks(c, 50, [1, 0.82, 0.3], 3.5, 0.05); fx.glow(c, [1, 0.8, 0.3], isTiny() ? 0.5 : 2, 0.3);
 }
 function goldStep(dt, t) {
   for (const g of GOLD.list) {
@@ -137,7 +142,7 @@ function goldStep(dt, t) {
 /* ---------- Sorpresas: el relámpago (y la música que manda) ---------- */
 // 20 s (o una frase de la canción, 32 pulsos) en los que llegan seguidos (el doble de deprisa, hasta el máximo a la vez) y
 // todo vale el doble. Desde la segunda oleada, en una de cada tres más o menos, nunca con el jefe
-const RUSH = { on: false, left: 0, planT: -1, at: -1, end: -1, cd: 0, song: null };
+const RUSH = { on: false, left: 0, dur: 0, planT: -1, at: -1, end: -1, cd: 0, song: null };
 const musicLead = () => !!settings.musicLead && beatP() > 0;
 function rushPlan(i) {
   RUSH.planT = -1; RUSH.at = -1;
@@ -145,14 +150,14 @@ function rushPlan(i) {
 }
 const perkSpawnK = () => RUSH.on ? 2 : 1;
 function rushStart(sec) {
-  RUSH.on = true; RUSH.left = sec; RUSH.at = -1; say('¡RELÁMPAGO! Puntos ×2', '#ffd166', 1.8); SND.horn(); ENV.flash = 1; boardDirty = true;
+  RUSH.on = true; RUSH.left = RUSH.dur = sec; RUSH.at = -1; cheer('¡RELÁMPAGO! Puntos ×2', '#ffd166', 1.8); SND.horn(); ENV.flash = 1; boardDirty = true;
 }
-function rushStop(quiet) { if (RUSH.on && !quiet) say('Fin del relámpago', '#a49fc8', 1.1); RUSH.on = false; RUSH.left = 0; RUSH.end = -1; RUSH.at = -1; boardDirty = true; }
+function rushStop(quiet) { if (RUSH.on && !quiet) cheer('Fin del relámpago', '#a49fc8', 1.1); RUSH.on = false; RUSH.left = 0; RUSH.end = -1; RUSH.at = -1; boardDirty = true; }
 function rushStep(dt) {
   if (state !== 'play') { if (RUSH.on || RUSH.at >= 0) rushStop(true); return; }
   // una canción nueva de Spotify trae relámpago en su primera frase
   const id = spConnected() && SP.st && SP.st.item ? SP.st.item.id : null;
-  if (id && RUSH.song && id !== RUSH.song && musicLead() && surpriseOn() && !RUSH.on && RUSH.at < 0 && !isBossWave(waveIdx)) { RUSH.planT = 0.01; say('¡Canción nueva!', '#a68bff', 1.4); }
+  if (id && RUSH.song && id !== RUSH.song && musicLead() && surpriseOn() && !RUSH.on && RUSH.at < 0 && !isBossWave(waveIdx)) { RUSH.planT = 0.01; cheer('¡Canción nueva!', '#a68bff', 1.4); }
   if (id) RUSH.song = id;
   if (RUSH.planT > 0 && !RUSH.on) {
     RUSH.planT -= dt;
@@ -163,7 +168,7 @@ function rushStep(dt) {
     if (left <= 3 && left >= 1 && left !== RUSH.cd) { RUSH.cd = left; say(String(left), '#ffd166', 0.5, false); SND.tick(); }
     if (b >= RUSH.at) { RUSH.end = RUSH.at + 32; rushStart((RUSH.end - b) * beatP()); }
   }
-  if (RUSH.on) { RUSH.left -= dt; if ((RUSH.left | 0) !== ((RUSH.left + dt) | 0)) boardDirty = true; if (RUSH.left <= 0) rushStop(); }
+  if (RUSH.on) { RUSH.left -= dt; if (((RUSH.left * 4) | 0) !== (((RUSH.left + dt) * 4) | 0)) boardDirty = true; /* (la mecha del marcador, 4 veces por segundo) */ if (RUSH.left <= 0) rushStop(); }
 }
 // La luz de la compuerta late con el pulso de la música (más fuerte en el relámpago)
 const BEATL = { k: 0 };
@@ -212,9 +217,9 @@ function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
   fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
   const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
-  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; say(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
-  else if (settings.lives && lives < settings.lives) { lives++; say('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
-  else { score += 300; say('¡Cofre! +300 puntos', '#ffd166', 2.2); }
+  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
+  else if (settings.lives && lives < settings.lives) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
+  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); }
   boardDirty = true;
 }
 
@@ -230,9 +235,4 @@ function perkStep(dt, t) {
   for (const e of enemies) if (e.frostT > 0) { e.frostT -= dt; if (Math.random() < dt * 6) fx.glow(e.center(tmpA), [0.6, 0.9, 1], isTiny() ? 0.12 : 0.4, 0.2); }
   if (PK.offerT > 0 && state === 'rest') { PK.offerT -= dt; if (PK.offerT <= 0) { const pool = perkPool(); if (pool.length) { PK.offer = pool.sort(() => Math.random() - 0.5).slice(0, 3); perkMenu(); } } }
   ghostStep(dt); goldStep(dt, t); rushStep(dt); beatLightStep(dt); chestStep(dt, t);
-}
-// En el marcador, la carrera contra el récord: en el centro, encima de la barra de la oleada (el relámpago va en la frase
-// grande de la derecha, ver drawBoard)
-function perkBoard(c) {
-  const g = ghostText(); if (g && ['play', 'rest'].includes(state)) { c.textAlign = 'left'; c.fillStyle = g[1]; fitFont(c, g[0], 240, 26, '%px ' + FD); c.fillText(g[0], 514, 256); }
 }

@@ -80,6 +80,10 @@ No las cambies sin preguntarle.
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
+  - Diseño elegido (C): rosco doble (fuera, la oleada con la muesca del récord; dentro, la racha en 10 tramos), oleadas en
+    puntos, un solo hueco para mensajes a 48 px o más. En el relámpago, el borde es una mecha. Nada de cargas ni escudo en
+    el marcador: se ven en el juego (bola en la mano, celdas del bláster, brazalete del escudo en el antebrazo).
+- Las celebraciones (`cheer`) van solo al marcador; delante de la cara, solo lo que pide hacer algo ya o colocarse.
 - Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura) **nunca se ladean
   con la cabeza**: siempre derechos de pie y colgado.
   - Pendiente de decidir con el usuario: cómo orientarlos tumbado y en plancha, mirando al suelo o al techo.

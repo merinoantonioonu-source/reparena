@@ -519,7 +519,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, en cada descanso eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma; si no eliges, te toca una al azar). El marcador te dice cuántas repeticiones llevas de más o de menos que en <b>tu mejor ronda</b> en ese momento. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble y, en algunos descansos, un cofre que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
+      <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
+      <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, en cada descanso eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma; si no eliges, te toca una al azar). En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
@@ -3307,7 +3308,7 @@ function vortexEngulf() {
   VX.engulfT = 1.4; SND.engulf(at); hapticBoth(1, 350);
   for (let i = 0; i < 30; i++) fx.trail(at.clone().add(new V3(rand(-0.5, 0.5), rand(0, 1.4), rand(-0.5, 0.5))), [0.9, 0.3, 0.6], 0.08, 0.6);
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say('¡TE ENGULLÓ EL REMOLINO!', '#ff6ab4', 2); BAR.failed = true;
+  cheer('¡TE ENGULLÓ EL REMOLINO!', '#ff6ab4', 2); BAR.failed = true;
 }
 function updateVortex(dt, t) {
   const on = vortexOn() && state !== 'idle' && eqKind() === 'door';
@@ -6250,6 +6251,36 @@ function boardDay2(c, W, y) {
   else if (D.n > D.best) item(x2, '¡RÉCORD!', BC.gold, `${D.n}${u} (+${D.n - D.best})`, BC.gold, 1, BC.pink, BC.gold);
   else item(x2, 'RÉCORD', BC.pink, `${D.n} / ${D.best}${u}`, BC.ink, D.n / (D.best + 1), BC.pink, BC.gold);
 }
+// El rosco: el fondo, el relleno (con su punta dorada si vas por delante de tu récord) y la muesca blanca de tu récord
+function boardRing(c, x, y, R, lw, k, c0, c1, notch, ahead) {
+  c.save(); c.lineCap = 'round'; c.lineWidth = lw; c.strokeStyle = comicOn() ? 'rgba(20,12,26,0.55)' : 'rgba(255,255,255,0.10)'; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke();
+  if (k > 0) { const g = c.createLinearGradient(x - R, y - R, x + R, y + R); g.addColorStop(0, c0); g.addColorStop(1, c1); if (!comicOn()) { c.shadowColor = c0; c.shadowBlur = 14; } c.strokeStyle = g; c.beginPath(); c.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, k)); c.stroke();
+    if (ahead) { const a = -Math.PI / 2 + TAU * Math.min(1, k); c.shadowColor = BC.gold; c.shadowBlur = 20; c.fillStyle = BC.gold; c.beginPath(); c.arc(x + Math.cos(a) * R, y + Math.sin(a) * R, lw * 0.62, 0, TAU); c.fill(); } }
+  c.restore();
+  if (notch !== undefined) { const a = -Math.PI / 2 + TAU * notch, r0 = R - lw * 0.85, r1 = R + lw * 0.85; c.save(); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.beginPath(); c.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); c.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); c.stroke(); c.restore(); }
+}
+// La racha en 10 tramos; cada vuelta completa, otro color (dorado, rosa, blanco)
+function boardSegs(c, x, y, R, lw, n, lap) {
+  const col = [BC.gold, BC.pink, '#ffffff'][clamp(lap, 0, 2)], gap = 0.07; c.save(); c.lineWidth = lw; c.lineCap = 'butt';
+  for (let i = 0; i < 10; i++) { const a0 = -Math.PI / 2 + TAU * i / 10 + gap, a1 = -Math.PI / 2 + TAU * (i + 1) / 10 - gap; const on = i < n; c.strokeStyle = on ? col : comicOn() ? 'rgba(20,12,26,0.5)' : 'rgba(255,255,255,0.10)'; c.shadowBlur = on && !comicOn() ? 12 : 0; c.shadowColor = col; c.beginPath(); c.arc(x, y, R, a0, a1); c.stroke(); }
+  c.restore();
+}
+// El relámpago: el borde se vuelve una mecha dorada que se consume (k: lo que queda), con la chispa en la punta
+function boardFuse(c, W, H, k) {
+  const m = 8, w = W - 2 * m, h = H - 2 * m, per = 2 * (w + h), s = per * clamp(k, 0, 1); c.save();
+  c.lineWidth = 10; c.strokeStyle = 'rgba(255,209,102,0.18)'; rr(c, m, m, w, h, 26); c.stroke();
+  c.setLineDash([s, per]); c.strokeStyle = BC.gold; if (!comicOn()) { c.shadowColor = BC.gold; c.shadowBlur = 18; } rr(c, m, m, w, h, 26); c.stroke(); c.setLineDash([]);
+  let px, py; if (s < w) { px = m + s; py = m; } else if (s < w + h) { px = m + w; py = m + s - w; } else if (s < 2 * w + h) { px = m + w - (s - w - h); py = m + h; } else { px = m; py = m + h - (s - 2 * w - h); }
+  c.shadowColor = '#ffffff'; c.shadowBlur = 22; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(px, py, 9, 0, TAU); c.fill(); c.restore();
+}
+// Una frase grande a la derecha; si no cabe a buen tamaño, en dos líneas (nunca por debajo de 48 px)
+function boardSay(c, t, col, x, y, maxW, size) {
+  c.textAlign = 'right'; c.textBaseline = 'middle'; const fs = fitFont(c, t, maxW, size, '%px ' + FD);
+  if (fs >= 56 || t.indexOf(' ') < 0) { glowText(c, t, x, y, col, 12); return; }
+  const sp = [...t.matchAll(/ /g)].map(m => m.index), mid = t.length / 2, cut = sp.reduce((a, b) => Math.abs(b - mid) < Math.abs(a - mid) ? b : a);
+  const l1 = t.slice(0, cut), l2 = t.slice(cut + 1), f2 = Math.min(fitFont(c, l1, maxW, Math.min(size, 72), '%px ' + FD), fitFont(c, l2, maxW, Math.min(size, 72), '%px ' + FD));
+  c.font = `${f2}px ${FD}`; glowText(c, l1, x, y - f2 * 0.58, col, 12); glowText(c, l2, x, y + f2 * 0.58, col, 12);
+}
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
   c.clearRect(0, 0, W, H); boardFrame(c, W, H);
@@ -6261,53 +6292,53 @@ function drawBoard() {
     boardDay2(c, W, 352);
     board.tex.needsUpdate = true; return;
   }
-  const N = settings.waves, hang = settings.exercise === 'hang';
-  // arriba: oleada, puntos y vidas
-  const rk = Math.round(rampK() * 100), wv = (SES.active ? `B${SES.idx + 1}/${SES.blocks.length}${SES.rounds > 1 ? ` V${SES.round + 1}/${SES.rounds}` : ''} · ` : '') + (N ? `OLEADA ${Math.min(waveIdx + 1, N)}/${N}` : `OLEADA ${waveIdx + 1}`) + (rk && state !== 'rest' ? ` ▲${rk}%` : '');
-  c.textAlign = 'left'; fitFont(c, wv, 340, 30, '%px ' + FD); const ww = c.measureText(wv).width + 44;
-  boardPill(c, 32, 24, ww, 54, 'rgba(60,240,198,0.12)', 'rgba(60,240,198,0.55)'); c.fillStyle = BC.teal; c.fillText(wv, 54, 52);
-  c.textAlign = 'center'; c.font = `54px ${FD}`; glowText(c, String(score), W / 2 + 60, 52, BC.gold, 16);
+  const N = settings.waves, hang = settings.exercise === 'hang', RX = W - 44, live = ['play', 'rest', 'ready'].includes(state);
+  if (RUSH.on) boardFuse(c, W, H, RUSH.dur > 0 ? RUSH.left / RUSH.dur : 0); // el relámpago: el borde es una mecha que se consume
+  // arriba: la oleada en puntos (y el bloque de la sesión), los puntos y las vidas
+  let x = 44; c.textAlign = 'left';
+  if (SES.active) { const t = `B${SES.idx + 1}/${SES.blocks.length}`; c.font = `48px ${FD}`; c.fillStyle = BC.teal; c.fillText(t, 32, 56); x = 32 + c.measureText(t).width + 30; }
+  if (N > 0 && N <= 10) for (let i = 0; i < N; i++) { const cx = x + i * 40, wi = Math.min(waveIdx, N - 1), done = i < wi || (i === wi && state === 'rest'); c.beginPath(); c.arc(cx, 54, 13, 0, TAU); if (done) { c.fillStyle = BC.teal; c.fill(); } else if (i === wi) { c.lineWidth = 5; c.strokeStyle = BC.teal; c.stroke(); c.beginPath(); c.arc(cx, 54, 6, 0, TAU); c.fillStyle = BC.teal; c.fill(); } else { c.fillStyle = 'rgba(255,255,255,0.12)'; c.fill(); } }
+  else { const t = N ? `${Math.min(waveIdx + 1, N)}/${N}` : String(waveIdx + 1); c.font = `48px ${FD}`; c.fillStyle = BC.teal; c.fillText('◉ ' + t, x - 12, 56); }
+  c.textAlign = 'center'; c.font = `60px ${FD}`; const sc = String(score); glowText(c, sc, W / 2 + 40, 56, RUSH.on ? '#ffffff' : BC.gold, 16);
+  if (RUSH.on) { c.textAlign = 'left'; const sw = c.measureText(sc).width; c.font = `48px ${FD}`; glowText(c, '×2', W / 2 + 40 + sw / 2 + 22, 56, BC.gold, 14); }
   c.textAlign = 'right';
-  if (!settings.lives) { c.font = `34px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', W - 44, 52); }
-  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 48, '%px ' + FB); glowText(c, s, W - 40, 52, BC.pink, 10); }
-  else { c.font = `36px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, W - 40, 52); }
-  // izquierda: el número grande (y el combo, si va bien) y la barra de la oleada
-  const big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
-  c.textAlign = 'left'; c.font = `170px ${FD}`; glowText(c, big, 40, 186, '#ffffff', 18);
-  if (combo >= 3 && !hang) { const bw = c.measureText(big).width; c.font = `44px ${FD}`; c.fillStyle = BC.gold; c.fillText(`×${combo}`, 60 + bw, 230); }
-  c.fillStyle = BC.lil; c.font = `26px ${FD}`; c.fillText(hang ? 'SEGUNDOS' : 'REPS', 46, 292);
-  const wk = state !== 'play' ? 0 : hang ? BAR.hold / Math.max(1, BAR.need) : waveTarget ? waveDone / waveTarget : 0;
-  boardBar(c, 196, 284, 300, 16, wk, BC.teal, '#7af7ff');
-  // derecha: lo que pasa ahora (una frase grande) y la carga
-  c.textAlign = 'right'; const RX = W - 40, big2 = (t, col, size = 70, y = 160) => { fitFont(c, t, 470, size, '%px ' + FD); glowText(c, t, RX, y, col, 12); };
+  if (!settings.lives) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
+  else if (settings.lives <= 8) { let s = ''; for (let i = 0; i < settings.lives; i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
+  else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
+  // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
+  // medio, tus repeticiones (en colgado, los segundos)
+  const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
+  let wk = hang ? (state === 'play' ? BAR.hold / Math.max(1, BAR.need) : state === 'rest' ? 1 : 0) : waveTarget ? waveDone / waveTarget : 0;
+  if (state === 'rest' && settings.rest > 0) wk = clamp(stateT / settings.rest, 0, 1); // (en el descanso, la cuenta atrás)
+  else if (state === 'between') wk = SES.rest > 0 ? clamp(1 - SES.wait / SES.rest, 0, 1) : 1;
+  const gh = state === 'play' && !hang ? ghostAt() : null, gold = RUSH.on;
+  let notch, ahead = false;
+  if (gh) { const k = (gh.g - (stats.reps - waveDone)) / Math.max(1, waveTarget); ahead = gh.beat || stats.reps >= gh.g; if (k > 0) notch = Math.min(0.995, k); }
+  boardRing(c, ox, oy, 140, 26, wk, gold ? BC.gold : BC.teal, gold ? '#fff3c4' : '#7af7ff', notch, ahead && wk > 0);
+  if (!hang) { const lap = combo > 0 && combo % 10 === 0 ? combo / 10 - 1 : Math.floor(combo / 10); boardSegs(c, ox, oy, 104, 18, combo > 0 && combo % 10 === 0 ? 10 : combo % 10, lap); }
+  c.textAlign = 'center'; fitFont(c, big, 160, 120, '%px ' + FD); glowText(c, big, ox, oy + 8, '#ffffff', 16);
+  // derecha: un solo hueco para lo que pasa ahora (no se pisan: va lo más importante)
+  const say1 = (t, col, size = 84, y = 250) => boardSay(c, t, col, RX, y, 560, size);
   if (state === 'rest') {
-    big2(`DESCANSO ${Math.ceil(settings.rest - stateT)}`, BC.teal, 58, 140);
-    const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)} reps`, up = RAMP.note ? (RAMP.up ? ` · ▲ +${Math.round(rampK() * 100)} %` : ' · = igual') : '';
-    c.fillStyle = RAMP.up ? BC.gold : BC.ink; fitFont(c, nx + up, 470, 32, '500 %px ' + FB); c.fillText(nx + up, RX, 214);
-  } else if (state === 'mount') big2(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', BC.teal, 50);
-  else if (state === 'calib') big2('CALIBRANDO', BC.teal, 54);
-  else if (state === 'ready') big2(String(Math.max(1, Math.ceil(3 - stateT))), BC.gold, 120, 170);
-  else if (state === 'paused') big2('PAUSA', BC.gold, 80);
-  else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
-  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
-  else if (RUSH.on) big2(`⚡ RELÁMPAGO ${Math.max(0, Math.ceil(RUSH.left))}`, BC.gold, 52); // (79_perks: todo vale el doble)
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
+    say1(`DESCANSO ${Math.max(0, Math.ceil(settings.rest - stateT))}`, BC.teal, 72, 150);
+    const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)}`, up = RAMP.note ? (RAMP.up ? ' · ▲ un poco más' : ' · igual') : '';
+    const D = boardDay(), goal = settings.goalMin, g2 = ghostAt(), gt = g2 && g2.best ? (g2.beat ? `¡Récord! +${g2.n - g2.best}` : `Récord: vas ${g2.n - g2.g >= 0 ? '+' : '−'}${Math.abs(g2.n - g2.g)}`) : D.best ? `Tu mejor día: ${D.best}` : '';
+    const line = (t, col, y) => { if (!t) return; c.fillStyle = col; fitFont(c, t, 560, 48, '600 %px ' + FB); c.fillText(t, RX, y); };
+    line(nx + up, RAMP.up ? BC.gold : BC.ink, 228); line(`Hoy: ${Math.floor(D.time / 60)} de ${goal} min${D.time >= goal * 60 ? ' ✓' : ''}`, BC.ink, 296); line(gt, g2 && g2.n >= g2.g ? BC.teal : '#ff8a3d', 364);
+  } else if (state === 'mount') say1(settings.exercise === 'row' ? 'A LAS PARALELAS' : 'A LA BARRA', BC.teal, 64);
+  else if (state === 'calib') say1('CALIBRANDO', BC.teal, 72);
+  else if (state === 'ready') say1(String(Math.max(1, Math.ceil(3 - stateT))), BC.gold, 160, 260);
+  else if (state === 'paused') say1('PAUSA', BC.gold, 96);
+  else if (state === 'between') say1(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 72);
+  else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); say1(msg.text, msg.color, 84); c.globalAlpha = 1; }
+  else if (RUSH.on) say1('⚡ ×2', BC.gold, 120, 260);
+  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) say1(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
-  if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
-    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right'; c.font = `500 34px ${FB}`;
-    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; c.fillText(t1, RX, 236);
-    if (gd !== null) { c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; c.fillText(`fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`, RX, 278); }
+  if (settings.mode === 'arcs' && live && state !== 'rest') {
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right';
+    c.fillStyle = ARX.fever ? '#ff4fa3' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
+    if (gd !== null) { const t2 = `fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}`; c.fillStyle = gd >= 0 ? BC.teal : '#ff8a3d'; fitFont(c, t2, 560, 48, '600 %px ' + FB); c.fillText(t2, RX, 392); }
   }
-  let ch = null; const live = ['play', 'ready'].includes(state);
-  if (isCombat() && swordActive() && live) { const n = SWD.perf.length; ch = [n ? `⚔ ${n}` : '⚔ 0', n ? BC.teal : '#ff8a3d']; }
-  else if (throwAim() && live) { const n = throwCount(); ch = [`✋ ${n}`, n ? BC.teal : BC.lil]; }
-  else if (pistolOn() && live) ch = [`▮ ${GUN.ammo}`, GUN.ammo ? BC.teal : '#ff8a3d'];
-  else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
-  if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
-  guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
-  perkBoard(c); // la carrera contra tu récord
-  // abajo: lo de hoy
-  boardDay2(c, W, 356);
   board.tex.needsUpdate = true;
 }
 
@@ -7842,10 +7873,15 @@ const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
 // Avisos de corrección (naranja o rojo): además, grandes en el suelo durante 4 s y apuntados para la pausa
 const WARN_COLS = ['#ff8a3d', '#ff3b5c', '#ff4a6a'];
+// Avisos: lo que pide hacer algo ya (o colocarte) sale delante de ti; las celebraciones y lo que pasa (cheer), solo en el
+// marcador. Con los avisos de la vista apagados, todo va al marcador. Los de lo que haces mal, además, impresos en el suelo
+const SAYT = { t: 0 }; // (lo que le queda al último aviso, esté donde esté: para no repetir los recordatorios)
 function say(text, color = '#ffffff', dur = 1.4, toast = true) {
-  msg = { text, color, t: dur }; boardDirty = true; if (toast) showToast(text, color, dur);
+  SAYT.t = dur;
+  if (toast && settings.toasts && GAME_STATES.includes(state)) showToast(text, color, dur); else { msg = { text, color, t: dur }; boardDirty = true; }
   if (WARN_COLS.includes(color) && GAME_STATES.includes(state)) warnFloor(text, color);
 }
+const cheer = (text, color, dur) => say(text, color, dur, false);
 
 /* ---------- Barra de vida flotante ---------- */
 const barBgMat = new THREE.MeshBasicMaterial({ color: 0x120d1c, transparent: true, opacity: 0.85, depthWrite: false });
@@ -8300,7 +8336,7 @@ class Robot {
     const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize();
     Object.assign(this, { state: 'down', st: 0, atk: null, react: 0, restart: true, downAnim: anim, downT: anim ? c.Hit_Knockback.duration + c.LayToIdle.duration : 1.0 });
     this.knockFrom.copy(this.pos); this.knockTo.copy(this.pos).addScaledVector(back, 1.1 * this.sc);
-    this.stagger = 1; say('¡DERRIBADO!', '#ffd166', 0.9); return true;
+    this.stagger = 1; cheer('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
   // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
   shove(dist) {
@@ -8890,15 +8926,15 @@ class Arc {
       const need = settings.jumpHeight / 100;
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
       const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
-      say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect); if (perfect) SND.perfect();
+      say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
-    if (this.second) { score += 150 * (1 + combo * 0.1) | 0; say('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
+    if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
     registerRep(perfect, false); arxClean();
-    say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, perfect);
+    say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false);
     if (perfect) SND.perfect();
   }
   dispose() { arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
@@ -8974,7 +9010,7 @@ function onKilled(e) {
   stats.kills++;
   const pts0 = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300), pts = pts0 * perkKillK(e); // (dorado ×3, relámpago ×2)
   score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
-  if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
+  if (e.K && e.K.boss || e.boss) cheer('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
 }
 
@@ -8983,16 +9019,16 @@ function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
   score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
-  if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
+  if (combo > 0 && combo % 10 === 0) { cheer(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
   registerRep(opts.perfect, true, side); guardOnRep(opts);
-  if (!(combo % 10 === 0)) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
+  if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   const pow = opts.pow || 1, dmg = (opts.perfect ? 2 : 1) + POW_DMG[pow - 1];
-  if (pow > 1) say(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
+  if (pow > 1) cheer(`¡DISPARO ×${pow}!`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), 1.1);
   // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
@@ -9020,7 +9056,7 @@ function onPower(pow, deep) {
   if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
   chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
   if (deep) { SND.perfect(); fx.glow(head.p.clone().addScaledVector(fwd(), 0.5), [1, 0.25, 0.95], 0.5, 0.2); }
-  say(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
+  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
@@ -9360,7 +9396,7 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'dips') {
     // fondos en silla: la cabeza baja al doblar los codos y sube al estirarlos
     const d = DET.di, req = dv('dipDepth') / 100;
-    if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
@@ -9386,7 +9422,7 @@ function runDetectors(t, dt) {
     const P = DET.sp, y = head.p.y, drop = settings.splDrop / 100, hold = settings.splHold;
     // el tiempo solo corre durante la oleada; en el descanso cambias de lado y se toma la nueva postura
     if (state !== 'play') { P.t0 = t; P.sec = 0; P.dev = 0; P.state = 'hold'; if (y < 1.0) P.ref += (y - P.ref) * Math.min(1, dt * 1.5); return; }
-    if (y > P.ref + 0.4) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Ponte en plancha lateral', '#ff8a3d', 1.2); P.t0 = t; P.sec = 0; return; }
+    if (y > P.ref + 0.4) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Ponte en plancha lateral', '#ff8a3d', 1.2); P.t0 = t; P.sec = 0; return; }
     P.awayT = 0; P.warnT -= dt;
     if (P.state === 'hold') {
       if (Math.abs(y - P.ref) < drop * 0.5) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
@@ -9403,7 +9439,7 @@ function runDetectors(t, dt) {
     // S.ref es la altura de la cabeza tumbado: baja enseguida y sube despacio cuando no estás arriba, así se
     // corrige sola si al calibrar la cabeza estaba más alta o más baja que al hacer el ejercicio.
     const S = DET.su, y = head.p.y, req = settings.supRange / 100, hold = settings.supHold;
-    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
+    if (y > S.ref + 0.6) { S.awayT += dt; if (S.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Túmbate boca abajo', '#ff8a3d', 1.2); S.state = 'down'; S.peak = y; return; }
     S.awayT = 0; S.warnT -= dt;
     // quieto y sin subir el tronco: esa es tu altura tumbado
     S.stillT = head.speed < 0.05 ? S.stillT + dt : 0;
@@ -9440,7 +9476,7 @@ function runDetectors(t, dt) {
     // plancha con un brazo: la cabeza se mantiene a su altura de plancha; levantar un brazo dispara a su lado.
     // En el remo en plancha, la mancuerna tiene que subir el recorrido del remo
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
-    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
+    if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
     // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
     const lifted = s => hands[s].ok && hands[s].wrist.y > P[s].floor + LIFT;
@@ -9463,7 +9499,7 @@ function runDetectors(t, dt) {
     iwStep(t, dt);
   } else if (settings.exercise === 'pushup') {
     const d = DET.pu, req = dv('pushDepth') / 100;
-    if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && msg.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
   }
@@ -10139,7 +10175,7 @@ function startWave(i) {
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = ''; perkWaveStart(i);
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
-  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
@@ -10147,7 +10183,7 @@ function hurtPlayer(src) {
   hapticBoth(0.9, 120);
   if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
-  if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
+  if (!(src instanceof Arc) && !(src && src.silent)) cheer(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
@@ -10301,6 +10337,7 @@ function exitAll() {
 /* =================== LÓGICA POR FOTOGRAMA =================== */
 function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
+  if (SAYT.t > 0) SAYT.t -= dt;
   stateT += dt;
   if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
   arenaGlide(dt);
@@ -10374,9 +10411,9 @@ function arxReset() {
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); say('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); cheer('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
-function arxHit() { if (ARX.fever) say('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
+function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
 /* ---------- Coreografías ---------- */
 // Cada pieza es una lista de obstáculos con su hueco hasta el siguiente (en veces el intervalo medio); se eligen según los
@@ -10449,7 +10486,7 @@ class ArcObs {
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
-    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, true); SND.perfect();
+    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
   }
   dispose() {
     arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose());
@@ -10594,7 +10631,7 @@ function barMounted() {
   }
   center.mesh.visible = false; SND.charge();
   if (settings.exercise === 'row') placeRowBoard(true);
-  if (BAR.resume) { BAR.resume = false; state = 'play'; stateT = 0; say('¡Sigue!', '#3cf0c6', 1.2); }
+  if (BAR.resume) { BAR.resume = false; state = 'play'; stateT = 0; cheer('¡Sigue!', '#3cf0c6', 1.2); }
   else startWave(BAR.nextWave);
   BAR.started = true;
 }
@@ -10623,7 +10660,7 @@ function barFall() {
   const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
   hurtPlayer({ silent: true }); if (state === 'end') return;
-  say(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
+  cheer(door ? '¡AL CHARCO!' : '¡TE SOLTASTE!', door ? '#3cff8a' : '#ff8a3d', 1.8);
   if (BAR.lastFall) warnFloor(`${door ? '¡AL CHARCO!' : '¡TE SOLTASTE!'} (${BAR.lastFall})`, '#ff8a3d');
   barToMount(0, true);
 }
@@ -10650,7 +10687,7 @@ function barDetect(t, dt) {
       score += 10; combo++; stats.bestCombo = Math.max(stats.bestCombo, combo); boardDirty = true;
       const s = Math.floor(BAR.hold), left = Math.ceil(BAR.need - BAR.hold);
       if (left > 0 && left <= 3) SND.beep(1 + (3 - left) * 0.25);
-      else if (left > 0 && s % 10 === 0) { say(`¡${s} s!`, '#3cf0c6', 1.0); SND.combo(); }
+      else if (left > 0 && s % 10 === 0) { cheer(`¡${s} s!`, '#3cf0c6', 1.0); SND.combo(); }
     }
     return;
   }
@@ -10674,7 +10711,7 @@ function barDetect(t, dt) {
 function barRep(opts) {
   if (state !== 'play' || settings.exercise === 'hang' || BAR.contact) return; // ya contó al reventarlo con la cabeza
   registerRep(opts.perfect, false);
-  if (combo % 10 !== 0) { if (opts.perfect) say('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
+  if (combo % 10 !== 0) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
   let tg = frontTarget();
   if (!tg && spawnQueue.length) { spawnFromQueue(); spawnTimer = barGap(); tg = frontTarget(); } // ninguna repetición se pierde
@@ -11377,7 +11414,7 @@ class TouchTarget {
     const P = tchPeriod(), dt_ = Math.abs(TCH.clock - this.arriveAt);
     const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.4 : dt_ < 0.3;
     registerRep(perfect, false); stats.kills++;
-    say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, !perfect);
+    say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, false);
     if (perfect) SND.perfect();
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba
@@ -11715,7 +11752,7 @@ function swordStrike(S, e, p, dmg, counter) {
   SND.swordHit(p, laser); fx.sparks(p, 22, laser ? boltRGB(1) : [1, 0.7, 0.3], 3, 0.04); fx.glow(p, laser ? [0.5, 0.9, 1] : [1, 0.85, 0.6], 0.5, 0.1);
   if (laser) fx.electric(p, 10);
   stats.hits++; stats.shots++;
-  if (counter) say('¡CONTRAATAQUE!', '#ffd166', 0.9);
+  if (counter) cheer('¡CONTRAATAQUE!', '#ffd166', 0.9);
   e.onHit(dmg, true, p); comicHit(p); if (!e.alive) onKilled(e);
 }
 
@@ -11886,6 +11923,7 @@ function guardWarnSpr(i) {
   return GV.warn[i];
 }
 function guardStep(dt, t) {
+  braceStep(dt, t);
   if (!guardOn() || !['play', 'rest'].includes(state)) { guardHide(); GUARD.up = null; return; }
   const G = GUARD, D = gDiff();
   G.flash = Math.max(0, G.flash - dt * 4);
@@ -11923,8 +11961,6 @@ function guardStep(dt, t) {
     w.material.color.setRGB(1, 0.75 - 0.6 * k, 0.2 - 0.15 * k); w.material.opacity = 0.3 + 0.45 * k;
     const s = sz * (0.8 + 0.25 * Math.sin(t * (18 + 20 * k))); w.scale.set(s, s, 1);
   }
-  // en el marcador, cuando cambia lo bastante
-  const q = `${Math.round(G.charge * 20)}|${Math.round(G.en * 20)}|${G.broke}`; if (q !== G.drawn) { G.drawn = q; boardDirty = true; }
 }
 // Dónde va el escudo: delante del antebrazo, entre él y el enemigo que ataca (o, si no, hacia delante), con su eje largo a
 // lo largo del antebrazo (sin saber hacia dónde va el brazo, de pie); se gira con suavidad
@@ -11974,8 +12010,8 @@ function guardAbsorb(src) {
   // el escudo por técnica: para el golpe solo y aparta al enemigo
   if (G.charge >= 1) {
     G.charge = 0; G.ready = false; const p = guardPoint(src, new V3());
-    guardHitFx(p, true, null); guardRepel(src, 0.5, 1.0); stats.shields = (stats.shields || 0) + 1;
-    say('¡ESCUDO! Lo has repelido', '#3cf0c6', 1.2);
+    guardHitFx(p, true, null); guardRepel(src, 0.5, 1.0); stats.shields = (stats.shields || 0) + 1; braceBreakFx();
+    cheer('¡ESCUDO! Lo has repelido', '#3cf0c6', 1.2);
     return true;
   }
   return false;
@@ -12043,20 +12079,41 @@ function guardOnRep(opts) {
   if (!guardOn()) return;
   const G = GUARD, D = gDiff(), was = G.charge;
   G.charge = Math.min(1, G.charge + (opts.perfect ? D.perf : D.rep) + (combo > 0 && combo % 5 === 0 ? D.streak : 0));
-  if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); say('¡ESCUDO LISTO! Parará el siguiente golpe', '#3cf0c6', 1.4); }
+  if (G.charge >= 1 && was < 1) { G.ready = true; SND.power(3); cheer('¡ESCUDO LISTO!', '#3cf0c6', 1.4); }
   G.en = Math.min(1, G.en + (opts.perfect ? D.enP : D.en)); if (G.broke && G.en >= 0.3) G.broke = false;
 }
 
-/* ---------- En el marcador ---------- */
-function guardBoard(c, RX) {
-  if (!guardOn() || !['play', 'rest', 'ready'].includes(state)) return;
-  const G = GUARD, two = gestureOn(), w = two ? 160 : 330, y = 322;
-  c.textAlign = 'left'; c.font = `500 20px ${FB}`;
-  const x1 = RX - (two ? 2 * w + 30 : w);
-  c.fillStyle = G.charge >= 1 ? BC.teal : BC.lil; c.fillText(G.charge >= 1 ? 'ESCUDO LISTO' : 'ESCUDO', x1, y - 16);
-  boardBar(c, x1, y, w, 12, G.charge, BC.teal, '#7af7ff');
-  if (two) { const x2 = RX - w; c.fillStyle = G.broke ? '#ff8a3d' : BC.lil; c.fillText(G.broke ? 'SIN ENERGÍA' : 'GUARDIA', x2, y - 16); boardBar(c, x2, y, w, 12, G.en, G.broke ? '#ff8a3d' : BC.gold, '#ffe9a8'); }
+/* ---------- El brazalete: el escudo por técnica, en tu antebrazo ---------- */
+// En vez de una barra en el marcador: una banda de luz alrededor del antebrazo (el izquierdo; si no se ve, el derecho), en
+// tantos tramos como perfectas pide el escudo, que se llena con cada repetición. Llena, se pone blanca y late (y el
+// anillo gira a tu alrededor); al parar un golpe se rompe en chispas y vuelve a empezar
+const BRACE = (() => {
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    uniforms: { uK: { value: 0 }, uN: { value: 4 }, uFull: { value: 0 }, uT: { value: 0 } },
+    vertexShader: 'varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform float uK; uniform float uN; uniform float uFull; uniform float uT; varying vec2 vU;
+      void main(){
+        float seg = fract(vU.x * uN), gap = step(0.07, seg) * step(seg, 0.93), on = step(vU.x, uK); // (alrededor del brazo, uv.x de 0 a 1)
+        float edge = smoothstep(0.0, 0.3, vU.y) * smoothstep(1.0, 0.7, vU.y);
+        vec3 lit = mix(vec3(0.24, 0.94, 0.78), vec3(1.0), uFull * (0.45 + 0.35 * sin(uT * 7.0)));
+        gl_FragColor = vec4(mix(vec3(0.16, 0.22, 0.32), lit, on), mix(0.3, 0.95, on) * (0.5 + 0.5 * edge) * gap);
+      }`
+  });
+  const g = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.039, 0.045, 40, 1, true), m); g.visible = false; g.renderOrder = 21; scene.add(g);
+  return { g, u: m.uniforms, k: 0 };
+})();
+const _brA = new V3(), _brY = new V3(0, 1, 0);
+function braceStep(dt, t) {
+  const h = hands.left.ok ? hands.left : hands.right.ok ? hands.right : null;
+  if (!h || !guardOn() || !['play', 'rest'].includes(state)) { BRACE.g.visible = false; return; }
+  const G = GUARD, u = BRACE.u; BRACE.k += (G.charge - BRACE.k) * Math.min(1, dt * 8); // (se llena con suavidad)
+  _brA.set(0, 0, 1).applyQuaternion(h.wristQ); // hacia el codo (el +Z de la muñeca, en las manos y en los mandos)
+  BRACE.g.position.copy(h.wrist).addScaledVector(_brA, 0.075); BRACE.g.quaternion.setFromUnitVectors(_brY, _brA);
+  BRACE.g.scale.setScalar(G.charge >= 1 ? 1 + 0.06 * Math.sin(t * 7) : 1);
+  u.uK.value = BRACE.k; u.uN.value = Math.max(2, Math.round(1 / gDiff().perf)); u.uFull.value = G.charge >= 1 ? 1 : 0; u.uT.value = t; BRACE.g.visible = true;
 }
+function braceBreakFx() { if (!BRACE.g.visible) return; fx.sparks(BRACE.g.position, 22, [0.4, 1, 0.9], 1.8, 0.025); BRACE.k = 0; }
 
 /* =================== DIANA: CONTORNO DE NEÓN =================== */
 // En lugar del aro, al enemigo al que apuntas le sale un contorno rojo de neón algo separado de su silueta, que sigue su
@@ -12165,7 +12222,7 @@ function perkMenu() {
 function perkTake(k, random) {
   PK.has.add(k); PK.offer = null; if (menu && menu.perks) hideMenu();
   if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1;
-  say(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
+  cheer(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
 }
 // Se acaba el descanso: la que no elegiste, al azar; el cofre se va
 function perkRestEnd() {
@@ -12182,15 +12239,15 @@ function perkWaveStart(i) {
 const perkPtsK = perfect => (perfect && perkHas('gold') ? 2 : 1) * (RUSH.on ? 2 : 1);
 function perkOnRep(perfect) {
   if (!perfect || !perkHas('life') || !settings.lives) return;
-  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; say('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
+  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; cheer('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
 }
 // El golpe que para el escudo (después de la guardia, que es cosa tuya)
 function perkAbsorb() {
   if (PK.shield <= 0) return false;
-  PK.shield--; say('¡ESCUDO!', '#5ab8ff', 1.1); SND.zap(head.p); hapticBoth(0.5, 80);
+  PK.shield--; cheer('¡ESCUDO!', '#5ab8ff', 1.1); SND.zap(head.p); hapticBoth(0.5, 80);
   fx.glow(head.p.clone().addScaledVector(fwd(), 0.4), [0.35, 0.7, 1], 0.6, 0.25); return true;
 }
-const perkKeepCombo = () => { if (PK.comboSave > 0 && combo >= 3) { PK.comboSave--; say('Combo a salvo', '#ff8a3d', 1); return true; } return false; };
+const perkKeepCombo = () => { if (PK.comboSave > 0 && combo >= 3) { PK.comboSave--; cheer('Combo a salvo', '#ff8a3d', 1); return true; } return false; };
 // Al llegar un disparo perfecto: escarcha y onda alrededor del impacto
 function perkOnHit(target, p) {
   if (!p.perfect || !(perkHas('frost') || perkHas('wave'))) return;
@@ -12225,9 +12282,14 @@ function ghostStep(dt) {
   if (!ghostOn() || !['play', 'rest'].includes(state)) return;
   GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
   const B = GH.best, n = ghostNow();
-  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; say('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
 }
-// Lo que pone el marcador: cuántas llevas de más (o de menos) que tu récord en este momento
+// Para el marcador: dónde ibas en tu mejor ronda en este momento (g), lo que llevas ahora (n) y tu récord (best)
+function ghostAt() {
+  const B = GH.best; if (!ghostOn() || !B || !B.n || !B.tl || !B.tl.length) return null;
+  return { g: B.tl[Math.min(B.tl.length - 1, GH.tl.length)] || 0, n: ghostNow(), best: B.n, beat: GH.beat };
+}
+// Cuántas llevas de más (o de menos) que tu récord en este momento
 function ghostText() {
   const B = GH.best; if (!ghostOn() || !B || !B.n) return null; const n = ghostNow();
   if (GH.beat) return [`¡RÉCORD! +${n - B.n}`, '#ffd166'];
@@ -12251,7 +12313,7 @@ function perkSpawned(e) {
 const perkKillK = e => (e.golden ? 3 : 1) * (RUSH.on ? 2 : 1);
 function perkOnKill(e) {
   if (!e.golden) return; const c = e.center(new V3());
-  say('¡DORADO! ×3', '#ffd166', 1.6); SND.combo(); fx.sparks(c, 50, [1, 0.82, 0.3], 3.5, 0.05); fx.glow(c, [1, 0.8, 0.3], isTiny() ? 0.5 : 2, 0.3);
+  cheer('¡DORADO! ×3', '#ffd166', 1.6); SND.combo(); fx.sparks(c, 50, [1, 0.82, 0.3], 3.5, 0.05); fx.glow(c, [1, 0.8, 0.3], isTiny() ? 0.5 : 2, 0.3);
 }
 function goldStep(dt, t) {
   for (const g of GOLD.list) {
@@ -12264,7 +12326,7 @@ function goldStep(dt, t) {
 /* ---------- Sorpresas: el relámpago (y la música que manda) ---------- */
 // 20 s (o una frase de la canción, 32 pulsos) en los que llegan seguidos (el doble de deprisa, hasta el máximo a la vez) y
 // todo vale el doble. Desde la segunda oleada, en una de cada tres más o menos, nunca con el jefe
-const RUSH = { on: false, left: 0, planT: -1, at: -1, end: -1, cd: 0, song: null };
+const RUSH = { on: false, left: 0, dur: 0, planT: -1, at: -1, end: -1, cd: 0, song: null };
 const musicLead = () => !!settings.musicLead && beatP() > 0;
 function rushPlan(i) {
   RUSH.planT = -1; RUSH.at = -1;
@@ -12272,14 +12334,14 @@ function rushPlan(i) {
 }
 const perkSpawnK = () => RUSH.on ? 2 : 1;
 function rushStart(sec) {
-  RUSH.on = true; RUSH.left = sec; RUSH.at = -1; say('¡RELÁMPAGO! Puntos ×2', '#ffd166', 1.8); SND.horn(); ENV.flash = 1; boardDirty = true;
+  RUSH.on = true; RUSH.left = RUSH.dur = sec; RUSH.at = -1; cheer('¡RELÁMPAGO! Puntos ×2', '#ffd166', 1.8); SND.horn(); ENV.flash = 1; boardDirty = true;
 }
-function rushStop(quiet) { if (RUSH.on && !quiet) say('Fin del relámpago', '#a49fc8', 1.1); RUSH.on = false; RUSH.left = 0; RUSH.end = -1; RUSH.at = -1; boardDirty = true; }
+function rushStop(quiet) { if (RUSH.on && !quiet) cheer('Fin del relámpago', '#a49fc8', 1.1); RUSH.on = false; RUSH.left = 0; RUSH.end = -1; RUSH.at = -1; boardDirty = true; }
 function rushStep(dt) {
   if (state !== 'play') { if (RUSH.on || RUSH.at >= 0) rushStop(true); return; }
   // una canción nueva de Spotify trae relámpago en su primera frase
   const id = spConnected() && SP.st && SP.st.item ? SP.st.item.id : null;
-  if (id && RUSH.song && id !== RUSH.song && musicLead() && surpriseOn() && !RUSH.on && RUSH.at < 0 && !isBossWave(waveIdx)) { RUSH.planT = 0.01; say('¡Canción nueva!', '#a68bff', 1.4); }
+  if (id && RUSH.song && id !== RUSH.song && musicLead() && surpriseOn() && !RUSH.on && RUSH.at < 0 && !isBossWave(waveIdx)) { RUSH.planT = 0.01; cheer('¡Canción nueva!', '#a68bff', 1.4); }
   if (id) RUSH.song = id;
   if (RUSH.planT > 0 && !RUSH.on) {
     RUSH.planT -= dt;
@@ -12290,7 +12352,7 @@ function rushStep(dt) {
     if (left <= 3 && left >= 1 && left !== RUSH.cd) { RUSH.cd = left; say(String(left), '#ffd166', 0.5, false); SND.tick(); }
     if (b >= RUSH.at) { RUSH.end = RUSH.at + 32; rushStart((RUSH.end - b) * beatP()); }
   }
-  if (RUSH.on) { RUSH.left -= dt; if ((RUSH.left | 0) !== ((RUSH.left + dt) | 0)) boardDirty = true; if (RUSH.left <= 0) rushStop(); }
+  if (RUSH.on) { RUSH.left -= dt; if (((RUSH.left * 4) | 0) !== (((RUSH.left + dt) * 4) | 0)) boardDirty = true; /* (la mecha del marcador, 4 veces por segundo) */ if (RUSH.left <= 0) rushStop(); }
 }
 // La luz de la compuerta late con el pulso de la música (más fuerte en el relámpago)
 const BEATL = { k: 0 };
@@ -12339,9 +12401,9 @@ function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
   fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
   const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
-  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; say(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
-  else if (settings.lives && lives < settings.lives) { lives++; say('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
-  else { score += 300; say('¡Cofre! +300 puntos', '#ffd166', 2.2); }
+  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
+  else if (settings.lives && lives < settings.lives) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
+  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); }
   boardDirty = true;
 }
 
@@ -12357,11 +12419,6 @@ function perkStep(dt, t) {
   for (const e of enemies) if (e.frostT > 0) { e.frostT -= dt; if (Math.random() < dt * 6) fx.glow(e.center(tmpA), [0.6, 0.9, 1], isTiny() ? 0.12 : 0.4, 0.2); }
   if (PK.offerT > 0 && state === 'rest') { PK.offerT -= dt; if (PK.offerT <= 0) { const pool = perkPool(); if (pool.length) { PK.offer = pool.sort(() => Math.random() - 0.5).slice(0, 3); perkMenu(); } } }
   ghostStep(dt); goldStep(dt, t); rushStep(dt); beatLightStep(dt); chestStep(dt, t);
-}
-// En el marcador, la carrera contra el récord: en el centro, encima de la barra de la oleada (el relámpago va en la frase
-// grande de la derecha, ver drawBoard)
-function perkBoard(c) {
-  const g = ghostText(); if (g && ['play', 'rest'].includes(state)) { c.textAlign = 'left'; c.fillStyle = g[1]; fitFont(c, g[0], 240, 26, '%px ' + FD); c.fillText(g[0], 514, 256); }
 }
 
 

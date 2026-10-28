@@ -335,7 +335,7 @@ class TouchTarget {
     const P = tchPeriod(), dt_ = Math.abs(TCH.clock - this.arriveAt);
     const perfect = this.hold ? this.outT === 0 : P ? dt_ < 0.15 : this.part === 'head' ? this.rad < 0.4 : dt_ < 0.3;
     registerRep(perfect, false); stats.kills++;
-    say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, !perfect);
+    say(perfect ? '¡PERFECTO!' : this.hold ? '¡Aguantado!' : '¡Bien!', perfect ? '#3cf0c6' : '#ffffff', 0.8, false);
     if (perfect) SND.perfect();
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba

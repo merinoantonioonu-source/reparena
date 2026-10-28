@@ -189,7 +189,7 @@ function swordStrike(S, e, p, dmg, counter) {
   SND.swordHit(p, laser); fx.sparks(p, 22, laser ? boltRGB(1) : [1, 0.7, 0.3], 3, 0.04); fx.glow(p, laser ? [0.5, 0.9, 1] : [1, 0.85, 0.6], 0.5, 0.1);
   if (laser) fx.electric(p, 10);
   stats.hits++; stats.shots++;
-  if (counter) say('¡CONTRAATAQUE!', '#ffd166', 0.9);
+  if (counter) cheer('¡CONTRAATAQUE!', '#ffd166', 0.9);
   e.onHit(dmg, true, p); comicHit(p); if (!e.alive) onKilled(e);
 }
 

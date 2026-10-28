@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { punchStep, PUNCH, FRONT_MIN, SP_FADE, spBlockEnd, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, spBlockEnd, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm };
@@ -1093,6 +1093,26 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }
     log(`punch: robot ${!!e} · stunned ${stun.toFixed(2)} s · pushed back ${(back * 100).toFixed(0)} cm · hp ${hp0} → ${hp1} · a slow touch stuns ${slow.toFixed(2)} s`);
     if (!e || stun <= 0 || back < 0.1 || hp1 !== hp0 || slow > 0) errors.push('golpe: un puñetazo rápido debería echar atrás al enemigo y aturdirlo, sin quitarle vida (y uno lento, no)');
+    for (const k in saved) if (RA.settings[k] !== saved[k]) RA.setSetting(k, saved[k]);
+    RA.lobbyMenu(); frame(2); }
+  // ---- El marcador (rosco doble) y los avisos: las celebraciones, en el marcador; lo que pide hacer algo, delante de ti ----
+  if (!process.env.ONLY || /board|marcador/.test(process.env.ONLY)) {
+    const saved = { ...RA.settings }, T = { t: 0 }, step = n => { for (let i = 0; i < n; i++) { frame(1); T.t += 0.033; } };
+    applyCfg({ mode: 'combat', exercise: 'squat', aim: 'auto', foesGate: 'robot', lives: 3, waves: 5, repsWave: 40, rest: 0, guard: 'on', perks: 0, surprises: 0, toasts: 1 });
+    RA.startPreview(); frame(3); press('EMPEZAR');
+    while (T.t < 30 && RA.state !== 'play') step(1);
+    RA.toastP.mesh.visible = false; RA.cheer('¡PERFECTA!', '#3cf0c6', 1); const cheerOk = RA.msg.text === '¡PERFECTA!' && !RA.toastP.mesh.visible;
+    RA.say('¡Agáchate para parar el golpe!', '#ff8a3d', 1); const faceOk = RA.toastP.mesh.visible && RA.msg.text === '¡PERFECTA!';
+    RA.setSetting('toasts', 0); RA.say('Vuelve a la plancha', '#ff8a3d', 1); const offOk = RA.msg.text === 'Vuelve a la plancha'; RA.setSetting('toasts', 1);
+    // con racha, relámpago y una frase larga se dibuja sin fallar (el lienzo simulado falla con textos raros o radios negativos)
+    let drawOk = true; try { RA.combo = 13; RA.cheer('¡Cofre! Mejora extra: Doble o nada', '#ffd166', 1); RA.drawBoard(); RA.rushStart(12); step(5); RA.drawBoard(); RA.rushStop(true); RA.combo = 20; RA.drawBoard(); } catch (e) { drawOk = false; log('board error ' + e.message); }
+    // el brazalete: con la mano izquierda a la vista, se ve y se llena con el escudo
+    RA.PV.handSide = 'left'; RA.PV.handAt = RA.head.p.clone().add(new THREE.Vector3(-0.2, -0.4, -0.3)); RA.GUARD.charge = 0.5; step(20);
+    const brOn = RA.BRACE.g.visible, brK = RA.BRACE.k; RA.PV.handAt = null; step(2); const brOff = !RA.BRACE.g.visible;
+    log(`board: cheer on the board only ${cheerOk} · action in front of you ${faceOk} · with view notices off, on the board ${offOk} · draws ${drawOk} · bracelet ${brOn} (${brK.toFixed(2)}) hidden without the hand ${brOff}`);
+    if (!cheerOk || !faceOk || !offOk) errors.push('avisos: las celebraciones van solo al marcador y lo que pide hacer algo, delante de ti (con los avisos de la vista apagados, al marcador)');
+    if (!drawOk) errors.push('marcador: falla al dibujarse con racha, relámpago o una frase larga');
+    if (!brOn || Math.abs(brK - 0.5) > 0.1 || !brOff) errors.push('escudo: el brazalete debería verse en el antebrazo, llenarse con el escudo y ocultarse sin la mano');
     for (const k in saved) if (RA.settings[k] !== saved[k]) RA.setSetting(k, saved[k]);
     RA.lobbyMenu(); frame(2); }
   // ---- Para que no aburra (79_perks): mejoras entre oleadas, carrera contra el récord, sorpresas y la música que manda ----
