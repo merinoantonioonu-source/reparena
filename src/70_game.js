@@ -1209,7 +1209,9 @@ function onPower(pow, deep) {
   if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
   chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
   if (deep) { SND.perfect(); fx.glow(head.p.clone().addScaledVector(fwd(), 0.5), [1, 0.25, 0.95], 0.5, 0.2); }
-  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
+  const col = '#' + POW_COL[pow - 1].toString(16).padStart(6, '0');
+  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, col, deep ? 1.3 : 0.9); boardDirty = true;
+  chargeFloor(pow >= 4 ? `×4 · ¡ARRIBA!` : deep ? `RECARGA ×${pow}` : `CARGA ×${pow}`, col); // (en el suelo: agachado, es lo que ves)
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
