@@ -2067,7 +2067,8 @@ function foesMenu(back) {
 const RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
-function rankVals(r = settings.rank) { const i = rankIdx(r), o = {}; for (const k in RANK_VALS) o[k] = clampSetting(FIELD[k], RANK_VALS[k][i]); return o; }
+// (con lo que el desarrollador haya puesto en la tabla de este modo y ejercicio: 67_dev)
+function rankVals(r = settings.rank) { const i = rankIdx(r), o = {}; for (const k in RANK_VALS) o[k] = devVal(k, i); for (const k of devCtl()) o[k] = devVal(k, i); return o; }
 function applyRank() { RANK.applying = true; try { const v = rankVals(); for (const k in v) setSetting(k, v[k]); } finally { RANK.applying = false; } } // (solo en este modo y ejercicio)
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) applyRank(); });
 const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
@@ -2129,7 +2130,7 @@ function armsSummary() {
 function armsMenu(back) {
   const again = () => armsMenu(back);
   const rows = [{ t: 'title', text: 'ARMAS' },
-    ...SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true, after: f.relayout ? again : undefined })),
+    ...SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, after: f.relayout ? again : undefined })),
     { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.arms }); m.rebuild = again;
 }
@@ -2138,37 +2139,36 @@ function lobbyMenu() {
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
   const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
+  // dos columnas: a la izquierda, qué juegas (modo, ejercicio, rango, enemigos y armas); a la derecha, cómo (al fallo y
+  // lo que el desarrollador ha marcado con el ojo para este modo y ejercicio: 67_dev)
+  const M = Object.entries(MODE_NAMES), modeBtn = ([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', onPress: () => { setSetting('mode', v); lobbyMenu(); } });
+  const left = [
+    ...[0, 2].map(k => ({ t: 'btns', items: M.slice(k, k + 2).map(modeBtn) })),
+    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
+    { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); lobbyMenu(); } })) },
+    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
+    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] }] : []),
+    ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] }] : [])];
+  const eyeF = (menuFull() ? [] : devEye()).filter(k => FIELD[k] && fieldVisible(FIELD[k]));
+  const right = [{ t: 'field', key: 'toFail', after: () => lobbyMenu() }, ...eyeF.map(k => ({ t: 'field', key: k, after: FIELD[k].relayout ? () => lobbyMenu() : undefined }))];
+  if (menuFull()) right.push({ t: 'field', key: speedKey() }, { t: 'field', key: settings.mode === 'arcs' ? 'arcMax' : bars && hang ? 'hangInc' : 'repsWave' });
   const rows = [
     { t: 'title', text: 'REPARENA' },
     { t: 'text', text: summaryText() },
     ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
+    { t: 'cols', titles: ['Qué', 'Cómo'], cols: [left, right] },
     { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
     ...sessionRows(),
-    { t: 'choice', label: 'Modo', value: settings.mode, opts: Object.entries(MODE_NAMES), onPick: v => { setSetting('mode', v); lobbyMenu(); } },
-    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
-    { t: 'field', key: 'toFail', after: () => lobbyMenu() },
-    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
-    // enemigos y armas, juntos en una fila (el menú queda más corto y al alcance)
-    ...(isCombat() || armsAny() ? [{ t: 'btns', items: [
-      ...(isCombat() ? [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] : []),
-      ...(armsAny() ? [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] : [])] }] : []),
-    { t: 'field', key: speedKey() },
-    ...(foesHas('robots') && foesHas('flyers') ? [{ t: 'field', key: 'flySpeed' }] : []),
-    settings.mode === 'arcs' ? { t: 'field', key: 'arcMax' } : bars && hang ? { t: 'field', key: 'hangInc' } : { t: 'field', key: 'repsWave' },
     ...(bars && hang ? [{ t: 'field', key: 'hangPit' }] : [])
   ];
-  if (bars && !hang) rows.push({ t: 'field', key: 'barTarget' });
   if (settings.mode === 'touch') {
     if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
-    else rows.push({ t: 'field', key: 'tchHands' });
-    if (settings.menuLevel !== 'simple') rows.push(...tempoRows(() => lobbyMenu())); // (en el sencillo, el ritmo está en Sonido)
+    if (menuFull()) rows.push(...tempoRows(() => lobbyMenu())); // (para el jugador, el ritmo está en Sonido)
   }
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
   // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
   const sub = [];
-  // menú sencillo: fuera lo de afinar (sigue en Ajustes con el menú completo, o con ★ aquí)
-  if (settings.menuLevel === 'simple') for (let i = rows.length - 1; i >= 0; i--) if (rows[i].t === 'field' && !fieldShown(FIELD[rows[i].key])) rows.splice(i, 1);
-  rows.push(...favRows(new Set(rows.filter(r => r.t === 'field').map(r => r.key)), () => lobbyMenu())); // los ★ de los submenús
+  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].t === 'field' && !fieldVisible(FIELD[rows[i].key])) rows.splice(i, 1);
   // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
@@ -2190,14 +2190,14 @@ function soundMenu(back) {
   const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
   const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume', star: true }, { t: 'field', key: 'ambient', star: true }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
   const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
-    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key, star: true })),
+    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key })),
     ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.scene }); m.rebuild = again;
 }
@@ -2208,10 +2208,13 @@ function settingsMenu(back, tab = settingsTab) {
   const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   if (tab === 'ejercicio') rows.push({ t: 'text', text: BODY_NOTE, color: '#a49fc8' });
-  SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, star: true, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
-  const simple = settings.menuLevel === 'simple'; // menú sencillo o completo, a un toque
-  rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo básico (menú sencillo)', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] });
-  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y + · ★ lo lleva al menú principal', color: '#a49fc8' });
+  SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  // el desarrollador: menú completo o el del jugador, a un toque, y sus retoques de este rango, a la tabla
+  if (DEV.on) { const simple = !menuFull(), i = rankIdx(), own = devRows().filter(k => rankDiff(settings[k], devVal(k, i)));
+    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } },
+      ...(own.length ? [{ label: `Guardar ${own.length} retoque${own.length > 1 ? 's' : ''} en la tabla (${rankName()})`, style: 'primary', onPress: () => { own.forEach(k => devSet(k, i, settings[k])); say(`Tabla: ${own.length} valor${own.length > 1 ? 'es' : ''} de ${rankName()} guardado${own.length > 1 ? 's' : ''}`, '#ffd166', 2); settingsMenu(back, tab); } }] : [])] }); }
+  rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
+  if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) settingsMenu(back, tab); } }] }); // (cinco toques: modo desarrollador)
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
   rows.push({ t: 'btns', items: [
@@ -2288,7 +2291,7 @@ function warmStep() {
 // todo lo que quede, de una vez (si empieza la partida antes de acabar la cola)
 function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
-  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
+  audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);

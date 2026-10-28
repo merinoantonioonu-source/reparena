@@ -215,7 +215,7 @@ const SCHEMA = [
   { key: 'dipLen', g: 'barras', label: 'Largo de las paralelas', short: 'Largo', type: 'num', min: 30, max: 150, step: 1, def: 70, unit: 'cm', modes: ['bars'], ex: ['row'] },
 
   { key: 'depth', g: 'entorno', label: 'Distancia de las compuertas', short: 'Dist. compuertas', type: 'num', min: 0, max: 25, step: 0.5, def: 0, unit: 'm', zero: 'Auto', hint: 'Auto: 11 m en VR y 6 m en realidad mixta.' },
-  { key: 'menuLevel', g: 'sistema', label: 'Menú', type: 'choice', opts: [['simple', 'Sencillo'], ['full', 'Completo']], def: 'simple', relayout: true, hint: 'Sencillo: en los menús y aquí solo salen los ajustes básicos (y tus favoritos con ★). Completo: todos, también los de afinar.' },
+  { key: 'menuLevel', g: 'sistema', label: 'Menú', type: 'choice', opts: [['simple', 'Del jugador'], ['full', 'Completo']], def: 'simple', relayout: true, cond: () => DEV.on, hint: 'Solo en modo desarrollador. Del jugador: lo que marcaste con el ojo en tu tabla. Completo: todos los ajustes.' },
   { key: 'menuWhere', g: 'sistema', label: 'Dónde aparece el menú', short: 'Menú en', type: 'choice', opts: [['wrist', 'Muñeca'], ['stand', 'Atril']], def: 'wrist', hint: 'Muñeca: mira tu muñeca izquierda y pulsa MENÚ; el menú se queda quieto delante de ti hasta que lo cierras con la palma hacia abajo o el puño. Atril: fijo delante de ti, sobre un pie.' },
   { key: 'wristDist', g: 'sistema', label: 'Distancia del menú de muñeca a los ojos', short: 'Dist. muñeca', type: 'num', min: 30, max: 90, step: 5, def: 55, unit: 'cm', cond: () => settings.menuWhere === 'wrist', hint: 'Sale de la muñeca y se queda a esta distancia, delante de ti. Si te cuesta enfocarlo, aléjalo; si no llegas con el dedo, acércalo.' },
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
@@ -324,9 +324,10 @@ const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
-const isBasic = f => f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
+// lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
+const isBasic = f => devRowOk(f) ? devEye().includes(f.key) : f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
 // Lo que se enseña en los menús y en la página: lo que vale para lo elegido y, con el menú sencillo, lo básico
-const fieldShown = f => fieldVisible(f) && (settings.menuLevel !== 'simple' || isBasic(f));
+const fieldShown = f => fieldVisible(f) && (menuFull() || isBasic(f));
 function fieldVisible(f) {
   if (f.modes && !f.modes.includes(settings.mode)) return false;
   if (f.ex && !f.ex.includes(settings.exercise)) return false;
@@ -460,8 +461,9 @@ function syncForm() {
   const byBody = settings.exSort === 'body'; sortExCards(byBody);
   Object.keys(EX_NAMES).forEach(x => { const el = $(`#ex-${x}`); if (el) { const ok = exOk(settings.mode, x); el.disabled = !ok; const card = el.closest && el.closest('.card'); if (card) card.hidden = !ok; } });
   if (byBody && document.querySelectorAll) document.querySelectorAll('.cards .zone').forEach(h => { let n = h.nextElementSibling, any = false; while (n && !n.classList.contains('zone')) { if (!n.hidden) any = true; n = n.nextElementSibling; } h.hidden = !any; }); // zonas sin ejercicios de este modo, fuera
-  const ln = $('#levelNote'), simple = settings.menuLevel === 'simple';
-  if (ln) ln.innerHTML = `${simple ? 'Menú sencillo: solo lo básico.' : 'Menú completo: todos los ajustes.'} <button type="button" class="btn small" data-level="${simple ? 'full' : 'simple'}">${simple ? 'Ver todos los ajustes' : 'Ver solo lo básico'}</button>`;
+  // (el menú completo es solo del desarrollador; el jugador ve lo que este marcó con el ojo)
+  const ln = $('#levelNote'), simple = !menuFull();
+  if (ln) ln.innerHTML = !DEV.on ? '' : `${simple ? 'Lo que ve el jugador.' : 'Menú completo (desarrollador): todos los ajustes.'} <button type="button" class="btn small" data-level="${simple ? 'full' : 'simple'}">${simple ? 'Ver todos los ajustes' : 'Ver solo lo del jugador'}</button>`;
   const st = $('#specTitle'); if (st) st.textContent = `4 · Opciones de ${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`;
   const note = $('#exNote'); note.hidden = !['arcs', 'bars', 'touch'].includes(settings.mode);
   note.textContent = { arcs: 'El modo Arcos es solo para sentadillas.', bars: 'El modo Barras usa la barra de dominadas o las paralelas. Remo, dominadas y colgado solo se juegan en él.', touch: 'En Toques no disparas: tocas con la cabeza las amebas y con la mano que piden los diamantes que vienen hacia ti; entre un toque y otro, vuelve a la postura de partida.' }[settings.mode] || '';
@@ -483,6 +485,7 @@ function syncForm() {
   document.querySelectorAll('.group').forEach(g => { g.hidden = !SCHEMA.some(f => f.g === g.dataset.group && fieldShown(f)); });
   if (typeof animNote === 'function') animNote();
   renderPick(); updateSummary();
+  if (typeof devPage === 'function') { devPage(); exSongsPage(); } // (la tabla y las canciones, del ejercicio elegido)
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
 const EXCARDS = { order: null };

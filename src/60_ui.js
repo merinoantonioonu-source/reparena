@@ -83,7 +83,7 @@ class Btn {
       const tc = keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
-      if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, tc);
+      if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, tc); // (sin texto: el galón solo, en medio)
       const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
       fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
     }
@@ -97,7 +97,7 @@ class Btn {
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
-    if (this.badge !== undefined) drawRank(c, this.badge, H * 0.62, H / 2, H * 0.62, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
+    if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
     const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
     c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true;
@@ -363,6 +363,9 @@ function hideMenu(keepAnchor) {
   if (menu) { scene.remove(menu.group); disposeTree(menu.group); menu = null; }
   if (!keepAnchor) { if (menuAnchor) { lastAnchor = menuAnchor; lastAnchorT = performance.now() / 1000; } menuAnchor = null; stand.visible = false; }
 }
+// las columnas del menú principal: margen dentro de su caja, alto del título y ancho de la etiqueta de sus campos
+const COLP = 0.012, COLT = 0.03, COL_LW = 0.165;
+const subH = r => { const f = r.t === 'field' && FIELD[r.key]; return r.h || (f && f.grid ? Math.ceil(f.opts.length / f.grid) * (GRID_H + GAP) - GAP : ROWH[r.t]) || 0.06; };
 const GRID_H = 0.046, ROWH = { title: 0.075, text: 0.034, btns: 0.07, field: 0.062, choice: 0.062, tabs: 0.056, space: 0.012 };
 // Los textos largos se parten en líneas (a un tamaño que se lee) en vez de encogerse hasta no leerse
 const TXT_FONT = '500 27px ' + FB, TXT_LH = 0.03; let _wrapCtx = null;
@@ -387,6 +390,7 @@ function openMenu(rows, opts = {}) {
   if (closable && (!rows.length || rows[0].t !== 'title')) rows = [{ t: 'title', text: '' }, ...rows];
   // las selecciones con muchas opciones (Enemigos) van en rejilla: f.grid por fila
   rows.forEach(r => { const f = r.t === 'field' && FIELD[r.key]; if (f && f.grid && !r.h) r.h = Math.ceil(f.opts.length / f.grid) * (GRID_H + GAP) - GAP; });
+  rows.forEach(r => { if (r.t === 'cols' && !r.h) r.h = Math.max(...r.cols.map(col => (r.titles ? COLT : 0) + col.reduce((a, sr) => a + subH(sr), 0) + GAP * Math.max(0, col.length - 1))) + COLP * 2; });
   const wrapPx = (MW - PAD * 2 - 0.02) * 1024 / MW, lines = rows.map(r => r.t === 'text' && !r.h ? wrapLines(r.text, wrapPx) : null);
   const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
@@ -410,54 +414,69 @@ function openMenu(rows, opts = {}) {
     c.save(); c.shadowColor = 'rgba(0,0,0,0.75)'; c.shadowBlur = 16; c.shadowOffsetX = 6; c.shadowOffsetY = 9; rr(c, px + 2, py + 2, w.w * sc - 4, w.h * sc - 4, Math.min(w.h * sc * 0.32, 30)); c.fillStyle = '#1d2029'; c.fill(); c.restore();
     return w;
   };
-  const label = (text, cy, color = '#eeeaff', off = 0) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (LABW - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (X0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
-  rows.forEach((r, i) => {
-    const h = heights[i], cy = y - h / 2;
+  // x0, cw: dónde empieza la fila y su ancho (todo el menú o una de sus columnas); lw: el ancho de la etiqueta
+  const label = (text, cy, color = '#eeeaff', off = 0, x0 = X0, lw = LABW) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (lw - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (x0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
+  const layRow = (r, h, cy, i, X0, CW, LW) => {
     if (r.t === 'title') {
-      c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - (closable && !i ? CLOSE_W * 2 : 0)) * sc, 60, '%px ' + FD); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc + 4);
+      c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - (closable && !i ? CLOSE_W * 2 : 0)) * sc, 60, '%px ' + FD); c.fillText(r.text, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy) * sc + 4);
       if (closable && !i) addW(new Btn('✕ Cerrar', CLOSE_W, Math.min(h, 0.052), menuClose, { style: 'ghost', font: 0.42 }), X0 + CW - CLOSE_W / 2, cy);
     }
     else if (r.t === 'text') {
       c.fillStyle = r.color || '#d8d3f5'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, bg.W / 2, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
-      else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, bg.W / 2, (H / 2 - cy) * sc); }
+      if (lines[i] && lines[i].length > 1) { c.font = TXT_FONT; lines[i].forEach((l, k) => c.fillText(l, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy + (k - (lines[i].length - 1) / 2) * TXT_LH) * sc)); }
+      else { fitFont(c, r.text, (CW - 0.02) * sc, 30, '500 %px ' + FB); c.fillText(r.text, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy) * sc); }
     }
     else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon, badge: it.badge }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
-      label(r.label, cy); const n = r.opts.length, avail = CW - LABW - GAP * (n - 1); let x = X0 + LABW; const w = avail / n;
+      label(r.label, cy, undefined, 0, X0, LW); const n = r.opts.length, avail = CW - LW - GAP * (n - 1); let x = X0 + LW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'field') {
-      const f = FIELD[r.key], so = r.star ? 0.044 : 0;
-      if (r.star) { const on = () => isFav(f.key), b = addW(new Btn(on() ? '★' : '☆', 0.036, h * 0.7, () => { if (favToggle(f.key)) b.setLabel(on() ? '★' : '☆', on() ? 'value' : 'ghost'); }, { style: on() ? 'value' : 'ghost', font: 0.62 }), X0 + 0.018, cy); } // ★: al menú principal
-      label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so);
+      const f = FIELD[r.key], so = 0;
+      label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so, X0, LW);
       if (f.type === 'num') {
-        const bw = 0.054, vw = 0.13, sw = CW - LABW - bw * 2 - vw - GAP * 3; let x = X0 + LABW;
+        // en una columna (estrecha) no cabe el deslizador: − valor +
+        const narrow = CW < 0.5, bw = narrow ? 0.052 : 0.054, vw = narrow ? CW - LW - bw * 2 - GAP * 2 : 0.13, sw = CW - LW - bw * 2 - vw - GAP * 3; let x = X0 + LW;
         const row = { f };
         const commit = v => { setSetting(f.key, v); refreshRow(row); };
         row.minus = addW(new Btn('−', bw, h, () => commit(settings[f.key] - f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
-        row.slider = addW(new Slider(f, sw, h, (v, done) => { row.value.setLabel(fmtVal(f, v)); if (done) commit(v); }), x + sw / 2, cy); x += sw + GAP;
+        if (narrow) { row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.42 }), x + vw / 2, cy); x += vw + GAP; } // (− valor +)
+        else { row.slider = addW(new Slider(f, sw, h, (v, done) => { row.value.setLabel(fmtVal(f, v)); if (done) commit(v); }), x + sw / 2, cy); x += sw + GAP; }
         row.plus = addW(new Btn('+', bw, h, () => commit(settings[f.key] + f.step), { font: 0.6 }), x + bw / 2, cy); x += bw + GAP;
-        row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
+        if (!narrow) row.value = addW(new Btn(fmtVal(f), vw, h, () => openKeypad(f, row), { style: 'value', font: 0.36 }), x + vw / 2, cy);
         fieldRows.push(row);
       } else if (f.type === 'multi') { // varios a la vez (al menos uno, salvo los que pueden quedarse vacíos); con f.grid, en rejilla
-        const n = f.opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h, row = { f, btns: [] };
+        const n = f.opts.length, cols = f.grid || n, w = (CW - LW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h, row = { f, btns: [] };
         const on = () => String(settings[f.key]).split(',');
-        f.opts.forEach(([v, lab], i) => { const c = i % cols, rr_ = Math.floor(i / cols), x = X0 + LABW + c * (w + GAP), y = f.grid ? cy + h / 2 - bh / 2 - rr_ * (bh + GAP) : cy;
+        f.opts.forEach(([v, lab], i) => { const c = i % cols, rr_ = Math.floor(i / cols), x = X0 + LW + c * (w + GAP), y = f.grid ? cy + h / 2 - bh / 2 - rr_ * (bh + GAP) : cy;
           row.btns.push(addW(new Btn(lab, w, bh, () => {
           const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length && !f.empty) return;
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
         }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
       } else {
         // una opción entre varias; con f.grid, en rejilla (y, con f.badges, cada una con sus galones: los rangos)
-        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, cols = f.grid || n, w = (CW - LABW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h;
+        const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, cols = f.grid || n, w = (CW - LW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h;
         const row = { f, btns: [] };
-        opts.forEach(([v, lab], i) => { const x = X0 + LABW + (i % cols) * (w + GAP), yy = f.grid ? cy + h / 2 - bh / 2 - Math.floor(i / cols) * (bh + GAP) : cy;
+        opts.forEach(([v, lab], i) => { const x = X0 + LW + (i % cols) * (w + GAP), yy = f.grid ? cy + h / 2 - bh / 2 - Math.floor(i / cols) * (bh + GAP) : cy;
           row.btns.push(addW(new Btn(lab, w, bh, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.38, badge: f.badges ? i : undefined }), x + w / 2, yy)); });
       }
     }
+  };
+  rows.forEach((r, i) => {
+    const h = heights[i], cy = y - h / 2;
+    // dos columnas (el menú principal): cada una, en su caja con su título, con sus filas a la mitad de ancho
+    if (r.t === 'cols') {
+      const n = r.cols.length, cw = (CW - GAP * 2 * (n - 1)) / n;
+      r.cols.forEach((col, k) => {
+        const x0 = X0 + k * (cw + GAP * 2), px = (x0 + MW / 2) * sc, top = (H / 2 - (cy + h / 2)) * sc;
+        rr(c, px, top, cw * sc, h * sc, 22); c.fillStyle = 'rgba(255,255,255,0.035)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.08)'; c.stroke();
+        let yy = cy + h / 2 - COLP;
+        if (r.titles && r.titles[k]) { c.fillStyle = '#a49fc8'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = '600 24px ' + FB; c.fillText(r.titles[k].toUpperCase(), px + 0.014 * sc, (H / 2 - (yy - COLT / 2)) * sc); yy -= COLT; }
+        col.forEach(sr => { const sh = subH(sr); layRow(sr, sh, yy - sh / 2, -1, x0 + COLP, cw - COLP * 2, COL_LW); yy -= sh + GAP; });
+      });
+    } else layRow(r, h, cy, i, X0, CW, LABW);
     y -= h + GAP;
   });
   bg.tex.needsUpdate = true;
@@ -491,7 +510,7 @@ function menuClose() {
   if (menu.wrist) WM.on = false;
   else { menu.closed = true; menu.group.visible = false; stand.visible = false; }
 }
-function refreshRow(row) { const f = row.f; row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
+function refreshRow(row) { const f = row.f; if (row.slider) row.slider.set(settings[f.key]); row.value.setLabel(fmtVal(f)); }
 
 /* ---------- Teclado numérico ---------- */
 // (opt: para escribir algo que no es un ajuste, como el código de otro dispositivo: { code, maxLen, onOK(texto) })

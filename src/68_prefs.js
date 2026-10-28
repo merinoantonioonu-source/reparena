@@ -1,22 +1,10 @@
 
-/* =================== FAVORITOS, PERFILES Y RESTABLECER =================== */
-// Para que el menú no obligue a buscar: los ajustes que más tocas, marcados con ★ en sus submenús, salen en el menú
-// principal; los perfiles guardan todos los ajustes (modo y ejercicio incluidos) con un nombre y se cargan de un toque;
-// y cada pestaña (o grupo de la página) se puede devolver a como venía sin tocar el resto
-const FAV_KEY = 'reparena3-favs', PROF_KEY = 'reparena3-profiles', UI_KEY = 'reparena3-ui', FAV_MAX = 6, PROF_MAX = 8;
-const PREFS = { favs: (store(FAV_KEY) || []).filter(k => FIELD[k]), resetArm: '', delArm: -1 };
-const isFav = k => PREFS.favs.includes(k);
-function favToggle(k) {
-  if (isFav(k)) PREFS.favs = PREFS.favs.filter(x => x !== k);
-  else if (PREFS.favs.length >= FAV_MAX) { say(`Como mucho ${FAV_MAX} favoritos: quita alguno`, '#ffd166', 2); return false; }
-  else PREFS.favs.push(k);
-  store(FAV_KEY, PREFS.favs); return true;
-}
-// los favoritos que valen para lo elegido y que el menú principal no enseña ya
-function favRows(shown, after) {
-  const ks = PREFS.favs.filter(k => fieldVisible(FIELD[k]) && !shown.has(k));
-  return ks.length ? [{ t: 'text', text: '★ Tus favoritos', color: '#ffd166' }, ...ks.map(k => ({ t: 'field', key: k, after: FIELD[k].relayout ? after : undefined }))] : [];
-}
+/* =================== PERFILES Y RESTABLECER =================== */
+// Los perfiles guardan todos los ajustes (modo y ejercicio incluidos) con un nombre y se cargan de un toque; y cada
+// pestaña (o grupo de la página) se puede devolver a como venía sin tocar el resto. (Las ★ de antes ya no están: lo que
+// ve el jugador lo decide el desarrollador con el ojo de su tabla, 67_dev)
+const PROF_KEY = 'reparena3-profiles', UI_KEY = 'reparena3-ui', PROF_MAX = 8;
+const PREFS = { resetArm: '', delArm: -1 };
 // Restablecer un grupo de ajustes (una pestaña de las gafas o un grupo de la página)
 function resetGroup(g) {
   SCHEMA.filter(f => f.g === g).forEach(f => settings[f.key] = f.def);

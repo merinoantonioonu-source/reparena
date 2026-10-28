@@ -110,7 +110,10 @@ No las cambies sin preguntarle.
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:
   - lo poco usado va en submenús (Sonido, Entorno, Ajustes…);
-  - hay modo sencillo y modo completo;
+  - el menú principal va en dos columnas (B): a la izquierda qué se juega, a la derecha cómo;
+  - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
+    completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;
+  - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla);
   - cada parte tiene su color.
 - Solo se ofrecen los ejercicios que valen para el modo elegido.
 
