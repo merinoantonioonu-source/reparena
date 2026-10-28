@@ -219,7 +219,8 @@ function layoutArena() {
   keyLight.target.position.set(0, 0, -D * 0.45);
   const ext = Math.max(6, D * 0.65); Object.assign(keyLight.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); keyLight.shadow.camera.updateProjectionMatrix();
   keyLight.position.set(-5, 10, 4 - D * 0.45);
-  while (boardRig.children.length) boardRig.remove(boardRig.children[0]);
+  // el soporte anterior se tira y sus piezas se liberan (se hace otro en cada ronda); el panel y los materiales se reutilizan
+  while (boardRig.children.length) { const o = boardRig.children[0]; o.traverse(n => { if (n.geometry && n !== board.mesh) n.geometry.dispose(); }); boardRig.remove(o); }
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
   if (low) {
@@ -311,7 +312,7 @@ function updateEnv(dt, t) {
       for (const p of smokeCols) if (Math.random() < 0.5) fx.bigSmoke(p);
     }
   }
-  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + Math.max(...gates.map(g => g.open)) * 1.5;
+  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + Math.max(...gates.map(g => g.open)) * 1.5 + (ENV.beat || 0) * 2.5; // (y late con la música: 79_perks)
 }
 function updateGates(dt, t) {
   for (const g of gates) {

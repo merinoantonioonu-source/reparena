@@ -112,6 +112,8 @@ function previewInput(dt) {
   }
   // sentadilla con salto: al soltar Espacio, sube de golpe por encima de tu altura de pie (PV.noJump: no salta)
   if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
+  // el cofre del descanso: igual, un salto (79_perks); al irse, deja de saltar
+  const cj = chestWaits(); if (cj || PV.chestJ) { PV.jumping = cj && !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; PV.chestJ = cj; if (PV.jumping) target = PV.baseY + 0.2; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
   PV.press += clamp((PV.crouch ? 0.24 : -0.15) - PV.press, -1.2 * dt, 1.2 * dt);
   PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt); PV.fr = (PV.fr || 0) + clamp((PV.crouch ? 1 : 0) - (PV.fr || 0), -1.6 * dt, 1.6 * dt);

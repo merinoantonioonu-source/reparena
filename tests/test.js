@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { WM, wristFar, DEMOV, center, showToast, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm };
@@ -1066,6 +1066,57 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
     if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
     press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
+  // ---- Para que no aburra (79_perks): mejoras entre oleadas, carrera contra el récord, sorpresas y la música que manda ----
+  if (!process.env.ONLY || /perks/.test(process.env.ONLY)) {
+    const saved = { ...RA.settings }; // (se devuelven tal cual al acabar: las pruebas siguientes cuentan con ellos)
+    const V = THREE.Vector3, sq = squatSim(2.4), real = Math.random, step = (n, sim) => { for (let i = 0; i < n; i++) { if (sim) sim(T.t); frame(1); T.t += 0.033; } }, T = { t: 0 };
+    storage.set('reparena3-ghosts', JSON.stringify({ 'combat:squat': { n: 9, tl: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9] } }));
+    applyCfg({ mode: 'combat', exercise: 'squat', aim: 'auto', lives: 3, waves: 3, repsWave: 4, repsInc: 0, rest: 6, ramp: 0, perks: 1, surprises: 0, ghost: 1, bpm: 0, musicLead: 1 });
+    RA.startPreview(); frame(3); press('EMPEZAR');
+    let gtxt = null;
+    // la primera oleada, hasta el descanso: la carrera contra el récord en el marcador y, al poco, las cartas
+    while (T.t < 200 && RA.state !== 'rest') { step(1, sq); if (RA.state === 'play' && !gtxt && RA.ghostText()) gtxt = RA.ghostText()[0]; }
+    RA.PV.crouch = false; step(60);
+    const cards = RA.activeWidgets().filter(w => Object.values(RA.PERKS).some(p => p.name === w.label)).map(w => w.label), menuPerks = !!(RA.menu && RA.menu.perks);
+    if (cards.length) { press(cards[0]); frame(2); } const picked = RA.PK.has.size;
+    // un cofre en el descanso: se abre saltando (en el ordenador, al soltar Espacio tras agacharte) y da otra mejora
+    RA.setSetting('surprises', 1); Math.random = () => 0; RA.chestMaybe(); Math.random = real; RA.setSetting('surprises', 0);
+    const chestOn = RA.CHEST.on; RA.PV.crouch = true; step(30); RA.PV.crouch = false; step(30); const opened = RA.CHEST.opened, afterChest = RA.PK.has.size;
+    // la segunda: sin elegir, al acabar el descanso te toca una al azar (y la tercera será larga, para el relámpago)
+    while (T.t < 400 && !(RA.state === 'rest' && RA.waveIdx === 1)) step(1, sq);
+    RA.setSetting('repsWave', 40); RA.PV.crouch = false; while (T.t < 420 && RA.state === 'rest') step(1);
+    const auto = RA.PK.has.size;
+    log(`perks: ghost on the board “${gtxt}” · cards in the rest ${menuPerks} [${cards.join(', ')}] · picked ${picked} · chest shown ${chestOn}, opened by a jump ${opened} → ${afterChest} perks · left to chance → ${auto} (${[...RA.PK.has].join(', ')})`);
+    if (!gtxt || !/RÉCORD/.test(gtxt)) errors.push('récord: el marcador no compara con tu mejor ronda');
+    if (!menuPerks || cards.length !== 3 || picked !== 1) errors.push('mejoras: en el descanso no salen 3 cartas para elegir una');
+    if (!chestOn || !opened || afterChest !== 2) errors.push('cofre: no sale, no se abre saltando o no da la mejora extra');
+    if (auto !== 3) errors.push('mejoras: sin elegir, al acabar el descanso no te toca una al azar');
+    // los efectos, uno a uno, en plena oleada: escudo, escarcha, doble o nada, relámpago y enemigo dorado
+    while (T.t < 450 && !(RA.state === 'play' && RA.enemies.some(e => e.alive))) step(1, sq);
+    const e = RA.enemies.find(x => x.alive);
+    RA.PK.has.add('shield'); RA.PK.shield = 1; const l0 = RA.lives; RA.hurtPlayer({ silent: true }); const l1 = RA.lives; RA.hurtPlayer({ silent: true }); const l2 = RA.lives;
+    let frost = false, slow = 1; if (e) { RA.PK.has.add('frost'); RA.perkOnHit(e, { perfect: true, to: e.center(new V()) }); frost = e.frostT > 2.5; slow = RA.perkSlow(e); }
+    const had = RA.PK.has.has('gold'); RA.PK.has.add('gold'); let s0 = RA.score; RA.registerRep(true); const dA = RA.score - s0; RA.PK.has.delete('gold');
+    s0 = RA.score; RA.registerRep(true); const dB = RA.score - s0; RA.rushStart(20); s0 = RA.score; RA.registerRep(true); const dC = RA.score - s0; RA.rushStop(true); if (had) RA.PK.has.add('gold');
+    let gold = 0; if (e) { s0 = RA.score; RA.onKilled(e); const plain = RA.score - s0; e.golden = true; s0 = RA.score; RA.onKilled(e); gold = (RA.score - s0) / plain; e.golden = false; }
+    log(`perks: shield lives ${l0} → ${l1} → ${l2} · frost ${frost} (pace ×${slow.toFixed(2)}) · perfect points: double or nothing ${dA}, plain ${dB}, in a rush ${dC} · golden kill ×${gold.toFixed(1)}`);
+    if (l1 !== l0 || l2 !== l0 - 1) errors.push('mejoras: el escudo no para (solo) el primer golpe');
+    if (!frost || slow > 0.5) errors.push('mejoras: la escarcha no frena a los de alrededor');
+    if (dA < dB * 1.6 || dC < dB * 1.6) errors.push('mejoras: doble o nada / relámpago no doblan los puntos');
+    if (Math.abs(gold - 3) > 0.01) errors.push('sorpresas: el enemigo dorado no vale el triple');
+    // la música manda: con ritmo, el relámpago espera al principio de una frase (cada 32 pulsos), con cuenta atrás
+    RA.setSetting('bpm', 120); RA.setSetting('surprises', 1); RA.RUSH.planT = 0.01; step(2, sq);
+    const at = RA.RUSH.at, ahead = at - RA.beatNow();
+    while (T.t < 520 && !RA.RUSH.on && RA.state === 'play') step(1, sq);
+    const rushOn = RA.RUSH.on, len = RA.RUSH.left;
+    log(`music leads: rush waits for beat ${at} (${ahead.toFixed(1)} beats ahead, phrase start ${at % 32 === 0}) · starts ${rushOn}, lasts ${len.toFixed(1)} s (32 beats at 120 BPM = 16 s)`);
+    if (!(at > 0) || at % 32 !== 0 || ahead < 4 || ahead > 36 || !rushOn || Math.abs(len - 16) > 0.6) errors.push('la música manda: el relámpago no empieza en una frase de la canción ni dura una frase');
+    // al acabar, si fue tu mejor ronda, queda como récord para la próxima
+    RA.rushStop(true); RA.endRun(false, true); frame(2); const G2 = JSON.parse(storage.get('reparena3-ghosts'))['combat:squat'];
+    log(`ghost saved after the round: ${G2.n} reps (before 9), timeline of ${G2.tl.length} points`);
+    if (!(G2.n > 9) || G2.tl.length < 10) errors.push('récord: la mejor ronda no se guarda para la próxima');
+    for (const k in saved) if (RA.settings[k] !== saved[k]) RA.setSetting(k, saved[k]);
+    RA.lobbyMenu(); frame(2); }
   // menú sencillo: Ajustes y el principal sin lo de afinar; un toque lo pasa a completo
   { const keys = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), labels = () => RA.activeWidgets().map(w => w.label);
     RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = armsLabels().includes('Al que miras');

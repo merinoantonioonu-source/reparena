@@ -175,12 +175,12 @@ function buildKeys(group, list, kh, tray) {
   g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
   // (se pintan después de la esfera negra del final de la ronda, OUT.black, que tapa todo lo opaco: si no, en el resumen las
   // teclas salían negras y no se leía lo que ponían)
-  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; group.add(mesh);
+  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; mesh.userData.own = 'all'; group.add(mesh);
   if (comicOn()) { // contorno de tinta de las teclas y la bandeja (comparte las posiciones: al hundir una tecla, su contorno la sigue)
     g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); outN(g);
     // (solo los laterales: la cara de arriba es cóncava y, vista en ángulo, su contorno asomaba por ella como grietas)
     const go = new THREE.BufferGeometry(); go.setAttribute('position', pos); go.setAttribute('normal', g.attributes.normal); go.setAttribute('aOutN', g.attributes.aOutN); go.setIndex(IO);
-    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
+    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.userData.own = 'geo'; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
   }
   const base = new Float32Array(P), K = { mesh, pos, col, base };
   const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
@@ -191,7 +191,7 @@ function buildKeys(group, list, kh, tray) {
     w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
     if (w.kind === 'slider') { // la bolita: se arrastra por la ranura
       const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
-      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; w.mesh.add(m); w.knob = m; w.draw(); continue;
+      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; m.userData.own = 'mat'; w.mesh.add(m); w.knob = m; w.draw(); continue;
     }
     // al hundirla, además de bajar, se encoge un poco y se oscurece (de frente, el descenso solo apenas se veía); al pulsar, destella
     w.setPush = p => {
@@ -320,7 +320,15 @@ function placeAnchor(dist) {
   const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
-function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+// Libera lo que se hizo para un menú: los paneles dibujados y, marcado con userData.own, lo de sus teclas en 3D ('all': la
+// geometría y el material; 'geo': solo la geometría, como el contorno, de material compartido; 'mat': solo el material, como
+// la bolita de los deslizadores, de geometría compartida)
+function disposeTree(o) {
+  o.traverse(n => {
+    const own = n.userData.own; if (own && own !== 'mat') n.geometry.dispose(); if (own === 'all' || own === 'mat') n.material.dispose();
+    if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); }
+  });
+}
 // Al cerrar un menú se recuerda su sitio un momento: si enseguida se abre otro (de un menú a otro), sale en el mismo sitio
 let lastAnchor = null, lastAnchorT = -9;
 function hideMenu(keepAnchor) {
@@ -596,6 +604,7 @@ function onWatch() {
   if (RPL.on) { endRoomPlace(false); return; }
   if (PLACE.on) { cancelPlace(); return; }
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
+  if (menu && menu.wrist && menu.perks) { wristOpen(); SND.tick(); return; } // en el descanso, las cartas recogidas vuelven (79_perks)
   if (GAME_STATES.includes(state)) openPause();
   else if (menu && menu.wrist) { wristOpen(); SND.tick(); } // el menú recogido (o perdido de vista) sale delante
   else if (menu) { menu.closed = false; menu.group.visible = true; menuAnchor = placeAnchor(0.45); SND.tick(); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
@@ -904,6 +913,7 @@ function drawBoard() {
   else if (state === 'paused') big2('PAUSA', BC.gold, 80);
   else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
+  else if (RUSH.on) big2(`⚡ RELÁMPAGO ${Math.max(0, Math.ceil(RUSH.left))}`, BC.gold, 52); // (79_perks: todo vale el doble)
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
@@ -918,6 +928,7 @@ function drawBoard() {
   else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
   if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
   guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
+  perkBoard(c); // la carrera contra tu récord
   // abajo: lo de hoy
   boardDay2(c, W, 356);
   board.tex.needsUpdate = true;

@@ -164,6 +164,9 @@ function bakeRigClips(U, M) {
   }
   mx.stopAllAction(); return out;
 }
+// Cada copia de un modelo animado lleva sus esqueletos y cada esqueleto, su textura de huesos en la tarjeta gráfica: al
+// retirar al enemigo se liberan (si no, se acumulaban unas siete por ronda)
+const skelFree = model => ({ dispose() { const s = new Set(); model.traverse(m => { if (m.isSkinnedMesh && m.skeleton) s.add(m.skeleton); }); s.forEach(k => k.dispose && k.dispose()); } });
 // Hace de «rig» para el constructor de los robots: cada ejemplar es una copia del modelo con su propio esqueleto y material
 function beastRig(kind) {
   return { kind: 'beast', instance() {
@@ -183,7 +186,7 @@ function beastRig(kind) {
     if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z
     else model.rotation.y = Math.PI; // con las animaciones de la biblioteca, el modelo mira hacia −Z: se gira para que mire hacia donde va
     const bn = D.bones || { chest: 'spine_03', head: 'Head', handR: 'hand_r' }, bones = { chest: model.getObjectByName(bn.chest), head: model.getObjectByName(bn.head), handR: model.getObjectByName(bn.handR) };
-    return { root, model, mat, bones, meshes: {}, list: [], skel: { dispose() {} }, variant: v };
+    return { root, model, mat, bones, meshes: {}, list: [], skel: skelFree(model), variant: v };
   } };
 }
 loadBeasts();
