@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -134,7 +134,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('boot ok; renders so far', RA.renderer.renders);
   // la dificultad creciente sube poco a poco: un 4 % por oleada por defecto (quien tenía el 6 % de antes pasa al 4 %)
   log(`ramp by default ${RA.settings.ramp} % (version ${RA.settings.rampV})`); if (RA.settings.ramp !== 4) errors.push('la dificultad creciente debería subir un 4 % por oleada por defecto');
-  { const simpleDef = RA.settings.menuLevel; RA.setSetting('menuLevel', 'full'); log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
+  { const simpleDef = RA.settings.menuLevel; RA.devToggle(true); RA.setSetting('menuLevel', 'full'); /* (el completo es del desarrollador) */ log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
   // ---- Botones táctiles: como un botón de verdad (llegar por delante, hundirlo y sacar el dedo para otra) ----
   {
     const hits = [], a = new RA.Btn('A', 0.1, 0.06, () => hits.push('A')), b = new RA.Btn('B', 0.1, 0.06, () => hits.push('B'));
@@ -603,6 +603,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const F = {}; await runConfig('Arcos al fallo', { ...base, mode: 'arcs', exercise: 'squat', toFail: 1, lives: 0, waves: 1, repsWave: 4, repsInc: 0, rest: 0, arcTilt: 0, arcJump: 0, arcDouble: 0, arcNew: 0, arcMace: 0, arcPlank: 0, arcOrbs: 0, arcRate: 20 }, t => { RA.PV.crouch = t < 22; F.wave = RA.waveIdx; },
       300, s => { F.txt = RA.menu && RA.menu.rows ? RA.menu.rows.map(r => r.text || '').join(' | ') : ''; return s.taken !== 3 ? `deberían quitarse 3 vidas (${s.taken} golpes)` : F.wave < 1 ? 'no pasa de la última oleada' : !/Al fallo: oleada|Récord al fallo/.test(F.txt) ? 'el resumen no dice a qué oleada llegaste' : ''; });
     log(`to failure: reached wave ${F.wave + 1} · ${(F.txt || '').slice(0, 120)}`); RA.setSetting('toFail', 0); }
+  // la tabla del desarrollador: cada casilla manda en su rango (también las filas que el rango no tocaba), se exporta y se
+  // importa, y es de cada modo y ejercicio
+  { const sv = { ...RA.settings }; RA.devImport('{}'); RA.setSetting('mode', 'arcs'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'cabo');
+    RA.devSet('arcSpeed', 2, 9.5); RA.devSet('arcTilt', 2, 40); const now = [RA.settings.arcSpeed, RA.settings.arcTilt];
+    RA.setSetting('rank', 'general'); const gen = [RA.settings.arcSpeed, RA.settings.arcTilt]; RA.setSetting('rank', 'cabo'); const back = [RA.settings.arcSpeed, RA.settings.arcTilt], touched = RA.rankTouched();
+    const exp = RA.devExport(), html = RA.devTableHTML(), rows = RA.devRows();
+    RA.devImport('{}'); const cleared = RA.devCell('arcSpeed', 2) === null; const msg = RA.devImport(exp), again = RA.devCell('arcTilt', 2);
+    RA.setSetting('mode', 'combat'); const other = RA.devCell('arcSpeed', 2), bad = RA.devImport('no es json');
+    log(`dev table: cabo ${now} · general ${gen} · cabo again ${back} (touched ${touched}) · rows ${rows.length} (${rows.slice(0, 4).join(',')}…) · html ${html.length} chars · import ${msg} → ${again} · in Combate ${other} · bad import “${bad}”`);
+    if (String(now) !== '9.5,40' || String(gen) !== '14,0' || String(back) !== '9.5,40' || touched) errors.push('tabla del desarrollador: sus valores no mandan en su rango (o el rango queda «retocado»)');
+    if (!rows.includes('arcSpeed') || !rows.includes('arcTiltW') || rows.includes('rank') || rows.includes('squatDepth') || !/dvtab/.test(html) || !/Velocidad/.test(html)) errors.push('tabla del desarrollador: las filas no son las de la dificultad de este modo y ejercicio');
+    if (!cleared || again !== 40 || other !== null || !/válid/.test(bad)) errors.push('tabla del desarrollador: no se exporta, se importa o es de cada modo y ejercicio');
+    RA.devImport('{}'); for (const k in sv) if (RA.settings[k] !== sv[k]) RA.setSetting(k, sv[k]); }
   // arcos al compás: con ritmo, cada arco llega a la cabeza justo en un pulso
   { const arr = [], seen = new Set(); await runConfig('Arcos al compás (120 BPM)', { ...base, mode: 'arcs', exercise: 'squat', bpm: 120, arcBeat: 1, arcTilt: 0, arcJump: 0, arcDouble: 0, arcNew: 0, arcMace: 0, arcPlank: 0, arcOrbs: 0, waves: 1, repsWave: 10, lives: 0, arcRate: 20 }, t => { RA.PV.crouch = true;
       for (const a of RA.arcs) if (!seen.has(a) && a.z >= RA.HL.z) { seen.add(a); const f = RA.beatNow() % 1; arr.push(Math.min(f, 1 - f)); } }, 200, s => s.reps < 10 ? 'al compás no se completa la oleada' : '');
@@ -1094,16 +1107,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const lw = RA.activeWidgets().map(w => w.label), ks = RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key); log('scene menu: scenery', lw.includes('Bosque'), 'sliders', ks.join(', '));
     if (!lw.includes('Bosque') || !ks.includes('depth')) errors.push('menú: el submenú de entorno no tiene el escenario o la distancia'); }
   press('Volver'); frame(2);
-  // ★ favoritos al menú principal, restablecer una pestaña, perfiles y la última pestaña recordada
-  { const sl = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key);
-    press('Ajustes'); frame(1); press('Partida'); frame(1); const before = sl().includes('rest');
-    const star = RA.activeWidgets().filter(w => w.label === '☆'); star[star.length - 1].onPress(); frame(1); // el último de la pestaña: descanso
-    press('Volver'); frame(1); const inLobby = sl().includes('rest');
-    press('Sonido'); frame(1); RA.activeWidgets().filter(w => w.label === '☆')[0].onPress(); press('Volver'); frame(1); const vol = sl().includes('volume');
+  // el ojo del desarrollador: lo marcado sale en el menú del jugador (a la derecha del principal y en Ajustes); sin
+  // estrellas. Luego, restablecer una pestaña, perfiles y la última pestaña recordada
+  { const sl = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), vals = () => RA.activeWidgets().filter(w => w.style === 'value').length;
+    const fieldsNow = () => (RA.menu && RA.menu.rows || []).flatMap(r => r.t === 'cols' ? r.cols.flat() : [r]).filter(r => r.t === 'field').map(r => r.key);
+    const ml = RA.settings.menuLevel; RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const before = fieldsNow().includes('repsInc'), stars = RA.activeWidgets().some(w => /[★☆]/.test(w.label));
+    RA.devEyeToggle('repsInc'); RA.lobbyMenu(); frame(1); const inLobby = fieldsNow().includes('repsInc');
+    press('Ajustes'); frame(1); press('Partida'); frame(1); const inSet = sl().includes('repsInc'); press('Volver'); frame(1); RA.devEyeToggle('repsInc');
+    const vol = !stars; RA.setSetting('menuLevel', ml);
     RA.setSetting('rest', 45); RA.setSetting('waves', 9); RA.setSetting('volume', 30);
     press('Ajustes'); frame(1); press('Partida'); frame(1); press('Restablecer Partida'); frame(1); const armed = RA.settings.rest; press('¿Restablecer Partida? Otra vez'); frame(1);
-    log(`favourites: rest in lobby ${!before} → ${inLobby} · volume ${vol} · reset Partida: before confirming rest ${armed}, after rest ${RA.settings.rest} waves ${RA.settings.waves} · other groups kept: volume ${RA.settings.volume}`);
-    if (!inLobby || !vol) errors.push('favoritos: lo marcado con ★ no sale en el menú principal');
+    log(`eye: extra reps in the lobby ${before} → ${inLobby} · in Ajustes ${inSet} · no stars ${vol} · reset Partida: before confirming rest ${armed}, after rest ${RA.settings.rest} waves ${RA.settings.waves} · other groups kept: volume ${RA.settings.volume}`);
+    if (before || !inLobby || !inSet || !vol) errors.push('ojo del desarrollador: lo marcado debería salir en el menú del jugador (y no quedar estrellas)');
     if (armed !== 45 || RA.settings.rest !== 20 || RA.settings.waves !== 5 || RA.settings.volume !== 30) errors.push('restablecer pestaña: no pide confirmar o toca otros grupos');
     press('Perfiles'); frame(1); RA.setSetting('lives', 7); press('Guardar: ' + 'Combate · ' + RA.EX_SHORT[RA.settings.exercise]); frame(1);
     RA.setSetting('lives', 2); RA.setSetting('volume', 90); const prof = RA.profiles(); press(prof[0].name); frame(1);
@@ -1113,7 +1128,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     press('Volver'); frame(1); press('Menú'); frame(1); press('Volver'); frame(1); press('Ajustes'); frame(1); const tabOn = RA.activeWidgets().find(w => w.style === 'selected' && ['Partida', 'Menú', 'Tu cuerpo'].includes(w.label));
     log(`profiles: after deleting ${left} · tab remembered: ${tabOn && tabOn.label}`);
     if (left !== 0 || !tabOn || tabOn.label !== 'Menú') errors.push('perfiles: no se borran, o Ajustes no recuerda la pestaña');
-    press('Volver'); frame(1); RA.PREFS.favs.slice().forEach(k => RA.favToggle(k)); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
+    press('Volver'); frame(1); RA.setSetting('lives', 3); RA.setSetting('volume', 80); RA.lobbyMenu(); frame(1); }
   // ---- Nunca detrás de ti, y a golpes se apartan ----
   if (!process.env.ONLY || /front|punch/.test(process.env.ONLY)) {
     const saved = { ...RA.settings }, V = THREE.Vector3, sq = squatSim(2.4), T = { t: 0 }, step = (n, sim) => { for (let i = 0; i < n; i++) { if (sim) sim(T.t); frame(1); T.t += 0.033; } };
@@ -1224,11 +1239,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.lobbyMenu(); frame(2); }
   // menú sencillo: Ajustes y el principal sin lo de afinar; un toque lo pasa a completo
   { const keys = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), labels = () => RA.activeWidgets().map(w => w.label);
-    RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = armsLabels().includes('Al que miras');
-    press('Ajustes'); frame(1); press('Partida'); frame(1); const partS = keys(); press('Ver todos los ajustes (menú completo)'); frame(1); const partF = keys();
-    press('Ver solo lo básico (menú sencillo)'); frame(1); press('Volver'); frame(1); RA.setSetting('menuLevel', 'full'); RA.lobbyMenu(); frame(1); const lobbyF = armsLabels().includes('Al que miras');
-    log(`simple menu: Partida ${partS.join(',')} · full ${partF.join(',')} · “el rayo va” in Armas ▸: simple ${lobbyS}, full ${lobbyF}`);
-    if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF) errors.push('menú sencillo: no esconde lo de afinar, o el completo no lo enseña');
+    RA.devToggle(false); RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const lobbyS = armsLabels().includes('Al que miras');
+    press('Ajustes'); frame(1); press('Partida'); frame(1); const partS = keys(), noDev = !labels().includes('Ver todos los ajustes (menú completo)');
+    RA.devToggle(true); RA.settingsMenu(() => RA.lobbyMenu(), 'partida'); frame(1); press('Ver todos los ajustes (menú completo)'); frame(1); const partF = keys();
+    press('Ver solo lo del jugador'); frame(1); press('Volver'); frame(1); RA.setSetting('menuLevel', 'full'); RA.lobbyMenu(); frame(1); const lobbyF = armsLabels().includes('Al que miras');
+    // (las pruebas que siguen cuentan con el menú completo, como antes: el del desarrollador)
+    log(`player menu: Partida ${partS.join(',')} · full (developer) ${partF.join(',')} · no full menu without developer mode ${noDev} · “el rayo va” in Armas ▸: simple ${lobbyS}, full ${lobbyF}`);
+    if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF || !noDev) errors.push('menú del jugador: no esconde lo de afinar, o el completo (del desarrollador) no lo enseña');
     RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
   press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
@@ -1592,6 +1609,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const down = cs.slice(0, iPlay).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), blockFade = iPlay > 0 && down.length >= 5 && down[down.length - 1] === 0 && SPOT.playing && SPOT.playBody && SPOT.playBody.uris[0] === m2[0].uri && bv[bv.length - 1] > 0 && !cs.includes('PUT /v1/me/player/pause');
     log(`spotify between blocks: same songs keep playing ${same} · other songs → the old one fades ${down.join('→')}, then the new one (${SPOT.playBody && SPOT.playBody.uris[0]}) comes up to ${bv[bv.length - 1]}, no pause`);
     if (!same || !blockFade) errors.push('Spotify: entre bloques, la canción del que acaba debería seguir y, si el siguiente trae otra, fundirse con ella (bajando la vieja y subiendo la nueva, sin pausa)');
+    // las canciones del ejercicio (del jugador): al empezar la ronda suenan ellas, al azar; y van en lo que exporta el desarrollador
+    RA.exSongsSet([{ uri: 'spotify:track:E1', name: 'E1' }, { uri: 'spotify:track:E2', name: 'E2' }]); RA.beginRun(); await sleep(400); frame(2);
+    const exPlay = SPOT.playBody && SPOT.playBody.uris.slice().sort().join(','), exInExport = /track:E1/.test(RA.devExport()), exHtml = /Canciones de/.test(RA.exSongsHTML());
+    RA.endRun(true, true); await sleep(300); frame(2); RA.exSongsSet([]); RA.SP.block = null;
+    log(`exercise songs: played ${exPlay} · in the developer export ${exInExport} · page ${exHtml}`);
+    if (exPlay !== 'spotify:track:E1,spotify:track:E2' || !exInExport || !exHtml) errors.push('canciones del ejercicio: al empezar la ronda deberían sonar ellas (y exportarse con la tabla)');
     Object.assign(RA.SP_FADE, { out: 0, in: 0 }); SPOT.vol = vStart; SPOT.playing = true; await RA.spRefresh();
     log(`spotify between games: paused at the end ${paused} after fading ${vols.slice(0, 6).join('→')} (back to ${SPOT.vol}) · ambience back ${amb} · resumed on the next game ${resumed}, volume back ${upOk}`);
     if (!fadeOk || !upOk) errors.push('Spotify: al acabar, la canción debería apagarse poco a poco (y volver a su volumen) en vez de cortarse');

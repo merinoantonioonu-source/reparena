@@ -280,6 +280,23 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesmusic .tracks small{color:var(--muted, #a49fc8)}
 .sesrow select:focus-visible,.sesrow input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .sesrow .unit{color:var(--muted);font-size:.85rem;min-width:1.6em}
+/* la tabla del desarrollador */
+.dvwrap{overflow-x:auto;margin:10px 0;border:1px solid var(--line);border-radius:12px}
+.dvtab{border-collapse:collapse;width:100%;font-size:.85rem;min-width:760px}
+.dvtab th,.dvtab td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.dvtab thead th{position:sticky;top:0;background:var(--panel2);font-weight:600;font-size:.78rem}
+.dvtab thead th img{display:block;margin:0 auto 2px}
+.dvtab tbody th{text-align:left;font-weight:500;max-width:240px}
+.dvtab tbody th small{color:var(--muted)}
+.dvtab tr.ctl tbody th,.dvtab tr.ctl th{color:var(--fg)}
+.dvtab input,.dvtab select{width:72px;background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 4px;font:inherit}
+.dvtab td.own input,.dvtab td.own select{color:#ffd166;border-color:#ffd16688;font-weight:700}
+.dvtab td.now{background:rgba(60,240,198,.08)}
+.dveye{background:none;border:1px solid var(--line);border-radius:8px;min-width:40px;min-height:32px;color:var(--muted);cursor:pointer}
+.dveye.on{border-color:#3cf0c6;color:#3cf0c6;background:rgba(60,240,198,.1)}
+.dvbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.dvbar select{margin-left:4px}
+#dvText{width:100%;box-sizing:border-box;font:12px/1.3 ui-monospace,monospace;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px}
 </style>
 </head>
 <body>
@@ -289,7 +306,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   <aside class="side">
     <header class="brand">
       <p class="eyebrow">Meta Quest 3 · WebXR · manos</p>
-      <h1>Rep<span>Arena</span></h1>
+      <h1 id="pageTitle">Rep<span>Arena</span></h1>
     </header>
     <div class="go">
       <button class="btn primary" id="btnAR"><span class="lg">Entrar en realidad mixta</span><span class="sm">Realidad mixta</span></button>
@@ -452,6 +469,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>
+    <div class="splists">
+      <h3>Canciones de cada ejercicio</h3>
+      <div id="exSongs"></div>
+    </div>
     <p>No hace falta abrir la app de Spotify: basta con pulsar Play en el juego. Si el navegador no puede reproducir Spotify, el menú lo dice y la música sonará en otro dispositivo tuyo (el mando funciona igual). Si la música ya suena en otro dispositivo, el menú ofrece «Que suene en las gafas». Al acabar la partida, la música se apaga poco a poco en vez de cortarse. En una sesión, entre bloques sigue sonando la canción del que acaba y, al empezar el siguiente, se funde con la suya.</p>
   </section>
 
@@ -478,6 +499,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
 
 
+
+  <section class="secDev" id="devSection" hidden>
+    <h2>Tabla de dificultad (desarrollador)</h2>
+    <p class="note">Solo se ve en modo desarrollador. Para cada modo y ejercicio, los valores de cada rango y lo que ve el jugador en su menú (el ojo). Cuando la tengas, pulsa <b>Exportar</b> y pégamela: la dejo de serie en el juego para todos.</p>
+    <div id="devTable"></div>
+  </section>
 
   <section class="session">
     <h2>Sesión de entrenamiento</h2>
@@ -507,6 +534,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>Dentro del juego</h2>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
+      <li><strong>El menú principal</strong> va en dos columnas: a la izquierda, <b>qué</b> juegas (modo, ejercicio y rango, con sus galones); a la derecha, <b>cómo</b> (al fallo y unos pocos ajustes del ejercicio). Las canciones de cada ejercicio se eligen aquí, en Sonido y música.</li>
       <li>El menú sale de tu <b>muñeca izquierda</b>: mírala (como para mirar un reloj) y pulsa el botón <b>MENÚ</b> con el índice derecho. El panel crece desde la muñeca y se queda <b>quieto delante de ti</b>, derecho y de cara, a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo): ya puedes bajar la mano izquierda y pulsar con calma con la punta del índice derecho. Para cerrarlo, pon la palma izquierda hacia abajo o cierra el puño; un punto rosa en la muñeca te recuerda que hay un menú esperando, y MENÚ lo vuelve a abrir (si te giras y lo pierdes de vista, el mismo botón, «Traer menú», lo pone delante otra vez). Con mandos, X o Y lo abren y lo cierran. Los menús nuevos (el principal al entrar, el resumen de cada ronda) salen solos delante de ti. Si prefieres el atril fijo sobre un pie, cámbialo en Ajustes → Menú → Menú en.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
