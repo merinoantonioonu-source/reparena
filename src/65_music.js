@@ -189,8 +189,8 @@ function spBlockMusic(b) {
   const tr = b && Array.isArray(b.music) ? b.music : []; if (!tr.length || !spConnected()) return false;
   const key = tr.map(t => t.uri).join(','); if (SP.block === key && spPlaying()) return true;
   SP.block = key; SP.resume = false; SP.want = 'block'; // (lo que quedara en cola de la ronda —pausar la del bloque anterior o seguirla—, ya no)
-  // la que sonaba se va bajando y la del bloque entra subiendo (no a golpe)
-  spDo(async () => { const v0 = spVolNow(), fade = SP_FADE.in > 0; if (spPlaying()) await spFadeOut(v0, SP_FADE.in); else if (fade) await spVolTry(0); await spPlayTracks(tr); await spFadeIn(v0); });
+  // la que sonaba (la del bloque anterior, que ha seguido en el descanso) se va bajando y la del bloque entra subiendo
+  spDo(async () => { const v0 = spVolNow(), fade = SP_FADE.in > 0; if (spPlaying()) await spFadeOut(v0); else if (fade) await spVolTry(0); await spPlayTracks(tr); await spFadeIn(v0); });
   return true;
 }
 // Fundidos: la canción no se corta de golpe. En las gafas el volumen se cambia en su reproductor (suave, en 20 pasos);
@@ -204,12 +204,6 @@ async function spVolTry(v) { if (!spCanFade()) return; try { if (spHereNow() && 
 async function spFade(from, to, ms) { const id = SP.fadeN = (SP.fadeN || 0) + 1; if (!spCanFade() || !(ms > 0)) return true; /* (0: sin fundido) */ const n = spHereNow() && SPP.player && SPP.player.setVolume ? 20 : 5; for (let i = 1; i <= n; i++) { if (SP.fadeN !== id) return false; await spVolTry(from + (to - from) * i / n); await spWait(ms / n); } return SP.fadeN === id; }
 const spFadeOut = (v0, ms = SP_FADE.out) => spFade(v0, 0, ms);
 const spFadeIn = (v0, ms = SP_FADE.in) => spFade(0, v0, ms);
-// Al acabar un bloque de la sesión con su música, si el siguiente trae otra: la de este se va apagando en el descanso
-function spBlockEnd(b, next) {
-  const key = x => x && Array.isArray(x.music) ? x.music.map(t => t.uri).join(',') : '';
-  if (!spConnected() || !key(b) || !key(next) || key(b) === key(next) || !spPlaying()) return;
-  SP.block = null; spRoundQueue('pause');
-}
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }

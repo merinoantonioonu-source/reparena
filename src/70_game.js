@@ -1152,7 +1152,7 @@ function updateProjectiles(dt) {
 function onKilled(e) {
   stats.kills++;
   const pts0 = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300), pts = pts0 * perkKillK(e); // (dorado ×3, relámpago ×2)
-  score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
+  score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); if (!e.bubble) comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!; las pompas solo revientan)
   if (e.K && e.K.boss || e.boss) cheer('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
 }
@@ -1682,13 +1682,14 @@ const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, c
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3(), _thd = new V3();
+const padVirt = () => hands.left.virt || hands.right.virt;
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
 function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH.idle = 0; HTH.taught = false; }
 // La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect, pow = 1) {
   if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
   for (const s of ['left', 'right']) { const T = HTH[s]; T.c = { dmg: Math.max(dmg, T.c ? T.c.dmg : 0), perfect: perfect || !!(T.c && T.c.perfect), pow: Math.max(pow, T.c ? T.c.pow : 1) }; }
-  if (!HTH.taught) { HTH.taught = true; say('Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
+  if (!HTH.taught) { HTH.taught = true; say(padVirt() ? 'Apunta con la mano y aprieta el gatillo' : 'Mano atrás y lánzala hacia el enemigo', '#3cf0c6', 2.2); }
   HTH.idle = 0; boardDirty = true; return true;
 }
 // El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados. Cuenta sobre todo hacia qué lado
@@ -1738,6 +1739,14 @@ function throwStep(dt, t) {
     orb.visible = on && h.ok && !!T.c;
     if (orb.visible) { const sc = 0.075 * (1 + 0.2 * (T.c.pow - 1)) * (1 + 0.15 * Math.sin(t * 18)); orb.position.copy(h.wrist).addScaledVector(_thf, 0.05); orb.scale.set(sc, sc, 1); orb.material.color.setHex(T.c.pow > 1 ? POW_COL[T.c.pow - 1] : BOLT_COL[T.c.perfect ? 1 : 0]); } // la carga de la sentadilla aguantada, por su color
     if (!on) { T.have = false; T.burst = false; continue; }
+    // mandos como manos: se apunta con la mano y se lanza con el gatillo (un instante después, por si llega también el
+    // agarre: los dos a la vez son el puño, no un disparo). Sin sacudida
+    if (h.virt) {
+      if (h.trig && !T.trigPrev) T.trigT = 0.09; T.trigPrev = h.trig; T.have = false; T.burst = false;
+      const tg = T.c && h.rayOk ? throwTarget(h.rayO, h.rayD) : null; if (tg) lockShow(tg, true); // (a quién va: su contorno de neón)
+      if (T.trigT > 0) { if (h.grip) T.trigT = 0; else if ((T.trigT -= dt) <= 0) { T.trigT = 0; if (!T.c) { if (state === 'play') { say('Sin carga: ¡haz una sentadilla!', '#ff8a3d', 1.1); haptic(s, 0.2, 30); } } else if (tg) throwFire(s, h.rayO.clone(), h.rayD.clone(), tg); else haptic(s, 0.15, 25); } }
+      continue;
+    }
     if (!h.ok) { // perdida en plena sacudida: sale el rayo en la dirección que llevaba la mano, si va hacia un enemigo
       T.lost += dt;
       if (T.have && T.burst && T.lost < 0.25) throwTry(s, T.last, _thd.subVectors(T.lastR, T.from));
@@ -1765,12 +1774,12 @@ function throwStep(dt, t) {
     if (sp < T.peak * THROW_STOP || _thd.subVectors(_thr, T.from).length() > THROW_LONG) throwTry(s, h.wrist, _thd.subVectors(_thr, T.from));
   }
   // al que miras: se sigue a quién miras y su contorno de neón lo marca (parpadea más deprisa si tienes carga)
-  if (on && throwByGaze() && !(swordActive() && !pistolOn())) { // (con espada no hay diana)
+  if (on && throwByGaze() && !padVirt() && !(swordActive() && !pistolOn())) { // (con espada no hay diana; con mandos como manos, la marca es la de la mano que apunta)
     const e = gazeLockStep(t, head.p, fwd()), ring = locks.gaze;
     ring.visible = false; lockShow(e, throwCount() > 0); // (la diana: el contorno de neón, 78_lockline)
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
-  if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say('¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
+  if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say(padVirt() ? '¡Lanza el rayo! Apunta y gatillo' : '¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
 }
 // Mirada: no se fija el enemigo que cae en el centro en cada instante (al bajar y subir en la sentadilla la cabeza se
 // mueve y la mirada baila), sino al que llevas un momento mirando: cada enemigo suma «atención» mientras cae cerca del
@@ -2318,7 +2327,9 @@ function startWave(i) {
   }
   RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = ''; perkWaveStart(i);
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
-  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK();
+  if (waveIntroOn(i)) { waveIntro(i); spawnTimer += WIN.dur; if (settings.mode === 'touch') TCH.nextArrive += WIN.dur; } // (que lleguen cuando se va el panel)
+  cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
@@ -2427,6 +2438,36 @@ function updateOutcome(dt) {
   if (!OUT.done && t >= delay) { OUT.done = true; const go = OUT.go; OUT.go = null; if (go) go(); }
 }
 function outcomeClear() { OUT.t = -1; OUT.cleared = false; OUT.veil.visible = false; OUT.black.visible = false; OUT.title.mesh.visible = false; }
+/* ---------- Entre oleadas: un fundido leve y la oleada que empieza ---------- */
+// Al acabar el descanso la escena se oscurece un poco (sin desaparecer) y sale grande delante de ti la oleada que empieza
+// y tus puntos hasta ahora; los de la oleada llegan cuando se va (así no tapa nada de lo que viene). En las barras no: ahí
+// ya está «A LA BARRA» (y la oleada empieza cuando te cuelgas)
+const WIN = { t: -1, dur: 2.4, q: new Q4() }, _wiP = new V3();
+WIN.veil = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false }));
+WIN.veil.renderOrder = RO.menu - 2; WIN.veil.visible = false; scene.add(WIN.veil);
+WIN.p = makePanel(1.2, 0.5, 1024, { depthTest: false }); WIN.p.mesh.renderOrder = RO.menu - 1; WIN.p.mesh.visible = false; scene.add(WIN.p.mesh);
+const waveIntroOn = i => i > 0 && !isBars();
+function waveIntro(i) {
+  const P = WIN.p, c = P.ctx, W = P.W, H = P.H, N = settings.waves, rk = rampK(), last = N && i >= N - 1;
+  c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
+  rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,10,28,0.82)'; c.fill(); c.lineWidth = 6; c.strokeStyle = 'rgba(255,209,102,0.7)'; c.stroke(); // (un panel, no letras sueltas)
+  const t1 = last ? '¡ÚLTIMA OLEADA!' : N ? `OLEADA ${i + 1} DE ${N}` : `OLEADA ${i + 1}`;
+  fitFont(c, t1, W - 60, 120, '%px ' + FD); c.save(); c.shadowColor = '#ffd166'; c.shadowBlur = 30; c.fillStyle = '#ffd166'; c.fillText(t1, W / 2, H * 0.3); c.restore();
+  const t2 = `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
+  const t3 = rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
+  if (t3) { fitFont(c, t3, W - 80, 48, '600 %px ' + FB); c.fillStyle = '#3cf0c6'; c.fillText(t3, W / 2, H * 0.87); }
+  P.tex.needsUpdate = true; WIN.t = 0;
+  hudLocal(_wiP.set(0, 0.02, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ()); // (donde salen los avisos, delante de ti)
+}
+function waveIntroClear() { WIN.t = -1; WIN.veil.visible = false; WIN.p.mesh.visible = false; }
+function updateWaveIntro(dt) {
+  if (WIN.t < 0) return;
+  if (state !== 'play') { waveIntroClear(); return; }
+  WIN.t += dt; const t = WIN.t, a = t < 0.35 ? smooth(t / 0.35) : Math.max(0, Math.min(1, (WIN.dur - t) / 0.5));
+  WIN.veil.position.copy(head.p); WIN.veil.material.opacity = 0.5 * a; WIN.veil.visible = a > 0.01;
+  WIN.p.mesh.material.opacity = a; WIN.p.mesh.visible = a > 0.01; WIN.p.mesh.scale.setScalar(1 + 0.08 * Math.max(0, 1 - t / 0.5));
+  if (t >= WIN.dur) waveIntroClear();
+}
 // El resumen: una ficha con el número grande (repeticiones o segundos colgado), las estrellas y el porcentaje de perfectas,
 // seis casillas con lo demás y los logros; debajo, los botones. Se queda hasta que pulses uno (sin cuenta atrás)
 function summaryDraw(S, c, x, y, w, h) {
@@ -2512,7 +2553,7 @@ function gameStep(dt, t) {
     }
   } else if (state === 'rest') {
     if (Math.floor(stateT) !== Math.floor(stateT - dt)) boardDirty = true;
-    if (stateT >= settings.rest) { perkRestEnd(); if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
+    if (stateT >= settings.rest && !perkWaits()) { perkRestEnd(); if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
     GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt * perkSlow(e), t);

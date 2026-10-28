@@ -942,7 +942,7 @@ function drawBoard() {
   // derecha: un solo hueco para lo que pasa ahora (no se pisan: va lo más importante)
   const say1 = (t, col, size = 84, y = 250) => boardSay(c, t, col, RX, y, 560, size);
   if (state === 'rest') {
-    say1(`DESCANSO ${Math.max(0, Math.ceil(settings.rest - stateT))}`, BC.teal, 72, 150);
+    if (stateT >= settings.rest && perkWaits()) say1('ELIGE MEJORA', BC.gold, 72, 150); else say1(`DESCANSO ${Math.max(0, Math.ceil(settings.rest - stateT))}`, BC.teal, 72, 150);
     const nx = hang ? `Siguiente: ${hangSecs(waveIdx + 1)} s` : `Siguiente: ${waveReps(waveIdx + 1)}`, up = RAMP.note ? (RAMP.up ? ' · ▲ un poco más' : ' · igual') : '';
     const D = boardDay(), goal = settings.goalMin, g2 = ghostAt(), gt = g2 && g2.best ? (g2.beat ? `¡Récord! +${g2.n - g2.best}` : `Récord: vas ${g2.n - g2.g >= 0 ? '+' : '−'}${Math.abs(g2.n - g2.g)}`) : D.best ? `Tu mejor día: ${D.best}` : '';
     const line = (t, col, y) => { if (!t) return; c.fillStyle = col; fitFont(c, t, 560, 48, '600 %px ' + FB); c.fillText(t, RX, y); };

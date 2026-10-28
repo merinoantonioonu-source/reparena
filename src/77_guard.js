@@ -65,8 +65,8 @@ const _gdF = new V3(), _gdP = new V3(), _gdQ = new V3();
 // delante de la cara o del pecho: entre 8 y 60 cm por delante de la cabeza, sin irse mucho a un lado, entre lo y hi de altura
 function gFront(p, lo, hi) { const dx = p.x - head.p.x, dz = p.z - head.p.z, al = dx * _gdF.x + dz * _gdF.z, dy = p.y - head.p.y; return al > 0.08 && al < 0.6 && Math.abs(dx * _gdF.z - dz * _gdF.x) < 0.35 && dy > lo && dy < hi; }
 // puño cerrado: las puntas de los dedos cerca de la muñeca
-function gFist(h) { if (!h.isHand) return false; let n = 0, s = 0; for (const j of [9, 14, 19, 24]) { const J = h.J[j]; if (J && J.ok) { s += J.p.distanceTo(h.wrist); n++; } } return n >= 3 && s / n < 0.1; }
-const gGrip = h => !h.isHand && h.pad && h.pad.buttons && h.pad.buttons[1] && h.pad.buttons[1].pressed;
+function gFist(h) { if (h.virt) return h.trig && h.grip; /* (mandos como manos: gatillo y agarre a la vez) */ if (!h.isHand) return false; let n = 0, s = 0; for (const j of [9, 14, 19, 24]) { const J = h.J[j]; if (J && J.ok) { s += J.p.distanceTo(h.wrist); n++; } } return n >= 3 && s / n < 0.1; }
+const gGrip = h => !h.isHand && !h.virt && h.pad && h.pad.buttons && h.pad.buttons[1] && h.pad.buttons[1].pressed;
 // Busca la guardia de ahora: { kind, side, pos }; kind: 'grip' (mandos) o 'fist'
 function guardDetect() {
   _gdF.copy(fwdH());
@@ -161,6 +161,7 @@ function guardShieldPose(m, G, dt) {
 // Cómo defenderse en este ejercicio (sale la primera vez que un enemigo prepara un golpe)
 function guardTip() {
   if (!gestureOn()) return G_TIPTECH;
+  if (['left', 'right'].some(s => hands[s].virt)) return '¡Te va a golpear! Puño delante del pecho (gatillo y agarre): escudo';
   if (['left', 'right'].some(s => hands[s].ok && !hands[s].isHand && hands[s].pad)) return '¡Te va a golpear! Aprieta el botón de agarre: escudo';
   return '¡Te va a golpear! Cierra el puño delante del pecho: escudo';
 }

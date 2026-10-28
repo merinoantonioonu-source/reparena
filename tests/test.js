@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, spBlockEnd, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, favToggle, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm };
@@ -86,7 +86,7 @@ function menuTop() { const g = RA.menu.group, h = RA.menu.H / 2; return new THRE
 
 // ONLY=expresión: solo las partidas cuyo nombre encaja (para depurar deprisa)
 // Pone unos ajustes como antes de guardarlos por modo y ejercicio: sin lo guardado, el modo y el ejercicio primero
-function applyCfg(cfg) { storage.delete('reparena3-combos'); RA.PV.guard = false; if (!('guard' in cfg)) cfg = { ...cfg, guard: 'off' }; // (la defensa, solo en sus pruebas)
+function applyCfg(cfg) { storage.delete('reparena3-combos'); RA.PV.guard = false; if (!('guard' in cfg)) cfg = { ...cfg, guard: 'off' }; if (!('perks' in cfg)) cfg = { ...cfg, perks: 0 }; // (la defensa y las mejoras, que esperan a que elijas, solo en sus pruebas)
   for (const k of ['mode', 'exercise']) if (k in cfg) RA.setSetting(k, cfg[k]); for (const k in cfg) if (k !== 'mode' && k !== 'exercise') RA.setSetting(k, cfg[k]); }
 async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
   if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
@@ -1109,6 +1109,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // el brazalete: con la mano izquierda a la vista, se ve y se llena con el escudo
     RA.PV.handSide = 'left'; RA.PV.handAt = RA.head.p.clone().add(new THREE.Vector3(-0.2, -0.4, -0.3)); RA.GUARD.charge = 0.5; step(20);
     const brOn = RA.BRACE.g.visible, brK = RA.BRACE.k; RA.PV.handAt = null; step(2); const brOff = !RA.BRACE.g.visible;
+    // entre oleadas: fundido leve y el panel con la oleada que empieza; nadie llega hasta que se va
+    for (const e of RA.enemies) e.alive = false; RA.startWave(1); step(15); const inOn = RA.WIN.t > 0 && RA.WIN.veil.visible && RA.WIN.veil.material.opacity > 0.3 && RA.WIN.veil.material.opacity < 0.6 && RA.WIN.p.mesh.visible, none = !RA.enemies.some(e => e.alive);
+    step(70); const inOff = RA.WIN.t < 0 && !RA.WIN.veil.visible; step(60); const came = RA.enemies.some(e => e.alive);
+    log(`wave intro: dim and panel ${inOn} · nobody comes during it ${none} · gone after ${RA.WIN.dur} s ${inOff} · then they come ${came}`);
+    if (!inOn || !none || !inOff || !came) errors.push('entre oleadas: debería oscurecerse un poco con el panel de la oleada que empieza, y llegar los enemigos cuando se va');
     log(`board: cheer on the board only ${cheerOk} · action in front of you ${faceOk} · with view notices off, on the board ${offOk} · draws ${drawOk} · bracelet ${brOn} (${brK.toFixed(2)}) hidden without the hand ${brOff}`);
     if (!cheerOk || !faceOk || !offOk) errors.push('avisos: las celebraciones van solo al marcador y lo que pide hacer algo, delante de ti (con los avisos de la vista apagados, al marcador)');
     if (!drawOk) errors.push('marcador: falla al dibujarse con racha, relámpago o una frase larga');
@@ -1131,15 +1136,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // un cofre en el descanso: se abre saltando (en el ordenador, al soltar Espacio tras agacharte) y da otra mejora
     RA.setSetting('surprises', 1); Math.random = () => 0; RA.chestMaybe(); Math.random = real; RA.setSetting('surprises', 0);
     const chestOn = RA.CHEST.on; RA.PV.crouch = true; step(30); RA.PV.crouch = false; step(30); const opened = RA.CHEST.opened, afterChest = RA.PK.has.size;
-    // la segunda: sin elegir, al acabar el descanso te toca una al azar (y la tercera será larga, para el relámpago)
+    // la segunda: sin elegir, la oleada siguiente espera (aunque se acabe el descanso y se cierre el panel); al elegir,
+    // empieza a los 3 s (y la tercera será larga, para el relámpago)
     while (T.t < 400 && !(RA.state === 'rest' && RA.waveIdx === 1)) step(1, sq);
-    RA.setSetting('repsWave', 40); RA.PV.crouch = false; while (T.t < 420 && RA.state === 'rest') step(1);
+    RA.setSetting('repsWave', 40); RA.PV.crouch = false; const t0 = T.t; while (T.t < t0 + 12 && RA.state === 'rest') step(1);
+    const waited = RA.state === 'rest' && !!RA.PK.offer; if (RA.menu && RA.menu.perks) RA.hideMenu(); step(80); const back = !!(RA.menu && RA.menu.perks);
+    const cards2 = RA.activeWidgets().filter(w => Object.values(RA.PERKS).some(p => p.name === w.label)).map(w => w.label); if (cards2.length) { press(cards2[0]); frame(2); }
+    const t1 = T.t; while (T.t < t1 + 8 && RA.state === 'rest') step(1); const startIn = T.t - t1;
     const auto = RA.PK.has.size;
-    log(`perks: ghost on the board “${gtxt}” · cards in the rest ${menuPerks} [${cards.join(', ')}] · picked ${picked} · chest shown ${chestOn}, opened by a jump ${opened} → ${afterChest} perks · left to chance → ${auto} (${[...RA.PK.has].join(', ')})`);
+    log(`perks: ghost on the board “${gtxt}” · cards in the rest ${menuPerks} [${cards.join(', ')}] · picked ${picked} · chest shown ${chestOn}, opened by a jump ${opened} → ${afterChest} perks · waits for you ${waited}, panel back ${back}, starts ${startIn.toFixed(1)} s after picking → ${auto} (${[...RA.PK.has].join(', ')})`);
     if (!gtxt || !/RÉCORD/.test(gtxt)) errors.push('récord: el marcador no compara con tu mejor ronda');
     if (!menuPerks || cards.length !== 3 || picked !== 1) errors.push('mejoras: en el descanso no salen 3 cartas para elegir una');
     if (!chestOn || !opened || afterChest !== 2) errors.push('cofre: no sale, no se abre saltando o no da la mejora extra');
-    if (auto !== 3) errors.push('mejoras: sin elegir, al acabar el descanso no te toca una al azar');
+    if (!waited || !back || auto !== 3 || startIn > 4) errors.push('mejoras: la oleada siguiente debería esperar a que elijas (y empezar a los 3 s de elegir)');
     // los efectos, uno a uno, en plena oleada: escudo, escarcha, doble o nada, relámpago y enemigo dorado
     while (T.t < 450 && !(RA.state === 'play' && RA.enemies.some(e => e.alive))) step(1, sq);
     const e = RA.enemies.find(x => x.alive);
@@ -1528,12 +1537,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const vols = SPOT.calls.slice(n0).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), iP = SPOT.calls.slice(n0).indexOf('PUT /v1/me/player/pause');
     const v0 = vols[0] ? Math.round(vols[0] / 0.8) : 0, fadeOk = vols.length >= 6 && vols.slice(0, 5).every((v, i, a) => !i || v <= a[i - 1]) && vols[4] === 0 && iP > 0 && vols[5] === v0 && SPOT.vol === v0;
     RA.beginRun(); await sleep(300); frame(2); const resumed = SPOT.playing, upOk = SPOT.vol === v0;
-    // en una sesión: al acabar un bloque con su canción, si el siguiente trae otra, la de este se va apagando (y si trae la misma, sigue)
+    // en una sesión: entre bloques sigue la canción del que acaba; el bloque siguiente, si trae la misma, la sigue, y si
+    // trae otra, la que sonaba se apaga poco a poco y la nueva entra subiendo
     SPOT.playing = true; await RA.spRefresh(); const m1 = [{ uri: 'spotify:track:A1' }], m2 = [{ uri: 'spotify:track:B2' }];
-    RA.spBlockEnd({ music: m1 }, { music: m1 }); await sleep(200); const same = SPOT.playing; const n1 = SPOT.calls.length;
-    RA.spBlockEnd({ music: m1 }, { music: m2 }); await sleep(300); const bv = SPOT.calls.slice(n1).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), blockFade = !SPOT.playing && bv.length >= 5 && bv[4] === 0;
-    log(`spotify between blocks: same songs keep playing ${same} · other songs next → fades ${bv.slice(0, 6).join('→')} and pauses ${!SPOT.playing}`);
-    if (!same || !blockFade) errors.push('Spotify: al acabar un bloque, si el siguiente trae otra canción, la de este debería apagarse poco a poco (y si trae la misma, seguir)');
+    RA.spBlockMusic({ music: m1 }); await sleep(300); const n1 = SPOT.calls.length; RA.spBlockMusic({ music: m1 }); await sleep(200); const same = SPOT.playing && !SPOT.calls.slice(n1).some(c => c.startsWith('PUT /v1/me/player/play'));
+    const n2 = SPOT.calls.length; RA.spBlockMusic({ music: m2 }); await sleep(400); const cs = SPOT.calls.slice(n2), iPlay = cs.findIndex(c => c.startsWith('PUT /v1/me/player/play')), bv = cs.filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]);
+    const down = cs.slice(0, iPlay).filter(c => c.includes('volume_percent=')).map(c => +c.split('=')[1]), blockFade = iPlay > 0 && down.length >= 5 && down[down.length - 1] === 0 && SPOT.playing && SPOT.playBody && SPOT.playBody.uris[0] === m2[0].uri && bv[bv.length - 1] > 0 && !cs.includes('PUT /v1/me/player/pause');
+    log(`spotify between blocks: same songs keep playing ${same} · other songs → the old one fades ${down.join('→')}, then the new one (${SPOT.playBody && SPOT.playBody.uris[0]}) comes up to ${bv[bv.length - 1]}, no pause`);
+    if (!same || !blockFade) errors.push('Spotify: entre bloques, la canción del que acaba debería seguir y, si el siguiente trae otra, fundirse con ella (bajando la vieja y subiendo la nueva, sin pausa)');
     Object.assign(RA.SP_FADE, { out: 0, in: 0 }); SPOT.vol = vStart; SPOT.playing = true; await RA.spRefresh();
     log(`spotify between games: paused at the end ${paused} after fading ${vols.slice(0, 6).join('→')} (back to ${SPOT.vol}) · ambience back ${amb} · resumed on the next game ${resumed}, volume back ${upOk}`);
     if (!fadeOk || !upOk) errors.push('Spotify: al acabar, la canción debería apagarse poco a poco (y volver a su volumen) en vez de cortarse');
@@ -1690,6 +1701,30 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.stats.shots < 4) errors.push('pistolas XR: el gatillo de los mandos no dispara');
   { const strong = (XRS.haptics || []).filter(h => h[1] >= 0.7).length; log('pistol XR: strong haptic pulses', strong); if (strong < RA.stats.shots - 1) errors.push('pistolas XR: el mando no vibra al disparar'); }
   XRS.controllers = false; XRS.trig = null; RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
+
+  // ---- Mandos como manos (sentadillas, sin pistolas): se ven manos, el rayo sale apuntando y con el gatillo, y gatillo y agarre a la vez son el puño ----
+  { applyCfg({ mode: 'combat', exercise: 'squat', aim: 'hands', foesGate: 'robot', foesFly: 'drone', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 3, squatDepth: 25, padHands: 1, guard: 'full' });
+    XRS.controllers = true; XRS.headY = 1.7; XRS.ctrl = null; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(250, 16, xrFrame);
+    const G = RA.gloves.right, vis = RA.hands.right.virt && G.seg.count > 0 && G.palm.visible && !G.pad.visible;
+    const st0 = RA.state; (RA.renderer.xr.getSession().listeners.selectstart || []).forEach(f => f({ inputSource: { handedness: 'right' } })); frame(2, 16, xrFrame); const noPause = RA.state !== 'paused';
+    // el puño: con el gatillo y el agarre, los dedos se doblan (la punta del índice se acerca a la palma)
+    const tipOpen = RA.hands.right.J[9].p.distanceTo(RA.hands.right.J[0].p); XRS.trig = 'right'; XRS.squeeze = 'right'; frame(15, 16, xrFrame); const tipFist = RA.hands.right.J[9].p.distanceTo(RA.hands.right.J[0].p); XRS.trig = null; XRS.squeeze = null; frame(15, 16, xrFrame);
+    // una sentadilla carga; apuntar con el mando derecho a un enemigo y el gatillo lanza el rayo
+    for (let i = 0; i < 600 && !RA.enemies.some(e => e.alive && (e.out || e.type === 'flyer')); i++) frame(1, 16, xrFrame);
+    XRS.headY = 1.36; frame(60, 16, xrFrame); XRS.headY = 1.7; frame(30, 16, xrFrame);
+    const e = RA.enemies.find(x => x.alive && (x.out || x.type === 'flyer')), charged = !!(RA.HTH.right.c); let shot = false;
+    if (e) { const V = THREE.Vector3, p = new V(0.2, 1.3, -0.3), c = RA.arena.localToWorld(e.center(new V()).clone()), d = c.clone().sub(p).normalize(), q = new THREE.Quaternion().setFromUnitVectors(new V(0, 0, -1), d);
+      XRS.ctrl = { right: { p, q } }; frame(5, 16, xrFrame); const s0 = RA.stats.shots; XRS.trig = 'right'; frame(3, 16, xrFrame); XRS.trig = null; frame(12, 16, xrFrame); shot = RA.stats.shots > s0; }
+    // el escudo: puño (gatillo y agarre) delante del pecho
+    XRS.ctrl = { left: { p: new THREE.Vector3(-0.05, 1.45, -0.3), q: new THREE.Quaternion() } }; XRS.trig = 'left'; XRS.squeeze = 'left'; frame(10, 16, xrFrame); const guard = RA.GUARD.up === 'fist'; XRS.trig = null; XRS.squeeze = null; frame(5, 16, xrFrame);
+    log(`pad hands XR: hands seen ${vis} · trigger does not pause ${noPause} (${st0} → ${RA.state}) · fist curls the fingers ${tipOpen.toFixed(3)} → ${tipFist.toFixed(3)} m · charged ${charged} · aim + trigger shoots ${shot} · fist in front of the chest = shield ${guard}`);
+    if (!vis) errors.push('mandos como manos: con los mandos en sentadillas debería verse una mano, no el mando');
+    if (!noPause) errors.push('mandos como manos: el gatillo no debería abrir la pausa (lanza el rayo)');
+    if (!(tipFist < tipOpen - 0.03)) errors.push('mandos como manos: gatillo y agarre deberían cerrar el puño');
+    if (!charged || !shot) errors.push('mandos como manos: apuntar con la mano y apretar el gatillo debería lanzar el rayo cargado');
+    if (!guard) errors.push('mandos como manos: el puño delante del pecho debería sacar el escudo');
+    XRS.ctrl = null; XRS.controllers = false; XRS.trig = null; XRS.squeeze = null; RA.setSetting('guard', 'off'); RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Espadas en XR con mandos ----
   // La hoja sale del agarre por −Z: para un tajo se coloca el mando de modo que la hoja apunte a `center` y se barre en `sweep`
@@ -2138,11 +2173,12 @@ function makeXRFrame() {
   const handL = mkHand('left'), handR = mkHand('right');
   const sources = [{ handedness: 'left', hand: handL, targetRaySpace: { ray: 'left' } }, { handedness: 'right', hand: handR, targetRaySpace: { ray: 'right' } }];
   // mandos con vibración: cada pulso queda apuntado en XRS.haptics
-  const pads = Object.fromEntries(['left', 'right'].map(h => [h, { buttons: [{ pressed: false }], hapticActuators: [{ pulse(v, ms) { (XRS.haptics = XRS.haptics || []).push([h, v, ms]); return Promise.resolve(true); } }] }]));
+  const pads = Object.fromEntries(['left', 'right'].map(h => [h, { buttons: [{ pressed: false }, { pressed: false }], hapticActuators: [{ pulse(v, ms) { (XRS.haptics = XRS.haptics || []).push([h, v, ms]); return Promise.resolve(true); } }] }]));
   const ctrls = ['left', 'right'].map(h => ({ handedness: h, gripSpace: { grip: h }, targetRaySpace: { ray: h }, gamepad: pads[h] }));
   return () => {
     const s = RA.renderer.xr.getSession(), src = XRS.controllers ? ctrls : sources; if (s) s.inputSources = src;
     pads.left.buttons[0].pressed = XRS.trig === 'left'; pads.right.buttons[0].pressed = XRS.trig === 'right';
+    pads.left.buttons[1].pressed = XRS.squeeze === 'left'; pads.right.buttons[1].pressed = XRS.squeeze === 'right'; // (el botón de agarre)
     return {
       session: s || { inputSources: src },
       detectedPlanes: XRS.room ? XRS.room.planes : undefined, detectedMeshes: XRS.room ? XRS.room.meshes : undefined,

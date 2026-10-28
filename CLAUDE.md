@@ -65,11 +65,15 @@ No las cambies sin preguntarle.
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
+- Mandos como manos (sentadillas y zancadas): el mando se ve como una mano; gatillo + agarre = puño; el rayo se lanza
+  apuntando con la mano y con el gatillo. Con mando, la puntería por defecto es «con las manos».
 
 **Dificultad**
 - Sube **poco a poco de una oleada a otra**, no dentro de cada oleada: que se note un poco, pero que sea real.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
+- Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**.
+- Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos.
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.
@@ -107,6 +111,7 @@ No las cambies sin preguntarle.
 
 **Sonido**
 - Mientras suena Spotify, el sonido ambiente se pone a 0 %.
+- En las sesiones, entre bloques sigue la canción del bloque que acaba (sin ambiente) y se funde con la del siguiente.
 
 **Realidad mixta**
 - Puede usar la habitación escaneada o colocarse a mano. Lo colocado (y las barras y paralelas) se recuerda entre

@@ -8,7 +8,7 @@ function readXR(frame, t = 0) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = false; h.J.forEach(j => j.ok = false); }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = h.virt = false; h.J.forEach(j => j.ok = false); }
   for (const src of frame.session.inputSources) {
     const h = hands[src.handedness]; if (!h) continue;
     if (src.targetRaySpace) { const rp = frame.getPose(src.targetRaySpace, ref); if (rp) { const o = rp.transform.orientation; h.rayOk = true; h.rayO.copy(rp.transform.position); h.rayQ.set(o.x, o.y, o.z, o.w); h.rayD.set(0, 0, -1).applyQuaternion(h.rayQ); } }
@@ -30,6 +30,7 @@ function readXR(frame, t = 0) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
       if (gp) { const p = gp.transform.position, o = gp.transform.orientation; h.ok = true; h.wrist.set(p.x, p.y, p.z); h.wristQ.set(o.x, o.y, o.z, o.w); h.tip.copy(h.wrist).add(_js.set(0, -0.01, -0.075).applyQuaternion(h.wristQ)); h.tipOk = true; }
+      h.grip = !!(B[1] && B[1].pressed); if (h.ok && padHandsOn() && !(swordSides().includes(src.handedness) && GAME_STATES.includes(state))) padHand(h, src.handedness, t); // (mandos como manos, 40_models)
     }
   }
   anchorsFrame(frame, ref); roomFrame(frame, ref, t);
@@ -264,7 +265,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateFX(dt); updateBolts(dt);
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
-  updateWatch(dt); updateWristMenu(dt); updateOutcome(dt);
+  updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt);
   updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); updateComic(dt, t); spTick(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);
@@ -372,7 +373,7 @@ async function startXR(ar) {
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
-    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet()) openPause(); });
+    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet() && !padHandsOn()) openPause(); }); // (con mandos como manos, el gatillo lanza el rayo: el menú, con X o Y)
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(); }, 600);
   } catch (err) {
