@@ -2,7 +2,8 @@
 // El desarrollador decide, para cada modo y ejercicio y para cada uno de los 7 rangos, los valores que marcan la
 // dificultad (la tabla D) y qué ajustes ve el jugador en su menú (el ojo). Las canciones de cada ejercicio son del jugador
 // (abajo, al final).
-// Lo que no toca sigue como venía: los valores del rango (RANK_VALS) o los de fábrica del ajuste. «Exportar» da la
+// Lo que no toca sigue como venía: los valores del rango (RANK_VALS) o los de fábrica del ajuste. Lo que el jugador cambia
+// en su menú también va aquí, al rango y ejercicio de ahora (70_game): así se queda como el valor de ese rango. «Exportar» da la
 // tabla entera; pegada en DEV_FACTORY queda como valores de fábrica para todos.
 // El modo desarrollador está escondido: cinco toques seguidos en el título de la página o en «Acerca de» (Ajustes →
 // Menú y avisos, en las gafas), o la página con ?dev=1
@@ -53,7 +54,7 @@ function devSet(key, i, v, id = comboId()) {
   const e = DEV.t[id] = DEV.t[id] || {}; e.v = e.v || {}; const a = e.v[key] = e.v[key] || Array(RANKS.length).fill(null);
   a[i] = v === null || v === '' ? null : clampSetting(FIELD[key], v);
   if (a.every(x => x === null)) delete e.v[key]; devSave();
-  // en el rango de ahora, el valor nuevo se nota ya (sin quedar «retocado»)
+  // en el rango de ahora, el valor nuevo se nota ya
   if (id === comboId() && i === rankIdx()) { RANK.applying = true; try { setSetting(key, devVal(key, i)); } finally { RANK.applying = false; } }
 }
 // el ojo: lo que ve el jugador en su menú. Sin marcar nada, la velocidad, cuánto se pide y el descanso (lo de siempre)

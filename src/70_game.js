@@ -634,7 +634,7 @@ class Spider {
     this.pos = new V3(hatch.x, -0.07 * this.s, hatch.z); hatch.openT = 2.2;
     this.home = new V3(hatch.x, 0, hatch.z);
     this.target = oneArm() ? new V3(Math.sign(hatch.x) * rand(0.3, 0.4), 0, rand(-0.3, 0)) : new V3((hatch.x < 0 ? -1 : 1) * rand(0.06, 0.22), 0, -(0.4 + 0.04 * this.s)); // en la plancha atacan por el costado
-    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / dv('walkTime'));
+    this.avg = Math.max(0.01, this.pos.distanceTo(this.target) / (dv('walkTime') * (settings.exercise === 'inchworm' ? IW_SLOW : 1))); // (en el inchworm, mucho más despacio)
     this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
     Object.assign(this, { mode: 'emerge', st: 0, run: false, runT: 0, vel: new V3(), hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.075 * this.s, fade: 1, rear: 0, skitT: 0, lungeFrom: new V3(), lungeTo: new V3(), pitch: 0, roll: 0 });
     Object.assign(this, { threatT: rand(1.2, 2.5), close: 0, rage: 0, hopFrom: new V3(), hopTo: new V3(), hopped: false, startD: Math.max(0.1, this.pos.distanceTo(this.target)) });
@@ -650,6 +650,11 @@ class Spider {
     this.eyeGlow = glowSprite(0xff2208, 0.05, 0); this.eyeGlow.position.set(0, 0.015, 0.05); this.B.body.add(this.eyeGlow);
   }
   center(out) { this.B.body.getWorldPosition(out); return out; }
+  // La onda del inchworm: sale despedida hacia su trampilla y vuelve a empezar desde allí
+  sendHome() {
+    if (!this.alive || this.mode === 'dying' || this.mode === 'emerge') return;
+    this.mode = 'recoil'; this.st = 0; this.lungeFrom.copy(this.pos); this.lungeTo.set(this.home.x, 0, this.home.z); this.rear = 0; this.stunT = 0; this.parryT = 0.8; this.threatT = rand(1.5, 3);
+  }
   idealFoot(L, out) {
     const d = L.d, s = this.s, reach = (d.L * 1.1) * 0.7 * s, cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
     L.hipW.copy(d.hip); this.B.body.localToWorld(L.hipW); arena.worldToLocal(L.hipW);
@@ -1186,7 +1191,7 @@ function onRep(opts, side) {
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
-    const sup = settings.exercise === 'superman', origin = sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
+    const sup = settings.exercise === 'superman', origin = sup ? SORB.fireAt || (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
   } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
@@ -1209,11 +1214,13 @@ function onPower(pow, deep) {
   if (!charged || !['play', 'rest', 'ready'].includes(state)) return;
   chargePow = pow; chargeOrb.material.color.setHex(POW_COL[pow - 1]); SND.power(pow);
   if (deep) { SND.perfect(); fx.glow(head.p.clone().addScaledVector(fwd(), 0.5), [1, 0.25, 0.95], 0.5, 0.2); }
-  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, '#' + POW_COL[pow - 1].toString(16).padStart(6, '0'), deep ? 1.3 : 0.9); boardDirty = true;
+  const col = '#' + POW_COL[pow - 1].toString(16).padStart(6, '0');
+  cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, col, deep ? 1.3 : 0.9); boardDirty = true;
+  chargeFloor(pow >= 4 ? `×4 · ¡ARRIBA!` : deep ? `RECARGA ×${pow}` : `CARGA ×${pow}`, col); // (en el suelo: agachado, es lo que ves)
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim(); SND.charge(); boardDirty = true;
+  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && settings.exercise !== 'superman'; // (en el superman, la bola de energía) SND.charge(); boardDirty = true;
 }
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
@@ -1482,57 +1489,100 @@ function twistStep(t, dt) {
 // las dos últimas, en posición de flexión; las dos del medio cambian de sitio en cada repetición. De pie, te doblas y
 // caminas con las manos tocando las huellas en orden (cada mano, las suyas); en las últimas, la flexión carga y al subir
 // dispara a las arañas; luego vuelves caminando y te pones de pie, y las huellas del medio se recolocan.
+// Cada huella es un contorno; al posar la mano en ella (con margen: no hace falta acertar dentro) destella, echa chispas y
+// se rellena de color sólido: a la ida, el de su mano; a la vuelta, dorado. Al acabar la vuelta, al despegar las manos del
+// suelo, sale una onda expansiva que devuelve a los bichos a su trampilla. Como hay que caminar con las manos, los bichos
+// llegan mucho más despacio (IW_SLOW)
 // La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
 const iwReachM = () => settings.iwReach > 0 ? Math.max(0.8, settings.iwReach / 100) : clamp(calibRef * 0.8, 1.0, 1.6);
 const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
+const IW_SLOW = 2.6, IW_REACH = 0.3, IW_GOLD = new THREE.Color(0xffd166); // (los bichos, 2,6 veces más lentos; el margen de la huella, hasta 30 cm)
 const IW = { group: new THREE.Group(), prints: [], mats: [] };
 IW.group.visible = false; arena.add(IW.group);
-for (let i = 0; i < 6; i++) {
-  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, c = mkCanvas(128), x = c.getContext('2d');
+// la huella: la mano (en espejo para la izquierda) con su número; hueca (contorno) o rellena
+function iwPrintTex(side, n, filled) {
+  const c = mkCanvas(128), x = c.getContext('2d');
   x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
-  x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); x.fill(); // palma
-  for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.beginPath(); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.fill(); x.restore(); }
-  x.restore(); x.fillStyle = '#10101a'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
-  const mat = new THREE.MeshBasicMaterial({ map: texFrom(c), color: side === 'left' ? 0x4aa8ff : 0xff9a3c, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+  const shape = () => { x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.moveTo(7, 0); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.restore(); } };
+  if (filled) { x.fillStyle = '#ffffff'; shape(); x.fill(); }
+  else { x.fillStyle = 'rgba(255,255,255,0.16)'; shape(); x.fill(); x.lineWidth = 6; x.strokeStyle = '#ffffff'; shape(); x.stroke(); }
+  x.restore(); x.fillStyle = filled ? '#10101a' : '#ffffff'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
+  return texFrom(c);
+}
+for (let i = 0; i < 6; i++) {
+  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, col = new THREE.Color(side === 'left' ? 0x4aa8ff : 0xff9a3c);
+  const tex = { hollow: iwPrintTex(side, n, false), full: iwPrintTex(side, n, true) };
+  const mat = new THREE.MeshBasicMaterial({ map: tex.hollow, color: col, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; IW.group.add(m); IW.mats.push(mat);
-  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, m });
+  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, back: false, flash: 0, m, tex, col });
+}
+// La mano llega a la huella: destella, echa chispas y se rellena (a la ida, de su color; a la vuelta, dorada)
+function iwHit(p, back) {
+  if (back) p.back = true; else p.done = true; p.flash = 1;
+  const w = arena.localToWorld(_iww.set(p.x, 0.03, p.z)), c = back ? IW_GOLD : p.col;
+  fx.sparks(w, 14, [c.r, c.g, c.b], 1.3, 0.02); fx.glow(w, [c.r, c.g, c.b], 0.22, 0.25); SND.tick(); haptic(p.side, 0.45, 35);
+}
+// Al despegar las manos del suelo tras la vuelta: una onda expansiva en el suelo que devuelve a los bichos a su trampilla
+const IWW = { m: null, t: -1 };
+function iwWave() {
+  if (!IWW.m) { IWW.m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0x7af7ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); IWW.m.rotation.x = -Math.PI / 2; IWW.m.renderOrder = 20; scene.add(IWW.m); }
+  IWW.t = 0; IWW.m.visible = true; IWW.m.position.set(head.p.x, 0.03, head.p.z); IWW.m.scale.setScalar(0.2);
+  fx.glow(IWW.m.position.clone().add(_iww.set(0, 0.1, 0)), [0.5, 0.95, 1], 0.6, 0.25); SND.whoosh(head.p); hapticBoth(0.6, 90);
+  let n = 0; for (const e of enemies) { if (!e.alive) continue; n++; if (e.type === 'spider' && e.sendHome) e.sendHome(); else if (e.shove) e.shove(1.2); }
+  stats.waves = (stats.waves || 0) + 1; say(n ? '¡ONDA EXPANSIVA! Vuelven a su trampilla' : '¡Onda expansiva!', '#7af7ff', 1.4, false);
+}
+function iwWaveStep(dt) {
+  if (!IWW.m || IWW.t < 0) return;
+  IWW.t += dt; const k = IWW.t / 0.6; IWW.m.scale.setScalar(0.2 + k * 2.2); IWW.m.material.opacity = 0.8 * (1 - k);
+  if (k >= 1) { IWW.t = -1; IWW.m.visible = false; }
 }
 // Las seis huellas, en la arena: las primeras y las últimas siempre igual; las del medio, a una distancia y un lado distintos cada vez
 function iwLayout() {
   const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, zm = lerp(z0, z2, rand(0.38, 0.62));
   const mz = () => clamp(zm + rand(-0.13, 0.13), z2 + 0.27, z0 - 0.27); // nunca pegadas a las primeras ni a las últimas
   const pos = [[-0.17, z0], [0.17, z0], [-rand(0.11, 0.27), mz()], [rand(0.11, 0.27), mz()], [-0.2, z2], [0.2, z2]];
-  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = false; p.m.position.set(p.x, 0.006, p.z); });
-  Object.assign(DET.iw, { pair: 0, phase: 'stand' });
+  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = p.back = false; p.flash = 0; p.m.position.set(p.x, 0.006, p.z); });
+  // el margen de cada huella: hasta IW_REACH, sin llegar a la vecina de la misma mano (si no, una contaría por otra)
+  for (const p of IW.prints) { let d = 9; for (const o of IW.prints) if (o !== p && o.side === p.side) d = Math.min(d, Math.hypot(o.x - p.x, o.z - p.z)); p.reach = clamp(d * 0.85, 0.16, IW_REACH); }
+  Object.assign(DET.iw, { pair: 0, phase: 'stand', bpair: 1 });
 }
 const _iww = new V3();
 function iwStep(t, dt) {
   const W = DET.iw, standing = head.p.y > calibRef - 0.22;
   if (W.phase === 'stand' && !standing) W.phase = 'walk';
   if ((W.phase === 'stand' || W.phase === 'walk') && W.pair < 3) { // la siguiente pareja de huellas: cada mano, la suya
-    for (const p of IW.prints) {
-      if (p.pair !== W.pair || p.done) continue; const h = hands[p.side]; if (!h.ok) continue;
-      arena.worldToLocal(_iww.copy(h.wrist)); if (_iww.y < 0.22 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < 0.22) { p.done = true; SND.tick(); haptic(p.side, 0.3, 25); }
-    }
+    for (const p of IW.prints) if (p.pair === W.pair && !p.done && iwOn(p)) iwHit(p, false);
     if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
   }
   if (W.phase === 'plank') {
     const req = dv('pushDepth') / 100, before = stats.reps;
     vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
-    if (stats.reps > before) W.phase = 'back'; // disparó: ahora, de vuelta y de pie
+    if (stats.reps > before) { W.phase = 'back'; W.bpair = 1; for (const p of IW.prints) if (p.pair === 2) iwHit(p, true); } // disparó: ahora, de vuelta (las últimas, ya pisadas) y de pie
     else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
   } else if (W.phase === 'walk' && standing) { if (W.pair > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
-  else if (W.phase === 'back' && standing) iwLayout(); // de pie otra vez: nuevas huellas
-}
-function iwVisual(t) {
-  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
-  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8);
-  for (const p of IW.prints) {
-    const next = (W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done, fin = W.phase === 'plank' && p.pair === 2;
-    p.m.material.opacity = next ? pulse : fin ? 0.95 : p.done ? 0.35 : W.phase === 'back' ? 0.25 : 0.55;
-    p.m.scale.setScalar(next ? 1.12 : 1);
+  else if (W.phase === 'back') {
+    // la vuelta: otra vez por las huellas, al revés (las del medio y las primeras)
+    if (W.bpair >= 0) { for (const p of IW.prints) if (p.pair === W.bpair && !p.back && iwOn(p)) iwHit(p, true); if (IW.prints.filter(p => p.pair === W.bpair).every(p => p.back)) W.bpair--; }
+    // hecha la vuelta, al despegar las manos del suelo (o ya de pie), la onda
+    if (W.bpair < 0 && !W.waved && (standing || ['left', 'right'].every(s => !hands[s].ok || arena.worldToLocal(_iww.copy(hands[s].wrist)).y > 0.3))) { W.waved = true; iwWave(); }
+    if (standing) { iwLayout(); W.waved = false; } // de pie otra vez: nuevas huellas
   }
 }
+// ¿La mano de esta huella está sobre ella? (con margen: no hace falta acertar dentro)
+function iwOn(p) { const h = hands[p.side]; if (!h.ok) return false; arena.worldToLocal(_iww.copy(h.wrist)); return _iww.y < 0.25 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < (p.reach || 0.22); }
+function iwVisual(t) {
+  const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
+  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8), dt = Math.min(0.1, t - (IW.lastT || t)); IW.lastT = t;
+  for (const p of IW.prints) {
+    const next = ((W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done) || (W.phase === 'back' && p.pair === W.bpair && !p.back), full = p.done || p.back, mat = p.m.material;
+    const tex = full ? p.tex.full : p.tex.hollow; if (mat.map !== tex) { mat.map = tex; mat.needsUpdate = true; }
+    p.flash = Math.max(0, p.flash - dt * 3);
+    mat.color.copy(p.back ? IW_GOLD : p.col).lerp(_iwWhite, p.flash * 0.7); // (destella en blanco y se queda de su color)
+    mat.opacity = next ? pulse : full ? 0.95 : 0.6;
+    p.m.scale.setScalar((next ? 1.12 : 1) * (1 + 0.35 * p.flash));
+  }
+}
+const _iwWhite = new THREE.Color(1, 1, 1);
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
@@ -1610,13 +1660,13 @@ function runDetectors(t, dt) {
         S.peak = y;
       }
     } else if (S.state === 'up') {
-      const held = t - S.t0; S.peak = Math.max(S.peak, y);
+      const held = t - S.t0; S.peak = Math.max(S.peak, y); S.k = clamp(held / Math.max(0.1, hold), 0, 1); // (la carga de la bola de energía: 54_suporb)
       if (y < S.ref + req * 0.6) { onPartial(`¡Aguanta ${fmtNum(hold)} s arriba!`); S.state = 'down'; S.peak = y; }
       else {
         // manos recogidas durante un rato: el tiempo se para (un fallo suelto del seguimiento no cuenta)
         S.armT = armsBack() ? S.armT + dt : 0;
         if (S.armT > 0.4) { S.t0 += dt; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
-        else if (held >= hold) { onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
+        else if (held >= hold) { SORB.fireAt = sorbFire(); onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); SORB.fireAt = null; S.state = 'top'; }
         else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
       }
     } else {
@@ -2063,7 +2113,8 @@ function foesMenu(back) {
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
 // Rangos: la dificultad. Cada modo con cada ejercicio guarda el suyo (va con sus ajustes: comboSave); elegir uno pone sus
-// valores en ese ejercicio y, si luego retocas algo a mano, se ve «retocado» y se puede volver a sus valores de serie
+// valores en ese ejercicio. Lo que cambias a mano en un rango se queda como valor de ese rango en ese ejercicio (en la
+// tabla de 67_dev, la misma que ve el desarrollador): es lo que se pone cada vez que empiezas ese ejercicio con ese rango
 const RANK = { applying: false };
 const rankIdx = (r = settings.rank) => Math.max(0, RANKS.findIndex(o => o[0] === r));
 const rankName = (r = settings.rank) => RANKS[rankIdx(r)][1];
@@ -2072,20 +2123,19 @@ function rankVals(r = settings.rank) { const i = rankIdx(r), o = {}; for (const 
 function applyRank() { RANK.applying = true; try { const v = rankVals(); for (const k in v) setSetting(k, v[k]); } finally { RANK.applying = false; } } // (solo en este modo y ejercicio)
 settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) applyRank(); });
 const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
-const rankTouched = () => { const v = rankVals(); return Object.keys(v).some(k => rankDiff(settings[k], v[k])); };
-function rankReset() { applyRank(); }
+// lo que tocas tú (no lo que pone el rango, un perfil, el ejercicio al cargarse ni el bloque de una sesión), a la tabla
+settingHooks.push(k => {
+  if (RANK.applying || comboLoading || SES.active || !FIELD[k] || !devRows().includes(k)) return;
+  const i = rankIdx(), fa = (devFact().v || {})[k], base = clampSetting(FIELD[k], fa && fa[i] !== undefined && fa[i] !== null ? fa[i] : devBase(k, i));
+  devSet(k, i, rankDiff(settings[k], base) ? settings[k] : null); // (igual que el de serie: la casilla vuelve a «de serie»)
+});
+
 // Los rangos de antes eran uno para todo: el que tenías pasa a cada modo y ejercicio ya guardado (una vez)
 (function rankMigrate() {
   if (settings.rankV === 2) return;
   const all = store(COMBO_KEY) || {}; for (const id in all) if (all[id] && all[id].rank === undefined) all[id].rank = settings.rank;
   store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
 })();
-// Tus rangos en los ejercicios que has jugado (los de la vista, primero el de ahora)
-function rankList() {
-  const all = store(COMBO_KEY) || {}, cur = comboId(), out = [];
-  for (const id in all) { const [m, x] = id.split('|'); if (id === cur || !MODE_NAMES[m] || !EX_NAMES[x] || !all[id].rank) continue; out.push({ id, m, x, r: clampSetting(FIELD.rank, all[id].rank) }); }
-  return out.sort((a, b) => rankIdx(b.r) - rankIdx(a.r));
-}
 // Subir o bajar de rango: tras 3 rondas ganadas seguidas con un 70 % de perfectas o más, el resumen propone subir; tras 2
 // derrotas seguidas, bajar. Nunca cambia solo: lo decides tú con un botón. Se cuenta por modo y ejercicio
 const RANKFIT_KEY = 'reparena3-rankfit';
@@ -2096,28 +2146,6 @@ function rankFitAdd(win, pct) {
   else if (L.length >= 2 && L.slice(-2).every(r => !r.win) && i > 0) to = RANKS[i - 1][0];
   if (to) { all[id] = []; store(RANKFIT_KEY, all); } // (propuesto una vez: para la siguiente, otra racha)
   return to;
-}
-// Lo que el rango cambia en el modo elegido, en pocas palabras
-function rankSummary() {
-  const v = settings, L = [v.lives ? `${v.lives} ${v.lives === 1 ? 'vida' : 'vidas'}` : 'vidas infinitas'];
-  if (isCombat()) L.push(`llegan en ${fmtNum(v.walkTime)} s`, `${v.maxAlive} a la vez`, `vuelo a ${fmtNum(v.flySpeed)} km/h`);
-  else if (settings.mode === 'arcs') L.push(`${v.arcRate} arcos/min a ${fmtNum(v.arcSpeed)} km/h`, `espera máx. ${fmtNum(v.arcMaxGap)} s`);
-  else if (settings.mode === 'touch') L.push(`llegan en ${fmtNum(v.tchArrive)} s`, `${fmtNum(v.tchWindow)} s para tocar`);
-  else L.push(`llegan en ${fmtNum(v.barArrive)} s`, v.barWait ? `${v.barWait} s para reventar` : 'sin límite para reventar');
-  L.push(v.ramp ? `+${v.ramp} % por oleada` : 'sin dificultad creciente');
-  if (isCombat() && settings.guard !== 'off') L.push(`defensa ${({ easy: 'fácil', normal: 'normal', hard: 'difícil' })[v.guardDiff]}`);
-  return L.join(' · ');
-}
-function rankMenu(back) {
-  const again = () => rankMenu(back), n = rankName(), cur = settings.rank, touched = rankTouched(), others = rankList();
-  const pickRow = list => ({ t: 'btns', h: 0.066, items: list.map(([k, lab]) => ({ label: lab, badge: rankIdx(k), style: k === cur ? 'selected' : 'normal', onPress: () => { setSetting('rank', k); again(); } })) });
-  const rows = [{ t: 'title', text: 'RANGO' }, { t: 'text', text: `Para ${EX_NAMES[settings.exercise]} · ${MODE_NAMES[settings.mode]}: cada ejercicio guarda el suyo. Del recluta (un galón, lo más fácil) al general (tres estrellas).` },
-    pickRow(RANKS.slice(0, 4)), pickRow(RANKS.slice(4)),
-    { t: 'text', text: `${n}${touched ? ' (retocado)' : ''}: ${rankSummary()}`, color: '#ffd166' },
-    ...(touched ? [{ t: 'btns', items: [{ label: `Volver a ${n} de serie`, onPress: () => { rankReset(); again(); } }] }] : []),
-    ...(others.length ? [{ t: 'text', text: 'En los demás: ' + others.slice(0, 6).map(o => `${EX_SHORT[o.x] || EX_NAMES[o.x]}${o.m !== 'combat' ? ` (${MODE_NAMES[o.m]})` : ''} ${rankName(o.r).toLowerCase()}`).join(' · ') + (others.length > 6 ? ' …' : ''), color: '#a49fc8' }] : []),
-    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
-  const m = openMenu(rows, { accent: '#ffd166' }); m.rebuild = again;
 }
 // Con qué atacas: las pistolas, las manos (o la puntería automática o con la mirada) y las espadas, en su submenú
 const armsAny = () => SCHEMA.some(f => f.g === 'armas' && fieldVisible(f));
@@ -2146,7 +2174,6 @@ function lobbyMenu() {
     ...[0, 2].map(k => ({ t: 'btns', items: M.slice(k, k + 2).map(modeBtn) })),
     { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
     { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); lobbyMenu(); } })) },
-    { t: 'btns', items: [{ label: `Rango: ${rankName()}${rankTouched() ? ' (retocado)' : ''}  ▸`, badge: rankIdx(), onPress: () => rankMenu(lobbyMenu) }] },
     ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] }] : []),
     ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] }] : [])];
   const eyeF = (menuFull() ? [] : devEye()).filter(k => FIELD[k] && fieldVisible(FIELD[k]));
@@ -2209,10 +2236,9 @@ function settingsMenu(back, tab = settingsTab) {
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   if (tab === 'ejercicio') rows.push({ t: 'text', text: BODY_NOTE, color: '#a49fc8' });
   SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
-  // el desarrollador: menú completo o el del jugador, a un toque, y sus retoques de este rango, a la tabla
-  if (DEV.on) { const simple = !menuFull(), i = rankIdx(), own = devRows().filter(k => rankDiff(settings[k], devVal(k, i)));
-    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } },
-      ...(own.length ? [{ label: `Guardar ${own.length} retoque${own.length > 1 ? 's' : ''} en la tabla (${rankName()})`, style: 'primary', onPress: () => { own.forEach(k => devSet(k, i, settings[k])); say(`Tabla: ${own.length} valor${own.length > 1 ? 'es' : ''} de ${rankName()} guardado${own.length > 1 ? 's' : ''}`, '#ffd166', 2); settingsMenu(back, tab); } }] : [])] }); }
+  // el desarrollador: menú completo o el del jugador, a un toque (lo que cambias va solo a la tabla, en este rango)
+  if (DEV.on) { const simple = !menuFull();
+    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] }); }
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) settingsMenu(back, tab); } }] }); // (cinco toques: modo desarrollador)
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
@@ -2293,7 +2319,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
+  stats = newStats(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -2422,7 +2448,7 @@ function endRun(win, manual) {
     : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
     : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
     : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
-  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName() + (rankTouched() ? ' (retocado)' : ''),
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName(),
     sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
@@ -2593,7 +2619,7 @@ function gameStep(dt, t) {
   else if (state === 'mount') barMountStep(dt);
   // (el marcador se redibuja cada segundo: lleva el tiempo de hoy)
   if (['ready', 'play', 'rest'].includes(state)) { if (state !== 'ready') { stats.time += dt; if ((stats.time | 0) !== ((stats.time - dt) | 0)) boardDirty = true; } if (state === 'play') stats.work += dt; runDetectors(t, dt); }
-  iwVisual(t);
+  iwVisual(t); iwWaveStep(dt);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
     spawnTimer -= dt * perkSpawnK();
@@ -2631,4 +2657,5 @@ function gameStep(dt, t) {
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
   if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
+  sorbStep(dt, settings.exercise === 'superman' && DET.su.state === 'up' && GAME_STATES.includes(state) ? DET.su.k || 0 : -1); // superman: la bola de energía
 }

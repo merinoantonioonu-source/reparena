@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, rankTouched, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, rankMenu, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -87,7 +87,8 @@ function menuTop() { const g = RA.menu.group, h = RA.menu.H / 2; return new THRE
 // ONLY=expresión: solo las partidas cuyo nombre encaja (para depurar deprisa)
 // Pone unos ajustes como antes de guardarlos por modo y ejercicio: sin lo guardado, el modo y el ejercicio primero
 function applyCfg(cfg) { storage.delete('reparena3-combos'); RA.PV.guard = false; if (!('guard' in cfg)) cfg = { ...cfg, guard: 'off' }; if (!('perks' in cfg)) cfg = { ...cfg, perks: 0 }; if (!('foeLadder' in cfg)) cfg = { ...cfg, foeLadder: 0 }; // (la defensa y las mejoras, que esperan a que elijas, solo en sus pruebas)
-  for (const k of ['mode', 'exercise']) if (k in cfg) RA.setSetting(k, cfg[k]); for (const k in cfg) if (k !== 'mode' && k !== 'exercise') RA.setSetting(k, cfg[k]); }
+  // (como los pone el juego, no tú: no van a la tabla del rango)
+  RA.RANK.applying = true; try { for (const k of ['mode', 'exercise']) if (k in cfg) RA.setSetting(k, cfg[k]); for (const k in cfg) if (k !== 'mode' && k !== 'exercise') RA.setSetting(k, cfg[k]); } finally { RA.RANK.applying = false; } }
 async function runConfig(name, cfg, simulate, maxSec = 420, check, unfinished = false) {
   if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   // (cada prueba parte de lo que hay: sin lo guardado de cada modo y ejercicio, y el modo y el ejercicio antes que lo demás)
@@ -191,6 +192,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { let A = null; await runConfig('superman: tiempo para cargar', { ...base, mode: 'combat', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 7, maxAlive: 5, waves: 1, repsWave: 14, lives: 0 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 4.5) < 3.2; }, 300, s => { A = { ...s }; });
     if (A && (A.taken > 2 || A.reps < 6)) errors.push(`superman: los voladores pican antes de que dé tiempo a cargar el disparo (${A.taken} picotazos en ${A.reps} repeticiones)`); }
   await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, watchPanels(t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }), 420, panelCheck('superman', s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : ''));
+  // aguantando arriba, entre las manos se carga la bola de energía: visible, con la capa de rayos creciendo; al disparar
+  // estalla (y el rayo sale de ella); bajando antes, se deshace
+  { const B = { vis: 0, k0: 9, k1: 0, sh0: 9, sh1: 0, burst: 0, fizz: 0 };
+    await runConfig('Superman: la bola de energía', { ...supCfg, waves: 1, repsWave: 3 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; const S = RA.SORB;
+      if (S.g.visible && S.on) { B.vis++; B.k0 = Math.min(B.k0, S.k); B.k1 = Math.max(B.k1, S.k); B.sh0 = Math.min(B.sh0, S.shell.scale.x); B.sh1 = Math.max(B.sh1, S.shell.scale.x); }
+      if (S.burst > 0) B.burst++; if (S.fizz > 0) B.fizz++; }, 60, s => '', true);
+    await runConfig('Superman: la bola se deshace', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; if (RA.SORB.fizz > 0) B.fizz++; }, 12, s => '', true);
+    log(`superman energy ball: visible ${B.vis} frames · charge ${B.k0.toFixed(2)}→${B.k1.toFixed(2)} · bolt layer ${B.sh0.toFixed(3)}→${B.sh1.toFixed(3)} m · burst on firing ${B.burst > 0} · fizzles when dropped early ${B.fizz > 0}`);
+    if (!B.vis || B.k1 < 0.9 || B.sh1 < B.sh0 * 2 || !B.burst || !B.fizz) errors.push('superman: aguantando arriba debería cargarse la bola de energía (con su capa de rayos creciendo), estallar al disparar y deshacerse si bajas antes'); }
   await runConfig('Enjambre+superman demasiado corto', { ...supCfg, waves: 1 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.5) < 1.0; }, 30, s => s.reps ? 'subir y bajar rápido no debería disparar' : !s.partial ? 'debería avisar de que hay que aguantar' : '', true);
   await runConfig('Enjambre+superman brazos encogidos', { ...supCfg, waves: 1 }, t => { RA.PV.keys.KeyR = true; RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }, 30, s => s.reps ? 'con los brazos encogidos no debería disparar' : '', true);
   RA.PV.keys.KeyR = false;
@@ -207,9 +217,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Antebrazos con giros cortos', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, waves: 1, walkTime: 30 }, squatSim(1.6), 25, s => s.reps ? 'giros cortos no deberían disparar' : !s.partial ? 'debería avisar de que hay que girar más' : '', true);
   RA.PV.twistScale = 1; RA.PV.crouch = false;
   // sentadillas en combate: aguantar abajo carga el disparo (×2, ×3, ×4), como en las flexiones
-  for (const aim of ['auto', 'hands']) { let maxPow = 1;
-    await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]); }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
-    log(`  squat held low (${aim}): charge up to ×${maxPow}`); }
+  for (const aim of ['auto', 'hands']) { let maxPow = 1; const F = { seen: new Set(), y: 9, gone: null };
+    await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]);
+      // la carga, también en el suelo (agachado es lo que ves): ×2, ×3 y, a ×4, «¡ARRIBA!»; se va al disparar
+      const cm = RA.CHG.p.mesh; if (cm.visible) { F.seen.add(RA.CHG.text); F.y = Math.min(F.y, cm.position.y); } if (F.seen.size && !RA.PV.crouch && t % 5 > 4 && F.gone === null) F.gone = !cm.visible; }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
+    log(`  squat held low (${aim}): charge up to ×${maxPow} · on the floor: ${[...F.seen].join(' → ')} (y ${F.y.toFixed(2)}) · gone after standing up ${F.gone}`);
+    if (!F.seen.has('CARGA ×2') || !F.seen.has('×4 · ¡ARRIBA!') || F.y > 0.1 || !F.gone) errors.push('carga: debería verse en el suelo (×2… y a ×4 «¡ARRIBA!») e irse al disparar'); }
   // zancadas: también cargan aguantando abajo; y bajando mucho más de lo pedido, la recarga profunda (×4 al instante)
   { let lunge = 1, deep = 0, deepOff = 0, quick = 1;
     await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
@@ -471,10 +484,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }
     for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
-  const iwMid = new Set();
+  const iwMid = new Set(), IWF = { full: 0, gold: 0, flash: 0, home: 0, homeOk: 0, speed: null };
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
     RA.PV.iwAuto = true; const m = RA.IW.prints.find(p => p.pair === 1 && p.side === 'left'); iwMid.add(m.x.toFixed(2) + m.z.toFixed(2));
+    // cada huella pisada se rellena (de su color a la ida, dorada a la vuelta) y destella; al acabar la vuelta, la onda
+    for (const p of RA.IW.prints) { if (p.m.material.map === p.tex.full) IWF.full++; if (p.back) IWF.gold++; if (p.flash > 0.9) IWF.flash++; }
+    for (const e of RA.enemies) if (e.type === 'spider' && e.alive) { if (IWF.speed === null && e.mode === 'run') { IWF.speed = e.avg; IWF.dist = e.startD; } if (e.mode === 'recoil' && e.lungeTo.distanceTo(e.home) < 0.01 && !e._h) { e._h = true; IWF.home++; } }
   }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : iwMid.size < 3 ? 'inchworm: las huellas del medio no cambian de sitio' : RA.IW.prints.length !== 6 ? 'inchworm: no hay seis huellas' : '');
+  log(`  inchworm prints: filled ${IWF.full} frames · gold on the way back ${IWF.gold} · flashes ${IWF.flash} · shockwaves ${RA.stats.waves || 0} · spiders sent home ${IWF.home} · spider speed ${IWF.speed && IWF.speed.toFixed(3)} m/s for ${IWF.dist && IWF.dist.toFixed(2)} m with «llegan en 10 s» (${IWF.speed && (IWF.dist / IWF.speed).toFixed(0)} s)`);
+  if (!IWF.full || !IWF.gold || !IWF.flash) errors.push('inchworm: al pisar cada huella debería destellar y rellenarse (a la vuelta, dorada)');
+  if ((RA.stats.waves || 0) < 3 || !IWF.home) errors.push('inchworm: al acabar la vuelta y despegar las manos debería salir la onda que devuelve los bichos a su trampilla');
+  if (!(IWF.dist / IWF.speed > 20)) errors.push(`inchworm: los bichos deberían llegar mucho más despacio (en ${IWF.dist / IWF.speed} s con «llegan en 10 s»)`);
   await runConfig('inchworm sin las huellas del medio', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
     s => s.reps ? 'inchworm: sin pasar por todas las huellas no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que faltan huellas' : '', true);
   RA.PV.iwAuto = RA.PV.iwSkip = false; RA.PV.iwT = 0;
@@ -607,7 +627,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // importa, y es de cada modo y ejercicio
   { const sv = { ...RA.settings }; RA.devImport('{}'); RA.setSetting('mode', 'arcs'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'cabo');
     RA.devSet('arcSpeed', 2, 9.5); RA.devSet('arcTilt', 2, 40); const now = [RA.settings.arcSpeed, RA.settings.arcTilt];
-    RA.setSetting('rank', 'general'); const gen = [RA.settings.arcSpeed, RA.settings.arcTilt]; RA.setSetting('rank', 'cabo'); const back = [RA.settings.arcSpeed, RA.settings.arcTilt], touched = RA.rankTouched();
+    RA.setSetting('rank', 'general'); const gen = [RA.settings.arcSpeed, RA.settings.arcTilt]; RA.setSetting('rank', 'cabo'); const back = [RA.settings.arcSpeed, RA.settings.arcTilt], touched = false;
     const exp = RA.devExport(), html = RA.devTableHTML(), rows = RA.devRows();
     RA.devImport('{}'); const cleared = RA.devCell('arcSpeed', 2) === null; const msg = RA.devImport(exp), again = RA.devCell('arcTilt', 2);
     RA.setSetting('mode', 'combat'); const other = RA.devCell('arcSpeed', 2), bad = RA.devImport('no es json');
@@ -1068,22 +1088,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
     if (!btn || mainHas) errors.push('armas: el menú principal debería llevar el botón Armas ▸ en lugar de los ajustes sueltos');
     RA.setSetting('foesGate', fg); RA.setSetting('foesFly', ff); RA.setSetting('aim', 'auto'); RA.setSetting('mode', 'walkers'); RA.lobbyMenu(); frame(1); }
-  // rangos: cada uno pone toda la dificultad (también la de la defensa); retocado se nota y se vuelve a como venía
+  // rangos: cada uno pone toda la dificultad (también la de la defensa); se eligen con la hilera de galones del menú (sin
+  // otro selector debajo); lo que cambias en un rango se queda como valor de ese rango en ese ejercicio (en la tabla)
   { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'general'); const g = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
     RA.setSetting('rank', 'recluta'); const r = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
-    RA.lobbyMenu(); frame(1); const btn = RA.activeWidgets().find(w => /^Rango: /.test(w.label)); const badge = btn && btn.badge;
-    btn.onPress(); frame(1); const picks = RA.activeWidgets().filter(w => w.badge !== undefined).length; press('Sargento'); frame(1); const sg = RA.settings.walkTime;
-    RA.setSetting('walkTime', 30); const touched = RA.rankTouched(); RA.rankMenu(() => RA.lobbyMenu()); frame(1); press('Volver a Sargento de serie'); frame(1); const back = RA.settings.walkTime; press('Volver'); frame(1);
-    log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · main menu badge ${badge} · ${picks} ranks with insignia · sargento llegan en ${sg} s · retocado ${touched} · back to stock ${back}`);
+    RA.lobbyMenu(); frame(1); const badges = RA.activeWidgets().filter(w => w.badge !== undefined), dup = RA.activeWidgets().some(w => /^Rango: /.test(w.label || ''));
+    badges[3].onPress(); frame(1); const sg = [RA.settings.rank, RA.settings.walkTime];
+    RA.setSetting('walkTime', 30); const cell = RA.devCell('walkTime', 3); RA.setSetting('rank', 'cabo'); const cabo = RA.settings.walkTime; RA.setSetting('rank', 'sargento'); const kept = RA.settings.walkTime;
+    RA.setSetting('walkTime', 11); const back = [RA.settings.walkTime, RA.devCell('walkTime', 3)];
+    log(`ranks: general ${JSON.stringify(g)} · recluta ${JSON.stringify(r)} · ${badges.length} insignia buttons, rank button below ${dup} · 4th → ${sg} · walk 30 on sargento → table ${cell}, cabo ${cabo}, sargento again ${kept} · back to 11 → ${JSON.stringify(back)}`);
     if (!(g.walk < r.walk && g.max > r.max && g.lives === 1 && r.lives === 0 && g.gd === 'hard' && r.gd === 'easy')) errors.push('rangos: el general debería ser más difícil que el recluta (también la defensa)');
-    if (badge !== 0 || picks !== 7 || sg !== 11 || !touched || back !== 11) errors.push('rangos: no se eligen o no vuelven a como venían');
-    const dirty = ['recluta', 'soldado', 'cabo', 'sargento', 'teniente', 'capitan', 'general'].filter(k => { RA.setSetting('rank', k); return RA.rankTouched(); });
-    if (dirty.length) errors.push('rangos: recién elegidos ya salen como retocados: ' + dirty.join(', '));
-    // cada ejercicio guarda su rango (con sus retoques): sargento retocado en sentadillas, recluta en curl
+    if (badges.length !== 7 || dup || sg[0] !== 'sargento' || sg[1] !== 11) errors.push('rangos: deberían elegirse con la hilera de galones, sin otro selector debajo');
+    if (cell !== 30 || cabo === 30 || kept !== 30 || back[0] !== 11 || back[1] !== null) errors.push('rangos: lo que cambias en un rango debería quedarse como su valor en ese ejercicio (y en la tabla)');
+    // cada ejercicio guarda su rango (con sus valores): sargento con 25 s en sentadillas, recluta en curl
     RA.setSetting('rank', 'sargento'); RA.setSetting('walkTime', 25); RA.setSetting('exercise', 'curl'); RA.setSetting('rank', 'recluta'); const curl = [RA.settings.rank, RA.settings.walkTime];
-    RA.setSetting('exercise', 'squat'); const sq = [RA.settings.rank, RA.settings.walkTime, RA.rankTouched()]; RA.setSetting('exercise', 'curl'); const curl2 = RA.settings.rank;
+    RA.setSetting('exercise', 'squat'); const sq = [RA.settings.rank, RA.settings.walkTime]; RA.setSetting('exercise', 'curl'); const curl2 = RA.settings.rank;
     log(`   per exercise: curl ${JSON.stringify(curl)} · back to squats ${JSON.stringify(sq)} · curl again ${curl2}`);
-    if (curl[0] !== 'recluta' || sq[0] !== 'sargento' || sq[1] !== 25 || !sq[2] || curl2 !== 'recluta') errors.push('rangos: cada ejercicio debería guardar su rango (y sus retoques)');
+    if (curl[0] !== 'recluta' || curl[1] === 25 || sq[0] !== 'sargento' || sq[1] !== 25 || curl2 !== 'recluta') errors.push('rangos: cada ejercicio debería guardar su rango (y sus valores)');
     // subir o bajar: 3 rondas ganadas con muchas perfectas proponen subir; 2 derrotas, bajar (solo lo propone)
     storage.delete('reparena3-rankfit'); const a1 = RA.rankFitAdd(true, 90), a2 = RA.rankFitAdd(true, 80), up = RA.rankFitAdd(true, 75), keep = RA.settings.rank;
     const d1 = RA.rankFitAdd(false, 40), down = RA.rankFitAdd(false, 30), mixed = (RA.rankFitAdd(true, 50), RA.rankFitAdd(true, 90), RA.rankFitAdd(true, 90));
@@ -1142,7 +1163,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`never behind you: after stepping 1.5 m forward, enemies checked ${seen} times · closest to your side ${worst.toFixed(2)} m (must stay below −${RA.FRONT_MIN})`);
     if (!seen || worst > -RA.FRONT_MIN + 0.02) errors.push('los enemigos no deberían ponerse a tu altura ni detrás de ti (también si avanzas)');
     // un puñetazo rápido al que tienes delante lo echa atrás y lo aturde, sin quitarle vida
-    const e = RA.enemies.find(x => x.alive && x.type === 'robot' && x.out && ['walk', 'windup', 'strike'].includes(x.state)); // (no uno que ya retrocede tras golpear)
+    const ready = () => RA.enemies.find(x => x.alive && x.type === 'robot' && x.out && ['walk', 'windup', 'strike'].includes(x.state)); // (no uno que ya retrocede tras golpear)
+    for (let i = 0; i < 300 && !ready(); i++) step(1); // (si justo está retrocediendo, se le espera)
+    const e = ready();
     let stun = 0, hp0 = 0, hp1 = 0, back = 0, slow = 0;
     if (e) {
       const h = RA.hands.left, c = e.center(new V()), dir = c.clone().sub(RA.head.p).normalize(); hp0 = e.hp; const away = () => Math.hypot(e.pos.x - RA.HL.x, e.pos.z - RA.HL.z), d0 = away();
