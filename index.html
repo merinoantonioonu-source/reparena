@@ -518,6 +518,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, en cada descanso eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma; si no eliges, te toca una al azar). El marcador te dice cuántas repeticiones llevas de más o de menos que en <b>tu mejor ronda</b> en ese momento. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble y, en algunos descansos, un cofre que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
@@ -715,6 +716,9 @@ const SCHEMA = [
   { key: 'hangTime', g: 'partida', label: 'Tiempo colgado en la primera oleada', short: 'Colgado 1.ª oleada', type: 'num', min: 5, max: 300, step: 5, def: 20, unit: 's', ex: ['hang'] },
   { key: 'hangInc', g: 'partida', label: 'Segundos extra colgado en cada oleada', short: 'Segundos extra', type: 'num', min: 0, max: 120, step: 5, def: 5, unit: 's', ex: ['hang'] },
   { key: 'ramp', g: 'partida', label: 'Dificultad creciente', short: 'Dif. creciente', type: 'num', min: 0, max: 15, step: 1, def: 4, unit: '% por oleada', zero: 'No', hint: 'Lo pone el rango (aquí, retocarlo). Cada oleada que superas con soltura, la siguiente es algo más difícil: los enemigos (o los arcos, los objetivos…) llegan antes, salen algo más seguidos y algunos más a la vez, sus gestos van más deprisa, hay menos tiempo para tocarlos, y el ejercicio pide algo más de recorrido. Si en una oleada te dan mucho, la siguiente sigue igual. Sube este porcentaje cada vez, hasta un +60 % (el recorrido, como mucho un +24 %). 0 = siempre igual.' },
+  { key: 'perks', g: 'partida', label: 'Mejoras entre oleadas', short: 'Mejoras', type: 'toggle', def: 1, modes: ['combat'], hint: 'En cada descanso eliges 1 de 3 cartas (escudo, escarcha, onda, corazón…) para el resto de la ronda. No dan más disparos: las oleadas piden las mismas repeticiones.' },
+  { key: 'surprises', g: 'partida', label: 'Sorpresas', type: 'toggle', def: 1, modes: ['combat'], hint: 'De vez en cuando, un enemigo dorado (×3 puntos), un relámpago (20 s de llegadas seguidas y puntos ×2) o, en el descanso, un cofre que se abre saltando.' },
+  { key: 'ghost', g: 'partida', label: 'Carrera contra tu récord', short: 'Contra tu récord', type: 'toggle', def: 1, modes: ['combat', 'touch', 'bars'], hint: 'El marcador dice cuántas repeticiones llevas de más o de menos que en tu mejor ronda de este ejercicio, en el mismo momento; al superarla, ¡nuevo récord!' },
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
@@ -857,7 +861,8 @@ const SCHEMA = [
   { key: 'toasts', g: 'sistema', label: 'Avisos breves en la vista', short: 'Avisos en vista', type: 'toggle', def: 1 },
   { key: 'volume', g: 'sonido', label: 'Volumen de efectos', short: 'Volumen', type: 'num', min: 0, max: 100, step: 5, def: 80, unit: '%' },
   { key: 'ambient', g: 'sonido', label: 'Sonido ambiente', short: 'Ambiente', type: 'num', min: 0, max: 100, step: 5, def: 60, unit: '%' },
-  { key: 'bpm', g: 'sonido', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' }
+  { key: 'bpm', g: 'sonido', label: 'Ritmo de la música', short: 'Ritmo', type: 'num', min: 0, max: 200, step: 1, def: 0, unit: 'BPM', zero: 'libre', modes: ['touch', 'combat'], hint: 'Con un ritmo, en Toques los objetivos llegan a ti en el pulso; en Combate los enemigos salen en el pulso, los robots pisan al compás y atacan en el pulso y los voladores hacen sus quiebros en el pulso. Márcalo en el juego tocando al compás (o pídeselo a Spotify).' },
+  { key: 'musicLead', g: 'sonido', label: 'La música manda', short: 'Música manda', type: 'toggle', def: 1, modes: ['combat'], hint: 'Con ritmo (marcado o de Spotify): el relámpago empieza al inicio de una frase de la canción, con cuenta atrás al compás; cada canción nueva trae uno, y la luz de la compuerta late con el pulso.' },
 ];
 const FIELD = {}; SCHEMA.forEach(f => FIELD[f.key] = f);
 const settings = { mode: 'combat', exercise: 'squat' };
@@ -2405,7 +2410,8 @@ function layoutArena() {
   keyLight.target.position.set(0, 0, -D * 0.45);
   const ext = Math.max(6, D * 0.65); Object.assign(keyLight.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); keyLight.shadow.camera.updateProjectionMatrix();
   keyLight.position.set(-5, 10, 4 - D * 0.45);
-  while (boardRig.children.length) boardRig.remove(boardRig.children[0]);
+  // el soporte anterior se tira y sus piezas se liberan (se hace otro en cada ronda); el panel y los materiales se reutilizan
+  while (boardRig.children.length) { const o = boardRig.children[0]; o.traverse(n => { if (n.geometry && n !== board.mesh) n.geometry.dispose(); }); boardRig.remove(o); }
   const rig = new THREE.Group(); boardRig.add(rig);
   const k = new Kit();
   if (low) {
@@ -2497,7 +2503,7 @@ function updateEnv(dt, t) {
       for (const p of smokeCols) if (Math.random() < 0.5) fx.bigSmoke(p);
     }
   }
-  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + Math.max(...gates.map(g => g.open)) * 1.5;
+  gateLight.intensity = (arMode ? 0.6 : 1.4) * (0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 7.3)) + Math.max(...gates.map(g => g.open)) * 1.5 + (ENV.beat || 0) * 2.5; // (y late con la música: 79_perks)
 }
 function updateGates(dt, t) {
   for (const g of gates) {
@@ -5000,6 +5006,9 @@ function bakeRigClips(U, M) {
   }
   mx.stopAllAction(); return out;
 }
+// Cada copia de un modelo animado lleva sus esqueletos y cada esqueleto, su textura de huesos en la tarjeta gráfica: al
+// retirar al enemigo se liberan (si no, se acumulaban unas siete por ronda)
+const skelFree = model => ({ dispose() { const s = new Set(); model.traverse(m => { if (m.isSkinnedMesh && m.skeleton) s.add(m.skeleton); }); s.forEach(k => k.dispose && k.dispose()); } });
 // Hace de «rig» para el constructor de los robots: cada ejemplar es una copia del modelo con su propio esqueleto y material
 function beastRig(kind) {
   return { kind: 'beast', instance() {
@@ -5019,7 +5028,7 @@ function beastRig(kind) {
     if (D.own) model.scale.setScalar(D.k); // el zombi y los dinosaurios ya miran hacia +Z
     else model.rotation.y = Math.PI; // con las animaciones de la biblioteca, el modelo mira hacia −Z: se gira para que mire hacia donde va
     const bn = D.bones || { chest: 'spine_03', head: 'Head', handR: 'hand_r' }, bones = { chest: model.getObjectByName(bn.chest), head: model.getObjectByName(bn.head), handR: model.getObjectByName(bn.handR) };
-    return { root, model, mat, bones, meshes: {}, list: [], skel: { dispose() {} }, variant: v };
+    return { root, model, mat, bones, meshes: {}, list: [], skel: skelFree(model), variant: v };
   } };
 }
 loadBeasts();
@@ -5541,12 +5550,12 @@ function buildKeys(group, list, kh, tray) {
   g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
   // (se pintan después de la esfera negra del final de la ronda, OUT.black, que tapa todo lo opaco: si no, en el resumen las
   // teclas salían negras y no se leía lo que ponían)
-  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; group.add(mesh);
+  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; mesh.userData.own = 'all'; group.add(mesh);
   if (comicOn()) { // contorno de tinta de las teclas y la bandeja (comparte las posiciones: al hundir una tecla, su contorno la sigue)
     g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); outN(g);
     // (solo los laterales: la cara de arriba es cóncava y, vista en ángulo, su contorno asomaba por ella como grietas)
     const go = new THREE.BufferGeometry(); go.setAttribute('position', pos); go.setAttribute('normal', g.attributes.normal); go.setAttribute('aOutN', g.attributes.aOutN); go.setIndex(IO);
-    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
+    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.userData.own = 'geo'; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
   }
   const base = new Float32Array(P), K = { mesh, pos, col, base };
   const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
@@ -5557,7 +5566,7 @@ function buildKeys(group, list, kh, tray) {
     w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
     if (w.kind === 'slider') { // la bolita: se arrastra por la ranura
       const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
-      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; w.mesh.add(m); w.knob = m; w.draw(); continue;
+      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; m.userData.own = 'mat'; w.mesh.add(m); w.knob = m; w.draw(); continue;
     }
     // al hundirla, además de bajar, se encoge un poco y se oscurece (de frente, el descenso solo apenas se veía); al pulsar, destella
     w.setPush = p => {
@@ -5686,7 +5695,15 @@ function placeAnchor(dist) {
   const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
-function disposeTree(o) { o.traverse(n => { if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); } }); }
+// Libera lo que se hizo para un menú: los paneles dibujados y, marcado con userData.own, lo de sus teclas en 3D ('all': la
+// geometría y el material; 'geo': solo la geometría, como el contorno, de material compartido; 'mat': solo el material, como
+// la bolita de los deslizadores, de geometría compartida)
+function disposeTree(o) {
+  o.traverse(n => {
+    const own = n.userData.own; if (own && own !== 'mat') n.geometry.dispose(); if (own === 'all' || own === 'mat') n.material.dispose();
+    if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); }
+  });
+}
 // Al cerrar un menú se recuerda su sitio un momento: si enseguida se abre otro (de un menú a otro), sale en el mismo sitio
 let lastAnchor = null, lastAnchorT = -9;
 function hideMenu(keepAnchor) {
@@ -5962,6 +5979,7 @@ function onWatch() {
   if (RPL.on) { endRoomPlace(false); return; }
   if (PLACE.on) { cancelPlace(); return; }
   if (PLACE.wait) { PLACE.wait = false; center.mesh.visible = false; adjustMenu(PLACE.back); return; }
+  if (menu && menu.wrist && menu.perks) { wristOpen(); SND.tick(); return; } // en el descanso, las cartas recogidas vuelven (79_perks)
   if (GAME_STATES.includes(state)) openPause();
   else if (menu && menu.wrist) { wristOpen(); SND.tick(); } // el menú recogido (o perdido de vista) sale delante
   else if (menu) { menu.closed = false; menu.group.visible = true; menuAnchor = placeAnchor(0.45); SND.tick(); const rebuild = menu.rebuild; if (rebuild) rebuild(); }
@@ -6270,6 +6288,7 @@ function drawBoard() {
   else if (state === 'paused') big2('PAUSA', BC.gold, 80);
   else if (state === 'between') big2(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 58);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); fitFont(c, msg.text, 470, 66, '%px ' + FD); c.fillStyle = msg.color; c.fillText(msg.text, RX, 150); c.globalAlpha = 1; }
+  else if (RUSH.on) big2(`⚡ RELÁMPAGO ${Math.max(0, Math.ceil(RUSH.left))}`, BC.gold, 52); // (79_perks: todo vale el doble)
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) big2(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 60);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && ['play', 'rest'].includes(state)) {
@@ -6284,6 +6303,7 @@ function drawBoard() {
   else if (charged && live) ch = [chargePow > 1 ? `● ×${chargePow}` : '●', '#' + POW_COL[chargePow - 1].toString(16).padStart(6, '0')];
   if (ch) { c.font = `40px ${FD}`; const w = c.measureText(ch[0]).width + 44; boardPill(c, RX - w + 8, 230, w, 60, 'rgba(255,255,255,0.06)', ch[1]); c.fillStyle = ch[1]; c.fillText(ch[0], RX - 14, 261); }
   guardBoard(c, RX); // el escudo por técnica y la energía de la guardia
+  perkBoard(c); // la carrera contra tu récord
   // abajo: lo de hoy
   boardDay2(c, W, 356);
   board.tex.needsUpdate = true;
@@ -8615,7 +8635,7 @@ class HatchBeast extends Spider {
     this.mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
     model.traverse(m => { if (m.isMesh) { m.material = this.mat; m.castShadow = true; m.frustumCulled = false; } });
     model.scale.setScalar(0.2 * D.k / D.h); root.add(model); // (D.k es para su tamaño andando, de D.h metros)
-    Object.assign(this, { model, root, legless: true, voice: this.HK.beast, inst: { root, skel: { dispose() {} } }, B: { body: model }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null, tint: 0 });
+    Object.assign(this, { model, root, legless: true, voice: this.HK.beast, inst: { root, skel: skelFree(model) }, B: { body: model }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null, tint: 0 });
   }
   center(out) { return this.root.localToWorld(out.set(0, 0.1, 0)); }
   pose(dt, t) {
@@ -8627,7 +8647,7 @@ class HatchBeast extends Spider {
     this.tint = Math.max(0, this.tint - dt * 4); this.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); // al recibir, se tiñe de rojo
   }
   onHit(dmg, perfect, point, pow) { this.tint = 1; super.onHit(dmg, perfect, point, pow); }
-  dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); }
+  dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); this.inst.skel.dispose(); }
 }
 
 /* =================== BICHOS VOLADORES =================== */
@@ -8649,7 +8669,7 @@ function beastFlyer(kind) {
   // movieran el modelo, le quitarían ese desplazamiento y el cuerpo volaría por encima de la diana
   const body = new THREE.Group(); root.add(body);
   model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); body.add(model);
-  return { root, model, mat, bones: { body }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
+  return { root, model, mat, bones: { body }, meshes: {}, skel: skelFree(model), mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
 }
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
@@ -8898,7 +8918,7 @@ function updateProjectiles(dt) {
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
-        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); comicHit(p.to); if (!target.alive) onKilled(target);
+        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); comicHit(p.to); if (!target.alive) onKilled(target); perkOnHit(target, p);
         if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
           const R = isTiny() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isTiny() ? 0.35 : 1, 0.15); SND.zap(p.to);
           for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone(), p.pow); if (!o.alive) onKilled(o); } // (la onda también derriba a los que aguantan)
@@ -8914,8 +8934,8 @@ function updateProjectiles(dt) {
 }
 function onKilled(e) {
   stats.kills++;
-  const pts = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300);
-  score += pts; popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
+  const pts0 = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300), pts = pts0 * perkKillK(e); // (dorado ×3, relámpago ×2)
+  score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
   if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
 }
@@ -8924,7 +8944,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1)); // (en fiebre, el doble)
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
   if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -9749,7 +9769,7 @@ function resetWorld() {
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
-  AUD.loops.forEach(l => l.stop());
+  AUD.loops.forEach(l => l.stop()); perkClear(); rushStop(true);
 }
 function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { combat: foesHas('robots') ? 'walkTime' : 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
 function summaryText() {
@@ -9963,6 +9983,7 @@ function pauseMenu() {
     { t: 'title', text: 'PAUSA' },
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
+    ...perkRows(), // las mejoras que llevas (79_perks)
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
     ...spMiniRows(), // la música, sin salir de la pausa
     { t: 'btns', items: [{ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', accent: MC.scene, onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(() => pauseMenu()) }] },
@@ -10008,7 +10029,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -10078,14 +10099,15 @@ function startWave(i) {
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.35); // con espada, uno detrás de otro; con la dificultad creciente, algo más seguidos
   }
-  RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
+  RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = ''; perkWaveStart(i);
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
+  if (perkAbsorb()) return; // el escudo de las mejoras (79_perks)
   hapticBoth(0.9, 120);
-  combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
+  if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
   if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
@@ -10121,7 +10143,7 @@ function progressLine(P = progress()) {
 }
 function endRun(win, manual) {
   const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
-  saveRun(win);
+  saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop()); if (!SES.active) spRoundEnd(); // (en una sesión, al acabar el último bloque)
@@ -10257,7 +10279,7 @@ function gameStep(dt, t) {
   iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
-    spawnTimer -= dt;
+    spawnTimer -= dt * perkSpawnK();
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
@@ -10267,15 +10289,15 @@ function gameStep(dt, t) {
       rampWaveEnd(!BAR.failed);
       if (BAR.failed) { const last = settings.waves && waveIdx >= settings.waves - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
       else if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {
     if (Math.floor(stateT) !== Math.floor(stateT - dt)) boardDirty = true;
-    if (stateT >= settings.rest) { if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
+    if (stateT >= settings.rest) { perkRestEnd(); if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
-    GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);
+    GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt * perkSlow(e), t);
     enemies = enemies.filter(e => (e.alive || (e.mode === 'dying' && !e.gone)));
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
@@ -10287,7 +10309,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t);
+  arxStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
@@ -12031,6 +12053,245 @@ function lockStep(t) {
   LKL.on.clear();
 }
 
+/* =================== PARA QUE NO ABURRA: MEJORAS, RÉCORD, SORPRESAS Y MÚSICA =================== */
+// Cuatro cosas que cambian cada ronda sin pedir menos ejercicio (ninguna da más cargas ni más daño: las oleadas siguen
+// necesitando las mismas repeticiones):
+// - Mejoras entre oleadas (Combate): en el descanso eliges 1 de 3 cartas, que duran el resto de la ronda.
+// - Carrera contra tu récord: tus repeticiones de ahora frente a las de tu mejor ronda de ese ejercicio en el mismo momento.
+// - Sorpresas (Combate): de vez en cuando, un enemigo dorado (×3 puntos), un relámpago (20 s de llegadas seguidas y puntos
+//   ×2) o, en el descanso, un cofre que se abre saltando.
+// - La música manda (Combate con ritmo): el relámpago empieza en una frase de la canción (cada 32 pulsos), con cuenta atrás
+//   al compás; una canción nueva trae uno, y la luz de la compuerta late con el pulso.
+
+const PERKS = {
+  shield: { name: 'Escudo', col: '#5ab8ff', desc: 'Para el primer golpe de cada oleada' },
+  frost: { name: 'Escarcha', col: '#9fe8ff', desc: 'Cada perfecta deja más lentos 3 s a los que están cerca del impacto' },
+  wave: { name: 'Onda', col: '#a68bff', desc: 'Cada perfecta empuja hacia atrás a los que están cerca del impacto' },
+  life: { name: 'Corazón', col: '#ff4fa3', desc: 'Cada 10 perfectas recuperas una vida (si te falta alguna)', ok: () => settings.lives > 0 },
+  gold: { name: 'Doble o nada', col: '#ffd166', desc: 'Las perfectas valen el doble de puntos' },
+  combo: { name: 'Combo de hierro', col: '#ff8a3d', desc: 'El primer golpe de cada oleada no te rompe el combo' },
+  calm: { name: 'Calma', col: '#7ee081', desc: 'Los enemigos se mueven un 15 % más despacio' }
+};
+const PK = { has: new Set(), offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0 };
+const perksOn = () => !!settings.perks && isCombat();
+const surpriseOn = () => !!settings.surprises && isCombat();
+const perkHas = k => PK.has.has(k);
+
+/* ---------- Mejoras entre oleadas ---------- */
+// Al superar una oleada (con descanso por delante), las cartas salen a los pocos segundos (después del «¡Oleada superada!»)
+function perkWaveCleared() {
+  if (perksOn() && !SES.active && perkPool().length) PK.offerT = 1.2;
+  chestMaybe();
+}
+const perkPool = () => Object.keys(PERKS).filter(k => !PK.has.has(k) && (!PERKS[k].ok || PERKS[k].ok()));
+function perkMenu() {
+  if (!PK.offer) return;
+  const rows = [{ t: 'title', text: 'ELIGE UNA MEJORA', color: '#ffd166' }, { t: 'text', text: 'Dura lo que queda de ronda. Si no eliges, te toca una al azar', color: '#a49fc8' }];
+  for (const k of PK.offer) rows.push({ t: 'btns', items: [{ label: PERKS[k].name, accent: PERKS[k].col, onPress: () => perkTake(k) }], h: 0.075 }, { t: 'text', text: PERKS[k].desc });
+  const m = openMenu(rows, { accent: '#ffd166' }); m.perks = true; m.rebuild = perkMenu;
+}
+function perkTake(k, random) {
+  PK.has.add(k); PK.offer = null; if (menu && menu.perks) hideMenu();
+  if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1;
+  say(`${random ? 'Te toca' : 'Mejora'}: ${PERKS[k].name}`, PERKS[k].col, 1.8); SND.combo(); boardDirty = true;
+}
+// Se acaba el descanso: la que no elegiste, al azar; el cofre se va
+function perkRestEnd() {
+  PK.offerT = -1;
+  if (PK.offer) perkTake(pick(PK.offer), true);
+  if (menu && menu.perks) hideMenu();
+  chestClear();
+}
+// En cada oleada nueva vuelven el escudo y el combo de hierro, y se decide si habrá relámpago
+function perkWaveStart(i) {
+  if (perkHas('shield')) PK.shield = 1; if (perkHas('combo')) PK.comboSave = 1;
+  GOLD.n = 0; rushPlan(i);
+}
+const perkPtsK = perfect => (perfect && perkHas('gold') ? 2 : 1) * (RUSH.on ? 2 : 1);
+function perkOnRep(perfect) {
+  if (!perfect || !perkHas('life') || !settings.lives) return;
+  if (++PK.perfN % 10 === 0 && lives < settings.lives) { lives++; say('+1 VIDA', '#ff4fa3', 1.4); SND.combo(); boardDirty = true; }
+}
+// El golpe que para el escudo (después de la guardia, que es cosa tuya)
+function perkAbsorb() {
+  if (PK.shield <= 0) return false;
+  PK.shield--; say('¡ESCUDO!', '#5ab8ff', 1.1); SND.zap(head.p); hapticBoth(0.5, 80);
+  fx.glow(head.p.clone().addScaledVector(fwd(), 0.4), [0.35, 0.7, 1], 0.6, 0.25); return true;
+}
+const perkKeepCombo = () => { if (PK.comboSave > 0 && combo >= 3) { PK.comboSave--; say('Combo a salvo', '#ff8a3d', 1); return true; } return false; };
+// Al llegar un disparo perfecto: escarcha y onda alrededor del impacto
+function perkOnHit(target, p) {
+  if (!p.perfect || !(perkHas('frost') || perkHas('wave'))) return;
+  const R = isTiny() ? 0.5 : 2.2;
+  for (const o of enemies) if (o.alive && o.center(tmpA).distanceTo(p.to) < R) {
+    if (perkHas('frost')) { o.frostT = 3; fx.sparks(tmpA, 8, [0.6, 0.9, 1], 1.2, 0.03); }
+    if (perkHas('wave') && o !== target && o.shove) o.shove(isTiny() ? 0.08 : 0.3);
+  }
+  if (perkHas('wave')) fx.glow(p.to, [0.65, 0.55, 1], isTiny() ? 0.4 : 1.4, 0.2);
+}
+// Lo que se frena un enemigo: escarcha y calma (el reloj de su paso, sus animaciones y sus ataques)
+const perkSlow = e => (e.frostT > 0 ? 0.45 : 1) * (perkHas('calm') ? 0.85 : 1);
+function perkRows() { return PK.has.size ? [{ t: 'text', text: 'Mejoras: ' + [...PK.has].map(k => PERKS[k].name).join(' · '), color: '#ffd166' }] : []; }
+
+/* ---------- Carrera contra tu récord ---------- */
+// Se guarda la mejor ronda de cada modo y ejercicio con sus repeticiones cada 2 s (en colgado, los segundos); los Arcos
+// tienen la suya, por puntos y metros (71_arcs)
+const GHOST_KEY = 'reparena3-ghosts';
+const GH = { key: '', best: null, tl: [], tT: 0, beat: false };
+const ghostOn = () => !!settings.ghost && settings.mode !== 'arcs' && !SES.active;
+const ghostNow = () => settings.exercise === 'hang' ? Math.floor(stats.hold) : stats.reps;
+function ghostReset() {
+  Object.assign(GH, { key: `${settings.mode}:${settings.exercise}`, best: null, tl: [], tT: 0, beat: false });
+  if (!ghostOn()) return;
+  const all = store(GHOST_KEY) || {}; GH.best = all[GH.key] || null;
+  if (!GH.best) { // sin carrera guardada, al menos tu mejor ronda del historial
+    const n = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode).reduce((a, r) => Math.max(a, r.reps || 0), 0);
+    if (n) GH.best = { n, tl: null };
+  }
+}
+function ghostStep(dt) {
+  if (!ghostOn() || !['play', 'rest'].includes(state)) return;
+  GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
+  const B = GH.best, n = ghostNow();
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; say('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+}
+// Lo que pone el marcador: cuántas llevas de más (o de menos) que tu récord en este momento
+function ghostText() {
+  const B = GH.best; if (!ghostOn() || !B || !B.n) return null; const n = ghostNow();
+  if (GH.beat) return [`¡RÉCORD! +${n - B.n}`, '#ffd166'];
+  if (!B.tl || !B.tl.length) return [`RÉCORD ${B.n} · FALTAN ${B.n - n + 1}`, '#a49fc8']; // (para superarlo, una más)
+  const g = B.tl[Math.min(B.tl.length - 1, GH.tl.length)] || 0, d = n - g;
+  return [`RÉCORD ${d >= 0 ? '+' : '−'}${Math.abs(d)}`, d >= 0 ? '#3cf0c6' : '#ff8a3d'];
+}
+function ghostEnd() {
+  if (!ghostOn()) return; const n = ghostNow(), B = GH.best;
+  if (n > 0 && (!B || n > B.n)) { const all = store(GHOST_KEY) || {}; all[GH.key] = { n, tl: GH.tl.concat(n).slice(0, 900) }; store(GHOST_KEY, all); }
+}
+
+/* ---------- Sorpresas: el enemigo dorado ---------- */
+const GOLD = { n: 0, list: [] };
+function perkSpawned(e) {
+  if (!surpriseOn() || GOLD.n || e.boss || (e.K && e.K.boss) || Math.random() > 0.08) return;
+  GOLD.n++; e.golden = true;
+  // un halo dorado que se ve también por delante del cuerpo (y a pleno día)
+  const s = glowSprite(0xffc23a, isTiny() ? 0.45 : 1.7, 0.55); s.material.depthTest = false; s.renderOrder = 5; scene.add(s); GOLD.list.push({ e, s });
+}
+const perkKillK = e => (e.golden ? 3 : 1) * (RUSH.on ? 2 : 1);
+function perkOnKill(e) {
+  if (!e.golden) return; const c = e.center(new V3());
+  say('¡DORADO! ×3', '#ffd166', 1.6); SND.combo(); fx.sparks(c, 50, [1, 0.82, 0.3], 3.5, 0.05); fx.glow(c, [1, 0.8, 0.3], isTiny() ? 0.5 : 2, 0.3);
+}
+function goldStep(dt, t) {
+  for (const g of GOLD.list) {
+    if (g.e.alive) { g.e.center(g.s.position); const k = (isTiny() ? 0.45 : 1.7) * (1 + 0.15 * Math.sin(t * 6)); g.s.scale.set(k, k, 1); if (Math.random() < dt * 18) fx.sparks(g.s.position, 2, [1, 0.85, 0.35], 1.2, isTiny() ? 0.02 : 0.045); }
+    else { scene.remove(g.s); g.s.material.dispose(); g.gone = true; }
+  }
+  GOLD.list = GOLD.list.filter(g => !g.gone);
+}
+
+/* ---------- Sorpresas: el relámpago (y la música que manda) ---------- */
+// 20 s (o una frase de la canción, 32 pulsos) en los que llegan seguidos (el doble de deprisa, hasta el máximo a la vez) y
+// todo vale el doble. Desde la segunda oleada, en una de cada tres más o menos, nunca con el jefe
+const RUSH = { on: false, left: 0, planT: -1, at: -1, end: -1, cd: 0, song: null };
+const musicLead = () => !!settings.musicLead && beatP() > 0;
+function rushPlan(i) {
+  RUSH.planT = -1; RUSH.at = -1;
+  if (surpriseOn() && i >= 1 && !isBossWave(i) && Math.random() < 0.35) RUSH.planT = rand(4, 10);
+}
+const perkSpawnK = () => RUSH.on ? 2 : 1;
+function rushStart(sec) {
+  RUSH.on = true; RUSH.left = sec; RUSH.at = -1; say('¡RELÁMPAGO! Puntos ×2', '#ffd166', 1.8); SND.horn(); ENV.flash = 1; boardDirty = true;
+}
+function rushStop(quiet) { if (RUSH.on && !quiet) say('Fin del relámpago', '#a49fc8', 1.1); RUSH.on = false; RUSH.left = 0; RUSH.end = -1; RUSH.at = -1; boardDirty = true; }
+function rushStep(dt) {
+  if (state !== 'play') { if (RUSH.on || RUSH.at >= 0) rushStop(true); return; }
+  // una canción nueva de Spotify trae relámpago en su primera frase
+  const id = spConnected() && SP.st && SP.st.item ? SP.st.item.id : null;
+  if (id && RUSH.song && id !== RUSH.song && musicLead() && surpriseOn() && !RUSH.on && RUSH.at < 0 && !isBossWave(waveIdx)) { RUSH.planT = 0.01; say('¡Canción nueva!', '#a68bff', 1.4); }
+  if (id) RUSH.song = id;
+  if (RUSH.planT > 0 && !RUSH.on) {
+    RUSH.planT -= dt;
+    if (RUSH.planT <= 0) { RUSH.planT = -1; if (musicLead()) { RUSH.at = Math.ceil((beatNow() + 4) / 32) * 32; RUSH.cd = 0; } else rushStart(20); } // con ritmo, en la próxima frase (al menos 4 pulsos)
+  }
+  if (RUSH.at >= 0 && !RUSH.on) { // cuenta atrás al compás: 3, 2, 1 en los tres pulsos de antes
+    const b = beatNow(), left = Math.ceil(RUSH.at - b);
+    if (left <= 3 && left >= 1 && left !== RUSH.cd) { RUSH.cd = left; say(String(left), '#ffd166', 0.5, false); SND.tick(); }
+    if (b >= RUSH.at) { RUSH.end = RUSH.at + 32; rushStart((RUSH.end - b) * beatP()); }
+  }
+  if (RUSH.on) { RUSH.left -= dt; if ((RUSH.left | 0) !== ((RUSH.left + dt) | 0)) boardDirty = true; if (RUSH.left <= 0) rushStop(); }
+}
+// La luz de la compuerta late con el pulso de la música (más fuerte en el relámpago)
+const BEATL = { k: 0 };
+function beatLightStep(dt) {
+  if (state === 'play' && musicLead() && BEAT.hit) BEATL.k = RUSH.on ? 1 : 0.55;
+  else if (RUSH.on && !musicLead() && Math.random() < dt * 2) BEATL.k = 0.8; // sin ritmo, el relámpago parpadea
+  BEATL.k = Math.max(0, BEATL.k - dt * 5); ENV.beat = BEATL.k;
+}
+
+/* ---------- Sorpresas: el cofre que se abre saltando ---------- */
+// En algunos descansos (de pie, en Combate) sale un cofre en el suelo, delante y a un lado: un salto lo abre y da una
+// mejora más (si quedan), una vida o puntos
+const CHEST = (() => {
+  const g = new THREE.Group(), k = new Kit(), wood = col(0.11, 0.05, 0.02), band = col(0.85, 0.5, 0.06); // (colores lineales: se ven bastante más claros)
+  k.add('m', G.box(0.5, 0.26, 0.34), wood, 0, 0.13, 0);
+  for (const x of [-0.17, 0.17]) k.add('m', G.box(0.04, 0.27, 0.35), band, x, 0.135, 0);
+  g.add(k.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
+  const lid = new THREE.Group(); lid.position.set(0, 0.26, -0.17); g.add(lid);
+  const kl = new Kit(); kl.add('m', G.box(0.5, 0.1, 0.34), wood, 0, 0.05, 0.17); kl.add('m', G.box(0.08, 0.08, 0.03), band, 0, 0.0, 0.345);
+  for (const x of [-0.17, 0.17]) kl.add('m', G.box(0.04, 0.11, 0.35), band, x, 0.05, 0.17);
+  lid.add(kl.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
+  const glow = glowSprite(0xffd166, 0.9, 0.5); glow.position.y = 0.3; g.add(glow);
+  g.visible = false; arena.add(g);
+  return { g, lid, glow, on: false, open: 0, opened: false, t: 0, vy: 0, lastY: 0 };
+})();
+const chestWaits = () => CHEST.on && !CHEST.opened && state === 'rest';
+const chestCan = () => surpriseOn() && !isFloor() && !isSeated() && !isSupine() && !isBars() && settings.exercise !== 'inchworm';
+function chestMaybe() {
+  if (!chestCan() || Math.random() > 0.35) return;
+  Object.assign(CHEST, { on: true, open: 0, opened: false, t: 0, vy: 0, lastY: head.p.y });
+  CHEST.g.position.set(0.7, 0, -1.3); CHEST.g.rotation.y = -0.5; CHEST.g.scale.setScalar(0.01); CHEST.lid.rotation.x = 0; CHEST.g.visible = true;
+}
+function chestClear() { CHEST.on = false; CHEST.g.visible = false; }
+function chestStep(dt, t) {
+  if (!CHEST.on) return;
+  if (state !== 'rest') { chestClear(); return; }
+  CHEST.t += dt; CHEST.g.scale.setScalar(Math.min(1, CHEST.t * 3));
+  if (CHEST.t >= 2.6 && CHEST.t - dt < 2.6 && !CHEST.opened) say('¡Un cofre! Salta para abrirlo', '#ffd166', 3); // (después de la mejora)
+  CHEST.glow.material.opacity = CHEST.opened ? Math.max(0, 0.9 - CHEST.open) : 0.35 + 0.2 * Math.sin(t * 5);
+  // un salto: la cabeza sube deprisa por encima de tu altura de pie
+  const vy = dt > 0 ? (head.p.y - CHEST.lastY) / dt : 0; CHEST.vy += (vy - CHEST.vy) * Math.min(1, dt * 20); CHEST.lastY = head.p.y;
+  if (!CHEST.opened && CHEST.t > 1 && CHEST.vy > 0.6 && head.p.y > standHeadY() + 0.06) chestOpen();
+  if (CHEST.opened) { CHEST.open = Math.min(1, CHEST.open + dt * 2.5); CHEST.lid.rotation.x = -1.9 * (1 - Math.pow(1 - CHEST.open, 3)); }
+}
+function chestOpen() {
+  CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
+  fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
+  const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
+  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; say(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
+  else if (settings.lives && lives < settings.lives) { lives++; say('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
+  else { score += 300; say('¡Cofre! +300 puntos', '#ffd166', 2.2); }
+  boardDirty = true;
+}
+
+/* ---------- Cada ronda y cada fotograma ---------- */
+function perkReset() {
+  PK.has.clear(); Object.assign(PK, { offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0 });
+  rushStop(true); RUSH.planT = -1; RUSH.song = spConnected() && SP.st && SP.st.item ? SP.st.item.id : null;
+  perkClear(); ghostReset();
+}
+function perkClear() { for (const g of GOLD.list) { scene.remove(g.s); g.s.material.dispose(); } GOLD.list = []; GOLD.n = 0; chestClear(); }
+function perkStep(dt, t) {
+  if (state === 'paused') return;
+  for (const e of enemies) if (e.frostT > 0) { e.frostT -= dt; if (Math.random() < dt * 6) fx.glow(e.center(tmpA), [0.6, 0.9, 1], isTiny() ? 0.12 : 0.4, 0.2); }
+  if (PK.offerT > 0 && state === 'rest') { PK.offerT -= dt; if (PK.offerT <= 0) { const pool = perkPool(); if (pool.length) { PK.offer = pool.sort(() => Math.random() - 0.5).slice(0, 3); perkMenu(); } } }
+  ghostStep(dt); goldStep(dt, t); rushStep(dt); beatLightStep(dt); chestStep(dt, t);
+}
+// En el marcador, la carrera contra el récord: en el centro, encima de la barra de la oleada (el relámpago va en la frase
+// grande de la derecha, ver drawBoard)
+function perkBoard(c) {
+  const g = ghostText(); if (g && ['play', 'rest'].includes(state)) { c.textAlign = 'left'; c.fillStyle = g[1]; fitFont(c, g[0], 240, 26, '%px ' + FD); c.fillText(g[0], 514, 256); }
+}
+
 
 /* =================== ENTRADA XR =================== */
 let lastStandYaw = 0;
@@ -12145,6 +12406,8 @@ function previewInput(dt) {
   }
   // sentadilla con salto: al soltar Espacio, sube de golpe por encima de tu altura de pie (PV.noJump: no salta)
   if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
+  // el cofre del descanso: igual, un salto (79_perks); al irse, deja de saltar
+  const cj = chestWaits(); if (cj || PV.chestJ) { PV.jumping = cj && !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; PV.chestJ = cj; if (PV.jumping) target = PV.baseY + 0.2; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
   PV.press += clamp((PV.crouch ? 0.24 : -0.15) - PV.press, -1.2 * dt, 1.2 * dt);
   PV.curl += clamp((PV.crouch ? 0.42 : 0) - PV.curl, -1.4 * dt, 1.4 * dt); PV.fr = (PV.fr || 0) + clamp((PV.crouch ? 1 : 0) - (PV.fr || 0), -1.6 * dt, 1.6 * dt);

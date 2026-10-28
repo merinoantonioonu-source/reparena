@@ -839,7 +839,7 @@ class HatchBeast extends Spider {
     this.mat = new THREE.MeshStandardMaterial({ map: B.map, roughness: 0.85, metalness: 0, skinning: true, side: THREE.DoubleSide });
     model.traverse(m => { if (m.isMesh) { m.material = this.mat; m.castShadow = true; m.frustumCulled = false; } });
     model.scale.setScalar(0.2 * D.k / D.h); root.add(model); // (D.k es para su tamaño andando, de D.h metros)
-    Object.assign(this, { model, root, legless: true, voice: this.HK.beast, inst: { root, skel: { dispose() {} } }, B: { body: model }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null, tint: 0 });
+    Object.assign(this, { model, root, legless: true, voice: this.HK.beast, inst: { root, skel: skelFree(model) }, B: { body: model }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null, tint: 0 });
   }
   center(out) { return this.root.localToWorld(out.set(0, 0.1, 0)); }
   pose(dt, t) {
@@ -851,7 +851,7 @@ class HatchBeast extends Spider {
     this.tint = Math.max(0, this.tint - dt * 4); this.mat.color.setRGB(1, 1 - 0.55 * this.tint, 1 - 0.55 * this.tint); // al recibir, se tiñe de rojo
   }
   onHit(dmg, perfect, point, pow) { this.tint = 1; super.onHit(dmg, perfect, point, pow); }
-  dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); }
+  dispose() { arena.remove(this.root); this.mx.stopAllAction(); this.mat.dispose(); this.inst.skel.dispose(); }
 }
 
 /* =================== BICHOS VOLADORES =================== */
@@ -873,7 +873,7 @@ function beastFlyer(kind) {
   // movieran el modelo, le quitarían ese desplazamiento y el cuerpo volaría por encima de la diana
   const body = new THREE.Group(); root.add(body);
   model.scale.setScalar(D.k); model.position.y = -D.h * (D.ctr || 0.5); body.add(model);
-  return { root, model, mat, bones: { body }, meshes: {}, skel: { dispose() {} }, mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
+  return { root, model, mat, bones: { body }, meshes: {}, skel: skelFree(model), mx: new THREE.AnimationMixer(model), clips: B.clips, acts: {}, cur: null };
 }
 const MAT_DRONE = { main: M.carbonSkin, glow: M.glowSkin, halo: M.haloSkin, rotor: M.rotorSkin };
 // Tumbado (superman, plancha lateral) los voladores vienen bajos, a la altura de la cabeza
@@ -1122,7 +1122,7 @@ function updateProjectiles(dt) {
       if (p.e && p.e.alive) {
         p.e.pending = Math.max(0, p.e.pending - p.dmg);
         if (p.kind === 'bolt') stats.hits++;
-        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); comicHit(p.to); if (!target.alive) onKilled(target);
+        const target = p.e; target.onHit(p.dmg, p.perfect, p.to.clone(), p.pow || 1); comicHit(p.to); if (!target.alive) onKilled(target); perkOnHit(target, p);
         if (p.kind === 'orb' && p.pow >= 3) { // disparo muy cargado: estalla y alcanza a los de alrededor
           const R = isTiny() ? 0.32 : 1.4; fx.electric(p.to, 22); fx.glow(p.to, p.col, isTiny() ? 0.35 : 1, 0.15); SND.zap(p.to);
           for (const o of enemies) if (o.alive && o !== target && o.center(tmpA).distanceTo(p.to) < R) { o.onHit(p.pow - 2, false, tmpA.clone(), p.pow); if (!o.alive) onKilled(o); } // (la onda también derriba a los que aguantan)
@@ -1138,8 +1138,8 @@ function updateProjectiles(dt) {
 }
 function onKilled(e) {
   stats.kills++;
-  const pts = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300);
-  score += pts; popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
+  const pts0 = { titan: 1500, carrier: 1500, dragon: 1500, queen: 1500, bigbubble: 1000, wasp: 300, heavy: 500, bomber: 400, hornet: 350, cthulhu: 400, scout: 300, drone: 250, bubble: 200 }[e.kind] || ((e.K && e.K.boss) || e.boss ? 1500 : 300), pts = pts0 * perkKillK(e); // (dorado ×3, relámpago ×2)
+  score += pts; perkOnKill(e); popup(`+${pts}`, '#ffffff', e.center(new V3()).add(new V3(0, 0.2, 0))); comicKill(e.center(new V3()), !!(e.K && e.K.boss || e.boss)); // (en cómic, ¡POW!)
   if (e.K && e.K.boss || e.boss) say('¡JEFE DESTRUIDO!', '#ffd166', 2.2);
   boardDirty = true;
 }
@@ -1148,7 +1148,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1)); // (en fiebre, el doble)
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
   if (combo > 0 && combo % 10 === 0) { say(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -1973,7 +1973,7 @@ function resetWorld() {
   clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
-  AUD.loops.forEach(l => l.stop());
+  AUD.loops.forEach(l => l.stop()); perkClear(); rushStop(true);
 }
 function speedKey() { return isBars() ? (settings.exercise === 'hang' ? 'hangTime' : 'barArrive') : { combat: foesHas('robots') ? 'walkTime' : 'flySpeed', arcs: 'arcSpeed', touch: 'tchArrive' }[settings.mode]; }
 function summaryText() {
@@ -2187,6 +2187,7 @@ function pauseMenu() {
     { t: 'title', text: 'PAUSA' },
     { t: 'text', text: settings.exercise === 'hang' ? `${Math.round(stats.hold)} s colgado · ${stats.falls} caídas · ${score} puntos` : `${stats.reps} repeticiones · ${stats.kills} ${bars ? 'reventados' : 'enemigos'} · ${score} puntos` },
     { t: 'btns', items: [{ label: 'Continuar', style: 'primary', onPress: resumeGame }], h: 0.08 },
+    ...perkRows(), // las mejoras que llevas (79_perks)
     ...(WARN.log.length ? [{ t: 'text', text: 'Últimos avisos: ' + WARN.log.slice(-3).reverse().join(' · '), color: '#ff8a3d' }] : []),
     ...spMiniRows(), // la música, sin salir de la pausa
     { t: 'btns', items: [{ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(() => pauseMenu()) }, { label: 'Entorno  ▸', accent: MC.scene, onPress: () => sceneMenu(() => pauseMenu(), true) }, { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(() => pauseMenu()) }] },
@@ -2232,7 +2233,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = settings.lives || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false });
+  stats = newStats(); SUP_ATK.next = 0; guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -2302,14 +2303,15 @@ function startWave(i) {
     const auto = foes() === 'flyers' ? repTime() * (twoShots() ? 0.55 : 0.95) : clamp(avgHp * repTime() * 0.85, 1.0, 15);
     spawnInterval = (settings.spawnGap > 0 ? settings.spawnGap : swordWalk() ? Math.min(auto, 3) : auto) / (1 + rampK() * 0.35); // con espada, uno detrás de otro; con la dificultad creciente, algo más seguidos
   }
-  RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = '';
+  RAMP.t0 = stats.taken; RAMP.f0 = stats.falls; RAMP.note = ''; perkWaveStart(i);
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK(); say(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
+  if (perkAbsorb()) return; // el escudo de las mejoras (79_perks)
   hapticBoth(0.9, 120);
-  combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
+  if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
   if (settings.lives) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
   if (!(src instanceof Arc) && !(src && src.silent)) say(settings.lives ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
@@ -2345,7 +2347,7 @@ function progressLine(P = progress()) {
 }
 function endRun(win, manual) {
   const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
-  saveRun(win);
+  saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop()); if (!SES.active) spRoundEnd(); // (en una sesión, al acabar el último bloque)
@@ -2481,7 +2483,7 @@ function gameStep(dt, t) {
   iwVisual(t);
   if (settings.mode === 'touch') touchStep(dt, t);
   if (state === 'play') {
-    spawnTimer -= dt;
+    spawnTimer -= dt * perkSpawnK();
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); // con ritmo, los enemigos salen en el pulso
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit)) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
@@ -2491,15 +2493,15 @@ function gameStep(dt, t) {
       rampWaveEnd(!BAR.failed);
       if (BAR.failed) { const last = settings.waves && waveIdx >= settings.waves - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
       else if (settings.waves && waveIdx >= settings.waves - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {
     if (Math.floor(stateT) !== Math.floor(stateT - dt)) boardDirty = true;
-    if (stateT >= settings.rest) { if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
+    if (stateT >= settings.rest) { perkRestEnd(); if (isBars()) barToMount(waveIdx + 1); else startWave(waveIdx + 1); }
   }
   if (state !== 'paused') {
-    GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt, t);
+    GAMEF.n++; for (const e of enemies) if (e.alive || e.mode === 'dying') e.update(dt * perkSlow(e), t);
     enemies = enemies.filter(e => (e.alive || (e.mode === 'dying' && !e.gone)));
     for (const a of arcs) if (a.alive) a.update(dt, t);
     arcs = arcs.filter(a => a.alive);
@@ -2511,7 +2513,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t);
+  arxStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

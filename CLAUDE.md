@@ -48,6 +48,8 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
   - `tests/three-mock.js` solo tiene parte de la API de r128 (por ejemplo, no tiene `getWorldQuaternion`);
   - en `tests/env-mock.js`, los elementos del DOM no tienen `closest` ni `querySelector`, así que comprueba que existen;
   - el contexto 2D falla si se usa un método que no tiene.
+- Una prueba que cambie ajustes los devuelve al acabar (guarda `{ ...RA.settings }` y los restaura): las que van detrás
+  cuentan con ellos.
 - Las pruebas avanzan fotogramas más deprisa que el reloj real. Lo que dependa de `performance.now()` (por ejemplo, la
   pausa entre pulsaciones de botones) necesita un `await sleep(…)` en la prueba.
 
@@ -66,6 +68,8 @@ No las cambies sin preguntarle.
 
 **Dificultad**
 - Sube **poco a poco de una oleada a otra**, no dentro de cada oleada: que se note un poco, pero que sea real.
+- Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
+  defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.
