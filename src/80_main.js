@@ -103,6 +103,7 @@ function previewInput(dt) {
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
+    else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
     else PV.jumping = false;
   }
   // Toques: Espacio lleva la cabeza a la ameba que toca y la devuelve después

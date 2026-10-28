@@ -4,21 +4,22 @@
 // que te dan; entre arco y arco llegan orbes para recoger con la cabeza o las manos; el suelo y unas luces pasan a tu lado
 // (sensación de avance); hay obstáculos nuevos (un láser que barre, dos paredes que se cierran y una rueda que gira) y
 // metas: los metros recorridos, la carrera contra el fantasma de tu mejor ronda y una medalla al acabar.
-const ARX = { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, best: null, nextGap: 0 };
+const ARX = { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, best: null, nextGap: 0 };
 const ARX_GHOST = 'reparena3-arcghost';
 // los obstáculos nuevos, por turnos (empezando por uno al azar): así salen los tres
 const ARX_NEW = ['laser', 'walls', 'wheel']; let arxNewN = Math.floor(Math.random() * 3);
 const arxNewKind = () => ARX_NEW[(arxNewN++) % 3];
-const arxMul = () => ARX.fever ? 1.2 : 1; // la fiebre acelera lo que llega
+// la fiebre acelera lo que llega: la primera, un 20 %; cada una de las siguientes de la ronda, un 10 % más (hasta un 50 %)
+const arxMul = () => ARX.fever ? Math.min(1.5, 1.2 + 0.1 * (ARX.feverN - 1)) : 1;
 const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul();
 function arxReset() {
-  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
+  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
   arxFeverLook(false);
 }
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); cheer('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
 function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
@@ -36,16 +37,21 @@ function arxPatterns(total) {
     [settings.arcTilt / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.9, { tilt: s * tiltA() }), S(rand(lo, hi), 0.9, { tilt: -s * tiltA() }), S(rand(lo, hi), 1.3, { tilt: s * tiltA() })]; }], // zigzag
     [settings.arcJump / 25, () => [{ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 0.7 }, S(hi, 1.3)]], // valla y, enseguida, un arco bajo
     [settings.arcDouble / 20, () => [S(rand(lo, hi), 1.4, { kind: 'double' })]],
-    [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]]
+    [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
+    [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
+    [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]] // al suelo, en plancha (y tiempo para levantarte)
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
   while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
-  const out = list.slice(0, total);
+  const out = arxPlankRoom(list.slice(0, total));
   // con los obstáculos nuevos activados, en cada oleada larga salen al menos los tres (en vez de arcos sueltos)
   if (settings.arcNew > 0 && total >= 9) for (let need = 3 - out.filter(o => ARX_NEW.includes(o.kind)).length, i = 0; need > 0 && i < 40; i++) {
     const k = Math.floor(Math.random() * out.length); if (out[k].kind === 'single' && !out[k].tilt) { out[k] = { kind: arxNewKind(), drop: out[k].drop, tilt: 0, hp: 1, gap: 1.3 }; need--; }
   }
   return out;
 }
+
+// Antes de un arco de plancha, tiempo para bajar al suelo (el anterior deja un hueco largo)
+function arxPlankRoom(list) { list.forEach((o, i) => { if (o.kind === 'plank' && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, 1.8); }); return list; }
 
 /* ---------- Obstáculos nuevos: láser que barre y paredes que se cierran ---------- */
 // Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,
@@ -64,47 +70,81 @@ class ArcObs {
       const core = new THREE.Mesh(G.cylRaw(0.012, 0.012, 2.5, 6), LASER_MAT); core.position.y = 1.25; this.beam.add(core);
       for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 2.5), this.mat); p.position.y = 1.25; p.rotation.y = i * Math.PI / 2; this.beam.add(p); }
       for (const y of [0.03, 2.5]) { const e = new THREE.Mesh(G.box(0.12, 0.06, 0.12), M.steel); tint(e.geometry, C.gun); e.position.y = y; this.beam.add(e); }
+    } else if (kind === 'mace') {
+      // la maza: una bola de pinchos colgada de una cadena que se balancea de lado a lado; en lo más bajo pasa a la altura
+      // de tu cabeza. No se para: hay que mirar su ritmo y apartarse al lado por el que no pasa (o agacharse a tiempo: unos 35 cm)
+      const L = 2.0; Object.assign(this, { L, piv: calibRef + HEAD_TOP - 0.02 + L, A: rand(0.42, 0.55), w: TAU / rand(1.5, 2.1), ph: rand(0, TAU), drop: 0.01, tilt: 0.01, leanX: 0, bx: 0, by: 0, lastS: 0 });
+      const beam = new THREE.Mesh(G.box(2.4, 0.12, 0.14), M.steel); tint(beam.geometry, C.gun); beam.position.y = this.piv + 0.06; this.grp.add(beam);
+      for (const s of [-1, 1]) { const post = new THREE.Mesh(G.cyl(0.05, 0.06, this.piv + 0.12, 10), M.steel); tint(post.geometry, C.gun); post.position.set(s * 1.2, (this.piv + 0.12) / 2, 0); this.grp.add(post); }
+      this.arm = new THREE.Group(); this.arm.position.y = this.piv; this.grp.add(this.arm);
+      for (let i = 0; i < 9; i++) { const l = new THREE.Mesh(MACE.link, M.steel); l.position.y = -(i + 0.5) * (L - 0.15) / 9; l.rotation.y = i % 2 ? Math.PI / 2 : 0; this.arm.add(l); } // (eslabones, cruzados)
+      const ball = new THREE.Group(); ball.position.y = -L; this.arm.add(ball); ball.add(new THREE.Mesh(MACE.ball, MACE.ballMat)); ball.add(new THREE.Mesh(MACE.spikes, MACE.spikeMat));
+      this.glow = glowSprite(0xff2a14, 0.75, 0.25); ball.add(this.glow); this.ball = ball;
     } else {
-      this.gx = (Math.random() < 0.5 ? -1 : 1) * rand(0.28, 0.45); this.gap = 0.62; this.leanX = this.gx; this.tilt = Math.sign(this.gx) * 0.01; this.drop = 0.01;
+      // algunas llegan inclinadas: el hueco va en diagonal (a la altura de tu cabeza, más a un lado) y hay que ladearse
+      this.gx = (Math.random() < 0.5 ? -1 : 1) * rand(0.28, 0.45); this.gap = 0.62; this.drop = 0.01;
+      this.ang = Math.random() * 100 < settings.arcWallTilt ? -Math.sign(this.gx) * rand(0.1, 0.22) : 0; // (inclinadas hacia su lado: más hueco abajo de ese lado)
+      this.leanX = this.gapX(calibRef); this.tilt = Math.sign(this.leanX) * 0.01;
       this.walls = [-1, 1].map(s => { const g = new THREE.Group(), m = wallMat(), pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), m); pl.position.set(s * 0.7, 1.15, 0); g.add(pl);
-        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; this.grp.add(g); return g; });
+        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; g.rotation.z = this.ang; this.grp.add(g); return g; });
     }
     this.hum = humLoop(arena.localToWorld(new V3(0, 1.2, this.z)));
   }
   // lo que queda para que llegue: se mueve mucho al principio y se asienta en su sitio al pasar por ti
   settle() { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / 1.2); }
+  gapX(y) { return this.gx - Math.tan(this.ang || 0) * y; } // (el centro del hueco a esa altura)
   x() { return this.end + this.amp * Math.sin(this.ph + this.settle() * 2.2); }
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.grp.position.z = this.z;
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, s = this.settle();
     if (this.kind === 'laser') this.beam.position.x = this.x();
-    else { const half = this.gap / 2 + Math.min(0.9, s * 0.35); this.walls[0].position.x = this.gx - half; this.walls[1].position.x = this.gx + half; }
-    const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : Math.abs(HL.x - this.gx) > this.gap / 2 - 0.06;
+    else if (this.walls) { const half = this.gap / 2 + Math.min(0.9, s * 0.35); this.walls[0].position.x = this.gx - half; this.walls[1].position.x = this.gx + half; if (this.ang) this.leanX = this.gapX(HL.y); } // (inclinadas: el hueco, a la altura a la que llevas la cabeza)
+    if (this.kind === 'mace') this.swing(t);
+    const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : this.kind === 'mace' ? this.maceHits() : Math.abs(HL.x - this.gapX(HL.y)) > this.gap / 2 - 0.06;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && bad;
-    if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
+    if (this.kind === 'mace') this.glow.material.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.25;
+    else if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
-    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.gx, 1.2, this.z)));
+    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.kind === 'mace' ? this.bx : this.gapX(1.2), 1.2, this.z)));
     if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; if (bad) this.hit = true; }
     if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
     if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
   }
+  // la maza: el ángulo de la cadena y dónde está la bola (en el sitio de la pista); al pasar por lo más bajo cerca de ti, silba
+  swing(t) {
+    const a = this.A * Math.sin(this.w * this.t + this.ph); this.arm.rotation.z = a; this.ball.rotation.x = this.t * 0.7;
+    this.bx = this.L * Math.sin(a); this.by = this.piv - this.L * Math.cos(a);
+    const s = Math.sign(a); if (s !== this.lastS && this.lastS && Math.abs(this.z - HL.z) < 3) SND.whoosh(arena.localToWorld(tmpA.set(this.bx, this.by, this.z)), 'arc'); this.lastS = s;
+  }
+  maceHits() { return Math.hypot(HL.x - this.bx, HL.y - this.by) < MACE.r + 0.14; } // (la bola, con sus pinchos, y tu cabeza)
   resolve() {
     if (!(state === 'play' || state === 'rest')) return;
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
-    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
+    if (this.hit) { fx.electric(hp, 24); if (this.kind === 'mace') SND.metalHit(hp, true); else SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : this.kind === 'mace' ? '¡Esquiva la maza: apártate o agáchate!' : this.ang ? '¡Ladéate para entrar en el hueco!' : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
+    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : this.kind === 'mace' ? '¡Maza esquivada!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
   }
   dispose() {
-    arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose());
+    arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose()); if (this.glow) this.glow.material.dispose();
     this.grp.traverse(o => { if (o.geometry && o.geometry.type === 'PlaneGeometry') o.geometry.dispose(); }); if (this.hum) { this.hum.stop(); this.hum = null; }
   }
 }
 
+// La maza, compartida por todas: bola de acero oscuro con 12 pinchos y eslabones de cadena
+const MACE = (() => {
+  const r = 0.16, ball = new THREE.IcosahedronGeometry(r, 1), spk = [], ico = new THREE.IcosahedronGeometry(1, 0), P = ico.attributes.position, seen = [];
+  for (let i = 0; i < P.count; i++) { const v = new V3(P.getX(i), P.getY(i), P.getZ(i)).normalize(); if (seen.some(o => o.distanceTo(v) < 0.01)) continue; seen.push(v);
+    const c = new THREE.ConeGeometry(0.04, 0.13, 7); c.translate(0, r + 0.05, 0); c.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new Q4().setFromUnitVectors(new V3(0, 1, 0), v))); /* (r128: las geometrías no tienen applyQuaternion) */ spk.push(ensureAttrs(c.toNonIndexed())); }
+  return { r: r + 0.1, ball, spikes: mergeGeos(spk), link: new THREE.TorusGeometry(0.035, 0.011, 6, 12), ballMat: std({ color: 0x2a2c33, metalness: 0.9, roughness: 0.35, flatShading: true }), spikeMat: std({ color: 0xb8bcc6, metalness: 1, roughness: 0.25 }) };
+})();
+
 /* ---------- Orbes para recoger ---------- */
 // Orbe: un cristal dorado que gira y late, con dos aros que se cruzan, un halo, chispitas que lo rondan y una estela
-const orbGeo = new THREE.IcosahedronGeometry(0.075, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
-const orbMat = std({ color: 0xfff0b8, emissive: 0xffb02a, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.06, flatShading: true, toneMapped: false });
+// (un cristal tallado: muchas caras planas con luz propia moderada, para que la luz y los brillos marquen su relieve; y
+// un núcleo encendido dentro)
+const orbGeo = new THREE.OctahedronGeometry(0.085, 1), orbCoreGeo = new THREE.IcosahedronGeometry(0.035, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
+const orbMat = std({ color: 0xffe9a0, emissive: 0xff9a10, emissiveIntensity: 0.4, metalness: 0.75, roughness: 0.12, flatShading: true, toneMapped: false });
+const orbCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8, toneMapped: false });
 orbMat.userData.comicSoft = true; // (en cómic, sombreado redondeado)
 const orbRingMat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
@@ -112,14 +152,17 @@ function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); or
 class ArcOrb {
   constructor() {
     const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
-    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.grp.add(this.gem);
+    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.gem.scale.y = 1.25; this.grp.add(this.gem); this.gem.add(new THREE.Mesh(orbCoreGeo, orbCoreMat));
+    // vuelo: dos vaivenes de frecuencias que no encajan, en horizontal y en vertical, que crecen al acercarse: no se puede prever
+    this.fl = [rand(1.2, 1.9), rand(2.6, 3.5), rand(1.0, 1.6), rand(2.2, 3.1)].map(f => ({ f, p: rand(0, TAU) })); this.amp = 1;
     this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
     this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
     this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
     this.trailT = 0; this.ph = rand(0, TAU); this.grp.position.copy(this.pos); arena.add(this.grp);
   }
   update(dt, t) {
-    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02;
+    this.pos.z += this.speed * dt; const D = arenaDepth(), k = this.amp * clamp((this.pos.z + D) / Math.max(1, D), 0.3, 1), F = this.fl;
+    this.grp.position.set(clamp(this.pos.x + k * (0.2 * Math.sin(F[0].f * t + F[0].p) + 0.09 * Math.sin(F[1].f * t + F[1].p)), -0.85, 0.85), clamp(this.pos.y + k * (0.11 * Math.sin(F[2].f * t + F[2].p) + 0.05 * Math.sin(F[3].f * t + F[3].p)), 0.45, 2.1), this.pos.z);
     const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
     this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
     this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);

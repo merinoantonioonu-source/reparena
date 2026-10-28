@@ -8,7 +8,7 @@ const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 
 let stats = newStats();
 const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dificultad creciente (ver rampWaveEnd)
 let msg = { text: '', color: '#fff', t: 0 };
-let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
+let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, nextArcPlank = false, nextArcMace = false, calibRef = 1.6, runSaved = false;
 // Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
 const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
@@ -1029,10 +1029,11 @@ function jumpTrack(dt) {
 }
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
-  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0) {
+  // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0, plank = false) {
     const H = arMode ? 2.25 : 2.55;
-    this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
-    this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
+    this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.maxUp = -1; this.fast = false;
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     Object.assign(this, { speed: arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
@@ -1072,7 +1073,7 @@ class Arc {
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
@@ -1900,6 +1901,8 @@ function buildWave(i) {
     for (let n = 0; n < total; n++) {
       if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
+      if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
+      if (Math.random() * 100 < settings.arcPlank) { list.push({ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }); continue; } // al suelo, en plancha
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
@@ -1908,7 +1911,7 @@ function buildWave(i) {
     const tl = list.filter(s => s.tilt), nR = Math.round(tl.length * settings.arcRight / 100), sides = tl.map((_, k) => k < nR ? 1 : -1);
     for (let k = sides.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [sides[k], sides[j]] = [sides[j], sides[k]]; }
     tl.forEach((s, k) => { s.tilt = sides[k] * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180; });
-    return list;
+    return arxPlankRoom(list);
   }
   if (twoShots()) total *= 2;
   let boss = null;
@@ -1954,7 +1957,8 @@ function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
-    if (spec.kind === 'laser' || spec.kind === 'walls') arcs.push(new ArcObs(spec.kind));
+    if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
+    else if (spec.kind === 'plank') { arcs.push(new Arc(0, 0, false, 0, false, 0, true)); say('¡Arco de plancha! Manos al suelo, pies atrás', '#ffd166', 2.4); }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
     else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
@@ -1983,8 +1987,8 @@ function arcGap() {
 }
 function updateNextArc() {
   let best = null; for (const a of arcs) if (!a.judged && !a.second && (!best || a.z > best.z)) best = a;
-  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
-  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; boardDirty = true; }
+  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump'), pk = !!nx && (nx.plank || nx.kind === 'plank'), mc = !!nx && nx.kind === 'mace';
+  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump || pk !== nextArcPlank || mc !== nextArcMace) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; nextArcPlank = pk; nextArcMace = mc; boardDirty = true; }
 }
 
 /* =================== FLUJO =================== */
@@ -1992,7 +1996,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear(); ARX.orbs.forEach(o => o.alive && o.dispose()); ARX.orbs = []; ARX.orbT = -1;
   projs = []; boltsClear(); rocksClear();
-  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
+  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false; nextArcPlank = false; nextArcMace = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop()); perkClear(); rushStop(true);

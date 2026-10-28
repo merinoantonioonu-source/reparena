@@ -322,7 +322,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Eliges los enemigos: robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones gigantes que vuelan, o una mezcla. Y la puntería: automática, para pensar solo en el ejercicio, o apuntando tú con las manos (cada repetición carga las dos; lanza el rayo llevando la mano atrás y adelante deprisa hacia el enemigo) o la mirada.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
         <span class="tag">Sentadillas y saltos</span><b>Arcos</b>
-        <small>Arcos de energía avanzan hacia ti a distintas alturas: agáchate a tiempo para pasar por debajo. Y vallas a ras de suelo que hay que saltar.</small></label>
+        <small>Arcos de energía avanzan hacia ti a distintas alturas: agáchate a tiempo para pasar por debajo. Y vallas a ras de suelo que hay que saltar. También mazas de pinchos que se balancean y arcos tan bajos que hay que pasarlos en plancha.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
         <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
@@ -825,6 +825,10 @@ const SCHEMA = [
   { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
   { key: 'arcPatterns', g: 'arcos', label: 'Coreografías (en vez de al azar)', short: 'Coreografías', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Llegan en pequeñas secuencias con su ritmo: escalera (cada vez más abajo), ráfaga de tres, zigzag de inclinados, valla y arco bajo… Se aprenden y cogen ritmo.' },
   { key: 'arcNew', g: 'arcos', label: 'Obstáculos nuevos (láser, paredes, rueda)', short: 'Obst. nuevos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['arcs'], hint: 'Un láser que barre la pista y se para cerca del centro (apártate al lado libre), dos paredes que se cierran dejando un hueco a un lado (métete en él) y una barra que gira como una rueda y se para inclinada al llegar.' },
+  { key: 'arcWallTilt', g: 'arcos', label: 'Paredes inclinadas', short: 'Paredes incl.', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcNew > 0, hint: 'De las dos paredes que se cierran, cuántas llegan algo inclinadas: el hueco va en diagonal y hay que meterse ladeando el cuerpo.' },
+  { key: 'arcMace', g: 'arcos', label: 'Maza con pinchos (péndulo)', short: 'Maza', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'], hint: 'Una bola de pinchos colgada de una cadena que se balancea de lado a lado a la altura de tu cara mientras llega: apártate al lado por el que no pasa o agáchate a tiempo.' },
+  { key: 'arcPlank', g: 'arcos', label: 'Arcos de plancha (al suelo)', short: 'Plancha', type: 'num', min: 0, max: 100, step: 5, def: 10, unit: '%', modes: ['arcs'], relayout: true, hint: 'Un arco muy bajo, casi a ras de suelo: baja las manos al suelo, echa los pies atrás hasta quedar en plancha mientras pasa y vuelve a ponerte de pie (como un burpee, sin el salto). Llega avisado y con tiempo antes y después.' },
+  { key: 'arcPlankH', g: 'arcos', label: 'Altura del arco de plancha', short: 'Altura plancha', type: 'num', min: 40, max: 90, step: 5, def: 60, unit: 'cm', modes: ['arcs'], cond: () => settings.arcPlank > 0, hint: 'A qué altura del suelo pasa la barra. Tu cabeza tiene que quedar por debajo (en plancha suele estar a unos 35–45 cm).' },
   { key: 'arcOrbs', g: 'arcos', label: 'Orbes para recoger', short: 'Orbes', type: 'num', min: 0, max: 100, step: 10, def: 40, unit: '%', modes: ['arcs'], hint: 'Entre arco y arco llegan orbes dorados: recógelos con la cabeza o con las manos (100 puntos; 200 en fiebre). Si se escapan, no pasa nada.' },
   { key: 'arcFever', g: 'arcos', label: 'Modo fiebre (10 seguidos sin fallo)', short: 'Fiebre', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Tras 10 obstáculos seguidos sin que te den, todo va un 20 % más deprisa, las luces se vuelven de neón rosa y los puntos valen el doble, hasta que te dan.' },
   { key: 'arcMove', g: 'arcos', label: 'Sensación de avance', short: 'Avance', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Rayas en la pista y farolas a los lados que pasan junto a ti a la velocidad de los arcos.' },
@@ -951,8 +955,8 @@ function setSetting(key, v) {
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
-  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
+  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
+  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 const isBasic = f => f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
 // Lo que se enseña en los menús y en la página: lo que vale para lo elegido y, con el menú sencillo, lo básico
@@ -6370,7 +6374,7 @@ function drawBoard() {
   else if (state === 'between') say1(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 72);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); say1(msg.text, msg.color, 84); c.globalAlpha = 1; }
   else if (RUSH.on) say1('⚡ ×2', BC.gold, 120, 260);
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump)) say1(nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
+  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump || nextArcPlank || nextArcMace)) say1(nextArcMace ? '¡MAZA!' : nextArcPlank ? '¡PLANCHA!' : nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && live && state !== 'rest') {
     const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE ×2' : ''}`; c.textAlign = 'right';
@@ -7897,7 +7901,7 @@ const newStats = () => ({ reps: 0, perfect: 0, partial: 0, kills: 0, bestCombo: 
 let stats = newStats();
 const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dificultad creciente (ver rampWaveEnd)
 let msg = { text: '', color: '#fff', t: 0 };
-let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, calibRef = 1.6, runSaved = false;
+let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, nextArcPlank = false, nextArcMace = false, calibRef = 1.6, runSaved = false;
 // Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
 const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
@@ -8918,10 +8922,11 @@ function jumpTrack(dt) {
 }
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
-  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0) {
+  // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0, plank = false) {
     const H = arMode ? 2.25 : 2.55;
-    this.drop = drop; this.tilt = tilt; this.jump = jump; this.maxUp = -1; this.fast = false;
-    this.barY = jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
+    this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.maxUp = -1; this.fast = false;
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, calibRef + HEAD_TOP - drop - Math.tan(Math.abs(tilt)) * settings.arcShift / 100);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     Object.assign(this, { speed: arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
@@ -8961,7 +8966,7 @@ class Arc {
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
@@ -9789,6 +9794,8 @@ function buildWave(i) {
     for (let n = 0; n < total; n++) {
       if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
+      if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
+      if (Math.random() * 100 < settings.arcPlank) { list.push({ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }); continue; } // al suelo, en plancha
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
@@ -9797,7 +9804,7 @@ function buildWave(i) {
     const tl = list.filter(s => s.tilt), nR = Math.round(tl.length * settings.arcRight / 100), sides = tl.map((_, k) => k < nR ? 1 : -1);
     for (let k = sides.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [sides[k], sides[j]] = [sides[j], sides[k]]; }
     tl.forEach((s, k) => { s.tilt = sides[k] * rand(0.6, 1) * settings.arcTiltMax * Math.PI / 180; });
-    return list;
+    return arxPlankRoom(list);
   }
   if (twoShots()) total *= 2;
   let boss = null;
@@ -9843,7 +9850,8 @@ function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
-    if (spec.kind === 'laser' || spec.kind === 'walls') arcs.push(new ArcObs(spec.kind));
+    if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
+    else if (spec.kind === 'plank') { arcs.push(new Arc(0, 0, false, 0, false, 0, true)); say('¡Arco de plancha! Manos al suelo, pies atrás', '#ffd166', 2.4); }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
     else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
@@ -9872,8 +9880,8 @@ function arcGap() {
 }
 function updateNextArc() {
   let best = null; for (const a of arcs) if (!a.judged && !a.second && (!best || a.z > best.z)) best = a;
-  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump');
-  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; boardDirty = true; }
+  const nx = best || spawnQueue[0], d = nx ? nx.drop : 0, tl = nx ? Math.sign(nx.tiltEnd !== undefined ? nx.tiltEnd : nx.tilt || 0) : 0, j = !!nx && (nx.jump || nx.kind === 'jump'), pk = !!nx && (nx.plank || nx.kind === 'plank'), mc = !!nx && nx.kind === 'mace';
+  if (Math.abs(d - nextArcDrop) > 0.005 || tl !== nextArcTilt || j !== nextArcJump || pk !== nextArcPlank || mc !== nextArcMace) { nextArcDrop = d; nextArcTilt = tl; nextArcJump = j; nextArcPlank = pk; nextArcMace = mc; boardDirty = true; }
 }
 
 /* =================== FLUJO =================== */
@@ -9881,7 +9889,7 @@ function resetWorld() {
   enemies.forEach(e => { if (e.alive || e.mode === 'dying') e.dispose(); }); enemies = [];
   arcs.forEach(a => a.alive && a.dispose()); arcs = []; touchClear(); ARX.orbs.forEach(o => o.alive && o.dispose()); ARX.orbs = []; ARX.orbT = -1;
   projs = []; boltsClear(); rocksClear();
-  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false;
+  clearFX(); swordReset(); spawnQueue = []; chargeOrb.visible = false; charged = false; chargePow = 1; nextArcDrop = 0; nextArcTilt = 0; nextArcJump = false; nextArcPlank = false; nextArcMace = false;
   if (SPLEGS.fem) { SPLEGS.fem.count = 0; SPLEGS.tib.count = 0; }
   gates.forEach(g => g.openT = 0); hatches.forEach(h => h.openT = 0);
   AUD.loops.forEach(l => l.stop()); perkClear(); rushStop(true);
@@ -10470,21 +10478,22 @@ function gameStep(dt, t) {
 // que te dan; entre arco y arco llegan orbes para recoger con la cabeza o las manos; el suelo y unas luces pasan a tu lado
 // (sensación de avance); hay obstáculos nuevos (un láser que barre, dos paredes que se cierran y una rueda que gira) y
 // metas: los metros recorridos, la carrera contra el fantasma de tu mejor ronda y una medalla al acabar.
-const ARX = { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, best: null, nextGap: 0 };
+const ARX = { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, best: null, nextGap: 0 };
 const ARX_GHOST = 'reparena3-arcghost';
 // los obstáculos nuevos, por turnos (empezando por uno al azar): así salen los tres
 const ARX_NEW = ['laser', 'walls', 'wheel']; let arxNewN = Math.floor(Math.random() * 3);
 const arxNewKind = () => ARX_NEW[(arxNewN++) % 3];
-const arxMul = () => ARX.fever ? 1.2 : 1; // la fiebre acelera lo que llega
+// la fiebre acelera lo que llega: la primera, un 20 %; cada una de las siguientes de la ronda, un 10 % más (hasta un 50 %)
+const arxMul = () => ARX.fever ? Math.min(1.5, 1.2 + 0.1 * (ARX.feverN - 1)) : 1;
 const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul();
 function arxReset() {
-  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
+  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
   arxFeverLook(false);
 }
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; arxFeverLook(true); cheer('¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
 function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
@@ -10502,16 +10511,21 @@ function arxPatterns(total) {
     [settings.arcTilt / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.9, { tilt: s * tiltA() }), S(rand(lo, hi), 0.9, { tilt: -s * tiltA() }), S(rand(lo, hi), 1.3, { tilt: s * tiltA() })]; }], // zigzag
     [settings.arcJump / 25, () => [{ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 0.7 }, S(hi, 1.3)]], // valla y, enseguida, un arco bajo
     [settings.arcDouble / 20, () => [S(rand(lo, hi), 1.4, { kind: 'double' })]],
-    [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]]
+    [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
+    [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
+    [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]] // al suelo, en plancha (y tiempo para levantarte)
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
   while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
-  const out = list.slice(0, total);
+  const out = arxPlankRoom(list.slice(0, total));
   // con los obstáculos nuevos activados, en cada oleada larga salen al menos los tres (en vez de arcos sueltos)
   if (settings.arcNew > 0 && total >= 9) for (let need = 3 - out.filter(o => ARX_NEW.includes(o.kind)).length, i = 0; need > 0 && i < 40; i++) {
     const k = Math.floor(Math.random() * out.length); if (out[k].kind === 'single' && !out[k].tilt) { out[k] = { kind: arxNewKind(), drop: out[k].drop, tilt: 0, hp: 1, gap: 1.3 }; need--; }
   }
   return out;
 }
+
+// Antes de un arco de plancha, tiempo para bajar al suelo (el anterior deja un hueco largo)
+function arxPlankRoom(list) { list.forEach((o, i) => { if (o.kind === 'plank' && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, 1.8); }); return list; }
 
 /* ---------- Obstáculos nuevos: láser que barre y paredes que se cierran ---------- */
 // Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,
@@ -10530,47 +10544,81 @@ class ArcObs {
       const core = new THREE.Mesh(G.cylRaw(0.012, 0.012, 2.5, 6), LASER_MAT); core.position.y = 1.25; this.beam.add(core);
       for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 2.5), this.mat); p.position.y = 1.25; p.rotation.y = i * Math.PI / 2; this.beam.add(p); }
       for (const y of [0.03, 2.5]) { const e = new THREE.Mesh(G.box(0.12, 0.06, 0.12), M.steel); tint(e.geometry, C.gun); e.position.y = y; this.beam.add(e); }
+    } else if (kind === 'mace') {
+      // la maza: una bola de pinchos colgada de una cadena que se balancea de lado a lado; en lo más bajo pasa a la altura
+      // de tu cabeza. No se para: hay que mirar su ritmo y apartarse al lado por el que no pasa (o agacharse a tiempo: unos 35 cm)
+      const L = 2.0; Object.assign(this, { L, piv: calibRef + HEAD_TOP - 0.02 + L, A: rand(0.42, 0.55), w: TAU / rand(1.5, 2.1), ph: rand(0, TAU), drop: 0.01, tilt: 0.01, leanX: 0, bx: 0, by: 0, lastS: 0 });
+      const beam = new THREE.Mesh(G.box(2.4, 0.12, 0.14), M.steel); tint(beam.geometry, C.gun); beam.position.y = this.piv + 0.06; this.grp.add(beam);
+      for (const s of [-1, 1]) { const post = new THREE.Mesh(G.cyl(0.05, 0.06, this.piv + 0.12, 10), M.steel); tint(post.geometry, C.gun); post.position.set(s * 1.2, (this.piv + 0.12) / 2, 0); this.grp.add(post); }
+      this.arm = new THREE.Group(); this.arm.position.y = this.piv; this.grp.add(this.arm);
+      for (let i = 0; i < 9; i++) { const l = new THREE.Mesh(MACE.link, M.steel); l.position.y = -(i + 0.5) * (L - 0.15) / 9; l.rotation.y = i % 2 ? Math.PI / 2 : 0; this.arm.add(l); } // (eslabones, cruzados)
+      const ball = new THREE.Group(); ball.position.y = -L; this.arm.add(ball); ball.add(new THREE.Mesh(MACE.ball, MACE.ballMat)); ball.add(new THREE.Mesh(MACE.spikes, MACE.spikeMat));
+      this.glow = glowSprite(0xff2a14, 0.75, 0.25); ball.add(this.glow); this.ball = ball;
     } else {
-      this.gx = (Math.random() < 0.5 ? -1 : 1) * rand(0.28, 0.45); this.gap = 0.62; this.leanX = this.gx; this.tilt = Math.sign(this.gx) * 0.01; this.drop = 0.01;
+      // algunas llegan inclinadas: el hueco va en diagonal (a la altura de tu cabeza, más a un lado) y hay que ladearse
+      this.gx = (Math.random() < 0.5 ? -1 : 1) * rand(0.28, 0.45); this.gap = 0.62; this.drop = 0.01;
+      this.ang = Math.random() * 100 < settings.arcWallTilt ? -Math.sign(this.gx) * rand(0.1, 0.22) : 0; // (inclinadas hacia su lado: más hueco abajo de ese lado)
+      this.leanX = this.gapX(calibRef); this.tilt = Math.sign(this.leanX) * 0.01;
       this.walls = [-1, 1].map(s => { const g = new THREE.Group(), m = wallMat(), pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), m); pl.position.set(s * 0.7, 1.15, 0); g.add(pl);
-        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; this.grp.add(g); return g; });
+        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; g.rotation.z = this.ang; this.grp.add(g); return g; });
     }
     this.hum = humLoop(arena.localToWorld(new V3(0, 1.2, this.z)));
   }
   // lo que queda para que llegue: se mueve mucho al principio y se asienta en su sitio al pasar por ti
   settle() { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / 1.2); }
+  gapX(y) { return this.gx - Math.tan(this.ang || 0) * y; } // (el centro del hueco a esa altura)
   x() { return this.end + this.amp * Math.sin(this.ph + this.settle() * 2.2); }
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.grp.position.z = this.z;
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, s = this.settle();
     if (this.kind === 'laser') this.beam.position.x = this.x();
-    else { const half = this.gap / 2 + Math.min(0.9, s * 0.35); this.walls[0].position.x = this.gx - half; this.walls[1].position.x = this.gx + half; }
-    const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : Math.abs(HL.x - this.gx) > this.gap / 2 - 0.06;
+    else if (this.walls) { const half = this.gap / 2 + Math.min(0.9, s * 0.35); this.walls[0].position.x = this.gx - half; this.walls[1].position.x = this.gx + half; if (this.ang) this.leanX = this.gapX(HL.y); } // (inclinadas: el hueco, a la altura a la que llevas la cabeza)
+    if (this.kind === 'mace') this.swing(t);
+    const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : this.kind === 'mace' ? this.maceHits() : Math.abs(HL.x - this.gapX(HL.y)) > this.gap / 2 - 0.06;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && bad;
-    if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
+    if (this.kind === 'mace') this.glow.material.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.25;
+    else if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
-    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.gx, 1.2, this.z)));
+    if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.kind === 'mace' ? this.bx : this.gapX(1.2), 1.2, this.z)));
     if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; if (bad) this.hit = true; }
     if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
     if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
   }
+  // la maza: el ángulo de la cadena y dónde está la bola (en el sitio de la pista); al pasar por lo más bajo cerca de ti, silba
+  swing(t) {
+    const a = this.A * Math.sin(this.w * this.t + this.ph); this.arm.rotation.z = a; this.ball.rotation.x = this.t * 0.7;
+    this.bx = this.L * Math.sin(a); this.by = this.piv - this.L * Math.cos(a);
+    const s = Math.sign(a); if (s !== this.lastS && this.lastS && Math.abs(this.z - HL.z) < 3) SND.whoosh(arena.localToWorld(tmpA.set(this.bx, this.by, this.z)), 'arc'); this.lastS = s;
+  }
+  maceHits() { return Math.hypot(HL.x - this.bx, HL.y - this.by) < MACE.r + 0.14; } // (la bola, con sus pinchos, y tu cabeza)
   resolve() {
     if (!(state === 'play' || state === 'rest')) return;
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
-    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
+    if (this.hit) { fx.electric(hp, 24); if (this.kind === 'mace') SND.metalHit(hp, true); else SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : this.kind === 'mace' ? '¡Esquiva la maza: apártate o agáchate!' : this.ang ? '¡Ladéate para entrar en el hueco!' : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
+    SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : this.kind === 'mace' ? '¡Maza esquivada!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
   }
   dispose() {
-    arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose());
+    arena.remove(this.grp); if (this.mat) this.mat.dispose(); if (this.walls) this.walls.forEach(w => w.userData.m.dispose()); if (this.glow) this.glow.material.dispose();
     this.grp.traverse(o => { if (o.geometry && o.geometry.type === 'PlaneGeometry') o.geometry.dispose(); }); if (this.hum) { this.hum.stop(); this.hum = null; }
   }
 }
 
+// La maza, compartida por todas: bola de acero oscuro con 12 pinchos y eslabones de cadena
+const MACE = (() => {
+  const r = 0.16, ball = new THREE.IcosahedronGeometry(r, 1), spk = [], ico = new THREE.IcosahedronGeometry(1, 0), P = ico.attributes.position, seen = [];
+  for (let i = 0; i < P.count; i++) { const v = new V3(P.getX(i), P.getY(i), P.getZ(i)).normalize(); if (seen.some(o => o.distanceTo(v) < 0.01)) continue; seen.push(v);
+    const c = new THREE.ConeGeometry(0.04, 0.13, 7); c.translate(0, r + 0.05, 0); c.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new Q4().setFromUnitVectors(new V3(0, 1, 0), v))); /* (r128: las geometrías no tienen applyQuaternion) */ spk.push(ensureAttrs(c.toNonIndexed())); }
+  return { r: r + 0.1, ball, spikes: mergeGeos(spk), link: new THREE.TorusGeometry(0.035, 0.011, 6, 12), ballMat: std({ color: 0x2a2c33, metalness: 0.9, roughness: 0.35, flatShading: true }), spikeMat: std({ color: 0xb8bcc6, metalness: 1, roughness: 0.25 }) };
+})();
+
 /* ---------- Orbes para recoger ---------- */
 // Orbe: un cristal dorado que gira y late, con dos aros que se cruzan, un halo, chispitas que lo rondan y una estela
-const orbGeo = new THREE.IcosahedronGeometry(0.075, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
-const orbMat = std({ color: 0xfff0b8, emissive: 0xffb02a, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.06, flatShading: true, toneMapped: false });
+// (un cristal tallado: muchas caras planas con luz propia moderada, para que la luz y los brillos marquen su relieve; y
+// un núcleo encendido dentro)
+const orbGeo = new THREE.OctahedronGeometry(0.085, 1), orbCoreGeo = new THREE.IcosahedronGeometry(0.035, 0), orbRingGeo = new THREE.TorusGeometry(0.135, 0.007, 6, 36);
+const orbMat = std({ color: 0xffe9a0, emissive: 0xff9a10, emissiveIntensity: 0.4, metalness: 0.75, roughness: 0.12, flatShading: true, toneMapped: false });
+const orbCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8, toneMapped: false });
 orbMat.userData.comicSoft = true; // (en cómic, sombreado redondeado)
 const orbRingMat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 const orbRing2Mat = orbRingMat.clone(); orbRing2Mat.color.setHex(0x7ff7e0);
@@ -10578,14 +10626,17 @@ function orbFeverLook(on) { orbMat.emissive.setHex(on ? 0xff3c9a : 0xffb02a); or
 class ArcOrb {
   constructor() {
     const D = arenaDepth(); this.pos = new V3(rand(-0.6, 0.6), clamp(calibRef + rand(-0.55, 0.08), 0.5, 2.1), -D + 0.9); this.speed = arxSpeed(); this.alive = true;
-    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.grp.add(this.gem);
+    this.grp = new THREE.Group(); this.gem = new THREE.Mesh(orbGeo, orbMat); this.gem.scale.y = 1.25; this.grp.add(this.gem); this.gem.add(new THREE.Mesh(orbCoreGeo, orbCoreMat));
+    // vuelo: dos vaivenes de frecuencias que no encajan, en horizontal y en vertical, que crecen al acercarse: no se puede prever
+    this.fl = [rand(1.2, 1.9), rand(2.6, 3.5), rand(1.0, 1.6), rand(2.2, 3.1)].map(f => ({ f, p: rand(0, TAU) })); this.amp = 1;
     this.ring = new THREE.Mesh(orbRingGeo, orbRingMat); this.ring2 = new THREE.Mesh(orbRingGeo, orbRing2Mat); this.ring2.scale.setScalar(0.82); this.grp.add(this.ring, this.ring2);
     this.glow = glowSprite(ARX.fever ? 0xff4fa3 : 0xffd166, 0.5, 0.85); this.grp.add(this.glow);
     this.motes = [0, 1, 2].map(() => { const m = glowSprite(0xffffff, 0.07, 1); this.grp.add(m); return m; });
     this.trailT = 0; this.ph = rand(0, TAU); this.grp.position.copy(this.pos); arena.add(this.grp);
   }
   update(dt, t) {
-    this.pos.z += this.speed * dt; this.grp.position.copy(this.pos); this.grp.position.y += Math.sin(t * 3 + this.pos.x * 7) * 0.02;
+    this.pos.z += this.speed * dt; const D = arenaDepth(), k = this.amp * clamp((this.pos.z + D) / Math.max(1, D), 0.3, 1), F = this.fl;
+    this.grp.position.set(clamp(this.pos.x + k * (0.2 * Math.sin(F[0].f * t + F[0].p) + 0.09 * Math.sin(F[1].f * t + F[1].p)), -0.85, 0.85), clamp(this.pos.y + k * (0.11 * Math.sin(F[2].f * t + F[2].p) + 0.05 * Math.sin(F[3].f * t + F[3].p)), 0.45, 2.1), this.pos.z);
     const tt = t + this.ph, beat = 1 + 0.14 * Math.pow(0.5 + 0.5 * Math.sin(tt * 6), 3);
     this.gem.rotation.set(tt * 1.3, tt * 2.1, 0); this.gem.scale.setScalar(beat); this.ring.rotation.set(tt * 2, tt * 3, 0); this.ring2.rotation.set(-tt * 2.6, 0, tt * 1.7);
     this.glow.material.opacity = 0.65 + 0.3 * Math.sin(tt * 9) * Math.sin(tt * 3.7); this.glow.scale.setScalar(0.5 * beat);
@@ -12607,6 +12658,7 @@ function previewInput(dt) {
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
+    else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
     else PV.jumping = false;
   }
   // Toques: Espacio lleva la cabeza a la ameba que toca y la devuelve después
