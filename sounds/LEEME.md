@@ -31,6 +31,7 @@ Vale `.mp3`, `.ogg` o `.wav` (por ejemplo `rayo.mp3`). Si un archivo no está, s
 | `lanzamiento` | El lanzador te tira una piedra. |
 | `arco-pasa` | Un arco de energía te pasa por encima, o lo saltas (Arcos). |
 | `orbe` | Coges un orbe en Arcos. (Campanitas de cristal que suben.) |
+| `onda-expansiva` | En el inchworm, al acabar la vuelta: la onda que lanza a los bichos a su trampilla. (Un golpe grave, un soplido que barre el suelo y un retumbar.) |
 | `siseo-avispa` | Un avispón carga antes de picar; en Barras, las avispas y la reina amenazan o te pican. |
 | `ameba` | Revientas una ameba de agua (Toques). |
 | `pompa` | Revientas una pompa (Barras). |
