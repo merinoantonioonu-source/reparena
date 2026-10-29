@@ -2400,7 +2400,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
+  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -2539,6 +2539,7 @@ function endRun(win, manual) {
       AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
+  if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
   if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }

@@ -64,6 +64,32 @@ function handSmooth(h, t) {
   }
 }
 
+/* =================== CÓMO VEN LAS GAFAS TUS MANOS (medición) =================== */
+// Con las manos desnudas, durante la ronda: cuánto tiempo se ve cada mano, cuántas veces se pierde (más de TRK_MIN s), dónde
+// estaba al perderse (abajo, junto al cuerpo y fuera de las cámaras; por encima de la cabeza; o delante, a la vista, donde
+// la tapan el puño, la otra mano o la pesa) y cuánto tardan las gafas en volver a verla. Sale en el resumen (modo
+// desarrollador), para ver en la partida de verdad de dónde vienen los cortes
+const TRK_MIN = 0.1, mkTrk = () => ({ obs: 0, seen: 0, n: 0, low: 0, high: 0, front: 0, sum: 0, max: 0, cur: 0, where: '', lastY: 0 });
+const TRK = { left: mkTrk(), right: mkTrk() };
+function trkReset() { TRK.left = mkTrk(); TRK.right = mkTrk(); }
+function trkStep(dt) {
+  if (!xrActive || preview || !['ready', 'play', 'rest'].includes(state)) return;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], T = TRK[s]; if (!h.isHand) continue; T.obs += dt;
+    if (h.ok) {
+      if (T.cur >= TRK_MIN) { T.n++; T[T.where]++; T.sum += T.cur; T.max = Math.max(T.max, T.cur); }
+      T.cur = 0; T.seen += dt; T.lastY = h.wrist.y - head.p.y; continue;
+    }
+    if (!T.cur) T.where = T.lastY < -0.6 ? 'low' : T.lastY > 0.08 ? 'high' : 'front';
+    T.cur += dt;
+  }
+}
+function trkLine() {
+  const f = s => { const T = TRK[s]; if (T.obs < 5) return null; const pct = Math.round(100 * T.seen / T.obs), avg = T.n ? T.sum / T.n : 0, n1 = v => v.toFixed(1).replace('.', ',');
+    return `${s === 'left' ? 'izq.' : 'der.'} vista ${pct} %${T.n ? ` · ${T.n} ${T.n === 1 ? 'corte' : 'cortes'} (${T.low} abajo, ${T.front} delante, ${T.high} arriba) · vuelve en ${n1(avg)} s (máx. ${n1(T.max)})` : ' · sin cortes'}`; };
+  const L = f('left'), R = f('right'); return L || R ? 'Manos: ' + [L, R].filter(Boolean).join(' | ') : '';
+}
+
 /* =================== PRUEBA EN EL ORDENADOR =================== */
 const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, twist: 0, curl: 0, thrUp: 0, wasCrouch: false };
 // Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
@@ -276,6 +302,7 @@ renderer.setAnimationLoop((time, frame) => {
   const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
   for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
+  trkStep(dt);
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
