@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, MARQ, demoTips, FLOORB, IWW };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, MARQ, demoTips, FLOORB, IWW };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -1475,6 +1475,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.exitAll(); frame(1);
 
   // ---- WebXR con manos ----
+  // (con XR=1 y ONLY, las partidas de antes se han saltado y sus comprobaciones fallarían sin motivo: no cuentan)
+  if (process.env.ONLY && process.env.XR && errors.length) { log(`(XR=1 con ONLY: no cuentan ${errors.length} comprobaciones de partidas que ONLY se ha saltado)`); errors.length = 0; }
   const xrFrame = makeXRFrame();
   await RA.startXR(false); for (let k = 0; k < 40; k++) { frame(2, 16, xrFrame); await sleep(20); } frame(40, 16, xrFrame);
   log('XR mode', RA.settings.mode, RA.settings.exercise); log('XR lobby state', RA.state, 'menu?', !!RA.menu, 'gloves seg count', RA.gloves.right.seg.count);
@@ -2041,13 +2043,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });
     { const s0 = RA.stats.shots; XRS.noHands = true; XRS.headY = 1.38; for (let i = 0; i < 70; i++) { frame(1, 16, xrFrame); scan(); } XRS.headY = 1.7; for (let i = 0; i < 30; i++) { frame(1, 16, xrFrame); scan(); }
       XRS.noHands = false; XRS.hands = rest(); for (let i = 0; i < 10; i++) { frame(1, 16, xrFrame); scan(); } var noHandShots = RA.stats.shots - s0 + autoOrbs, noHandCharges = charges(); }
-    { const s0 = RA.stats.shots, back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0);
+    const back0 = new THREE.Vector3(0.2, XRS.headY - 0.25, 0);
+    { const s0 = RA.stats.shots, back = back0.clone();
       // hacia el suelo, por el lado más alejado de todos los enemigos (un volador puede bajar mucho)
       const cands = [[0, -0.8, -0.6], [0.6, -0.8, -0.2], [-0.4, -0.8, -0.4], [0.3, -0.9, -0.3], [0.7, -0.7, 0.1]].map(c => new THREE.Vector3(...c).normalize());
       const gap = c => Math.min(Math.PI, ...RA.enemies.filter(x => x.alive).map(x => x.center(new THREE.Vector3()).sub(back).angleTo(c)));
-      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a);
+      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a), flat = v => new THREE.Vector3(v.x, v.y * 0.4, v.z);
+      var floorWhy = RA.enemies.filter(x => x.alive).map(x => { const v = x.center(new THREE.Vector3()).sub(back); return `${x.kind} a ${v.length().toFixed(1)} m, ${Math.round(v.angleTo(d) * 57.3)}° (aplanado ${Math.round(flat(v).angleTo(flat(d)) * 57.3)}°), alto ${(v.y + back.y).toFixed(2)}`; }).join('; ');
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 5; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); var floorShots = RA.stats.shots - s0, floorCharges = charges(); }
+    // hacia el enemigo pero muy por debajo (bajar la mano de golpe hacia el suelo de delante) no es lanzarle; un poco por debajo, sí
+    { const e = RA.enemies.filter(x => x.alive).sort((a, b) => b.center(new THREE.Vector3()).distanceTo(back0) - a.center(new THREE.Vector3()).distanceTo(back0))[0];
+      if (e) { const v = e.center(new THREE.Vector3()).sub(back0), h = new THREE.Vector3(v.x, 0, v.z).normalize(), el = Math.atan2(v.y, Math.hypot(v.x, v.z));
+        const tilt = deg => h.clone().multiplyScalar(Math.cos(el - deg / 57.3)).add(new THREE.Vector3(0, Math.sin(el - deg / 57.3), 0)), r = Math.atan(e.radius * 1.3 / v.length()) * 57.3;
+        const low = RA.throwTarget(back0, tilt(48 + r)) === e, near = !!RA.throwTarget(back0, tilt(20)); // (un poco por debajo puede ir a otro, aún más cerca de esa dirección)
+        log(`throw XR (${variant}): at the ${e.kind} ${v.length().toFixed(1)} m away, a flick ${Math.round(48 + r)}° below it targets it ${low}, 20° below ${near}`);
+        if (low || !near) errors.push(`lanzar con la mano (${variant}): una sacudida muy por debajo del enemigo (hacia el suelo) no debería ir a él, y una un poco por debajo sí`); } }
     { const s0 = RA.stats.shots; XRS.hands.right = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.05); frame(6, 16, xrFrame);
       for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive); i++) frame(1, 16, xrFrame);
       for (let k = 1; k <= 8; k++) { XRS.headY = 1.7 - 0.03 * k; frame(1, 16, xrFrame); } // bajando
@@ -2056,13 +2067,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       frame(8, 16, xrFrame); XRS.headY = 1.7; XRS.hands = rest(); frame(30, 16, xrFrame); var hipShots = RA.stats.shots - s0; }
     log(`throw XR (${variant}): no hands → shots ${noHandShots}, charges kept ${noHandCharges} · flick at the floor → shots ${floorShots}, charges ${floorCharges} · flick from the hip while squatting → shots ${hipShots}`);
     if (noHandShots || noHandCharges !== 2) errors.push(`lanzar con la mano (${variant}): sin manos a la vista no debería dispararse solo, sino quedarse cargado`);
-    if (floorShots || floorCharges !== 2) errors.push(`lanzar con la mano (${variant}): una sacudida que no va hacia ningún enemigo no debería lanzar ni gastar la carga`);
+    if (floorShots || floorCharges !== 2) errors.push(`lanzar con la mano (${variant}): una sacudida que no va hacia ningún enemigo no debería lanzar ni gastar la carga (${floorWhy})`);
     if (hipShots !== 1) errors.push(`lanzar con la mano (${variant}): la sacudida desde la cadera hacia el enemigo, bajando en la sentadilla, debería lanzar`);
     // las gafas pierden la mano en pleno lanzamiento: sale igual
     squat(); for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive); i++) frame(1, 16, xrFrame);
     { const back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
-      XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
-      const s0 = RA.stats.shots; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0; }
+      const s1 = RA.stats.shots; XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
+      const s0 = RA.stats.shots, c0 = !!RA.HTH.right.c, b0 = RA.HTH.right.burst; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0;
+      var lostWhy = `carga ${c0}, sacudida ${b0}, disparos antes ${s0 - s1}, blanco ${e ? (e.alive ? 'vivo' : 'muerto') : 'ninguno'}, vivos ${RA.enemies.filter(x => x.alive).length}`; }
     // sacudidas como las de verdad: desde la guardia (manos adelantadas), en arco, con el temblor del seguimiento, deprisa o
     // despacio (1 m/s), hacia el enemigo esté donde esté, y a veces perdiendo la mano justo al final: deben salir casi todas
     { const jit = () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006); let fired = 0, tried = 0;
@@ -2099,7 +2111,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);
     if (pinchShots || slowShots) errors.push(`lanzar con la mano (${variant}): pellizcar o empujar despacio no debería lanzar el rayo`);
     if (one !== 1 || two !== 2 || extra) errors.push(`lanzar con la mano (${variant}): cada mano lanza su rayo, y sin otra repetición no hay más (izquierda ${one}, derecha ${two}, otra ${extra})`);
-    if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual`);
+    if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual (${lostWhy})`);
     if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }
