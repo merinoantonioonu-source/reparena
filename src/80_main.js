@@ -283,11 +283,11 @@ renderer.setAnimationLoop((time, frame) => {
   fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
   gameStep(dt, t);
   updateFX(dt); updateBolts(dt);
-  updateGloves(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt); updateBigNotice(dt);
   updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); updateComic(dt, t); spTick(dt); spMarqStep(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
+  updateGloves(dt); // (después de las pulsaciones: la mano se dibuja ya apoyada en la tecla que hunde, sin un fotograma de retraso)
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
