@@ -1475,6 +1475,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.exitAll(); frame(1);
 
   // ---- WebXR con manos ----
+  // (con XR=1 y ONLY, las partidas de antes se han saltado y sus comprobaciones fallarían sin motivo: no cuentan)
+  if (process.env.ONLY && process.env.XR && errors.length) { log(`(XR=1 con ONLY: no cuentan ${errors.length} comprobaciones de partidas que ONLY se ha saltado)`); errors.length = 0; }
   const xrFrame = makeXRFrame();
   await RA.startXR(false); for (let k = 0; k < 40; k++) { frame(2, 16, xrFrame); await sleep(20); } frame(40, 16, xrFrame);
   log('XR mode', RA.settings.mode, RA.settings.exercise); log('XR lobby state', RA.state, 'menu?', !!RA.menu, 'gloves seg count', RA.gloves.right.seg.count);
@@ -2045,7 +2047,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       // hacia el suelo, por el lado más alejado de todos los enemigos (un volador puede bajar mucho)
       const cands = [[0, -0.8, -0.6], [0.6, -0.8, -0.2], [-0.4, -0.8, -0.4], [0.3, -0.9, -0.3], [0.7, -0.7, 0.1]].map(c => new THREE.Vector3(...c).normalize());
       const gap = c => Math.min(Math.PI, ...RA.enemies.filter(x => x.alive).map(x => x.center(new THREE.Vector3()).sub(back).angleTo(c)));
-      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a);
+      const d = cands.reduce((a, c) => gap(c) > gap(a) ? c : a), flat = v => new THREE.Vector3(v.x, v.y * 0.4, v.z);
+      var floorWhy = RA.enemies.filter(x => x.alive).map(x => { const v = x.center(new THREE.Vector3()).sub(back); return `${x.kind} a ${v.length().toFixed(1)} m, ${Math.round(v.angleTo(d) * 57.3)}° (aplanado ${Math.round(flat(v).angleTo(flat(d)) * 57.3)}°), alto ${(v.y + back.y).toFixed(2)}`; }).join('; ');
       XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 5; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); var floorShots = RA.stats.shots - s0, floorCharges = charges(); }
     { const s0 = RA.stats.shots; XRS.hands.right = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.05); frame(6, 16, xrFrame);
@@ -2056,13 +2059,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       frame(8, 16, xrFrame); XRS.headY = 1.7; XRS.hands = rest(); frame(30, 16, xrFrame); var hipShots = RA.stats.shots - s0; }
     log(`throw XR (${variant}): no hands → shots ${noHandShots}, charges kept ${noHandCharges} · flick at the floor → shots ${floorShots}, charges ${floorCharges} · flick from the hip while squatting → shots ${hipShots}`);
     if (noHandShots || noHandCharges !== 2) errors.push(`lanzar con la mano (${variant}): sin manos a la vista no debería dispararse solo, sino quedarse cargado`);
-    if (floorShots || floorCharges !== 2) errors.push(`lanzar con la mano (${variant}): una sacudida que no va hacia ningún enemigo no debería lanzar ni gastar la carga`);
+    if (floorShots || floorCharges !== 2) errors.push(`lanzar con la mano (${variant}): una sacudida que no va hacia ningún enemigo no debería lanzar ni gastar la carga (${floorWhy})`);
     if (hipShots !== 1) errors.push(`lanzar con la mano (${variant}): la sacudida desde la cadera hacia el enemigo, bajando en la sentadilla, debería lanzar`);
     // las gafas pierden la mano en pleno lanzamiento: sale igual
     squat(); for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive); i++) frame(1, 16, xrFrame);
     { const back = new THREE.Vector3(0.2, XRS.headY - 0.25, 0), e = RA.enemies.find(x => x.alive), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
-      XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
-      const s0 = RA.stats.shots; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0; }
+      const s1 = RA.stats.shots; XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
+      const s0 = RA.stats.shots, c0 = !!RA.HTH.right.c, b0 = RA.HTH.right.burst; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0;
+      var lostWhy = `carga ${c0}, sacudida ${b0}, disparos antes ${s0 - s1}, blanco ${e ? (e.alive ? 'vivo' : 'muerto') : 'ninguno'}, vivos ${RA.enemies.filter(x => x.alive).length}`; }
     // sacudidas como las de verdad: desde la guardia (manos adelantadas), en arco, con el temblor del seguimiento, deprisa o
     // despacio (1 m/s), hacia el enemigo esté donde esté, y a veces perdiendo la mano justo al final: deben salir casi todas
     { const jit = () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006); let fired = 0, tried = 0;
@@ -2099,7 +2103,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);
     if (pinchShots || slowShots) errors.push(`lanzar con la mano (${variant}): pellizcar o empujar despacio no debería lanzar el rayo`);
     if (one !== 1 || two !== 2 || extra) errors.push(`lanzar con la mano (${variant}): cada mano lanza su rayo, y sin otra repetición no hay más (izquierda ${one}, derecha ${two}, otra ${extra})`);
-    if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual`);
+    if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual (${lostWhy})`);
     if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
   }
