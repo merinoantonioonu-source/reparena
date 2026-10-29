@@ -257,7 +257,12 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = 
 //  · mientras está hundido, ese botón no cambia aunque el dedo resbale sobre los vecinos (si se sale más de POKE_SLIDE,
 //    se anula); para volver a pulsar hay que sacar el dedo por delante (POKE_OUT), y entre dos pulsaciones pasa POKE_GAP
 //  · tras pulsar (o al abrirse un menú), ese dedo no pulsa en el menú nuevo hasta retirarse (POKE_BACK por delante o fuera)
-const POKE = { st: {}, need: { left: false, right: false }, until: 0 };
+//  · vale cualquiera de las dos manos (el botón MENÚ de la muñeca izquierda, solo la derecha)
+//  · la tecla es sólida: al llegar al fondo de su recorrido, la mano que se ve se queda apoyada en ella aunque la de
+//    verdad siga empujando (POKE.lock: el plano del fondo de la tecla; sigue parando si el dedo resbala a la vecina o si
+//    la pulsación abre otro menú en el mismo sitio, hasta que sale por delante). El dedo de verdad sigue contando para pulsar
+const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} } };
+const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
 const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
 function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
 const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
@@ -266,8 +271,15 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
   for (const w of vis) w.cool = Math.max(0, (w.cool || 0) - dt);
   for (const side of ['left', 'right']) {
-    const f = fingers.find(x => x.side === side), S = pokeSt(key, side);
-    if (!f) { Object.assign(S, { cand: null, push: false, done: false, has: false }); continue; }
+    const f = fingers.find(x => x.side === side), S = pokeSt(key, side), Hd = POKE.hold[side][key] || (POKE.hold[side][key] = { v: new V3(), t: 0 });
+    Hd.v.set(0, 0, 0); Hd.t = now;
+    if (!f) { Object.assign(S, { cand: null, push: false, done: false, has: false }); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    // la mano apoyada en la tecla: ¿sigue el dedo detrás del fondo de la que hundió? (con el menú a la vista)
+    const L = POKE.lock[side], shown = !isMenu || (menu && !menu.closed && menu.group.visible && (!menu.wrist || WM.on));
+    if (L && L.key === key) {
+      const e = _pkL.subVectors(L.p, f.p).dot(L.n), lat = _pkL.addScaledVector(L.n, -e).length();
+      if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
+    }
     if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
     S.prev.copy(f.p); S.has = true;
     // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
@@ -292,7 +304,12 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       if (!cur || slide) { Object.assign(S, { cand: null, push: false, done: false }); continue; } // se fue de lado: anulado
       if (cur.z > POKE_OUT) { S.push = false; S.done = false; } // fuera, por delante: lista para otra
       else {
-        const depth = Math.max(0, -cur.z);
+        const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
+        if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
+          const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
+          Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
+          if (ex > 0) Hd.v.copy(Lk.n).multiplyScalar(ex); else Hd.v.set(0, 0, 0);
+        }
         if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
         else {
           push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
@@ -328,7 +345,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */
-// En las Quest el menú sale de la muñeca izquierda con su botón MENÚ, se queda quieto delante de ti y se pulsa con el índice derecho.
+// En las Quest el menú sale de la muñeca izquierda con su botón MENÚ, se queda quieto delante de ti y se pulsa con el índice de cualquier mano.
 // Con el ajuste «Atril», o en el ordenador, queda fijo delante de ti.
 let menu = null, menuAnchor = null;
 const wristMenuOn = () => xrActive && !preview && settings.menuWhere === 'wrist';
@@ -490,9 +507,8 @@ function openMenu(rows, opts = {}) {
   const wrist = wristMenuOn(), ksc = wrist ? wristScale() : 1;
   buildKeys(group, widgets.filter(w => w.kind === 'btn' || w.kind === 'slider'), KEY_H / ksc, { w: MW, h: H, d: 0.014 / ksc });
   scene.add(group);
-  if (wrist) { // en la muñeca: la postura la pone updateWristMenu; solo lo pulsa la mano derecha
+  if (wrist) { // en la muñeca: la postura la pone updateWristMenu; se pulsa con cualquiera de las dos manos
     if (!reuse && !recent) wristOpen(); // un menú nuevo sale solo delante de ti; el siguiente de uno abierto, en su sitio
-    widgets.forEach(w => { w.only = 'right'; });
     stand.visible = false; wristPose(group, H);
   } else {
     group.rotation.set(-0.38, menuAnchor.yaw, 0); const hz = H / 2 * Math.sin(0.38); // cuelga de su borde de arriba: el centro, más abajo y algo más cerca de ti
@@ -533,12 +549,11 @@ function openKeypad(f, row, opt = null) {
   let y0 = KH / 2 - PAD - dispH - g;
   keys.forEach((k, i) => {
     const col = i % 3, rowI = Math.floor(i / 3), x = (col - 1) * (kw + g), y = y0 - kh / 2 - rowI * (kh + g);
-    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); if (menu.wrist) b.only = 'right'; b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
+    const b = new Btn(k, kw, kh, () => keypadKey(k), { style: 'key', font: 0.55 }); b.mesh.position.set(x, y, 0.003); b.baseZ = 0.003; b.mesh.renderOrder = RO.key; grp.add(b.mesh); kp.widgets.push(b);
   });
   const yb = y0 - kh / 2 - 4 * (kh + g), bw = (KW - PAD * 2 - g) / 2;
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
-  if (menu.wrist) cancel.only = ok.only = 'right';
   cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
   buildKeys(grp, kp.widgets, kkh, { w: KW, h: KH, d: kd });
   menu.keypad = kp; drawKeypad();
@@ -607,7 +622,7 @@ function updateWatch(dt) {
 }
 // Panel de la muñeca: se abre con el botón MENÚ de la muñeca (o solo, cuando sale un menú nuevo: el principal al entrar,
 // el resumen de la ronda…) creciendo desde la muñeca hasta quedarse quieto delante de ti, a wristDist de los ojos y de cara a
-// ti, para pulsarlo con calma con el índice derecho: ya no sigue a la mano. Solo se cierra con su botón «✕ Cerrar» (ningún
+// ti, para pulsarlo con calma con el índice de cualquiera de las dos manos: ya no sigue a la mano. Solo se cierra con su botón «✕ Cerrar» (ningún
 // gesto de la mano lo cierra) y vuelve con el botón MENÚ. Si te alejas o te giras y lo pierdes de vista, el botón lo trae delante.
 const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el atril → 35 cm
 // escala a la distancia elegida: más lejos, más grande, para que se lea igual

@@ -2029,6 +2029,7 @@ function ladderPick(list, i) {
   return ok.length ? ok : list.filter(k => foeTier(k) === Math.min(...list.map(foeTier)));
 }
 function buildWave(i) {
+  LADDER.fresh = []; // (solo el combate anuncia enemigos nuevos: que no quede el aviso de la partida anterior en arcos, toques o barras)
   if (isBars()) return buildBarWave(i);
   if (settings.mode === 'touch') return buildTouchWave(i);
   let total = waveReps(i);

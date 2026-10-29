@@ -663,6 +663,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const w0 = kinds(0), w1 = kinds(1), w3 = kinds(3), fresh3 = RA.LADDER.fresh.join(','), w5 = kinds(5); RA.setSetting('foeLadder', 0); const off = kinds(0);
     log(`foe ladder: wave 1 ${w0} · wave 2 ${w1} · wave 4 ${w3} (new ${fresh3}) · wave 6 ${w5} · without the ladder ${off}`);
     if (w0 !== 'zombie' || !w5.includes('yeti') || !off.includes('yeti')) errors.push(`escalera de enemigos: la primera oleada debería traer solo los fáciles y la última, los duros (${w0} → ${w5}; sin ella, ${off})`);
+    // después, en arcos (al fallo), el paso de oleada no anuncia los enemigos de la partida anterior
+    RA.setSetting('foeLadder', 1); RA.buildWave(0); RA.buildWave(3); const was = RA.LADDER.fresh.join(','); RA.setSetting('mode', 'arcs'); RA.setSetting('toFail', 1); RA.buildWave(1); const arcs = RA.LADDER.fresh.join(',');
+    log(`foe ladder then arcs: before ${was || '—'} · in arcs ${arcs || '—'}`); if (arcs) errors.push(`arcos: el paso de oleada no debería anunciar enemigos (${arcs})`);
     for (const k in sv) RA.setSetting(k, sv[k]); }
   // al fallo: no se acaba en la última oleada, siempre con vidas (con infinitas, 3) y termina al perderlas, con la oleada a la que llegaste
   { const F = {}; await runConfig('Arcos al fallo', { ...base, mode: 'arcs', exercise: 'squat', toFail: 1, lives: 0, waves: 1, repsWave: 4, repsInc: 0, rest: 0, arcTilt: 0, arcJump: 0, arcDouble: 0, arcNew: 0, arcMace: 0, arcPlank: 0, arcOrbs: 0, arcRate: 20 }, t => { RA.PV.crouch = t < 22; F.wave = RA.waveIdx; },
@@ -1847,6 +1850,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!opened || !sameTab || !same) errors.push('la pulsación que abre un menú (sin retirar el dedo) no debería tocar el menú nuevo');
     if (!nowTab) errors.push('después de retirar el dedo, la siguiente pulsación debería contar');
     RA.exitAll(); frame(2, 16, xrFrame); RA.setSetting('menuWhere', 'wrist'); }
+  // ---- Menú de muñeca: se pulsa con cualquiera de las dos manos, y la tecla es sólida: la mano que se ve se queda apoyada en ella ----
+  { RA.setSetting('menuWhere', 'wrist'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(40, 16, xrFrame); RA.lobbyMenu(); frame(60, 16, xrFrame);
+    const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
+    const w = findW('Ajustes'), pts = [0.08, 0.05, 0.03, 0.015, 0.0, -0.01, -0.025, -0.04].map(d => at(w, d)), out = at(w, 0.1); await sleep(300);
+    const gap = () => RA.gloves.left.palm.position.distanceTo(RA.hands.left.J[0].s);
+    for (const p of pts) { XRS.ltip = p; frame(2, 16, xrFrame); }
+    const opened = RA.activeWidgets().some(x => x.label === 'Volver' || x.label === 'Tu cuerpo'); frame(10, 16, xrFrame);
+    const held = gap(), hold = RA.gloves.left.hold.length(); // (4 cm detrás de la superficie: la mano que se ve, ~3 cm por delante de la de verdad)
+    XRS.ltip = out; frame(20, 16, xrFrame); const back = gap();
+    XRS.ltip = null; frame(2, 16, xrFrame);
+    log(`wrist menu with the LEFT index: settings opened ${opened} · finger 4 cm in, the hand seen stays ${(held * 100).toFixed(1)} cm out (hold ${(hold * 100).toFixed(1)} cm) · pulled back ${(back * 100).toFixed(1)} cm`);
+    if (!opened) errors.push('menú de muñeca: también se debería poder pulsar con la mano izquierda');
+    if (!(held > 0.02 && held < 0.04)) errors.push(`la tecla debería parar la mano que se ve (apartada ${(held * 100).toFixed(1)} cm con el dedo 4 cm dentro)`);
+    if (back > 0.002) errors.push('al retirar el dedo, la mano que se ve debería volver con la de verdad');
+    RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- Pistolas en XR con mandos: bláster en cada mano y el gatillo dispara ----
   applyCfg({ mode: 'flyers', exercise: 'squat', pistol: 1, lives: 0, waves: 1, repsWave: 6, rest: 0, flySpeed: 8, squatDepth: 25 });
@@ -2361,6 +2379,7 @@ function makeXRFrame() {
         if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         if (XRS.left && j.side === 'left') pos = leftJoint(i, XRS.left); // mano izquierda con forma de mano: palma, dedos y puño
+        if (j.side === 'left' && i === 9 && XRS.ltip) pos = { x: XRS.ltip.x, y: XRS.ltip.y, z: XRS.ltip.z }; // (el índice izquierdo, para pulsar)
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }
     };
