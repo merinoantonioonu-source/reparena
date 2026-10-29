@@ -105,6 +105,9 @@ No las cambies sin preguntarle.
   - Tumbado y en plancha: en el suelo bajo la cara o en el techo, de cara a los ojos, con lo de arriba del texto hacia la
     cabeza y fijos (ladearla no los gira). Igual para todos los avisos de la vista.
 - Los avisos de lo que se hace mal salen grandes, impresos en el suelo, durante unos 4 s.
+- Al empezar cada ronda, la **carátula del duelo** (`src/64_intro.js`, modelo 3 de los propuestos): 2 s, grande, a 2,5 m,
+  con todo lo demás en negro; tú (rango y récord) contra el jefe de la ronda, sin la caricatura (sale después, hasta
+  calibrar). Se salta con cualquier botón del mando o con el pulgar arriba.
 - Al perder todas las vidas: fundido en negro, aviso claro de derrota y resumen automático con «Otra ronda» y «Menú
   principal».
 
