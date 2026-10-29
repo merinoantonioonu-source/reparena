@@ -25,8 +25,9 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
 - `index.html` **se genera**: nunca lo edites a mano, pero **haz commit de él** junto con `src/`, porque es lo que
   publica GitHub Pages. `build/` no se sube.
 - Ejecuta las pruebas en primer plano: en segundo plano la salida se corta.
-- Las pruebas XR tienen fallos conocidos de antes. Si sale alguno, compáralo con `main` (`git stash`, construir, probar y
-  `git stash pop`) antes de darlo por tuyo, y dile al usuario cuáles son de antes.
+- Con `XR=1 ONLY=…` no cuentan las comprobaciones de las partidas que `ONLY` se salta (lo dice al empezar la parte XR).
+  Si sale algún fallo, compáralo con `main` (`git stash`, construir, probar y `git stash pop`) antes de darlo por tuyo, y
+  dile al usuario cuáles son de antes. Algunas pruebas dependen del azar (dónde están los enemigos): repítelas.
 - Para ver un cambio visual, haz capturas con el Chromium de Playwright: el juego tiene un modo «Probar en el ordenador».
   Haz capturas de la página a 1280 y a 390 de ancho.
 - Flujo de trabajo: tras cada PR fusionado, la rama de trabajo se rehace desde `origin/main`. Commit, push y PR con la

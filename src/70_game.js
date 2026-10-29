@@ -1816,13 +1816,15 @@ function throwCharge(dmg, perfect, pow = 1) {
   HTH.idle = 0; boardDirty = true; return true;
 }
 // El blanco: el más cercano a la dirección del lanzamiento, hasta THROW_WIDE grados. Cuenta sobre todo hacia qué lado
-// va la mano (en horizontal): la sacudida suele hacer un arco hacia arriba o hacia abajo, y eso no debe cambiar el blanco
-const _ttd = new V3(), _ttv = new V3();
+// va la mano (en horizontal): la sacudida suele hacer un arco hacia arriba o hacia abajo, y eso no debe cambiar el blanco.
+// Pero no más de THROW_TILT por encima o por debajo de él: bajar la mano de golpe hacia el suelo no es lanzar al de delante
+const THROW_TILT = 45, _ttd = new V3(), _ttv = new V3();
 function throwTarget(o, d) {
-  let best = null, bs = THROW_WIDE * Math.PI / 180; _ttd.set(d.x, d.y * 0.4, d.z);
+  let best = null, bs = THROW_WIDE * Math.PI / 180; _ttd.set(d.x, d.y * 0.4, d.z); const ed = Math.atan2(d.y, Math.hypot(d.x, d.z));
   for (const e of enemies) {
     if (!e.alive) continue; const v = e.center(tmpA).sub(o), dist = v.length(); if (dist < 0.05) continue;
-    const a = _ttv.set(v.x, v.y * 0.4, v.z).angleTo(_ttd) - Math.atan(e.radius * 1.3 / dist);
+    const r = Math.atan(e.radius * 1.3 / dist), a = _ttv.set(v.x, v.y * 0.4, v.z).angleTo(_ttd) - r;
+    if (Math.abs(Math.atan2(v.y, Math.hypot(v.x, v.z)) - ed) - r > THROW_TILT * Math.PI / 180) continue;
     if (a < bs) { bs = a; best = e; }
   }
   return best;
