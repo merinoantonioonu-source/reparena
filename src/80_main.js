@@ -73,7 +73,7 @@ function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camer
 const _pvw = new V3();
 // Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición: te doblas, caminas con las
 // manos huella a huella (por turnos, cada mano a su siguiente), flexión, vuelves igual al revés y te pones de pie.
-// PV.iwSkip: se salta la tercera huella
+// PV.iwSkip: no llega a la última huella
 function iwPlan() {
   const P = IW.prints, N = P.length, ev = []; let t = 0.9; const D = 0.5;
   for (let j = 2; j < N; j++) { ev.push({ t, s: P[j].side, from: PV.iwSkip && j === 4 ? 0 : j - 2, to: PV.iwSkip && j === 2 ? 0 : j }); t += D; }
@@ -89,7 +89,7 @@ function iwSim(dt) {
   const stand = s => new V3(s === 'left' ? -0.22 : 0.22, 0.85, S), pp = (k, s) => { const pr = P[k] && P[k].side === s ? P[k] : P[k + 1] && P[k + 1].side === s ? P[k + 1] : P[k - 1]; return new V3(pr.x, 0.05, pr.z + 0.06); };
   const out = {}; let zs = 0;
   for (const s of ['left', 'right']) {
-    const k0 = P[0].side === s ? 0 : 1; let w;
+    const k0 = P[0].side === s ? (PV.iwJump ? P.length - 1 : 0) : 1; let w; /* (PV.iwJump: la mano que empieza, de una vez a la última) */
     if (u < 0.9) w = stand(s).lerp(pp(k0, s), smooth(u / 0.9));
     else if (u >= plan.te) w = pp(k0, s).lerp(stand(s), smooth(clamp((u - plan.te) / 1.0, 0, 1)));
     else { // la última huella de esta mano y, si se está moviendo, de dónde viene

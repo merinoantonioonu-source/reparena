@@ -65,8 +65,11 @@ No las cambies sin preguntarle.
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
-- Inchworm: huellas de mano humana dentro de círculos; las manos avanzan por turnos, un paso cada una (nunca a la misma
-  altura); en cada vuelta empieza la otra mano y las del medio se abren a los lados (`iwSpread`).
+- Inchworm: tres huellas de mano humana dentro de círculos (dos de la mano que empieza, junto a los pies y al final, y una
+  de la otra, un paso por detrás: nunca a la misma altura); en cada vuelta empieza la otra mano y las del final se abren a
+  los lados (`iwSpread`). Se pueden saltar huellas: llegar a la última vale y carga el rayo. La onda del final se ve y se
+  oye bien y lanza a los bichos por el aire.
+- El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
 - Mandos como manos (sentadillas y zancadas): el mando se ve como una mano; gatillo + agarre = puño; el rayo se lanza
   apuntando con la mano y con el gatillo. Con mando, la puntería por defecto es «con las manos».
 

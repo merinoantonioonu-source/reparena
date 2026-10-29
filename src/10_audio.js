@@ -271,6 +271,15 @@ const SND = {
     noise(o, { brown: true, f: 1800, to: 200, d: 0.7, gain: 0.9 }); noise(o, { type: 'bandpass', f: 900, to: 400, q: 1.5, d: 0.5, gain: 0.5 }); tone(shaper(o), { f: 70, to: 35, d: 0.5, gain: 0.5 });
     for (let i = 0; i < 10; i++) tone(o, { t: 0.08 + Math.random() * 0.6, f: rand(500, 1400), to: rand(1500, 3000), d: 0.05, gain: 0.05 });
   },
+  // la onda expansiva del inchworm: un golpe grave que se siente en el pecho, el soplido del aire que barre el suelo y un
+  // retumbar que se aleja
+  shock(pos) {
+    if (!sndOK()) return; const o = sout(pos, { rev: 0.55, gain: 1.3, ref: 3 });
+    tone(shaper(o), { f: 75, to: 28, d: 0.9, gain: 1.0, a: 0.004 }); tone(o, { f: 150, to: 45, d: 0.35, gain: 0.45 });
+    noise(o, { brown: true, f: 900, to: 90, d: 1.6, gain: 0.9 });
+    noise(o, { type: 'bandpass', f: 300, to: 2600, q: 0.9, a: 0.04, d: 0.7, gain: 0.55 });
+    noise(o, { t: 0.25, type: 'lowpass', f: 400, to: 120, a: 0.2, d: 1.4, gain: 0.35 });
+  },
   whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
   thunder(dist = 1) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
@@ -333,7 +342,7 @@ const VOICE_FILES = {
 // de tono) dentro de cada efecto
 const SND_FILES = {
   click: ['clic'], tick: ['tic'], charge: ['carga'], perfect: ['perfecta'], power: ['carga-nivel', 1], partial: ['a-medias'], miss: ['fallo'],
-  combo: ['combo'], beep: ['pitido'], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
+  combo: ['combo'], beep: ['pitido'], shock: ['onda-expansiva', 0], horn: ['oleada'], victory: ['victoria'], defeat: ['derrota'], hurt: ['golpe-recibido'],
   explosion: ['explosion', 0], metalHit: ['impacto-metal', 0], door: ['compuerta', 0], step: ['paso-robot', 0], servo: ['servo', 0], roar: [{ who: 2, def: 'robot' }, 0],
   orb: ['orbe', 0], hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
