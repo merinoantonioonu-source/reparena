@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, MARQ, demoTips };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -71,14 +71,16 @@ function frame(n = 1, dtMs = 33, xrFrame) {
 function key(type, code, keyName) { (winListeners[type] || []).forEach(f => f({ code, key: keyName || code, repeat: false, preventDefault() {} })); }
 // los submenús del principal llevan «  ▸» y el ejercicio se elige en su propio menú: findW los encuentra igual
 const wLabel = w => (w.label || '').replace(/\s+▸$/, '');
-function exLabels() { const b = RA.activeWidgets().find(w => /^Ejercicio:/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
+function exLabels() { const b = RA.activeWidgets().find(w => /^Ejercicio/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
 function findW(label) {
   let w = RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
-  for (const re of [/^Ejercicio:/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); } }
+  if (!w && label === 'Volver') w = RA.activeWidgets().find(x => x.label === 'Jugar');
+  if (!w) { const j = RA.activeWidgets().find(x => x.label === 'Jugar' && x.style !== 'selected'); if (j) { j.onPress(); w = RA.activeWidgets().find(x => x.label === label || wLabel(x) === label); } } // (en el menú principal, las partes van a la derecha: «volver» es volver a Jugar)
+  for (const re of [/^Ejercicio/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) findW('Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
 // Armas ▸ del menú principal: abrirlo, o leer lo que trae y volver (sin el botón, nada)
-function openArms() { const b = RA.activeWidgets().find(w => /^Armas: /.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
+function openArms() { const b = RA.activeWidgets().find(w => /^Armas/.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
 function armsLabels() { if (!openArms()) return []; const l = RA.activeWidgets().map(w => w.label); press('Volver'); frame(1); return l; }
 function log(...a) { console.log(...a); }
 // centro del borde de arriba del menú (de ahí cuelga: los menús que se suceden lo comparten)
@@ -189,7 +191,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.keys.KeyQ = RA.PV.keys.KeyE = false;
   const supCfg = { ...base, mode: 'flyers', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 8 };
   // a ritmo normal (subir, aguantar 2 s y bajar: una cada 4,5 s) los voladores no deben picar antes de dar tiempo a cargar
-  { let A = null; await runConfig('superman: tiempo para cargar', { ...base, mode: 'combat', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 7, maxAlive: 5, waves: 1, repsWave: 14, lives: 0 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 4.5) < 3.2; }, 300, s => { A = { ...s }; });
+  { let A = null; const FLAP = { ts: 9 }; await runConfig('superman: tiempo para cargar', { ...base, mode: 'combat', exercise: 'superman', supHold: 2, supRange: 12, flySpeed: 7, maxAlive: 5, waves: 1, repsWave: 14, lives: 0 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 4.5) < 3.2; for (const e of RA.enemies) { const a = e.inst && e.inst.acts && e.inst.acts.Fly; if (a && e.alive) FLAP.ts = Math.min(FLAP.ts, a.timeScale); } }, 300, s => { A = { ...s }; });
+    log(`superman flap: slowest wing beat ×${FLAP.ts === 9 ? '—' : FLAP.ts.toFixed(2)} of the clip`); if (FLAP.ts !== 9 && FLAP.ts < 2) errors.push('voladores: el batido de alas debería ser rápido, aunque avancen despacio');
     if (A && (A.taken > 2 || A.reps < 6)) errors.push(`superman: los voladores pican antes de que dé tiempo a cargar el disparo (${A.taken} picotazos en ${A.reps} repeticiones)`); }
   await runConfig('Enjambre+superman (aguanta 2,6 s)', supCfg, watchPanels(t => { RA.PV.crouch = RA.state === 'play' && (t % 4) < 2.9; }), 420, panelCheck('superman', s => s.reps < 5 ? 'el superman no dispara al aguantar' : s.partial ? 'aguantando lo pedido no debería haber medias' : s.kills < 5 ? 'no derriba a los voladores' : ''));
   // aguantando arriba, entre las manos se carga la bola de energía: visible, con la capa de rayos creciendo; al disparar
@@ -484,13 +487,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }
     for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
   // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
-  const iwMid = new Set(), IWF = { full: 0, gold: 0, flash: 0, home: 0, homeOk: 0, speed: null };
+  const iwMid = new Set(), IWF = { full: 0, gold: 0, flash: 0, home: 0, homeOk: 0, speed: null, firsts: new Set(), bad: false };
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
-    RA.PV.iwAuto = true; const m = RA.IW.prints.find(p => p.pair === 1 && p.side === 'left'); iwMid.add(m.x.toFixed(2) + m.z.toFixed(2));
+    RA.PV.iwAuto = true; const P = RA.IW.prints, m = P[2]; iwMid.add(m.x.toFixed(2) + m.z.toFixed(2)); IWF.firsts.add(P[0].side);
+    if (P.some((p, k) => k && (p.side === P[k - 1].side || Math.abs(p.z - P[k - 1].z) < 0.08))) IWF.bad = true; // (por turnos y nunca a la misma altura)
     // cada huella pisada se rellena (de su color a la ida, dorada a la vuelta) y destella; al acabar la vuelta, la onda
     for (const p of RA.IW.prints) { if (p.m.material.map === p.tex.full) IWF.full++; if (p.back) IWF.gold++; if (p.flash > 0.9) IWF.flash++; }
     for (const e of RA.enemies) if (e.type === 'spider' && e.alive) { if (IWF.speed === null && e.mode === 'run') { IWF.speed = e.avg; IWF.dist = e.startD; } if (e.mode === 'recoil' && e.lungeTo.distanceTo(e.home) < 0.01 && !e._h) { e._h = true; IWF.home++; } }
-  }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : iwMid.size < 3 ? 'inchworm: las huellas del medio no cambian de sitio' : RA.IW.prints.length !== 6 ? 'inchworm: no hay seis huellas' : '');
+  }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : iwMid.size < 3 ? 'inchworm: las huellas del medio no cambian de sitio' : RA.IW.prints.length < 6 || RA.IW.prints.length % 2 ? `inchworm: ${RA.IW.prints.length} huellas (al menos seis, por parejas)` : IWF.bad ? 'inchworm: las huellas deberían alternar las manos, a un paso una de otra (nunca a la misma altura)' : IWF.firsts.size < 2 ? 'inchworm: cada vuelta debería empezar con la otra mano' : '');
   log(`  inchworm prints: filled ${IWF.full} frames · gold on the way back ${IWF.gold} · flashes ${IWF.flash} · shockwaves ${RA.stats.waves || 0} · spiders sent home ${IWF.home} · spider speed ${IWF.speed && IWF.speed.toFixed(3)} m/s for ${IWF.dist && IWF.dist.toFixed(2)} m with «llegan en 10 s» (${IWF.speed && (IWF.dist / IWF.speed).toFixed(0)} s)`);
   if (!IWF.full || !IWF.gold || !IWF.flash) errors.push('inchworm: al pisar cada huella debería destellar y rellenarse (a la vuelta, dorada)');
   if ((RA.stats.waves || 0) < 3 || !IWF.home) errors.push('inchworm: al acabar la vuelta y despegar las manos debería salir la onda que devuelve los bichos a su trampilla');
@@ -612,6 +616,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Arcos con vallas sin saltar', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 4, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; RA.PV.noJump = true; }, 200, s => s.reps ? 'sin saltar no deberían contar las vallas' : s.taken < 4 ? 'las vallas no golpean si no saltas' : '');
   await runConfig('Arcos con vallas de puntillas (despacio)', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 4, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; RA.PV.noJump = false; RA.PV.slowJump = true; }, 200, s => s.reps ? 'subir despacio (de puntillas) no debería contar como salto' : '');
   RA.PV.noJump = RA.PV.slowJump = false;
+  // el menú principal: a la izquierda las partes, cada una con su color; a la derecha, lo de la elegida (con su color en lo
+  // elegido); EMPEZAR, pequeño, arriba a la izquierda del título
+  { RA.startPreview(); frame(2); RA.lobbyMenu(); frame(1); const W = () => RA.activeWidgets(), g = l => W().find(w => w.label === l);
+    const st = g('EMPEZAR'), jug = g('Jugar'), titleY = RA.menu.H / 2 - 0.05, leftX = Math.max(...['Jugar', 'Ajustes', 'Sonido'].map(l => g(l).mesh.position.x));
+    const topLeft = st && st.mesh.position.x < -0.25 && st.mesh.position.y > titleY - 0.06 && st.w < 0.2, tinted = jug && jug.style === 'selected' && jug.tint === '#5ab8ff';
+    press('Sonido'); frame(1); const snd = W().filter(w => w.kind === 'slider').map(w => w.f.key), right = W().filter(w => w.kind === 'slider').every(w => w.mesh.position.x > leftX), sndOn = g('Sonido').style === 'selected';
+    press('Ajustes'); frame(1); const tabsIn = !!g('Tu cuerpo'); press('Jugar'); frame(1);
+    log(`lobby: EMPEZAR top left ${topLeft} · Jugar tinted ${tinted} · Sonido pane ${snd.join(',')} to the right ${right} (tab on ${sndOn}) · Ajustes tabs inside ${tabsIn}`);
+    if (!topLeft || !tinted || !snd.includes('volume') || !right || !sndOn || !tabsIn) errors.push('menú principal: las partes deberían ir a la izquierda (con su color) y lo de la elegida a la derecha, con EMPEZAR arriba a la izquierda');
+    const T = RA.demoTips('squat', 'combat'); log(`caricature tips: ${T.perfect} · ${T.extra}`);
+    if (!/^Perfecta:/.test(T.perfect) || !/×2/.test(T.extra) || !/onda/.test(RA.demoTips('inchworm', 'combat').extra)) errors.push('caricaturas: deberían decir cómo sale PERFECTA y el extra del ejercicio');
+    RA.exitAll(); frame(1); }
   // la escalera de enemigos: en la primera oleada, solo los fáciles de entre los elegidos; en la última, ya entran los duros (y se anuncian)
   { const sv = { ...RA.settings }; RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); for (const [k, v] of Object.entries({ foeLadder: 1, foesGate: 'zombie,raptor,yeti', foesFly: '', foeKind: 'all', rank: 'cabo', waves: 6, repsWave: 20 })) RA.setSetting(k, v);
     const kinds = i => [...new Set(RA.buildWave(i).filter(e => !/boss/.test(e.kind)).map(e => e.kind))].sort().join(',');
@@ -635,6 +651,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (String(now) !== '9.5,40' || String(gen) !== '14,0' || String(back) !== '9.5,40' || touched) errors.push('tabla del desarrollador: sus valores no mandan en su rango (o el rango queda «retocado»)');
     if (!rows.includes('arcSpeed') || !rows.includes('arcTiltW') || rows.includes('rank') || rows.includes('squatDepth') || !/dvtab/.test(html) || !/Velocidad/.test(html)) errors.push('tabla del desarrollador: las filas no son las de la dificultad de este modo y ejercicio');
     if (!cleared || again !== 40 || other !== null || !/válid/.test(bad)) errors.push('tabla del desarrollador: no se exporta, se importa o es de cada modo y ejercicio');
+    // cada enemigo: su resistencia (disparos en la primera oleada) y su fuerza (vidas por golpe), y los nuevos entran solos en la lista
+    RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('foesGate', 'zombie'); RA.setSetting('foesFly', ''); RA.setSetting('foeLadder', 0); RA.setSetting('toFail', 0); RA.setSetting('waves', 5); RA.setSetting('repsWave', 20);
+    const hp0 = RA.buildWave(0).find(e => e.kind === 'zombie').hp; RA.devFoeSet('g:zombie', 'hp', 5); RA.devFoeSet('g:zombie', 'str', 2); const w = RA.buildWave(0), hp1 = w.find(e => e.kind === 'zombie').hp, fk = w[0].fk;
+    const listed = RA.devFoes().map(x => x[0]), allIn = RA.FOE_GATE.every(([k]) => listed.includes('g:' + k)) && RA.FOE_FLY.filter(([k]) => k !== 'dragon').every(([k]) => listed.includes('f:' + k));
+    const foeExp = /"g:zombie"/.test(RA.devExport());
+    log(`enemy stats: zombie shots ${hp0} → ${hp1} (key ${fk}) · every enemy listed ${allIn} (${listed.length}) · exported ${foeExp}`);
+    if (hp0 !== 2 || hp1 !== 5 || fk !== 'g:zombie' || !allIn || !foeExp) errors.push('enemigos del desarrollador: la resistencia no se aplica, falta algún enemigo en la lista o no se exporta');
     RA.devImport('{}'); for (const k in sv) if (RA.settings[k] !== sv[k]) RA.setSetting(k, sv[k]); }
   // arcos al compás: con ritmo, cada arco llega a la cabeza justo en un pulso
   { const arr = [], seen = new Set(); await runConfig('Arcos al compás (120 BPM)', { ...base, mode: 'arcs', exercise: 'squat', bpm: 120, arcBeat: 1, arcTilt: 0, arcJump: 0, arcDouble: 0, arcNew: 0, arcMace: 0, arcPlank: 0, arcOrbs: 0, waves: 1, repsWave: 10, lives: 0, arcRate: 20 }, t => { RA.PV.crouch = true;
@@ -1079,10 +1102,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (tabs.some(l => /Sonido|Entorno/.test(l))) errors.push('menú: sonido y entorno deberían tener su submenú, no una pestaña en Ajustes'); }
   press('Volver'); frame(2);
   // Armas: pistolas, puntería con las manos y espadas juntas, en su pestaña y en su submenú (y fuera de Enemigos)
-  { const mKeys = () => RA.menu.rows.filter(r => r.t === 'field').map(r => r.key), tabKeys = t => { RA.settingsMenu(() => RA.lobbyMenu(), t); frame(1); return mKeys(); };
+  { const mKeys = () => RA.menu.rows.flatMap(r => r.t === 'cols' ? r.cols.flat() : [r]).filter(r => r.t === 'field').map(r => r.key), tabKeys = t => { RA.settingsMenu(() => RA.lobbyMenu(), t); frame(1); return mKeys(); };
     const fg = RA.settings.foesGate, ff = RA.settings.foesFly; RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('foesGate', 'robots'); RA.setSetting('foesFly', ''); RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'full');
     const arm = tabKeys('armas'), foe = tabKeys('enemigos'); RA.lobbyMenu(); frame(1);
-    const btn = (RA.activeWidgets().find(w => /^Armas: /.test(w.label)) || {}).label, inside = (openArms(), mKeys()); press('Volver'); frame(1);
+    const btn = (RA.activeWidgets().find(w => /^Armas/.test(w.label)) || {}).label, inside = (openArms(), mKeys()); press('Volver'); frame(1);
     const mainHas = mKeys().some(k => ['aim', 'throwPick', 'sword', 'swordKind', 'pistol'].includes(k));
     log(`arms: tab ${arm.join(',')} · enemies tab ${foe.join(',')} · button “${btn}” · submenu ${inside.join(',')} · weapons left in the main menu ${mainHas}`);
     if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
@@ -1270,7 +1293,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`player menu: Partida ${partS.join(',')} · full (developer) ${partF.join(',')} · no full menu without developer mode ${noDev} · “el rayo va” in Armas ▸: simple ${lobbyS}, full ${lobbyF}`);
     if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF || !noDev) errors.push('menú del jugador: no esconde lo de afinar, o el completo (del desarrollador) no lo enseña');
     RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
-  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos: /.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(armsLabels()); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
@@ -1297,7 +1320,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
   // Enemigos ▸: cada uno se marca o se quita; sin ninguno de las compuertas, solo voladores
-  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^Enemigos: /.test(w.label)).label); frame(1);
+  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^Enemigos/.test(w.label)).label); frame(1);
   const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
   for (const l of gateLabels) { RA.activeWidgets().find(w => w.label === l).onPress(); frame(1); }
   press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
@@ -1644,7 +1667,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!paused || !amb || !resumed) errors.push('Spotify: al terminar la partida debería pausarse (y oírse el ambiente) y al empezar otra, seguir sonando');
     RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
-  RA.startPreview(); frame(2); press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
+  RA.startPreview(); frame(2);
+  // el reproductor pequeño, en el principal: sus cinco botones juntos y el rótulo de lo que suena, que se desplaza si no cabe
+  { const W = RA.activeWidgets(), ids = ['Anterior', 'Siguiente', 'Vol −', 'Vol +'].map(l => W.find(w => w.label === l)), M = RA.MARQ, x0 = M.x; for (let i = 0; i < 10; i++) frame(1);
+    const box = ids.every(Boolean) && Math.max(...ids.map(w => w.mesh.position.x)) - Math.min(...ids.map(w => w.mesh.position.x)) < 0.3;
+    log(`spotify mini player: buttons together ${box} · marquee “${M.text}” on ${!!(M.p && M.p.mesh.parent)} · scrolls ${M.x > x0}`);
+    if (!box || !M.p || !(M.x > x0) || !/♪|Spotify/.test(M.text)) errors.push('Spotify: el menú principal debería llevar el reproductor pequeño (botones juntos y rótulo que se mueve)'); }
+  press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);
   log('after next/vol:', RA.spNowText());
   for (const c of ['PUT /v1/me/player/pause', 'POST /v1/me/player/next', 'PUT /v1/me/player/volume?volume_percent=60']) if (!SPOT.calls.includes(c)) errors.push('Spotify: falta la llamada ' + c);
@@ -1713,7 +1742,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const top0 = RA.WM.top.clone();
     for (const d of [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]) { XRS.tip = wp.clone().addScaledVector(wn, d); frame(2, 16, xrFrame); }
     XRS.tip = null; frame(2, 16, xrFrame);
-    const pressed = RA.activeWidgets().some(x => /Volver/.test(x.label)), kept = RA.WM.top.distanceTo(top0) < 0.002 && RA.menu.group.visible;
+    const pressed = RA.activeWidgets().some(x => /Volver|Tu cuerpo/.test(x.label)), kept = RA.WM.top.distanceTo(top0) < 0.002 && RA.menu.group.visible;
     log('wrist menu poke with right index → settings opened', pressed, 'top edge kept in place', kept);
     if (!pressed) errors.push('el panel de la muñeca no se puede pulsar con el índice derecho');
     if (!kept) errors.push('el submenú de la muñeca no sale en el mismo sitio');
@@ -1780,7 +1809,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { RA.setSetting('menuWhere', 'stand'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(30, 16, xrFrame); RA.lobbyMenu(); frame(40, 16, xrFrame);
     const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
     const poke = (w, ds) => { for (const d of ds) { XRS.tip = at(w, d); frame(2, 16, xrFrame); if (process.env.DBG) log('  poke', w.label, d, 'need', RA.POKE.need.right, 'menuH', RA.menuH && RA.menuH.toFixed(2)); } };
-    poke(findW('Ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver');
+    poke(findW('Ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver' || w.label === 'Tu cuerpo');
     const tab = RA.activeWidgets().find(w => w.style === 'tab'), before = JSON.stringify(RA.settings);
     await sleep(500); poke(tab, [-0.01, 0.015, -0.01, 0.015, -0.01]); const sameTab = !RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected'), same = JSON.stringify(RA.settings) === before;
     poke(tab, [0.06]); await sleep(500); poke(tab, [0.06, 0.03, 0.015, 0.0, -0.01]); const nowTab = RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected');
