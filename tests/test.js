@@ -220,6 +220,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Antebrazos con giros cortos', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, waves: 1, walkTime: 30 }, squatSim(1.6), 25, s => s.reps ? 'giros cortos no deberían disparar' : !s.partial ? 'debería avisar de que hay que girar más' : '', true);
   RA.PV.twistScale = 1; RA.PV.crouch = false;
   // sentadillas en combate: aguantar abajo carga el disparo (×2, ×3, ×4), como en las flexiones
+  // la bola de energía (con rayos, en todos los ejercicios): delante, a un metro del pecho y por debajo de los ojos, con el
+  // número de la carga, la capa de rayos creciendo, el destello al llegar a ×4 y el estallido al disparar (de ella salen los
+  // rayos); con pistolas o espadas, ni en Arcos, no sale
+  { const B = { vis: 0, d: [9, 0], below: true, nums: new Set(), sh: [9, 0], max: 0, burst: 0 };
+    await runConfig('Bola de energía (sentadillas, puntería automática)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const S = RA.SORB;
+      if (S.g.visible && S.on) { B.vis++; const c = RA.head.p.clone(); const d = Math.hypot(S.pos.x - c.x, S.pos.z - c.z); B.d = [Math.min(B.d[0], d), Math.max(B.d[1], d)]; if (S.pos.y > RA.head.p.y - 0.15) B.below = false; if (S.num.visible) B.nums.add(S.pow); B.sh = [Math.min(B.sh[0], S.shell2.scale.x), Math.max(B.sh[1], S.shell2.scale.x)]; }
+      if (S.mx >= 0) B.max++; if (S.burst > 0) B.burst++; }, 200, s => '', true);
+    const none = {};
+    for (const [n, c] of [['pistolas', { pistol: 1 }], ['arcos', { mode: 'arcs' }]]) { let seen = 0; // (con espadas en el ordenador no hay mandos: la espada no está activa y salen rayos)
+      await runConfig(`Sin bola de energía (${n})`, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 3, ...c }, t => { RA.PV.crouch = (t % 5) < 3.4; if (RA.SORB.g.visible) seen++; }, 25, s => '', true); none[n] = seen; }
+    RA.setSetting('pistol', 0);
+    log(`energy ball: visible ${B.vis} frames · ${B.d[0].toFixed(2)}–${B.d[1].toFixed(2)} m in front · below the eyes ${B.below} · numbers ${[...B.nums].join(',')} · second layer ${B.sh[0].toFixed(3)}→${B.sh[1].toFixed(3)} · max flash ${B.max} frames · burst on firing ${B.burst} · with pistols / in arcs: ${JSON.stringify(none)}`);
+    if (!B.vis || B.d[0] < 0.8 || B.d[1] > 1.2 || !B.below || !B.nums.has(4) || B.sh[1] < B.sh[0] * 1.5 || !B.max || !B.burst) errors.push('bola de energía: debería flotar a un metro, por debajo de los ojos, con su número, la capa creciendo, el destello al máximo y el estallido al disparar');
+    if (none.pistolas || none.arcos) errors.push('bola de energía: con pistolas o sin disparos no debería salir'); }
   for (const aim of ['auto', 'hands']) { let maxPow = 1; const F = { seen: new Set(), y: 9, gone: null };
     await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]);
       // la carga, también en el suelo (agachado es lo que ves): ×2, ×3 y, a ×4, «¡ARRIBA!»; se va al disparar

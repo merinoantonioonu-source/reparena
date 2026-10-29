@@ -1194,15 +1194,16 @@ function onRep(opts, side) {
   // espadas: la sentadilla carga la hoja (y, con una espada y las pistolas, también el bláster de la otra mano)
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
+  const bp = sorbFire(); // la bola de energía estalla y de ella salen los rayos (lanzando con las manos, la carga pasa a ellas)
   if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
-    const sup = settings.exercise === 'superman', origin = sup ? SORB.fireAt || (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone();
+    const sup = settings.exercise === 'superman', origin = bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
   } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
-    if (throwAim()) { fireOrb(head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
+    if (throwAim()) { fireOrb(bp || head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
     for (const s of aimSources()) {
       let o = s.o.clone();
-      if (s.key === 'gaze') o = side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
+      if (s.key === 'gaze') o = bp ? bp.clone() : side && hands[side].ok ? hands[side].wrist.clone() : head.p.clone().add(tmpA.set(0, -0.15, 0)).addScaledVector(fwdH(), 0.2);
       else gloves[s.key].pulse = 1;
       fireBolt(o, s.d.clone(), s.key === 'gaze' ? head.p.clone() : null, dmg, opts.perfect, s.key === 'gaze' ? gazeLock() : null, pow);
     }
@@ -1221,10 +1222,11 @@ function onPower(pow, deep) {
   const col = '#' + POW_COL[pow - 1].toString(16).padStart(6, '0');
   cheer(deep ? `¡RECARGA PROFUNDA! ×${pow}` : `CARGA ×${pow}`, col, deep ? 1.3 : 0.9); boardDirty = true;
   chargeFloor(pow >= 4 ? `×4 · ¡ARRIBA!` : deep ? `RECARGA ×${pow}` : `CARGA ×${pow}`, col); // (en el suelo: agachado, es lo que ves)
+  if (pow >= 4 && sorbFor()) sorbMax(); // la bola, al máximo: el destello
 }
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && settings.exercise !== 'superman'; // (en el superman, la bola de energía) SND.charge(); boardDirty = true;
+  charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && !sorbFor(); SND.charge(); boardDirty = true; // (con rayos, la carga se ve en la bola de energía: 54_suporb)
 }
 const DET = {
   sq: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
@@ -1688,7 +1690,7 @@ function runDetectors(t, dt) {
         // manos recogidas durante un rato: el tiempo se para (un fallo suelto del seguimiento no cuenta)
         S.armT = armsBack() ? S.armT + dt : 0;
         if (S.armT > 0.4) { S.t0 += dt; if (S.warnT <= 0) { say('Estira los brazos', '#ff8a3d', 1.0); S.warnT = 1.5; } }
-        else if (held >= hold) { SORB.fireAt = sorbFire(); onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); SORB.fireAt = null; S.state = 'top'; }
+        else if (held >= hold) { onRep({ perfect: S.peak - S.ref >= req + 0.04, fast: false }); S.state = 'top'; }
         else if (Math.floor(held) > S.sec) { S.sec = Math.floor(held); SND.beep(1 + S.sec * 0.15); const left = Math.ceil(hold - held); if (left > 0) say(`Aguanta ${left}`, '#ffd166', 0.6, true); }
       }
     } else {
@@ -2694,5 +2696,5 @@ function gameStep(dt, t) {
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
   if (chargeOrb.visible) { const s = 0.15 + (chargePow - 1) * 0.07 + Math.sin(t * (10 + chargePow * 4)) * 0.03; chargeOrb.scale.set(s, s, 1); }
-  sorbStep(dt, settings.exercise === 'superman' && DET.su.state === 'up' && GAME_STATES.includes(state) ? DET.su.k || 0 : -1); // superman: la bola de energía
+  sorbStep(dt); // la bola de energía con la carga (54_suporb)
 }
