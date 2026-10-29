@@ -1326,6 +1326,8 @@ function armStep(kind, side, t, dt) {
       if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
       if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
     } else if (d.state === 'hold' && d.lost > 0.25) { d.state = 'top'; return { top: true, ...d.ev, pow: d.pow }; } // junto a la cara la mano se pierde a menudo: sale con la carga que llevaba
+    // subiendo, la pesa tapa los dedos y las gafas pierden la mano: si ya iba por casi la mitad, cuenta (sin ver el final)
+    else if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4) { d.state = 'top'; onCharge(); return { top: true, perfect: false, fast: false }; }
     else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
@@ -1440,7 +1442,12 @@ const _frm = new V3();
 function fraiseStep(t, dt) {
   const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
   for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
-  if (!n) { d.lost += dt; if (d.lost > 0.6) d.state = 'down'; return; }
+  if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
+    d.lost += dt;
+    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
+    else if (d.lost > 0.6 && d.state !== 'top') d.state = 'down';
+    return;
+  }
   _frm.divideScalar(n); d.lost = 0;
   const r = _frm.y - head.p.y, fwd = Math.hypot(_frm.x - head.p.x, _frm.z - head.p.z);
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido (se adapta a tu altura)
@@ -1800,14 +1807,14 @@ const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.ai
 // La mano se mide respecto a la cabeza en horizontal y respecto al suelo en altura (subir y bajar en la sentadilla no la
 // mueve). Una sacudida es un acelerón por encima de THROW_V; empieza donde la mano iba por última vez por debajo de
 // THROW_SLOW y acaba al frenar (por debajo de THROW_STOP del pico) o al recorrer THROW_LONG. THROW_JUMP: más rápido, es un salto del seguimiento
-const THROW_V = 0.8, THROW_SLOW = 0.45, THROW_D = 0.1, THROW_LONG = 0.32, THROW_WIDE = 60, THROW_STOP = 0.75, THROW_JUMP = 15;
-const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [], prev: new V3(), v: new V3(), from: new V3(), last: new V3(), lastR: new V3() });
+const THROW_V = 0.8, THROW_SLOW = 0.45, THROW_D = 0.1, THROW_LONG = 0.32, THROW_WIDE = 60, THROW_STOP = 0.75, THROW_JUMP = 15, THROW_REAPPEAR = 0.25;
+const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [], prev: new V3(), v: new V3(), from: new V3(), last: new V3(), lastR: new V3(), gone: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3(), _thd = new V3();
 const padVirt = () => hands.left.virt || hands.right.virt;
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH.idle = 0; HTH.taught = false; }
+function throwReset() { for (const s of ['left', 'right']) { Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH[s].gone.set(0, 0, 0); } HTH.idle = 0; HTH.taught = false; }
 // La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect, pow = 1) {
   if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
@@ -1873,13 +1880,22 @@ function throwStep(dt, t) {
       continue;
     }
     if (!h.ok) { // perdida en plena sacudida: sale el rayo en la dirección que llevaba la mano, si va hacia un enemigo
+      if (!T.lost && T.have) T.gone.copy(T.lastR); // (dónde estaba al perderla)
       T.lost += dt;
       if (T.have && T.burst && T.lost < 0.25) throwTry(s, T.last, _thd.subVectors(T.lastR, T.from));
       if (T.lost > 0.3) { T.have = false; T.burst = false; T.hist.length = 0; }
       continue;
     }
-    T.lost = 0; T.cool = Math.max(0, T.cool - dt);
+    const lostFor = T.lost; T.lost = 0; T.cool = Math.max(0, T.cool - dt);
     _thr.set(h.wrist.x - head.p.x, h.wrist.y, h.wrist.z - head.p.z); T.last.copy(h.wrist); T.lastR.copy(_thr);
+    // vuelve a verse ya lanzada: las gafas tardan en recuperar la mano (sobre todo si estaba abajo, junto a la cadera) y la
+    // sacudida puede empezar sin verla. Si en ese rato ha recorrido bastante y deprisa, cuenta como sacudida desde donde se
+    // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
+    if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
+      const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
+    }
+    T.gone.set(0, 0, 0);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto

@@ -2057,6 +2057,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   prR = RA.stats.reps;
   for (let i = 0; i < 3; i++) { for (let k = 0; k <= 14; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } XRS.noHands = true; frame(30, 16, xrFrame); XRS.noHands = false; XRS.hands = sh(1.55); frame(30, 16, xrFrame); }
   log('press XR lost overhead: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: con las manos perdidas arriba deberían ser 6 (${RA.stats.reps - prR})`);
+  // ---- Curl en XR con kettlebell: la pesa tapa los dedos al subir y las gafas pierden la mano; si ya iba por casi la
+  // mitad, la repetición cuenta aunque vuelva a verse ya abajo (y si apenas había empezado, no) ----
+  { XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame); applyCfg({ mode: 'walkers', exercise: 'curl', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20, curlRange: 27 });
+    await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); const ch = y => ({ left: new THREE.Vector3(-0.22, y, -0.2), right: new THREE.Vector3(0.22, y, -0.2) });
+    RA.beginRun(); XRS.hands = ch(0.95); frame(250, 16, xrFrame); let c0 = RA.stats.reps;
+    const lift = (top, n) => { for (let i = 0; i < n; i++) { for (let k = 0; k <= 10; k++) { XRS.hands = ch(0.95 + top * k / 10); frame(2, 16, xrFrame); } XRS.noHands = true; frame(40, 16, xrFrame); XRS.noHands = false; XRS.hands = ch(0.95); frame(40, 16, xrFrame); } };
+    lift(0.15, 3); const mid = RA.stats.reps - c0; c0 = RA.stats.reps; lift(0.05, 2); const tiny = RA.stats.reps - c0;
+    log(`curl XR lost while lifting: past half way ${mid} reps (3 lifts, two arms) · barely started ${tiny}`);
+    if (mid !== 6) errors.push(`curl XR: si la mano se pierde subiendo, ya por casi la mitad, la repetición debería contar (${mid} de 6)`);
+    if (tiny) errors.push('curl XR: si la mano se pierde nada más empezar a subir, no debería contar'); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Combate con las manos desnudas: la repetición carga UN rayo y se lanza con el gesto (atrás y adelante deprisa) con
   // cualquier mano; igual con las pistolas activadas (sin mandos no se dispara pellizcando) ----
@@ -2115,6 +2125,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const s1 = RA.stats.shots; XRS.hands.right = back.clone(); frame(4, 16, xrFrame); for (let k = 1; k <= 3; k++) { XRS.hands.right = back.clone().addScaledVector(d, 0.1 * k); frame(1, 16, xrFrame); }
       const s0 = RA.stats.shots, c0 = !!RA.HTH.right.c, b0 = RA.HTH.right.burst; XRS.noHands = true; frame(4, 16, xrFrame); XRS.noHands = false; XRS.hands = rest(); frame(4, 16, xrFrame); var lostShot = RA.stats.shots - s0;
       var lostWhy = `carga ${c0}, sacudida ${b0}, disparos antes ${s0 - s1}, blanco ${e ? (e.alive ? 'vivo' : 'muerto') : 'ninguno'}, vivos ${RA.enemies.filter(x => x.alive).length}`; }
+    // la mano abajo, junto a la cadera, fuera de las cámaras: la sacudida empieza sin verla y vuelve a verse ya lanzada hacia
+    // el enemigo: sale el rayo. Si vuelve a verse en el mismo sitio, o tras subir despacio, no
+    { const reap = (to, lostF) => { squat(); for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive); i++) frame(1, 16, xrFrame);
+        const e = RA.enemies.find(x => x.alive), hip = new THREE.Vector3(0.25, XRS.headY - 0.75, 0.0), d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(hip).normalize();
+        XRS.hands.right = hip.clone(); frame(10, 16, xrFrame); const s0 = RA.stats.shots, c = !!RA.HTH.right.c;
+        XRS.noRight = true; frame(lostF, 16, xrFrame); XRS.noRight = false; XRS.hands.right = to === 'same' ? hip.clone() : hip.clone().addScaledVector(d, 0.45); frame(3, 16, xrFrame);
+        const shot = RA.stats.shots - s0; frame(8, 16, xrFrame); XRS.hands = rest(); frame(10, 16, xrFrame); return c ? shot : -1; };
+      var reapFast = reap('far', 15), reapSame = reap('same', 15), reapSlow = reap('far', 45); }
     // sacudidas como las de verdad: desde la guardia (manos adelantadas), en arco, con el temblor del seguimiento, deprisa o
     // despacio (1 m/s), hacia el enemigo esté donde esté, y a veces perdiendo la mano justo al final: deben salir casi todas
     { const jit = () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.006); let fired = 0, tried = 0;
@@ -2151,6 +2169,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (charged !== 2 || shots0) errors.push(`lanzar con la mano (${variant}): cada repetición debería cargar un rayo en cada mano, sin acumular más (y no dispararlo sola)`);
     if (pinchShots || slowShots) errors.push(`lanzar con la mano (${variant}): pellizcar o empujar despacio no debería lanzar el rayo`);
     if (one !== 1 || two !== 2 || extra) errors.push(`lanzar con la mano (${variant}): cada mano lanza su rayo, y sin otra repetición no hay más (izquierda ${one}, derecha ${two}, otra ${extra})`);
+    log(`throw XR (${variant}): thrown while unseen from the hip → shots ${reapFast} · back in the same place ${reapSame} · raised slowly ${reapSlow}`);
+    if (reapFast !== 1) errors.push(`lanzar con la mano (${variant}): si la mano vuelve a verse ya lanzada hacia el enemigo, el rayo debería salir (${reapFast})`);
+    if (reapSame || reapSlow) errors.push(`lanzar con la mano (${variant}): si la mano vuelve a verse en el mismo sitio o tras moverse despacio, no debería salir el rayo (${reapSame}, ${reapSlow})`);
     if (lostShot !== 1) errors.push(`lanzar con la mano (${variant}): si las gafas pierden la mano en pleno lanzamiento, el rayo debería salir igual (${lostWhy})`);
     if (RA.state !== 'end' || RA.stats.shots < 3 || RA.stats.hits < RA.stats.shots * 0.5) errors.push(`lanzar con la mano (${variant}): el gesto no lanza el rayo o no acierta`);
     XRS.hands = null; RA.setSetting('aim', 'auto'); RA.setSetting('pistol', 0); RA.exitAll(); frame(2, 16, xrFrame);
@@ -2422,7 +2443,7 @@ function makeXRFrame() {
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
       getPose(space) { if (space.room) return { transform: space.room }; if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
-        if ((XRS.noLeft && j.side === 'left') || XRS.noHands) return null;
+        if ((XRS.noLeft && j.side === 'left') || (XRS.noRight && j.side === 'right') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);
         let pos = { x: side * 0.2 + (i % 5) * 0.01, y: XRS.headY - 0.45 + Math.floor(i / 5) * 0.01, z: -0.3 - Math.floor(i / 5) * 0.02 };
         let ori = { x: 0, y: 0, z: 0, w: 1 };
