@@ -516,18 +516,27 @@ function updateGloves(dt) {
 }
 
 /* ---------- Mandos como manos ---------- */
-// La mano que se pinta (y con la que se juega) sale del mando: un puño de boxeo que apunta hacia donde apunta el mando, con
-// el dorso arriba y algo hacia fuera. El gatillo dobla el índice; el agarre, los otros tres y el pulgar (los dos a la vez:
-// puño cerrado). En el marco de la mano: origen en la muñeca, −Z hacia los dedos, +Y el dorso (como las articulaciones de
-// las gafas). Por dedo: x del nudillo, z del nudillo y largo de las tres falanges
+// La mano que se pinta (y con la que se juega) sale del mando y lo agarra como se agarra un Touch Plus de las Quest 3: el
+// mango dentro del puño, la palma de lado (mirando hacia dentro), el índice en el gatillo y el pulgar arriba, hacia la cabeza
+// del mando. Los ejes del agarre (WebXR, comprobados con el modelo oficial del Touch Plus): el mango va a lo largo de Z
+// (la cabeza, con el joystick y los botones, hacia −Z), el gatillo delante (−Y) y el botón de agarre en el lado de dentro
+// (−X en la derecha); +X sale del dorso de la mano derecha (y −X, del de la izquierda). El gatillo dobla el índice; el
+// agarre, los otros tres y el pulgar (los dos a la vez: puño cerrado). En el marco de la mano: origen en la muñeca, −Z
+// hacia los dedos, +Y el dorso (como las articulaciones de las gafas). Por dedo: x del nudillo, z del nudillo y largo de
+// las tres falanges
 const PH_F = [[0.024, -0.085, [0.042, 0.025, 0.022]], [0.008, -0.09, [0.046, 0.028, 0.023]], [-0.008, -0.085, [0.042, 0.026, 0.022]], [-0.022, -0.077, [0.033, 0.02, 0.02]]];
-const PH_OPEN = [[0.12, 0.15, 0.1], [0.45, 0.55, 0.35]], PH_FIST = [1.45, 1.6, 1.1]; // (índice suelto: apunta; los demás, relajados)
+const PH_OPEN = [[0.12, 0.15, 0.1], [0.8, 0.9, 0.5]], PH_FIST = [1.45, 1.6, 1.1]; // (índice suelto: apunta; los demás rodean el mango sin apretar)
+// de la mano al agarre: los nudillos a lo largo del mango (el índice hacia la cabeza), los dedos hacia delante (rodean el
+// mango por el gatillo) y el dorso hacia fuera; y, como en la mano de verdad, el mango cruza la palma en diagonal (de la
+// base del índice al talón de la mano): la mano, PH_TILT más hacia la cabeza del mando
+const PH_TILT = 30 * Math.PI / 180, PH_GRIP = {};
+for (const [side, ts] of [['left', -1], ['right', 1]]) PH_GRIP[side] = new Q4().setFromAxisAngle(new V3(1, 0, 0), PH_TILT).multiply(new Q4().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new V3(0, 0, ts), new V3(ts, 0, 0), new V3(0, 1, 0))));
 const _phM = new THREE.Matrix4(), _phQ = new Q4(), _phR = new Q4(), _phP = new V3(), _phD = new V3(), _phX = new V3(1, 0, 0), _phY = new V3(), _phZ = new V3(), _phB = new THREE.Matrix4(), _phO = new V3();
 function padHand(h, side, t) {
   const ts = side === 'right' ? 1 : -1, dt = clamp(t - (h.vt || t), 0, 0.1); h.vt = t; h.virt = true;
   const k = 1 - Math.exp(-dt * 25); h.cI = (h.cI || 0) + ((h.trig ? 1 : 0) - (h.cI || 0)) * k; h.cG = (h.cG || 0) + ((h.grip ? 1 : 0) - (h.cG || 0)) * k;
   // del marco de la mano al del mando: el dorso, girado un poco hacia fuera; la muñeca, detrás de la palma (que envuelve el mando)
-  _phR.setFromAxisAngle(_phD.set(0, 0, 1), -ts * 0.5); _phQ.copy(h.wristQ).multiply(_phR); _phO.set(0, 0.01, 0.055);
+  _phQ.copy(h.wristQ).multiply(PH_GRIP[side]); _phO.set(0, 0.03, 0.075); // (el centro del puño, donde queda el mango, es el origen del agarre)
   const J = h.J, put = (i, p, q, r) => { const A = J[i]; A.p.copy(p).add(_phO).applyQuaternion(_phQ).add(h.wrist); A.s.copy(A.p); A.q.copy(_phQ).multiply(q); A.r = r; A.ok = true; };
   const boneQ = (dir, out) => { _phZ.copy(dir).negate(); _phY.crossVectors(_phZ, _phX).normalize(); _phB.makeBasis(_phD.crossVectors(_phY, _phZ), _phY, _phZ); return out.setFromRotationMatrix(_phB); }; // (−Z a lo largo del hueso, dorso arriba)
   const idQ = new Q4(), q = new Q4(); put(0, _phP.set(0, 0, 0), idQ, 0.02);

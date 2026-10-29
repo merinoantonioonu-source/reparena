@@ -548,7 +548,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos. Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
+      <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
@@ -4919,18 +4919,27 @@ function updateGloves(dt) {
 }
 
 /* ---------- Mandos como manos ---------- */
-// La mano que se pinta (y con la que se juega) sale del mando: un puño de boxeo que apunta hacia donde apunta el mando, con
-// el dorso arriba y algo hacia fuera. El gatillo dobla el índice; el agarre, los otros tres y el pulgar (los dos a la vez:
-// puño cerrado). En el marco de la mano: origen en la muñeca, −Z hacia los dedos, +Y el dorso (como las articulaciones de
-// las gafas). Por dedo: x del nudillo, z del nudillo y largo de las tres falanges
+// La mano que se pinta (y con la que se juega) sale del mando y lo agarra como se agarra un Touch Plus de las Quest 3: el
+// mango dentro del puño, la palma de lado (mirando hacia dentro), el índice en el gatillo y el pulgar arriba, hacia la cabeza
+// del mando. Los ejes del agarre (WebXR, comprobados con el modelo oficial del Touch Plus): el mango va a lo largo de Z
+// (la cabeza, con el joystick y los botones, hacia −Z), el gatillo delante (−Y) y el botón de agarre en el lado de dentro
+// (−X en la derecha); +X sale del dorso de la mano derecha (y −X, del de la izquierda). El gatillo dobla el índice; el
+// agarre, los otros tres y el pulgar (los dos a la vez: puño cerrado). En el marco de la mano: origen en la muñeca, −Z
+// hacia los dedos, +Y el dorso (como las articulaciones de las gafas). Por dedo: x del nudillo, z del nudillo y largo de
+// las tres falanges
 const PH_F = [[0.024, -0.085, [0.042, 0.025, 0.022]], [0.008, -0.09, [0.046, 0.028, 0.023]], [-0.008, -0.085, [0.042, 0.026, 0.022]], [-0.022, -0.077, [0.033, 0.02, 0.02]]];
-const PH_OPEN = [[0.12, 0.15, 0.1], [0.45, 0.55, 0.35]], PH_FIST = [1.45, 1.6, 1.1]; // (índice suelto: apunta; los demás, relajados)
+const PH_OPEN = [[0.12, 0.15, 0.1], [0.8, 0.9, 0.5]], PH_FIST = [1.45, 1.6, 1.1]; // (índice suelto: apunta; los demás rodean el mango sin apretar)
+// de la mano al agarre: los nudillos a lo largo del mango (el índice hacia la cabeza), los dedos hacia delante (rodean el
+// mango por el gatillo) y el dorso hacia fuera; y, como en la mano de verdad, el mango cruza la palma en diagonal (de la
+// base del índice al talón de la mano): la mano, PH_TILT más hacia la cabeza del mando
+const PH_TILT = 30 * Math.PI / 180, PH_GRIP = {};
+for (const [side, ts] of [['left', -1], ['right', 1]]) PH_GRIP[side] = new Q4().setFromAxisAngle(new V3(1, 0, 0), PH_TILT).multiply(new Q4().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new V3(0, 0, ts), new V3(ts, 0, 0), new V3(0, 1, 0))));
 const _phM = new THREE.Matrix4(), _phQ = new Q4(), _phR = new Q4(), _phP = new V3(), _phD = new V3(), _phX = new V3(1, 0, 0), _phY = new V3(), _phZ = new V3(), _phB = new THREE.Matrix4(), _phO = new V3();
 function padHand(h, side, t) {
   const ts = side === 'right' ? 1 : -1, dt = clamp(t - (h.vt || t), 0, 0.1); h.vt = t; h.virt = true;
   const k = 1 - Math.exp(-dt * 25); h.cI = (h.cI || 0) + ((h.trig ? 1 : 0) - (h.cI || 0)) * k; h.cG = (h.cG || 0) + ((h.grip ? 1 : 0) - (h.cG || 0)) * k;
   // del marco de la mano al del mando: el dorso, girado un poco hacia fuera; la muñeca, detrás de la palma (que envuelve el mando)
-  _phR.setFromAxisAngle(_phD.set(0, 0, 1), -ts * 0.5); _phQ.copy(h.wristQ).multiply(_phR); _phO.set(0, 0.01, 0.055);
+  _phQ.copy(h.wristQ).multiply(PH_GRIP[side]); _phO.set(0, 0.03, 0.075); // (el centro del puño, donde queda el mango, es el origen del agarre)
   const J = h.J, put = (i, p, q, r) => { const A = J[i]; A.p.copy(p).add(_phO).applyQuaternion(_phQ).add(h.wrist); A.s.copy(A.p); A.q.copy(_phQ).multiply(q); A.r = r; A.ok = true; };
   const boneQ = (dir, out) => { _phZ.copy(dir).negate(); _phY.crossVectors(_phZ, _phX).normalize(); _phB.makeBasis(_phD.crossVectors(_phY, _phZ), _phY, _phZ); return out.setFromRotationMatrix(_phB); }; // (−Z a lo largo del hueso, dorso arriba)
   const idQ = new Q4(), q = new Q4(); put(0, _phP.set(0, 0, 0), idQ, 0.02);
@@ -10203,6 +10212,8 @@ function armStep(kind, side, t, dt) {
       if (d.state === 'down' && d.lost > 0.2 && d.vy > 0.3 && d.prevR !== undefined && d.prevR > d.bottom + 0.04) { d.state = 'rising'; d.max = d.prevR; d.t0 = t; onCharge(); }
       if (d.state === 'rising' && d.lost > 0.12 && (d.max - d.bottom >= range * 0.3 || (d.vy > 0.25 && d.max > -0.15))) { d.state = 'top'; return { top: true, perfect: false, fast: false }; }
     } else if (d.state === 'hold' && d.lost > 0.25) { d.state = 'top'; return { top: true, ...d.ev, pow: d.pow }; } // junto a la cara la mano se pierde a menudo: sale con la carga que llevaba
+    // subiendo, la pesa tapa los dedos y las gafas pierden la mano: si ya iba por casi la mitad, cuenta (sin ver el final)
+    else if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4) { d.state = 'top'; onCharge(); return { top: true, perfect: false, fast: false }; }
     else if (d.lost > 0.5) d.state = 'down';
     return null;
   }
@@ -10317,7 +10328,12 @@ const _frm = new V3();
 function fraiseStep(t, dt) {
   const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
   for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
-  if (!n) { d.lost += dt; if (d.lost > 0.6) d.state = 'down'; return; }
+  if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
+    d.lost += dt;
+    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
+    else if (d.lost > 0.6 && d.state !== 'top') d.state = 'down';
+    return;
+  }
   _frm.divideScalar(n); d.lost = 0;
   const r = _frm.y - head.p.y, fwd = Math.hypot(_frm.x - head.p.x, _frm.z - head.p.z);
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido (se adapta a tu altura)
@@ -10677,14 +10693,14 @@ const throwAim = () => isCombat() && handsFree() && ((aimManual() && settings.ai
 // La mano se mide respecto a la cabeza en horizontal y respecto al suelo en altura (subir y bajar en la sentadilla no la
 // mueve). Una sacudida es un acelerón por encima de THROW_V; empieza donde la mano iba por última vez por debajo de
 // THROW_SLOW y acaba al frenar (por debajo de THROW_STOP del pico) o al recorrer THROW_LONG. THROW_JUMP: más rápido, es un salto del seguimiento
-const THROW_V = 0.8, THROW_SLOW = 0.45, THROW_D = 0.1, THROW_LONG = 0.32, THROW_WIDE = 60, THROW_STOP = 0.75, THROW_JUMP = 15;
-const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [], prev: new V3(), v: new V3(), from: new V3(), last: new V3(), lastR: new V3() });
+const THROW_V = 0.8, THROW_SLOW = 0.45, THROW_D = 0.1, THROW_LONG = 0.32, THROW_WIDE = 60, THROW_STOP = 0.75, THROW_JUMP = 15, THROW_REAPPEAR = 0.25;
+const mkThrow = () => ({ c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [], prev: new V3(), v: new V3(), from: new V3(), last: new V3(), lastR: new V3(), gone: new V3() });
 const HTH = { left: mkThrow(), right: mkThrow(), idle: 0, taught: false, orbs: {} };
 for (const s of ['left', 'right']) { const o = glowSprite(BOLT_COL[0], 0.07, 0.95); o.visible = false; o.renderOrder = 8; scene.add(o); HTH.orbs[s] = o; }
 const _thr = new V3(), _thv = new V3(), _thf = new V3(), _thd = new V3();
 const padVirt = () => hands.left.virt || hands.right.virt;
 const throwCount = () => (HTH.left.c ? 1 : 0) + (HTH.right.c ? 1 : 0);
-function throwReset() { for (const s of ['left', 'right']) Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH.idle = 0; HTH.taught = false; }
+function throwReset() { for (const s of ['left', 'right']) { Object.assign(HTH[s], { c: null, burst: false, have: false, lost: 0, peak: 0, cool: 0, hist: [] }); HTH[s].gone.set(0, 0, 0); } HTH.idle = 0; HTH.taught = false; }
 // La repetición carga las dos manos (en las gafas, aunque no se vea ninguna); en el ordenador sin manos devuelve false y dispara sola
 function throwCharge(dmg, perfect, pow = 1) {
   if (!throwAim() || (!xrActive && !(hands.left.ok || hands.right.ok))) return false;
@@ -10750,13 +10766,22 @@ function throwStep(dt, t) {
       continue;
     }
     if (!h.ok) { // perdida en plena sacudida: sale el rayo en la dirección que llevaba la mano, si va hacia un enemigo
+      if (!T.lost && T.have) T.gone.copy(T.lastR); // (dónde estaba al perderla)
       T.lost += dt;
       if (T.have && T.burst && T.lost < 0.25) throwTry(s, T.last, _thd.subVectors(T.lastR, T.from));
       if (T.lost > 0.3) { T.have = false; T.burst = false; T.hist.length = 0; }
       continue;
     }
-    T.lost = 0; T.cool = Math.max(0, T.cool - dt);
+    const lostFor = T.lost; T.lost = 0; T.cool = Math.max(0, T.cool - dt);
     _thr.set(h.wrist.x - head.p.x, h.wrist.y, h.wrist.z - head.p.z); T.last.copy(h.wrist); T.lastR.copy(_thr);
+    // vuelve a verse ya lanzada: las gafas tardan en recuperar la mano (sobre todo si estaba abajo, junto a la cadera) y la
+    // sacudida puede empezar sin verla. Si en ese rato ha recorrido bastante y deprisa, cuenta como sacudida desde donde se
+    // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
+    if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
+      const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
+    }
+    T.gone.set(0, 0, 0);
     if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
     _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
@@ -11277,7 +11302,7 @@ function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 6
 function beginRun() {
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
+  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
@@ -11416,6 +11441,7 @@ function endRun(win, manual) {
       AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
     today: progressLine(P) };
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
+  if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
   if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
@@ -13821,6 +13847,32 @@ function handSmooth(h, t) {
   }
 }
 
+/* =================== CÓMO VEN LAS GAFAS TUS MANOS (medición) =================== */
+// Con las manos desnudas, durante la ronda: cuánto tiempo se ve cada mano, cuántas veces se pierde (más de TRK_MIN s), dónde
+// estaba al perderse (abajo, junto al cuerpo y fuera de las cámaras; por encima de la cabeza; o delante, a la vista, donde
+// la tapan el puño, la otra mano o la pesa) y cuánto tardan las gafas en volver a verla. Sale en el resumen (modo
+// desarrollador), para ver en la partida de verdad de dónde vienen los cortes
+const TRK_MIN = 0.1, mkTrk = () => ({ obs: 0, seen: 0, n: 0, low: 0, high: 0, front: 0, sum: 0, max: 0, cur: 0, where: '', lastY: 0 });
+const TRK = { left: mkTrk(), right: mkTrk() };
+function trkReset() { TRK.left = mkTrk(); TRK.right = mkTrk(); }
+function trkStep(dt) {
+  if (!xrActive || preview || !['ready', 'play', 'rest'].includes(state)) return;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], T = TRK[s]; if (!h.isHand) continue; T.obs += dt;
+    if (h.ok) {
+      if (T.cur >= TRK_MIN) { T.n++; T[T.where]++; T.sum += T.cur; T.max = Math.max(T.max, T.cur); }
+      T.cur = 0; T.seen += dt; T.lastY = h.wrist.y - head.p.y; continue;
+    }
+    if (!T.cur) T.where = T.lastY < -0.6 ? 'low' : T.lastY > 0.08 ? 'high' : 'front';
+    T.cur += dt;
+  }
+}
+function trkLine() {
+  const f = s => { const T = TRK[s]; if (T.obs < 5) return null; const pct = Math.round(100 * T.seen / T.obs), avg = T.n ? T.sum / T.n : 0, n1 = v => v.toFixed(1).replace('.', ',');
+    return `${s === 'left' ? 'izq.' : 'der.'} vista ${pct} %${T.n ? ` · ${T.n} ${T.n === 1 ? 'corte' : 'cortes'} (${T.low} abajo, ${T.front} delante, ${T.high} arriba) · vuelve en ${n1(avg)} s (máx. ${n1(T.max)})` : ' · sin cortes'}`; };
+  const L = f('left'), R = f('right'); return L || R ? 'Manos: ' + [L, R].filter(Boolean).join(' | ') : '';
+}
+
 /* =================== PRUEBA EN EL ORDENADOR =================== */
 const PV = { keys: {}, crouch: false, fall: false, handsUp: false, baseY: 1.6, y: 1.6, drag: null, widget: null, down: null, bar: false, home: null, press: -0.15, twist: 0, curl: 0, thrUp: 0, wasCrouch: false };
 // Postura de partida en el ordenador según el ejercicio: de pie, en plancha, boca abajo o boca arriba
@@ -14033,6 +14085,7 @@ renderer.setAnimationLoop((time, frame) => {
   const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
   for (const s of ['left', 'right']) hands[s].lostT = hands[s].ok ? 0 : (hands[s].lostT || 0) + dt;
+  trkStep(dt);
   head.speed = head.speed * 0.85 + (dt > 0 ? head.p.distanceTo(head.prev) / dt : 0) * 0.15; head.prev.copy(head.p);
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
