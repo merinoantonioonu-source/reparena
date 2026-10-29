@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, MARQ, demoTips, FLOORB, IWW };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MARQ, demoTips, FLOORB, IWW };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -138,6 +138,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // la dificultad creciente sube poco a poco: un 4 % por oleada por defecto (quien tenía el 6 % de antes pasa al 4 %)
   log(`ramp by default ${RA.settings.ramp} % (version ${RA.settings.rampV})`); if (RA.settings.ramp !== 4) errors.push('la dificultad creciente debería subir un 4 % por oleada por defecto');
   { const simpleDef = RA.settings.menuLevel; RA.devToggle(true); RA.setSetting('menuLevel', 'full'); /* (el completo es del desarrollador) */ log('menu level by default', simpleDef); if (simpleDef !== 'simple') errors.push('el menú debería empezar en sencillo'); } // el resto de pruebas, con el menú completo
+  log('intro card by default', RA.settings.intro); if (RA.settings.intro !== 1) errors.push('la carátula del duelo debería salir por defecto');
+  RA.setSetting('intro', 0); // (la carátula del duelo retrasa 2 s cada ronda: solo en su prueba)
   // ---- Botones táctiles: como un botón de verdad (llegar por delante, hundirlo y sacar el dedo para otra) ----
   {
     const hits = [], a = new RA.Btn('A', 0.1, 0.06, () => hits.push('A')), b = new RA.Btn('B', 0.1, 0.06, () => hits.push('B'));
@@ -1868,6 +1870,26 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (back > 0.002) errors.push('al retirar el dedo, la mano que se ve debería volver con la de verdad');
     RA.exitAll(); frame(2, 16, xrFrame); }
 
+  // ---- La carátula del duelo al empezar la ronda: 2 s a 2,5 m con todo en negro, la ronda espera y luego sale la
+  // caricatura; se salta con cualquier botón del mando o con el pulgar arriba ----
+  { const sv = { ...RA.settings }; applyCfg({ mode: 'combat', exercise: 'squat', intro: 1, demo: 1, lives: 3, waves: 5 }); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(2, 16, xrFrame);
+    const on = RA.INTRO.t >= 0 && RA.INTRO.p.mesh.visible && RA.INTRO.veil.visible, dist = RA.INTRO.p.mesh.position.distanceTo(RA.head.p), black = RA.INTRO.veil.material.opacity;
+    frame(60, 16, xrFrame); const held = RA.state === 'calib' && RA.INTRO.t >= 0 && !RA.DEMOV.head.visible, black2 = RA.INTRO.veil.material.opacity;
+    frame(80, 16, xrFrame); const gone = RA.INTRO.t < 0 && !RA.INTRO.p.mesh.visible && !RA.INTRO.veil.visible && RA.DEMOV.head.visible;
+    log(`intro card: shown ${on} at ${dist.toFixed(2)} m · black ${black2.toFixed(2)} · after 1 s still waiting (${RA.state}, no caricature) ${held} · after 2.3 s gone and caricature back ${gone} · boss ${RA.introBoss().name}`);
+    if (!on || Math.abs(dist - 2.5) > 0.05 || black2 < 0.99) errors.push('carátula: debería salir a 2,5 m con todo lo demás en negro');
+    if (!held) errors.push('carátula: mientras se ve, la ronda debería esperar (sin calibrar) y sin la caricatura');
+    if (!gone) errors.push('carátula: a los 2 s debería irse y volver la caricatura hasta calibrar');
+    XRS.controllers = true; RA.beginRun(); frame(5, 16, xrFrame); const pre = RA.INTRO.t >= 0; XRS.trig = 'right'; frame(3, 16, xrFrame); XRS.trig = null; frame(20, 16, xrFrame); const padSkip = pre && RA.INTRO.t < 0; XRS.controllers = false; frame(5, 16, xrFrame);
+    RA.beginRun(); frame(5, 16, xrFrame); const pre2 = RA.INTRO.t >= 0; XRS.thumbUp = 'right'; frame(45, 16, xrFrame); const thumbSkip = pre2 && RA.INTRO.t < 0, isThumb = RA.thumbsUp(RA.hands.right); XRS.thumbUp = null; frame(5, 16, xrFrame);
+    RA.beginRun(); frame(5, 16, xrFrame); XRS.pinch = 'right'; frame(30, 16, xrFrame); XRS.pinch = null; const noSkip = RA.INTRO.t >= 0; frame(140, 16, xrFrame);
+    log(`intro skip: any controller button ${padSkip} · thumbs up ${thumbSkip} (detected ${isThumb}) · a pinch does not skip ${noSkip}`);
+    if (!padSkip) errors.push('carátula: con el mando, cualquier botón debería pasar al ejercicio');
+    if (!thumbSkip || !isThumb) errors.push('carátula: con las manos, el pulgar arriba debería pasar al ejercicio');
+    if (!noSkip) errors.push('carátula: otro gesto (pellizcar) no debería saltarla');
+    RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
+
   // ---- Pistolas en XR con mandos: bláster en cada mano y el gatillo dispara ----
   applyCfg({ mode: 'flyers', exercise: 'squat', pistol: 1, lives: 0, waves: 1, repsWave: 6, rest: 0, flySpeed: 8, squatDepth: 25 });
   XRS.controllers = true; XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
@@ -2346,6 +2368,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
 // ---------- simulador de frames XR ----------
 // Mano izquierda realista: muñeca p, normal de la palma n (hacia el lado de la palma), dedos hacia f; fist: puño cerrado.
 // En la izquierda, el pulgar queda hacia n × f
+// el pulgar arriba: el pulgar hacia el techo y las puntas de los otros dedos dobladas, más cerca de la muñeca que los nudillos
+function thumbJoint(i, side) {
+  const s = side === 'left' ? -1 : 1, W = { x: s * 0.2, y: XRS.headY - 0.5, z: -0.35 }, at = (x, y, z) => ({ x: W.x + s * x, y: W.y + y, z: W.z + z });
+  if (i === 0) return at(0, 0, 0); if (i === 2) return at(-0.03, 0.02, -0.05); if (i === 3) return at(-0.03, 0.055, -0.05); if (i === 4) return at(-0.03, 0.09, -0.05);
+  const f = Math.floor((i - 5) / 5), k = (i - 5) % 5, x = 0.02 * f - 0.01;
+  return k === 1 ? at(x, -0.01 * f, -0.08) : k === 4 ? at(x, -0.01 * f - 0.02, -0.035) : at(x, -0.01 * f - 0.01, -0.06);
+}
 function leftJoint(i, L) {
   const V = THREE.Vector3, n = L.n.clone().normalize(), f = L.f.clone().normalize(), th = new V().crossVectors(n, f).normalize(), P = (...t) => { const v = L.p.clone(); for (const [d, k] of t) v.addScaledVector(d, k); return { x: v.x, y: v.y, z: v.z }; };
   if (i === 0) return P();
@@ -2391,6 +2420,7 @@ function makeXRFrame() {
         if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         if (XRS.left && j.side === 'left') pos = leftJoint(i, XRS.left); // mano izquierda con forma de mano: palma, dedos y puño
+        if (XRS.thumbUp === j.side) pos = thumbJoint(i, j.side); // (pulgar arriba y el resto del puño cerrado)
         if (j.side === 'left' && i === 9 && XRS.ltip) pos = { x: XRS.ltip.x, y: XRS.ltip.y, z: XRS.ltip.z }; // (el índice izquierdo, para pulsar)
         return { transform: { position: pos, orientation: ori }, radius: 0.009 };
       }

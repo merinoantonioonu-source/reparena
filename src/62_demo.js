@@ -301,7 +301,7 @@ function demoAttach(m, ex = settings.exercise, mode = settings.mode) {
 function demoWaitEx() { const nx = state === 'between' && sesNext(); if (nx) { const b = SES.blocks[nx.i]; return [b.ex, b.mode]; } return [settings.exercise, settings.mode]; }
 function updateDemo(dt) {
   DEMOV.t += dt;
-  const wait = !!settings.demo && ['calib', 'ready', 'mount', 'between'].includes(state) && !(menu && !menu.wrist);
+  const wait = !!settings.demo && ['calib', 'ready', 'mount', 'between'].includes(state) && !(menu && !menu.wrist) && INTRO.t < 0; // (tras la carátula del duelo)
   let any = wait;
   if (menu && menu.group) menu.group.traverse(o => { if (o.material === DEMOP.mesh.material) any = true; });
   DEMOV.head.visible = wait;

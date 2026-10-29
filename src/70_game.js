@@ -2409,6 +2409,7 @@ function beginRun() {
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
+  introStart(); // la carátula del duelo, 2 s (64_intro): mientras se ve, la ronda espera
   warmQueue(); // (lo que falte se compila poco a poco mientras calibras; nada en plena partida)
 }
 // Hacia dónde mira el cuerpo, también en el suelo: mirando abajo (plancha, flexiones, superman) la parte de
@@ -2685,6 +2686,7 @@ function exitAll() {
 
 /* =================== LÓGICA POR FOTOGRAMA =================== */
 function gameStep(dt, t) {
+  if (introStep(dt)) return; // (con la carátula delante no se calibra ni empieza nada)
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   if (SAYT.t > 0) SAYT.t -= dt;
   stateT += dt;
