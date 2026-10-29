@@ -72,7 +72,7 @@ function drawMedal(c, kind, x, y, R) {
 }
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint;
     this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -139,6 +139,8 @@ const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], se
 const KEYC_C = { normal: [0x8fc7ff, '#1b1222'], primary: [0xff8a3d, '#1b1222'], selected: [0xffd23f, '#1b1222'], value: [0xfff2d6, '#c2410c'], tab: [0xc9b8ff, '#1b1222'],
   danger: [0xff6b7f, '#1b1222'], key: [0x8fc7ff, '#1b1222'], ghost: [0xd9d2e9, '#5a4f73'], slider: [0xfff2d6, ''], tray: [0x3a2d5c, ''] };
 const keyc = style => { const P = comicOn() ? KEYC_C : KEYC; return P[style] || P.normal; };
+// el color del cuerpo de una tecla: el de su estilo o, elegida y con tinte (los del menú principal), el de su parte
+const keyBody = w => w.kind !== 'slider' && w.tint && w.style === 'selected' ? parseInt(w.tint.slice(1), 16) : keyc(w.kind === 'slider' ? 'slider' : w.style)[0];
 // la luz con la que se pintan las teclas (en el plano del menú: x a la derecha, y arriba, z hacia ti): de arriba a la izquierda
 const KEY_L = new V3(-0.42, 0.62, 0.66).normalize(), KEY_HV = KEY_L.clone().add(new V3(0, 0, 1)).normalize();
 // anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
@@ -195,7 +197,7 @@ function buildKeys(group, list, kh, tray) {
     return { start, count: P.length / 3 - start, ao, col: colHex, cx, cy };
   };
   if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, keyc('tray')[0], true) });
-  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, keyc(w.kind === 'slider' ? 'slider' : w.style)[0], false) });
+  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, keyBody(w), false) });
   const N = vNormals(P, I), C = new Float32Array(P.length);
   for (const rg of R) { rg.N = N; keyColors(rg, C, rg.col, false); }
   const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(C, 3);
@@ -229,7 +231,7 @@ function buildKeys(group, list, kh, tray) {
       if (Math.abs(k - (rg.press || 0)) > 0.04 || (k === 0) !== !rg.press) { rg.press = k; w.recolor(); }
     };
     w.recolor = () => { keyColors(rg, col.array, rg.col, w.hover); touch(col, rg); };
-    w.setHover = (h, restyle) => { if (restyle) rg.col = keyc(w.style)[0]; w.recolor(); };
+    w.setHover = (h, restyle) => { if (restyle) rg.col = keyBody(w); w.recolor(); };
     w.flash = () => { w.flashT = 0.22; };
     w.flashStep = dt => { w.flashT = Math.max(0, w.flashT - dt); rg.flash = w.flashT / 0.22; w.recolor(); };
   }
@@ -416,9 +418,11 @@ function openMenu(rows, opts = {}) {
   };
   // x0, cw: dónde empieza la fila y su ancho (todo el menú o una de sus columnas); lw: el ancho de la etiqueta
   const label = (text, cy, color = '#eeeaff', off = 0, x0 = X0, lw = LABW) => { c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle'; fitFont(c, text, (lw - 0.01 - off) * sc, 34, '500 %px ' + FB); c.fillText(text, (x0 + off - (-MW / 2)) * sc, (H / 2 - cy) * sc); };
-  const layRow = (r, h, cy, i, X0, CW, LW) => {
+  const layRow = (r, h, cy, i, X0, CW, LW, tint) => {
     if (r.t === 'title') {
-      c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - (closable && !i ? CLOSE_W * 2 : 0)) * sc, 60, '%px ' + FD); c.fillText(r.text, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy) * sc + 4);
+      const side = Math.max(closable && !i ? CLOSE_W : 0, r.lead ? LEAD_W : 0); // (el botón de la izquierda, EMPEZAR, y el de cerrar, a los lados)
+      c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - side * 2) * sc, 60, '%px ' + FD); c.fillText(r.text, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy) * sc + 4);
+      if (r.lead) addW(new Btn(r.lead.label, LEAD_W, Math.min(h, 0.056), r.lead.onPress, { style: r.lead.style || 'primary', font: 0.42 }), X0 + LEAD_W / 2, cy);
       if (closable && !i) addW(new Btn('✕ Cerrar', CLOSE_W, Math.min(h, 0.052), menuClose, { style: 'ghost', font: 0.42 }), X0 + CW - CLOSE_W / 2, cy);
     }
     else if (r.t === 'text') {
@@ -429,10 +433,10 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot; addW(new Btn(it.label, w, h, it.onPress, { style: it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'), font: r.t === 'tabs' ? 0.4 : undefined, accent: it.accent, icon: it.icon, badge: it.badge }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'); addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'choice') {
       label(r.label, cy, undefined, 0, X0, LW); const n = r.opts.length, avail = CW - LW - GAP * (n - 1); let x = X0 + LW; const w = avail / n;
-      r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38 }), x + w / 2, cy); x += w + GAP; });
+      r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38, tint }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'field') {
       const f = FIELD[r.key], so = 0;
       label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so, X0, LW);
@@ -454,13 +458,13 @@ function openMenu(rows, opts = {}) {
           row.btns.push(addW(new Btn(lab, w, bh, () => {
           const cur = on(), next = cur.includes(v) ? cur.filter(k => k !== v) : [...cur, v]; if (!next.length && !f.empty) return;
           setSetting(f.key, next.join(',')); row.btns.forEach((b, j) => b.setLabel(b.label, on().includes(f.opts[j][0]) ? 'selected' : 'normal')); if (r.after) r.after();
-        }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34 }), x + w / 2, y)); });
+        }, { style: on().includes(v) ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.34, tint }), x + w / 2, y)); });
       } else {
         // una opción entre varias; con f.grid, en rejilla (y, con f.badges, cada una con sus galones: los rangos)
         const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts, n = opts.length, cols = f.grid || n, w = (CW - LW - GAP * (cols - 1)) / cols, bh = f.grid ? GRID_H : h;
         const row = { f, btns: [] };
         opts.forEach(([v, lab], i) => { const x = X0 + LW + (i % cols) * (w + GAP), yy = f.grid ? cy + h / 2 - bh / 2 - Math.floor(i / cols) * (bh + GAP) : cy;
-          row.btns.push(addW(new Btn(lab, w, bh, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.38, badge: f.badges ? i : undefined }), x + w / 2, yy)); });
+          row.btns.push(addW(new Btn(lab, w, bh, () => { setSetting(f.key, v); row.btns.forEach((b, j) => b.setLabel(b.label, opts[j][0] === settings[f.key] ? 'selected' : 'normal')); if (opts.length && r.after) r.after(); }, { style: settings[f.key] === v ? 'selected' : 'normal', font: f.grid ? 0.4 : 0.38, badge: f.badges ? i : undefined, tint }), x + w / 2, yy)); });
       }
     }
   };
@@ -468,13 +472,16 @@ function openMenu(rows, opts = {}) {
     const h = heights[i], cy = y - h / 2;
     // dos columnas (el menú principal): cada una, en su caja con su título, con sus filas a la mitad de ancho
     if (r.t === 'cols') {
-      const n = r.cols.length, cw = (CW - GAP * 2 * (n - 1)) / n;
+      // (r.fr: la parte del ancho de cada columna; r.lw: el ancho de sus etiquetas; r.colors: el color de su caja y su título,
+      // y con él se tiñen sus botones elegidos)
+      const n = r.cols.length, avail = CW - GAP * 2 * (n - 1), fr = r.fr || r.cols.map(() => 1 / n); let x0 = X0;
       r.cols.forEach((col, k) => {
-        const x0 = X0 + k * (cw + GAP * 2), px = (x0 + MW / 2) * sc, top = (H / 2 - (cy + h / 2)) * sc;
-        rr(c, px, top, cw * sc, h * sc, 22); c.fillStyle = 'rgba(255,255,255,0.035)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.08)'; c.stroke();
+        const cw = avail * fr[k], px = (x0 + MW / 2) * sc, top = (H / 2 - (cy + h / 2)) * sc, cc = r.colors && r.colors[k];
+        rr(c, px, top, cw * sc, h * sc, 22); c.fillStyle = 'rgba(255,255,255,0.035)'; c.fill(); c.lineWidth = cc ? 4 : 2; c.strokeStyle = cc || 'rgba(255,255,255,0.08)'; c.stroke();
         let yy = cy + h / 2 - COLP;
-        if (r.titles && r.titles[k]) { c.fillStyle = '#a49fc8'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = '600 24px ' + FB; c.fillText(r.titles[k].toUpperCase(), px + 0.014 * sc, (H / 2 - (yy - COLT / 2)) * sc); yy -= COLT; }
-        col.forEach(sr => { const sh = subH(sr); layRow(sr, sh, yy - sh / 2, -1, x0 + COLP, cw - COLP * 2, COL_LW); yy -= sh + GAP; });
+        if (r.titles && r.titles[k]) { c.fillStyle = cc || '#a49fc8'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = '600 24px ' + FB; c.fillText(r.titles[k].toUpperCase(), px + 0.014 * sc, (H / 2 - (yy - COLT / 2)) * sc); yy -= COLT; }
+        col.forEach(sr => { const sh = subH(sr); layRow(sr, sh, yy - sh / 2, -1, x0 + COLP, cw - COLP * 2, (r.lw && r.lw[k]) || COL_LW, cc); yy -= sh + GAP; });
+        x0 += cw + GAP * 2;
       });
     } else layRow(r, h, cy, i, X0, CW, LABW);
     y -= h + GAP;
@@ -504,7 +511,7 @@ function openMenu(rows, opts = {}) {
   return menu;
 }
 // «✕ Cerrar»: el menú se recoge en la muñeca (o, en el atril, desaparece) y vuelve con el botón MENÚ de la muñeca
-const CLOSE_W = 0.15;
+const CLOSE_W = 0.15, LEAD_W = 0.17;
 function menuClose() {
   if (!menu) return; closeKeypad(); SND.tick();
   if (menu.wrist) WM.on = false;

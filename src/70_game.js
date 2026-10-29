@@ -883,6 +883,8 @@ const FLYER_KIND = {
   bee: { beast: 'bee', speed: 1.35, erratic: 1.4, scale: 1.0 }, bat: { beast: 'bat', speed: 1.5, erratic: 1.9, scale: 1.0 },
   cthulhu: { beast: 'cthulhu', speed: 0.85, erratic: 0.7, scale: 1.1 }, dragon: { beast: 'dragon', speed: 0.5, erratic: 0.35, scale: 2.0, boss: true }
 };
+// Aleteos por segundo de cada monstruito volador (las abejas, casi zumbando; el dragón, más pausado pero sin desmayo)
+const FLAP_HZ = { bee: 4.5, bat: 3.4, cthulhu: 2.6, dragon: 1.8 };
 // Un ejemplar de un monstruito volador: una copia del modelo, con su textura, su esqueleto y su mezclador de animaciones
 function beastFlyer(kind) {
   const B = BEAST.kinds[kind], D = BEAST_DEF[kind], model = THREE.SkeletonUtils.clone(B.scene), root = new THREE.Group();
@@ -971,7 +973,9 @@ class Flyer {
       poseStinger(B, this.root, this.t, this.ph1, 0.5 + 0.5 * ch + Math.sin(this.t * 4) * 0.05, ch);
       B.head.rotation.y = Math.sin(this.t * 1.3) * 0.2 * (1 - ch);
     } else if (this.inst.mx) { // monstruito: vuela batiendo las alas y, al lanzarse, muerde
-      const I = this.inst, bite = this.windT > 0.3; mxPlay(I, bite ? 'Bite' : 'Fly', 0.12, bite, bite ? 1.4 : 1); I.mx.update(dt);
+      // el batido de alas va siempre a su ritmo (rápido), no al de lo que avanzan: los lentos (en el superman) no aletean despacio
+      const I = this.inst, bite = this.windT > 0.3, fc = I.clips && I.clips.Fly, fts = (FLAP_HZ[this.K.beast] || 3) * ((fc && fc.duration) || 1.125);
+      mxPlay(I, bite ? 'Bite' : 'Fly', 0.12, bite, bite ? 1.4 : fts); I.mx.update(dt);
     } else {
       for (let i = 0; i < 6; i++) { const r = B['r' + i]; if (r) r.rotation.y += dt * (55 + i * 3); }
       if (B.cam) B.cam.rotation.x = Math.sin(this.t * 0.7) * 0.2;
@@ -1236,7 +1240,7 @@ const DET = {
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
-  iw: { pair: 0, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
+  iw: { i: 0, b: 3, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
   fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0 },
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
@@ -1485,10 +1489,13 @@ function twistStep(t, dt) {
   }
 }
 /* =================== FLEXIONES INCHWORM =================== */
-// Seis huellas de manos en el suelo, tres por mano (izquierda azul, derecha naranja): las dos primeras, junto a los pies;
-// las dos últimas, en posición de flexión; las dos del medio cambian de sitio en cada repetición. De pie, te doblas y
-// caminas con las manos tocando las huellas en orden (cada mano, las suyas); en las últimas, la flexión carga y al subir
-// dispara a las arañas; luego vuelves caminando y te pones de pie, y las huellas del medio se recolocan.
+// Huellas de manos en el suelo (izquierda azul, derecha naranja), cada una dentro de su círculo y con su número de orden.
+// Las manos avanzan por turnos, como al caminar con ellas: cada huella queda un paso (unos 15 cm) más allá de la anterior,
+// de la otra mano, así que la izquierda y la derecha nunca están a la misma altura. Las dos primeras, junto a los pies;
+// las dos últimas, en posición de flexión (una algo por delante: flexión escalonada). En las últimas, la flexión carga y al
+// subir dispara a las arañas; luego vuelves por las mismas huellas al revés y te pones de pie. En cada vuelta nueva empieza
+// la otra mano (si la primera fue la izquierda, ahora la derecha) y las huellas del medio se abren más o menos a los lados
+// (iwSpread), para que trabajen los brazos.
 // Cada huella es un contorno; al posar la mano en ella (con margen: no hace falta acertar dentro) destella, echa chispas y
 // se rellena de color sólido: a la ida, el de su mano; a la vuelta, dorado. Al acabar la vuelta, al despegar las manos del
 // suelo, sale una onda expansiva que devuelve a los bichos a su trampilla. Como hay que caminar con las manos, los bichos
@@ -1496,25 +1503,33 @@ function twistStep(t, dt) {
 // La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
 const iwReachM = () => settings.iwReach > 0 ? Math.max(0.8, settings.iwReach / 100) : clamp(calibRef * 0.8, 1.0, 1.6);
 const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
-const IW_SLOW = 2.6, IW_REACH = 0.3, IW_GOLD = new THREE.Color(0xffd166); // (los bichos, 2,6 veces más lentos; el margen de la huella, hasta 30 cm)
-const IW = { group: new THREE.Group(), prints: [], mats: [] };
+const IW_SLOW = 2.6, IW_REACH = 0.3, IW_STEP = 0.15, IW_MAX = 12, IW_GOLD = new THREE.Color(0xffd166); // (los bichos, 2,6 veces más lentos; el margen de la huella, hasta 30 cm; el paso, ~15 cm)
+const IW = { group: new THREE.Group(), prints: [], all: [], tex: {}, first: 'left' };
 IW.group.visible = false; arena.add(IW.group);
-// la huella: la mano (en espejo para la izquierda) con su número; hueca (contorno) o rellena
+// la huella: una mano humana vista desde arriba (palma abajo: el pulgar hacia dentro; la izquierda, en espejo) dentro de
+// su círculo, con su número; hueca (contorno) o rellena
 function iwPrintTex(side, n, filled) {
+  const key = side + n + (filled ? 'f' : 'h'); if (IW.tex[key]) return IW.tex[key];
   const c = mkCanvas(128), x = c.getContext('2d');
+  x.beginPath(); x.arc(64, 64, 59, 0, TAU); x.lineWidth = 5; x.strokeStyle = '#ffffff'; x.stroke(); if (filled) { x.fillStyle = 'rgba(255,255,255,0.22)'; x.fill(); }
   x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
-  const shape = () => { x.beginPath(); x.ellipse(0, 12, 26, 32, 0, 0, TAU); for (const [fx, fy, fr, fl] of [[-30, -6, 0.9, 16], [-16, -42, 0.15, 22], [0, -48, 0, 24], [15, -44, -0.1, 22], [28, -32, -0.25, 17]]) { x.save(); x.translate(fx, fy); x.rotate(fr); x.moveTo(7, 0); x.ellipse(0, 0, 7, fl, 0, 0, TAU); x.restore(); } };
-  if (filled) { x.fillStyle = '#ffffff'; shape(); x.fill(); }
-  else { x.fillStyle = 'rgba(255,255,255,0.16)'; shape(); x.fill(); x.lineWidth = 6; x.strokeStyle = '#ffffff'; shape(); x.stroke(); }
-  x.restore(); x.fillStyle = filled ? '#10101a' : '#ffffff'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 84);
-  return texFrom(c);
+  const rp = (X, Y, w, h, r) => { x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+  const hand = () => {
+    x.beginPath(); rp(-20, -6, 40, 38, 13); // la palma
+    for (const [fx, len] of [[-14.5, 30], [-4.8, 35], [4.8, 33], [14.5, 25]]) rp(fx - 4.3, -6 - len, 8.6, len + 6, 4.3); // índice, corazón, anular y meñique
+    x.save(); x.translate(-17, 16); x.rotate(-0.95); rp(-4.8, -26, 9.6, 28, 4.8); x.restore(); // el pulgar, hacia dentro
+  };
+  if (filled) { x.fillStyle = '#ffffff'; hand(); x.fill(); }
+  else { // solo el contorno de fuera (sin las rayas de donde se juntan los dedos con la palma) y el interior, apenas
+    x.lineWidth = 9; x.strokeStyle = '#ffffff'; hand(); x.stroke(); x.globalCompositeOperation = 'destination-out'; hand(); x.fill(); x.globalCompositeOperation = 'source-over';
+    x.fillStyle = 'rgba(255,255,255,0.14)'; hand(); x.fill(); }
+  x.restore(); x.fillStyle = filled ? '#10101a' : '#ffffff'; x.font = 'bold 26px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 86);
+  return (IW.tex[key] = texFrom(c));
 }
-for (let i = 0; i < 6; i++) {
-  const side = i % 2 ? 'right' : 'left', n = (i >> 1) + 1, col = new THREE.Color(side === 'left' ? 0x4aa8ff : 0xff9a3c);
-  const tex = { hollow: iwPrintTex(side, n, false), full: iwPrintTex(side, n, true) };
-  const mat = new THREE.MeshBasicMaterial({ map: tex.hollow, color: col, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; IW.group.add(m); IW.mats.push(mat);
-  IW.prints.push({ side, pair: n - 1, x: 0, z: 0, done: false, back: false, flash: 0, m, tex, col });
+for (let i = 0; i < IW_MAX; i++) {
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; m.visible = false; IW.group.add(m);
+  IW.all.push({ k: i, side: 'left', x: 0, z: 0, done: false, back: false, flash: 0, m, tex: null, col: new THREE.Color() });
 }
 // La mano llega a la huella: destella, echa chispas y se rellena (a la ida, de su color; a la vuelta, dorada)
 function iwHit(p, back) {
@@ -1536,36 +1551,43 @@ function iwWaveStep(dt) {
   IWW.t += dt; const k = IWW.t / 0.6; IWW.m.scale.setScalar(0.2 + k * 2.2); IWW.m.material.opacity = 0.8 * (1 - k);
   if (k >= 1) { IWW.t = -1; IWW.m.visible = false; }
 }
-// Las seis huellas, en la arena: las primeras y las últimas siempre igual; las del medio, a una distancia y un lado distintos cada vez
+// Las huellas, en la arena: de los pies a la plancha, un paso cada una y alternando las manos (empieza IW.first); las del
+// medio, abiertas a los lados al azar (hasta iwSpread más allá de lo normal); las de la flexión, algo menos
 function iwLayout() {
-  const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, zm = lerp(z0, z2, rand(0.38, 0.62));
-  const mz = () => clamp(zm + rand(-0.13, 0.13), z2 + 0.27, z0 - 0.27); // nunca pegadas a las primeras ni a las últimas
-  const pos = [[-0.17, z0], [0.17, z0], [-rand(0.11, 0.27), mz()], [rand(0.11, 0.27), mz()], [-0.2, z2], [0.2, z2]];
-  IW.prints.forEach((p, i) => { [p.x, p.z] = pos[i]; p.done = p.back = false; p.flash = 0; p.m.position.set(p.x, 0.006, p.z); });
+  const S = IW_OFF(), z0 = S - 0.35, z2 = 0.12, L = Math.max(0.5, z0 - z2), N = clamp(2 * Math.round((L / IW_STEP + 1) / 2), 6, IW_MAX), d = L / (N - 1), sp = Math.max(0, settings.iwSpread || 0) / 100;
+  const other = IW.first === 'left' ? 'right' : 'left';
+  IW.prints = IW.all.slice(0, N);
+  IW.all.forEach((p, k) => {
+    if (k >= N) { p.m.visible = false; return; }
+    const side = k % 2 ? other : IW.first, sg = side === 'left' ? -1 : 1, end = k >= N - 2, start = k < 2;
+    p.side = side; p.k = k; p.x = sg * (start ? 0.17 : end ? rand(0.17, 0.17 + sp * 0.5) : rand(0.14, 0.2 + sp)); p.z = z0 - k * d;
+    p.done = p.back = false; p.flash = 0; p.col.setHex(side === 'left' ? 0x4aa8ff : 0xff9a3c); p.tex = { hollow: iwPrintTex(side, k + 1, false), full: iwPrintTex(side, k + 1, true) };
+    p.m.material.map = p.tex.hollow; p.m.material.needsUpdate = true; p.m.visible = true; p.m.position.set(p.x, 0.006, p.z);
+  });
   // el margen de cada huella: hasta IW_REACH, sin llegar a la vecina de la misma mano (si no, una contaría por otra)
-  for (const p of IW.prints) { let d = 9; for (const o of IW.prints) if (o !== p && o.side === p.side) d = Math.min(d, Math.hypot(o.x - p.x, o.z - p.z)); p.reach = clamp(d * 0.85, 0.16, IW_REACH); }
-  Object.assign(DET.iw, { pair: 0, phase: 'stand', bpair: 1 });
+  for (const p of IW.prints) { let dd = 9; for (const o of IW.prints) if (o !== p && o.side === p.side) dd = Math.min(dd, Math.hypot(o.x - p.x, o.z - p.z)); p.reach = clamp(dd * 0.85, 0.16, IW_REACH); }
+  Object.assign(DET.iw, { i: 0, b: N - 3, phase: 'stand' });
 }
 const _iww = new V3();
 function iwStep(t, dt) {
-  const W = DET.iw, standing = head.p.y > calibRef - 0.22;
+  const W = DET.iw, P = IW.prints, N = P.length, standing = head.p.y > calibRef - 0.22;
   if (W.phase === 'stand' && !standing) W.phase = 'walk';
-  if ((W.phase === 'stand' || W.phase === 'walk') && W.pair < 3) { // la siguiente pareja de huellas: cada mano, la suya
-    for (const p of IW.prints) if (p.pair === W.pair && !p.done && iwOn(p)) iwHit(p, false);
-    if (IW.prints.filter(p => p.pair === W.pair).every(p => p.done)) { W.pair++; if (W.pair === 3) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; } }
+  if (W.phase === 'stand' || W.phase === 'walk') { // la siguiente huella, de su mano (por turnos)
+    while (W.i < N && iwOn(P[W.i])) iwHit(P[W.i++], false);
+    if (W.i >= N) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; }
   }
   if (W.phase === 'plank') {
     const req = dv('pushDepth') / 100, before = stats.reps;
     vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
-    if (stats.reps > before) { W.phase = 'back'; W.bpair = 1; for (const p of IW.prints) if (p.pair === 2) iwHit(p, true); } // disparó: ahora, de vuelta (las últimas, ya pisadas) y de pie
+    if (stats.reps > before) { W.phase = 'back'; W.b = N - 3; for (const p of P.slice(N - 2)) iwHit(p, true); } // disparó: ahora, de vuelta (las últimas, ya pisadas) y de pie
     else if (standing) { onPartial('Haz la flexión en las dos últimas huellas'); iwLayout(); }
-  } else if (W.phase === 'walk' && standing) { if (W.pair > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
+  } else if (W.phase === 'walk' && standing) { if (W.i > 0) onPartial('Camina con las manos hasta las dos últimas huellas'); iwLayout(); }
   else if (W.phase === 'back') {
-    // la vuelta: otra vez por las huellas, al revés (las del medio y las primeras)
-    if (W.bpair >= 0) { for (const p of IW.prints) if (p.pair === W.bpair && !p.back && iwOn(p)) iwHit(p, true); if (IW.prints.filter(p => p.pair === W.bpair).every(p => p.back)) W.bpair--; }
+    // la vuelta: otra vez por las huellas, al revés (cada mano, a la suya de antes)
+    while (W.b >= 0 && iwOn(P[W.b])) iwHit(P[W.b--], true);
     // hecha la vuelta, al despegar las manos del suelo (o ya de pie), la onda
-    if (W.bpair < 0 && !W.waved && (standing || ['left', 'right'].every(s => !hands[s].ok || arena.worldToLocal(_iww.copy(hands[s].wrist)).y > 0.3))) { W.waved = true; iwWave(); }
-    if (standing) { iwLayout(); W.waved = false; } // de pie otra vez: nuevas huellas
+    if (W.b < 0 && !W.waved && (standing || ['left', 'right'].every(s => !hands[s].ok || arena.worldToLocal(_iww.copy(hands[s].wrist)).y > 0.3))) { W.waved = true; iwWave(); }
+    if (standing) { if (W.b < 0) IW.first = IW.first === 'left' ? 'right' : 'left'; iwLayout(); W.waved = false; } // de pie otra vez: nuevas huellas, y empieza la otra mano
   }
 }
 // ¿La mano de esta huella está sobre ella? (con margen: no hace falta acertar dentro)
@@ -1574,7 +1596,7 @@ function iwVisual(t) {
   const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
   const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8), dt = Math.min(0.1, t - (IW.lastT || t)); IW.lastT = t;
   for (const p of IW.prints) {
-    const next = ((W.phase === 'stand' || W.phase === 'walk') && p.pair === W.pair && !p.done) || (W.phase === 'back' && p.pair === W.bpair && !p.back), full = p.done || p.back, mat = p.m.material;
+    const next = ((W.phase === 'stand' || W.phase === 'walk') && p.k === W.i) || (W.phase === 'back' && p.k === W.b), full = p.done || p.back, mat = p.m.material;
     const tex = full ? p.tex.full : p.tex.hollow; if (mat.map !== tex) { mat.map = tex; mat.needsUpdate = true; }
     p.flash = Math.max(0, p.flash - dt * 3);
     mat.color.copy(p.back ? IW_GOLD : p.col).lerp(_iwWhite, p.flash * 0.7); // (destella en blanco y se queda de su color)
@@ -1962,8 +1984,8 @@ function ladderTop(i) {
 }
 function ladderPick(list, i) {
   if (!ladderOn() || list.length < 2) return list;
-  const top = ladderTop(i), ok = list.filter(k => (FOE_TIER[k] || 2) <= top);
-  return ok.length ? ok : list.filter(k => (FOE_TIER[k] || 2) === Math.min(...list.map(k => FOE_TIER[k] || 2)));
+  const top = ladderTop(i), ok = list.filter(k => foeTier(k) <= top);
+  return ok.length ? ok : list.filter(k => foeTier(k) === Math.min(...list.map(foeTier)));
 }
 function buildWave(i) {
   if (isBars()) return buildBarWave(i);
@@ -2007,18 +2029,19 @@ function buildWave(i) {
   }
   let k = 0;
   while (total > 0) {
-    let kind, hp;
+    // (la resistencia de la primera oleada es la de cada enemigo en la tabla del desarrollador: devFoe; luego sube como siempre)
+    let kind, hp, fk; const R = key => devFoe(fk = key).hp;
     if (F === 'robots' || (F === 'mix' && k % 2 === 0)) {
       const g = nextG();
-      if (tiny) { if (g === 'spider') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); } else { kind = 'h' + g; hp = 1 + Math.floor(i / 4); } }
-      else if (g === 'imp' || g === 'puglin') { kind = g; hp = kind === 'puglin' ? 1 + Math.floor(i / 4) : 2 + Math.floor(i / 3); }
-      else if (g === 'thrower') { kind = 'impthrow'; hp = 2 + Math.floor(i / 3); }
-      else if (g === 'raptor') { kind = 'raptor'; hp = 2 + Math.floor(i / 4); }
-      else if (g === 'robot') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? 3 + Math.floor(i / 3) : 2 + Math.floor(i / 4); }
-      else { kind = g; hp = (g === 'zchubby' || g === 'yeti' || g === 'cyclops' || g === 'captain' ? 3 : 2) + Math.floor(i / 3); } // zombis, monstruitos y piratas
+      if (tiny) { if (g === 'spider') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? R('h:spider_h') + Math.floor(i / 3) : R('h:spider') + Math.floor(i / 4); } else { kind = 'h' + g; hp = R('h:' + g) + Math.floor(i / 4); } }
+      else if (g === 'imp' || g === 'puglin') { kind = g; hp = R('g:' + g) + Math.floor(i / (kind === 'puglin' ? 4 : 3)); }
+      else if (g === 'thrower') { kind = 'impthrow'; hp = R('g:thrower') + Math.floor(i / 3); }
+      else if (g === 'raptor') { kind = 'raptor'; hp = R('g:raptor') + Math.floor(i / 4); }
+      else if (g === 'robot') { kind = k % 3 === 2 && heavyOk ? 'heavy' : 'scout'; hp = kind === 'heavy' ? R('g:robot_h') + Math.floor(i / 3) : R('g:robot') + Math.floor(i / 4); }
+      else { kind = g; hp = R('g:' + g) + Math.floor(i / 3); } // zombis, monstruitos y piratas
     }
-    else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = kind === 'bomber' || kind === 'cthulhu' ? 2 : 1; }
-    hp = Math.min(hp, total); list.push({ kind, hp }); total -= hp; k++;
+    else { const f = nextF(); kind = f === 'drone' && i >= 2 && k % 5 === 4 ? 'bomber' : f; hp = R('f:' + kind); }
+    hp = Math.min(hp, total); list.push({ kind, hp, fk }); total -= hp; k++;
   }
   if (boss) list.push(boss);
   return list;
@@ -2056,6 +2079,7 @@ function spawnFromQueue() {
     if (ROBOT_KIND[spec.kind].beast3d && !beastReady(ROBOT_KIND[spec.kind].beast3d)) spec.kind = ROBOT_KIND[spec.kind].boss ? 'titan' : 'scout'; // sin los modelos (aún cargando o sin conexión), robots
     const g = ROBOT_KIND[spec.kind].boss ? (gates[1].on ? gates[1] : liveGates()[0]) : freeGate(); if (!g) { spawnQueue.unshift(spec); return; } e = ROBOT_KIND[spec.kind].beast3d ? new Beast(spec, g) : new Robot(spec, g); } // todas ocupadas: sale en cuanto se despeje una
   else { const K = FLYER_KIND[spec.kind]; if (K && K.beast && !beastReady(K.beast)) spec.kind = K.boss ? 'carrier' : 'hornet'; e = new Flyer(spec); }
+  if (spec.fk) e.fk = spec.fk; // (su fuerza: las vidas que quita cada golpe)
   enemies.push(e);
 }
 // Hueco hasta el siguiente arco (en múltiplos del intervalo medio): regular, o irregular sin patrón que se
@@ -2088,9 +2112,9 @@ function summaryText() {
   return `${n} · ${first} · vidas ${nLives() || '∞'} · descanso ${settings.rest} s`;
 }
 // Los ejercicios del modo, de cuatro en cuatro por fila (de tres si son muchos, para que se lean), en lista o por zona del cuerpo
-function exerciseRows(back) {
+function exerciseRows(back, narrow) {
   const pick = v => { setSetting('exercise', v); back(); }, rows = [];
-  const add = (label, list) => { const per = list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
+  const add = (label, list) => { const per = narrow || list.length > 12 ? 3 : 4; list.forEach((x, i) => { if (i % per === 0) rows.push({ t: 'choice', label: i ? '' : label, value: settings.exercise, opts: [], onPick: pick }); rows[rows.length - 1].opts.push([x, EX_SHORT[x]]); }); };
   if (settings.exSort === 'body') for (const [name, list] of BODY_ZONES) add(name, list.filter(x => EX_NAMES[x] && exOk(settings.mode, x)));
   else add('Ejercicio', MODE_EX[settings.mode]);
   return rows;
@@ -2103,13 +2127,14 @@ function foesSummary() {
   return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : foeOnly() === 'fly' ? 'solo voladores' : foeOnly() === 'ground' ? 'solo los que andan' : `${all.length} clases`;
 }
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
-function foesMenu(back) {
-  const rows = [{ t: 'title', text: 'ENEMIGOS' },
-    { t: 'field', key: 'foeKind', after: () => foesMenu(back) },
+function foesRows(again) {
+  return [{ t: 'field', key: 'foeKind', after: again },
     { t: 'text', text: 'Marca los que quieres. Los de las compuertas salen de pie; los de las trampillas, en flexiones y planchas sobre una mano.' },
-    { t: 'field', key: 'foesGate', after: () => foesMenu(back) }, { t: 'field', key: 'foesHatch', after: () => foesMenu(back) }, { t: 'field', key: 'foesFly', after: () => foesMenu(back) },
-    { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') },
-    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    { t: 'field', key: 'foesGate', after: again }, { t: 'field', key: 'foesHatch', after: again }, { t: 'field', key: 'foesFly', after: again },
+    { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') }];
+}
+function foesMenu(back) {
+  const rows = [{ t: 'title', text: 'ENEMIGOS' }, ...foesRows(() => foesMenu(back)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.foes }); m.rebuild = () => foesMenu(back);
 }
 // Rangos: la dificultad. Cada modo con cada ejercicio guarda el suyo (va con sus ajustes: comboSave); elegir uno pone sus
@@ -2155,55 +2180,55 @@ function armsSummary() {
   if (sw || !isCombat()) return sw || 'sin espadas';
   return autoAim() ? 'puntería automática' : settings.aim === 'gaze' ? 'con la mirada' : 'con las manos';
 }
+const armsRows = again => SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, after: f.relayout ? again : undefined }));
 function armsMenu(back) {
   const again = () => armsMenu(back);
-  const rows = [{ t: 'title', text: 'ARMAS' },
-    ...SCHEMA.filter(f => f.g === 'armas' && fieldShown(f)).map(f => ({ t: 'field', key: f.key, after: f.relayout ? again : undefined })),
-    { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const rows = [{ t: 'title', text: 'ARMAS' }, ...armsRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.arms }); m.rebuild = again;
+}
+// El menú principal: a la izquierda, sus partes (cada una con su color: Jugar, Ejercicio, Enemigos, Armas, Sonido,
+// Entorno y Ajustes), el reproductor de Spotify y Salir; a la derecha, lo de la parte elegida, con su color. EMPEZAR, arriba
+// a la izquierda del título. La parte elegida se recuerda
+const LOBBY = { tab: uiPrefs().lobby || 'play' };
+const lobbyTabs = () => [['play', 'Jugar', '#5ab8ff'], ['ex', 'Ejercicio', MC.ex], ...(isCombat() ? [['foes', 'Enemigos', MC.foes]] : []), ...(armsAny() ? [['arms', 'Armas', MC.arms]] : []),
+  ['sound', 'Sonido', MC.sound], ['scene', 'Entorno', MC.scene], ['set', 'Ajustes', MC.set]];
+function lobbyPlayRows(again) {
+  const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set, n = eqName(k);
+  const M = Object.entries(MODE_NAMES), modeBtn = ([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', onPress: () => { setSetting('mode', v); again(); } });
+  // el modo, el rango (sus galones) y «Al fallo»; luego, lo que el desarrollador ha marcado con el ojo (67_dev)
+  const rows = [{ t: 'btns', items: M.map(modeBtn) },
+    { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); again(); } })) },
+    { t: 'text', text: `${rankName()} en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`, color: '#a49fc8' },
+    { t: 'field', key: 'toFail', after: again }];
+  const eyeF = menuFull() ? [speedKey(), settings.mode === 'arcs' ? 'arcMax' : bars && hang ? 'hangInc' : 'repsWave'] : devEye();
+  for (const key of eyeF) if (FIELD[key] && fieldVisible(FIELD[key])) rows.push({ t: 'field', key, after: FIELD[key].relayout ? again : undefined });
+  if (bars && hang) rows.push({ t: 'field', key: 'hangPit' });
+  if (settings.mode === 'touch') {
+    if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: again }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
+    if (menuFull()) rows.push(...tempoRows(again)); // (para el jugador, el ritmo está en Sonido)
+  }
+  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] },
+    { t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real`, color: !placed ? '#ffd166' : '#a49fc8' });
+  rows.push(...sessionRows());
+  return rows;
 }
 function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
-  const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set;
-  const n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
-  // dos columnas: a la izquierda, qué juegas (modo, ejercicio, rango, enemigos y armas); a la derecha, cómo (al fallo y
-  // lo que el desarrollador ha marcado con el ojo para este modo y ejercicio: 67_dev)
-  const M = Object.entries(MODE_NAMES), modeBtn = ([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', onPress: () => { setSetting('mode', v); lobbyMenu(); } });
-  const left = [
-    ...[0, 2].map(k => ({ t: 'btns', items: M.slice(k, k + 2).map(modeBtn) })),
-    { t: 'btns', items: [{ label: `Ejercicio: ${EX_NAMES[settings.exercise]}  ▸`, accent: MC.ex, onPress: () => exerciseMenu(lobbyMenu) }] },
-    { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); lobbyMenu(); } })) },
-    ...(isCombat() ? [{ t: 'btns', items: [{ label: `Enemigos: ${foesSummary()}  ▸`, accent: MC.foes, onPress: () => foesMenu(lobbyMenu) }] }] : []),
-    ...(armsAny() ? [{ t: 'btns', items: [{ label: `Armas: ${armsSummary()}  ▸`, accent: MC.arms, onPress: () => armsMenu(lobbyMenu) }] }] : [])];
-  const eyeF = (menuFull() ? [] : devEye()).filter(k => FIELD[k] && fieldVisible(FIELD[k]));
-  const right = [{ t: 'field', key: 'toFail', after: () => lobbyMenu() }, ...eyeF.map(k => ({ t: 'field', key: k, after: FIELD[k].relayout ? () => lobbyMenu() : undefined }))];
-  if (menuFull()) right.push({ t: 'field', key: speedKey() }, { t: 'field', key: settings.mode === 'arcs' ? 'arcMax' : bars && hang ? 'hangInc' : 'repsWave' });
+  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
+  const tabs = lobbyTabs(); if (!tabs.some(t => t[0] === LOBBY.tab)) LOBBY.tab = 'play';
+  const [tab, tabName, tabCol] = tabs.find(t => t[0] === LOBBY.tab), again = () => lobbyMenu();
+  const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
+  const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
+  left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
+  const pane = tab === 'ex' ? exerciseRows(() => { LOBBY.tab = 'play'; uiSave('lobby', 'play'); lobbyMenu(); }, true) : tab === 'foes' ? foesRows(again) : tab === 'arms' ? armsRows(again) : tab === 'sound' ? soundRows(again, true)
+    : tab === 'scene' ? sceneRows(again) : tab === 'set' ? settingsRows(g => { settingsTab = g; uiSave('tab', g); lobbyMenu(); }) : lobbyPlayRows(again);
   const rows = [
-    { t: 'title', text: 'REPARENA' },
+    { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
     { t: 'text', text: summaryText() },
     ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
-    { t: 'cols', titles: ['Qué', 'Cómo'], cols: [left, right] },
-    { t: 'btns', items: [{ label: 'EMPEZAR', style: 'primary', onPress: start }], h: 0.08 },
-    ...sessionRows(),
-    ...(bars && hang ? [{ t: 'field', key: 'hangPit' }] : [])
-  ];
-  if (settings.mode === 'touch') {
-    if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: () => lobbyMenu() }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
-    if (menuFull()) rows.push(...tempoRows(() => lobbyMenu())); // (para el jugador, el ritmo está en Sonido)
-  }
-  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] });
-  // lo menos usado, en submenús: así el menú principal cabe al alcance de la mano
-  const sub = [];
-  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].t === 'field' && !fieldVisible(FIELD[rows[i].key])) rows.splice(i, 1);
-  // sonido y música (volúmenes, Spotify y ritmo), entorno y vista (escenario, marcador, habitación) y el resto de ajustes
-  const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
-  if (roomBad) rows.push({ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' });
-  rows.push(...spMiniRows()); // con Spotify: lo que suena y sus controles (todo lo demás, en Sonido)
-  sub.push({ label: 'Sonido  ▸', accent: MC.sound, onPress: () => soundMenu(lobbyMenu) }, { label: 'Entorno  ▸', accent: MC.scene, style: roomBad ? 'primary' : undefined, onPress: () => sceneMenu(lobbyMenu) },
-    { label: 'Ajustes  ▸', accent: MC.set, onPress: () => settingsMenu(lobbyMenu) }, { label: 'Salir', style: 'danger', onPress: exitAll });
-  rows.push({ t: 'btns', items: sub });
-  if (bars) rows.push({ t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real; si no, pulsa Colocar`, color: !placed ? '#ffd166' : '#a49fc8' });
+    ...(roomBad && tab !== 'scene' ? [{ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' }] : []),
+    { t: 'cols', fr: [0.29, 0.71], lw: [0.1, 0.19], titles: ['', tabName], colors: [null, tabCol], music: spConnected(), cols: [left, pane.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]))] }];
   const m = openMenu(rows);
   m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido
 }
@@ -2213,41 +2238,53 @@ function exerciseMenu(back) {
   const m = openMenu(rows, { accent: MC.ex }); m.rebuild = () => exerciseMenu(back); demoAttach(m);
 }
 // Todo lo que suena: Spotify, el ritmo (al compás o el de Spotify, en Toques y Combate) y los volúmenes
-function soundMenu(back) {
-  const again = () => soundMenu(back), beat = settings.mode === 'touch' || isCombat();
-  const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...musicRows(),
+function soundRows(again, mini) {
+  const beat = settings.mode === 'touch' || isCombat();
+  return [...(mini ? spListRows() : musicRows()),
     ...(spConnected() ? [] : [{ t: 'text', text: 'Spotify: conéctalo una vez en la página del juego (Sonido y música)', color: '#a49fc8' }]),
-    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }, { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+    ...(beat ? tempoRows(again) : [{ t: 'text', text: 'El ritmo de la música («Al compás» o el de Spotify) se marca en Toques y en Combate', color: '#a49fc8' }]), { t: 'field', key: 'volume' }, { t: 'field', key: 'ambient' }];
+}
+function soundMenu(back) {
+  const again = () => soundMenu(back);
+  const rows = [{ t: 'title', text: 'SONIDO Y MÚSICA' }, ...soundRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = again;
 }
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
+function sceneRows(again, inGame) {
+  const room = ['roomMode', 'roomOcclude', 'roomShow'];
+  return [...viewRows(again), ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key })), ...(inGame ? [] : roomRows(again))];
+}
 function sceneMenu(back, inGame) {
-  const again = () => sceneMenu(back, inGame), room = ['roomMode', 'roomOcclude', 'roomShow'];
-  const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...viewRows(again),
-    ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key })),
-    ...(inGame ? [] : roomRows(again)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
+  const again = () => sceneMenu(back, inGame);
+  const rows = [{ t: 'title', text: 'ENTORNO Y VISTA' }, ...sceneRows(again, inGame), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.scene }); m.rebuild = again;
 }
 let settingsTab = uiPrefs().tab || 'partida'; // se recuerda la última pestaña
-function settingsMenu(back, tab = settingsTab) {
+// go(tab): abrir otra pestaña; back: «Volver» (en el principal no hay: la columna de la izquierda ya vuelve)
+function settingsRows(go, tab = settingsTab, back = null) {
   const groups = Object.keys(GROUP_NAMES).filter(g => !OWN_MENU.includes(g) && SCHEMA.some(f => f.g === g && fieldShown(f)));
   if (!groups.includes(tab)) tab = groups[0]; if (tab !== settingsTab) { settingsTab = tab; uiSave('tab', tab); PREFS.resetArm = ''; }
-  const rows = [{ t: 'title', text: 'AJUSTES' }, { t: 'tabs', items: groups.map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => settingsMenu(back, g) })) }];
+  const rows = [], per = back ? 8 : 4; // (en la columna del principal, de 4 en 4: si no, no se leen)
+  for (let k = 0; k < groups.length; k += per) rows.push({ t: 'tabs', items: groups.slice(k, k + per).map(g => ({ label: GROUP_TAB[g] || GROUP_NAMES[g], on: g === tab, onPress: () => go(g) })) });
   if (tab === 'cada') rows.push({ t: 'text', text: animStatus(), color: BEAST.ready ? '#3cf0c6' : '#ffd166' });
   if (tab === 'ejercicio') rows.push({ t: 'text', text: BODY_NOTE, color: '#a49fc8' });
-  SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => settingsMenu(back, tab) : undefined }));
+  SCHEMA.filter(f => f.g === tab && fieldShown(f)).forEach(f => rows.push({ t: 'field', key: f.key, after: f.relayout ? () => go(tab) : undefined }));
   // el desarrollador: menú completo o el del jugador, a un toque (lo que cambias va solo a la tabla, en este rango)
   if (DEV.on) { const simple = !menuFull();
-    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); settingsMenu(back, tab); } }] }); }
+    rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); go(tab); } }] }); }
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
-  if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) settingsMenu(back, tab); } }] }); // (cinco toques: modo desarrollador)
+  if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) go(tab); } }] }); // (cinco toques: modo desarrollador)
   // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
   rows.push({ t: 'btns', items: [
-    ...(inGame ? [] : [{ label: 'Perfiles  ▸', accent: MC.prof, onPress: () => profilesMenu(() => settingsMenu(back, tab)) }]),
-    { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; settingsMenu(back, tab); } },
-    { label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] });
-  const m = openMenu(rows, { accent: MC.set }); m.rebuild = () => settingsMenu(back, tab);
+    ...(inGame ? [] : [{ label: 'Perfiles  ▸', accent: MC.prof, onPress: () => profilesMenu(() => go(tab)) }]),
+    { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; go(tab); } },
+    ...(back ? [{ label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] : [])] });
+  return rows;
+}
+function settingsMenu(back, tab = settingsTab) {
+  const go = g => settingsMenu(back, g), rows = [{ t: 'title', text: 'AJUSTES' }, ...settingsRows(go, tab, back)];
+  const m = openMenu(rows, { accent: MC.set }); m.rebuild = () => settingsMenu(back, settingsTab);
 }
 function openPause() {
   if (!GAME_STATES.includes(state)) return;
@@ -2400,7 +2437,7 @@ function hurtPlayer(src) {
   if (perkAbsorb()) return; // el escudo de las mejoras (79_perks)
   hapticBoth(0.9, 120);
   if (!perkKeepCombo()) combo = 0; stats.taken++; hurtT = 0.55; SND.hurt();
-  if (nLives()) { lives--; boardDirty = true; if (lives <= 0) { endRun(false); return; } }
+  if (nLives()) { lives -= src && src.fk ? devFoe(src.fk).str : 1; boardDirty = true; if (lives <= 0) { lives = 0; endRun(false); return; } }
   if (!(src instanceof Arc) && !(src && src.silent)) cheer(nLives() ? '¡Te han golpeado!' : '¡Golpe!', '#ff3b5c', 1.3);
 }
 function saveRun(win) {

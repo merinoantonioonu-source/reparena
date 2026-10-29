@@ -123,6 +123,23 @@ function demoPose(D, u) {
   return lerpPose(A, B, k);
 }
 
+// Lo que hace una PERFECTA y el extra propio del ejercicio (o del modo), en una línea cada uno
+const DEMO_RANGE = { squat: 'baja hasta casi sentarte', lunge: 'la rodilla de atrás casi al suelo', jsquat: 'sentadilla a fondo y salto', pushup: 'el pecho casi al suelo', inchworm: 'el pecho casi al suelo en la flexión', dips: 'baja hasta los codos en ángulo recto',
+  curl: 'sube hasta el hombro y baja del todo', curl2: 'sube hasta el hombro y baja del todo', press: 'brazos estirados del todo arriba', press2: 'brazos estirados del todo arriba', fraise: 'hasta la altura de los hombros', thruster: 'sentadilla a fondo y brazos estirados',
+  frontsq: 'sentadilla a fondo', swing: 'cadera bien atrás', chop: 'de arriba abajo, cruzando el cuerpo', dlrow: 'cadera atrás y espalda recta', plank1: 'cuerpo recto, sin girar la cadera', splank: 'cadera bien arriba', superman: 'brazos y piernas a la vez arriba',
+  row: 'el pecho hasta la barra', pullup: 'la barbilla por encima de la barra', abs: 'sube los hombros del suelo', slam: 'a fondo y con fuerza', jump: 'salto con todo el cuerpo', combo: 'cada movimiento completo' };
+function demoTips(ex, mode) {
+  const pt = typeof settings !== 'undefined' && settings.perfectTime > 0 && !['hang', 'superman'].includes(ex) ? ` y sin prisa (${String(settings.perfectTime).replace('.', ',')} s)` : '';
+  const perfect = ex === 'hang' ? 'Perfecta: quieto y colgado, sin balancearte.' : `Perfecta: ${DEMO_RANGE[ex] || 'recorrido completo'}${mode === 'touch' ? '' : pt}.`;
+  let extra = '';
+  if (mode === 'combat') extra = ex === 'inchworm' ? 'Extra: al volver, una onda aleja a los bichos.' : ex === 'superman' ? 'Extra: aguanta arriba y la bola de energía crece.'
+    : (typeof DEEP_EX !== 'undefined' && DEEP_EX.includes(ex)) || ex === 'pushup' ? 'Extra: aguanta abajo y el disparo carga ×2, ×3, ×4.' : typeof settings !== 'undefined' && settings.perks ? 'Extra: entre oleadas eliges una mejora.' : '';
+  else if (mode === 'arcs') extra = 'Extra: 10 seguidos sin fallo, fiebre (puntos ×2).';
+  else if (mode === 'bars') extra = ex === 'hang' ? 'Extra: aguanta para cerrar el remolino.' : 'Extra: revienta pompas para más puntos.';
+  else if (mode === 'touch') extra = 'Extra: vuelve a la postura entre toque y toque.';
+  return { perfect, extra };
+}
+
 /* ---------- Dibujo ---------- */
 const DC = { ink: '#eeeaff', back: '#8e86c0', teal: '#3cf0c6', pink: '#ff4fa3', gold: '#ffd166', red: '#ff3b5c', bg0: '#16112c', bg1: '#0b0818', floor: '#2f2853' };
 function demoInfo(ex, mode) {
@@ -137,7 +154,7 @@ function demoInfo(ex, mode) {
     const foe = foesKind === 'flyers' ? 'al volador' : foesKind === 'spider' ? 'a la araña' : foesKind === 'mix' ? 'al enemigo' : D.tiny ? 'a la araña' : 'al robot';
     what = sw ? `Con la espada, corta ${foe} con un tajo amplio al subir.` : pist ? `Cada repetición carga la pistola: dispara ${foe} con el gatillo.` : `Cada repetición lanza un rayo ${foe} más cercano.`;
   }
-  return { D, foesKind, what };
+  return { D, foesKind, what, tips: demoTips(ex, mode) };
 }
 function demoDraw(c, W, H, ex, mode, t) {
   const { D, foesKind, what } = demoInfo(ex, mode);
@@ -227,9 +244,13 @@ function demoDraw(c, W, H, ex, mode, t) {
   const tx = W * 0.05, tw = W * 0.9; let ty = sH + capH * 0.02;
   c.fillStyle = DC.teal; c.font = `${Math.round(capH * 0.22)}px ${FD}`; fitFont(c, `${EX_NAMES[ex] || ex}${MODE_NAMES[mode] ? ' · ' + MODE_NAMES[mode] : ''}`, tw, Math.round(capH * 0.22), '%px ' + FD); c.fillText(`${EX_NAMES[ex] || ex}${MODE_NAMES[mode] ? ' · ' + MODE_NAMES[mode] : ''}`, tx, ty);
   ty += capH * 0.27;
-  const fs = Math.round(capH * 0.155); c.font = `500 ${fs}px ${FB}`; c.fillStyle = DC.ink;
+  const fs = Math.round(capH * 0.145); c.font = `500 ${fs}px ${FB}`; c.fillStyle = DC.ink;
   const desc = mode === 'combat' ? D.desc : D.desc.split(/(?<=\.) /).filter(x => !/dispar/i.test(x)).join(' ').replace(/[:,] [^.:,]*dispar[^.]*\./i, '.');
-  for (const line of demoWrap(c, desc + (what ? ' ' + what : ''), tw).slice(0, 4)) { c.fillText(line, tx, ty); ty += fs * 1.18; }
+  // lo que se hace (su primera frase), cómo sale PERFECTA y el extra del ejercicio: breve, una línea cada cosa
+  const T = demoTips(ex, mode), first = mode !== 'combat' && what ? what : desc.split(/(?<=\.) /)[0];
+  for (const [txt, col, n] of [[first, DC.ink, T.extra ? 1 : 2], [T.perfect, DC.teal, 1], [T.extra, DC.gold, 1]]) {
+    if (!txt) continue; c.fillStyle = col; const L = demoWrap(c, txt, tw); L.slice(0, n).forEach((line, k) => { if (k === n - 1 && L.length > n) line = line.replace(/\s*\S*$/, '…'); c.fillText(line, tx, ty); ty += fs * 1.16; });
+  }
   c.restore();
 }
 function demoWrap(c, text, w) { const out = []; let line = ''; for (const word of text.split(' ')) { const tr = line ? line + ' ' + word : word; if (c.measureText(tr).width > w && line) { out.push(line); line = word; } else line = tr; } if (line) out.push(line); return out; }

@@ -65,6 +65,8 @@ No las cambies sin preguntarle.
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
+- Inchworm: huellas de mano humana dentro de círculos; las manos avanzan por turnos, un paso cada una (nunca a la misma
+  altura); en cada vuelta empieza la otra mano y las del medio se abren a los lados (`iwSpread`).
 - Mandos como manos (sentadillas y zancadas): el mando se ve como una mano; gatillo + agarre = puño; el rayo se lanza
   apuntando con la mano y con el gatillo. Con mando, la puntería por defecto es «con las manos».
 
@@ -82,6 +84,8 @@ No las cambies sin preguntarle.
 - Se mueven con naturalidad y agresividad, sin chocar entre ellos.
 - Al abrirse una compuerta, su interior es oscuro.
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
+- Los voladores baten las alas siempre rápido, a su ritmo, sin depender de lo deprisa que avancen.
+- Cada enemigo tiene resistencia, fuerza y dureza en la tabla del desarrollador; los nuevos entran solos en ella.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
@@ -110,7 +114,9 @@ No las cambies sin preguntarle.
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:
   - lo poco usado va en submenús (Sonido, Entorno, Ajustes…);
-  - el menú principal va en dos columnas (B): a la izquierda qué se juega, a la derecha cómo;
+  - el menú principal: a la izquierda sus partes, cada una con su color (también Sonido, Entorno, Ajustes) y el reproductor
+    de Spotify (pequeño, en un cuadrado, con rótulo móvil); a la derecha, lo de la parte elegida, con su color; EMPEZAR,
+    pequeño, arriba a la izquierda del título;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;
   - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla);

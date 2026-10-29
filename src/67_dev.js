@@ -74,7 +74,8 @@ function devFactory(id = comboId()) { delete DEV.t[id]; devSave(); applyRank(); 
 // exportar: la tabla entera (lo de fábrica más lo tuyo), lista para pegar en DEV_FACTORY o en otro dispositivo
 function devExport() {
   const out = JSON.parse(JSON.stringify(DEV_FACTORY));
-  for (const id in DEV.t) { const e = DEV.t[id], o = out[id] = out[id] || {}; if (e.v) o.v = { ...(o.v || {}), ...e.v }; if (e.eye) o.eye = e.eye.slice(); }
+  if (DEV.t.foes) out.foes = { ...(DEV_FACTORY.foes || {}), ...DEV.t.foes };
+  for (const id in DEV.t) { if (id === 'foes') continue; const e = DEV.t[id], o = out[id] = out[id] || {}; if (e.v) o.v = { ...(o.v || {}), ...e.v }; if (e.eye) o.eye = e.eye.slice(); }
   const songs = { ...(DEV_FACTORY.songs || {}), ...EXS.t }; if (Object.keys(songs).length) out.songs = songs; // (las tuyas, de serie para todos)
   return JSON.stringify(out);
 }
@@ -83,6 +84,7 @@ function devImport(text) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) return 'Eso no es una tabla válida';
   const t = {}; let n = 0;
   for (const id in o) {
+    if (id === 'foes') { if (o.foes && typeof o.foes === 'object') { t.foes = {}; for (const k in o.foes) if (devFoes().some(x => x[0] === k) && o.foes[k]) t.foes[k] = devFoeClean(o.foes[k]); } continue; }
     if (id === 'songs') { if (o.songs && typeof o.songs === 'object') for (const x in o.songs) if (EX_NAMES[x]) exSongsSet(o.songs[x], x); continue; }
     const [m, x] = id.split('|'); if (!MODE_NAMES[m] || !EX_NAMES[x] || !o[id] || typeof o[id] !== 'object') continue;
     const e = {}, v = o[id].v || {};
@@ -91,6 +93,34 @@ function devImport(text) {
     t[id] = e;
   }
   DEV.t = t; devSave(); applyRank(); return `Tabla cargada (${n} filas)`;
+}
+
+/* ---------- Cada enemigo: resistencia, fuerza y dureza ---------- */
+// La resistencia es cuántos disparos aguanta en la primera oleada (luego sube como siempre, oleada a oleada); la fuerza,
+// cuántas vidas quita cada golpe; la dureza, en qué tramo de la escalera de enemigos entra (1, los primeros; 4, los
+// últimos). La lista sale de las de los enemigos (FOE_GATE, FOE_HATCH, FOE_FLY): uno nuevo entra solo, con 2 disparos
+// (1 si vuela o sale de una trampilla). Las oleadas piden las mismas repeticiones: más resistentes, salen menos
+const DEV_FOE_HP = { 'g:robot_h': 3, 'g:puglin': 1, 'g:zchubby': 3, 'g:yeti': 3, 'g:cyclops': 3, 'g:captain': 3, 'h:spider': 2, 'h:spider_h': 3, 'f:bomber': 2, 'f:cthulhu': 2 };
+function devFoes() {
+  const L = [];
+  for (const [k, n] of FOE_GATE) { L.push(['g:' + k, k === 'robot' ? 'Robot explorador' : n, k]); if (k === 'robot') L.push(['g:robot_h', 'Robot pesado', null]); }
+  for (const [k, n] of FOE_HATCH) { L.push(['h:' + k, n + ' (trampilla)', k]); if (k === 'spider') L.push(['h:spider_h', 'Araña pesada (trampilla)', null]); }
+  for (const [k, n] of FOE_FLY) if (k !== 'dragon') { L.push(['f:' + k, n, k]); if (k === 'drone') L.push(['f:bomber', 'Bombardero', null]); }
+  return L;
+}
+const devFoeDefHp = key => DEV_FOE_HP[key] || (key.startsWith('g:') ? 2 : 1);
+const devFoeClean = o => ({ ...(o.hp ? { hp: clamp(Math.round(+o.hp) || 1, 1, 12) } : {}), ...(o.str ? { str: clamp(Math.round(+o.str) || 1, 1, 5) } : {}), ...(o.tier ? { tier: clamp(Math.round(+o.tier) || 2, 1, 4) } : {}) });
+function devFoe(key) { const o = { ...((DEV_FACTORY.foes || {})[key] || {}), ...((DEV.t.foes || {})[key] || {}) }; return { hp: o.hp || devFoeDefHp(key), str: o.str || 1, tier: o.tier || 0 }; }
+function devFoeSet(key, f, v) { const F = DEV.t.foes = DEV.t.foes || {}, o = { ...(F[key] || {}), [f]: v === '' ? undefined : +v }; F[key] = devFoeClean(o); if (!Object.keys(F[key]).length) delete F[key]; devSave(); }
+// la dureza de la escalera: la del desarrollador o la de serie (FOE_TIER)
+const foeTier = k => devFoe('g:' + k).tier || devFoe('h:' + k).tier || devFoe('f:' + k).tier || FOE_TIER[k] || 2;
+function devFoesHTML() {
+  const L = devFoes(), td = (key, f, v, mn, mx, own) => `<td class="dvc${own ? ' own' : ''}"><input type="number" data-fk="${key}" data-f="${f}" min="${mn}" max="${mx}" step="1" value="${v}" inputmode="numeric"></td>`;
+  let h = '<h3>Enemigos: resistencia, fuerza y dureza</h3><p class="note">Para todos los modos y rangos. <b>Resistencia</b>: disparos que aguanta en la primera oleada (luego sube como siempre). <b>Fuerza</b>: vidas que quita cada golpe. <b>Dureza</b>: en qué tramo de la escalera entra (1, desde el principio; 4, al final). Los jefes, como siempre.</p>';
+  h += '<div class="dvwrap"><table class="dvtab dvfoes"><thead><tr><th>Enemigo</th><th>Resistencia</th><th>Fuerza</th><th>Dureza</th></tr></thead><tbody>';
+  const own = (DEV.t.foes || {});
+  for (const [key, name, base] of L) { const v = devFoe(key), o = own[key] || {}; h += `<tr><th scope="row">${escD(name)}</th>${td(key, 'hp', v.hp, 1, 12, o.hp)}${td(key, 'str', v.str, 1, 5, o.str)}${base ? td(key, 'tier', v.tier || FOE_TIER[base] || 2, 1, 4, o.tier) : '<td>—</td>'}</tr>`; }
+  return h + '</tbody></table></div>';
 }
 
 /* ---------- Canciones de cada ejercicio (del jugador) ---------- */
@@ -167,7 +197,7 @@ function devTableHTML() {
   h += `<div class="dvbar"><label>Copiar a <select id="dvCopyTo">${same.map(x => `<option value="${x}">${escD(EX_NAMES[x])}</option>`).join('')}</select></label><button type="button" class="btn small" data-a="copy"${same.length ? '' : ' disabled'}>Copiar</button>`
     + `<button type="button" class="btn small" data-a="factory">Valores de fábrica</button><button type="button" class="btn small" data-a="export">Exportar</button><button type="button" class="btn small" data-a="import">Importar</button><button type="button" class="btn small" data-a="off">Salir del modo desarrollador</button></div>`
     + `<textarea id="dvText" rows="3" placeholder="Aquí sale la tabla al exportar; pega aquí una para importarla" aria-label="Tabla exportada"></textarea><p class="status" id="dvStatus"></p>`;
-  return h + '<p class="hint">Las canciones de cada ejercicio se eligen en «Sonido y música»; al exportar, van con la tabla (de serie para todos).</p>';
+  return h + devFoesHTML() + '<p class="hint">Las canciones de cada ejercicio se eligen en «Sonido y música»; al exportar, van con la tabla (de serie para todos).</p>';
 }
 const devRowOn = key => !!RANK_VALS[key] || devCtl().includes(key);
 // un escudo pequeño con el galón (el mismo dibujo que en las gafas)
@@ -183,6 +213,7 @@ function devInitPage() {
   box.addEventListener('change', ev => {
     const el = ev.target, d = el.dataset || {};
     if (d.k !== undefined && d.i !== undefined) { devSet(d.k, +d.i, el.value); devPage(); }
+    else if (d.fk) { devFoeSet(d.fk, d.f, el.value); devPage(); }
   });
   box.addEventListener('click', ev => {
     const b = ev.target.closest ? ev.target.closest('button') : ev.target, d = (b && b.dataset) || {}, st = $('#dvStatus'), ta = $('#dvText');

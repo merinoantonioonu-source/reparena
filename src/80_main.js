@@ -71,22 +71,40 @@ const pvBaseY = () => settings.exercise === 'superman' ? 0.22 : isSupine() ? 0.2
 const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exercise === 'splank' ? -0.1 : isSupine() ? 1.1 : isFloor() ? -0.7 : -0.12;
 function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
 const _pvw = new V3();
-// Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición de ~7,5 s: te doblas, caminas con
-// las manos por las tres parejas de huellas, flexión, vuelves andando y te pones de pie. PV.iwSkip: se salta la pareja del medio
-const IWS = [[0, 1.6, -1], [0.9, 0.95, 0], [1.7, 0.7, 1], [2.6, 0.45, 2], [3.3, -1, 2], [3.9, -1, 2], [4.6, 0.45, 2], [5.3, 0.7, 1], [6.0, 0.95, 0], [7.0, 1.6, -1], [7.6, 1.6, -1]];
+// Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición: te doblas, caminas con las
+// manos huella a huella (por turnos, cada mano a su siguiente), flexión, vuelves igual al revés y te pones de pie.
+// PV.iwSkip: se salta la tercera huella
+function iwPlan() {
+  const P = IW.prints, N = P.length, ev = []; let t = 0.9; const D = 0.5;
+  for (let j = 2; j < N; j++) { ev.push({ t, s: P[j].side, from: PV.iwSkip && j === 4 ? 0 : j - 2, to: PV.iwSkip && j === 2 ? 0 : j }); t += D; }
+  const tw = t; t += 1.3; const tb = t;
+  for (let j = N - 3; j >= 0; j--) { ev.push({ t, s: P[j].side, from: j + 2, to: j, back: true }); t += D; }
+  return { ev, tw, tb, te: t, end: t + 1.6, D };
+}
 function iwSim(dt) {
-  if (PV.crouch || PV.iwAuto) PV.iwT = ((PV.iwT || 0) + dt) % 7.6;
-  const u = PV.iwT || 0, i = IWS.findIndex((k, j) => j + 1 < IWS.length && u < IWS[j + 1][0]), a = IWS[i], b = IWS[i + 1], k = smooth(clamp((u - a[0]) / (b[0] - a[0]) * 1.6, 0, 1));
-  const low = 0.45 - dv('pushDepth') / 100 - 0.06, hy = v => v < 0 ? low : v, y = lerp(hy(a[1]), hy(b[1]), k);
-  const S = IW_OFF(), zf = v => v < 0 ? S : v === 0 ? S - 0.3 : v === 1 ? S * 0.45 : 0, z = lerp(zf(a[2]), zf(b[2]), k);
+  const P = IW.prints; if (!P.length) return {};
+  const plan = PV.iwPlan || (PV.iwPlan = iwPlan());
+  if (PV.crouch || PV.iwAuto) { PV.iwT = (PV.iwT || 0) + dt; if (PV.iwT >= plan.end) { PV.iwT = 0; PV.iwPlan = null; } }
+  const u = PV.iwT || 0, S = IW_OFF(), low = 0.45 - dv('pushDepth') / 100 - 0.06, z0 = P[0].z, zN = P[P.length - 1].z;
+  const stand = s => new V3(s === 'left' ? -0.22 : 0.22, 0.85, S), pp = (k, s) => { const pr = P[k] && P[k].side === s ? P[k] : P[k + 1] && P[k + 1].side === s ? P[k + 1] : P[k - 1]; return new V3(pr.x, 0.05, pr.z + 0.06); };
+  const out = {}; let zs = 0;
+  for (const s of ['left', 'right']) {
+    const k0 = P[0].side === s ? 0 : 1; let w;
+    if (u < 0.9) w = stand(s).lerp(pp(k0, s), smooth(u / 0.9));
+    else if (u >= plan.te) w = pp(k0, s).lerp(stand(s), smooth(clamp((u - plan.te) / 1.0, 0, 1)));
+    else { // la última huella de esta mano y, si se está moviendo, de dónde viene
+      let at = k0, mv = null; for (const e of plan.ev) if (e.s === s && u >= e.t) { if (u < e.t + plan.D) mv = e; at = e.to; }
+      w = mv ? pp(mv.from, s).lerp(pp(mv.to, s), smooth((u - mv.t) / plan.D)) : pp(at, s);
+      if (mv) w.y += 0.5 * Math.min(1, 2.5 * Math.sin(Math.PI * (u - mv.t) / plan.D)); // la mano va levantada entre huella y huella y solo baja al llegar
+    }
+    zs += w.z; out[s] = arena.localToWorld(w);
+  }
+  // la cabeza: de pie, detrás; al avanzar las manos, va hacia la plancha (y baja); en la plancha, la flexión
+  const g = clamp((z0 - zs / 2) / Math.max(0.1, z0 - zN), 0, 1), up = u < 0.9 ? smooth(u / 0.9) : u >= plan.te ? 1 - smooth(clamp((u - plan.te) / 1.0, 0, 1)) : 1;
+  let y = lerp(1.6, lerp(0.95, 0.45, g), up), z = lerp(S, lerp(S - 0.3, 0, g), up);
+  if (u >= plan.tw && u < plan.tb) { const q = (u - plan.tw) / 1.3; y = lerp(0.45, low, Math.sin(Math.PI * clamp(q * 1.2, 0, 1))); }
   camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;
   if (PV.crouch || PV.iwAuto) camera.rotation.x = lerp(-0.12, -0.75, clamp((1.6 - y) / 1.1, 0, 1)); // mirando al suelo al bajar
-  const out = {};
-  for (const s of ['left', 'right']) {
-    const at = v => { if (v < 0) return new V3(s === 'left' ? -0.22 : 0.22, Math.max(0.75, y - 0.75), S); const pr = IW.prints.find(p => p.side === s && p.pair === (PV.iwSkip && v === 1 ? 0 : v)); return new V3(pr.x, 0.05, pr.z + 0.06); };
-    const w = at(a[2]).lerp(at(b[2]), k); if (a[2] >= 0 && b[2] >= 0 && a[2] !== b[2]) w.y += 0.5 * Math.min(1, 2.5 * Math.sin(Math.PI * k)); // la mano va levantada entre huella y huella y solo baja al llegar
-    out[s] = arena.localToWorld(w);
-  }
   return out;
 }
 function previewInput(dt) {
@@ -268,7 +286,7 @@ renderer.setAnimationLoop((time, frame) => {
   updateGloves(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt); updateBigNotice(dt);
-  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); updateComic(dt, t); spTick(dt);
+  updatePlace(dt); updateEquip(dt, t); roomStep(dt); updateRoomPlace(dt); updatePool(dt, t); updateVortex(dt, t); updateForest(dt, t); updateNature(dt, t); updateIsland(dt, t); updateComic(dt, t); spTick(dt); spMarqStep(dt);
   if (menu) { menu.age += dt; pokeWidgets(activeWidgets(), dt, menu.age > 0.5 && wristReady(), true); }
   updateViewPanels(dt); updateDemo(dt);
   updateEnv(dt, t);

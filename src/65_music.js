@@ -473,6 +473,41 @@ function spMiniRows() {
     { t: 'btns', h: 0.058, items: [{ label: 'Anterior', icon: 'prev', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', icon: spPlaying() ? 'pause' : 'play', style: 'primary', flex: 1.3, onPress: spToggle },
       { label: 'Siguiente', icon: 'next', onPress: spNext }, { label: 'Vol −', icon: 'voldown', onPress: () => spVol(-10) }, { label: 'Vol +', icon: 'volup', onPress: () => spVol(10) }] }];
 }
+// El reproductor pequeño del menú principal: todo junto en un cuadrado. Arriba, un rótulo que se desplaza con lo que suena
+// (sin tener que enseñarlo entero de una vez); debajo, anterior, play/pausa y siguiente, y bajar y subir el volumen
+const MARQ = { p: null, text: '', x: 0, t: 0 };
+function spPlayerRows() {
+  if (!spConnected()) return [];
+  if (Date.now() - SP.lastRef > 3000) SP.pollT = 0;
+  const it = SP.st && SP.st.item; MARQ.text = SP.err || (it ? `♪ ${it.name}${it.artists ? ' — ' + it.artists.map(a => a.name).join(', ') : ''}` : 'Spotify: no suena nada'); MARQ.col = SP.err ? '#ff8a3d' : '#a68bff';
+  return [{ t: 'canvas', h: 0.04, draw: (c, x, y, w, h) => { rr(c, x, y, w, h, h * 0.3); c.fillStyle = 'rgba(166,139,255,0.12)'; c.fill(); },
+      mount: (group, x0, cy, cw, h) => { const P = makePanel(cw - 0.012, h - 0.008, 512); P.mesh.position.set(x0 + cw / 2, cy, 0.002); P.mesh.renderOrder = RO.widget; group.add(P.mesh); MARQ.p = P; MARQ.x = 0; MARQ.t = 0; spMarqDraw(); } },
+    { t: 'btns', h: 0.05, items: [{ label: 'Anterior', icon: 'prev', onPress: spPrev }, { label: spPlaying() ? 'Pausa' : 'Play', icon: spPlaying() ? 'pause' : 'play', style: 'primary', onPress: spToggle }, { label: 'Siguiente', icon: 'next', onPress: spNext }] },
+    { t: 'btns', h: 0.05, items: [{ label: 'Vol −', icon: 'voldown', onPress: () => spVol(-10) }, { label: 'Vol +', icon: 'volup', onPress: () => spVol(10) }] }];
+}
+function spMarqDraw() {
+  const P = MARQ.p, c = P.ctx, W = P.W, H = P.H; c.clearRect(0, 0, W, H);
+  c.font = `600 ${Math.round(H * 0.62)}px ${FB}`; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = MARQ.col || '#a68bff';
+  const tw = c.measureText(MARQ.text).width, gap = W * 0.25;
+  if (tw <= W * 0.96) c.fillText(MARQ.text, (W - tw) / 2, H / 2); // (si cabe, quieto y en medio)
+  else { const x = -(MARQ.x % (tw + gap)); c.fillText(MARQ.text, x, H / 2); c.fillText(MARQ.text, x + tw + gap, H / 2); }
+  P.tex.needsUpdate = true;
+}
+// (a unos 20 dibujos por segundo, y solo con el reproductor a la vista)
+function spMarqStep(dt) {
+  const P = MARQ.p; if (!P || !P.mesh.parent || !P.mesh.parent.parent) { MARQ.p = null; return; }
+  MARQ.x += dt * P.W * 0.18; MARQ.t -= dt; if (MARQ.t > 0) return; MARQ.t = 0.05; spMarqDraw();
+}
+// En la columna de Sonido del principal: tus listas y, si suena en otro dispositivo, traerla a las gafas (los botones ya
+// están en el reproductor)
+function spListRows() {
+  if (!spConnected()) return [];
+  const here = spHereOk() && spPlaying() && !spHereNow() ? [{ t: 'btns', items: [{ label: 'Que suene en las gafas', style: 'primary', onPress: () => spDo(spToHere) }] }] : [];
+  const L = spLists();
+  return [...here, { t: 'btns', items: [...L.slice(0, 2).map(l => ({ label: l.name, onPress: () => spDo(() => spPlayLists([l])) })), ...(L.length > 1 ? [{ label: `Mezcladas (${L.length})`, onPress: () => spDo(() => spPlayLists(L)) }] : [])] },
+    { t: 'btns', items: [{ label: 'Listas y canciones  ▸', accent: '#a68bff', onPress: () => { const b = menu && menu.rebuild; SP.loadErr = ''; spListMenu(b || (() => hideMenu())); } }] },
+    ...(SPP.state === 'error' ? [{ t: 'text', text: SPP.err, color: '#ffd166' }] : [])].filter(r => r.t !== 'btns' || r.items.length);
+}
 function spMenuSync() { if (menu && menu.music !== null && !menu.keypad && menu.music !== spNowText() && menu.rebuild) menu.rebuild(); }
 // Con el menú de música abierto, se pregunta a Spotify cada 5 s; si no, cada 8 s (para callar el ambiente mientras
 // suena y para seguir el ritmo de cada canción)
