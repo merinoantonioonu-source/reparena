@@ -74,13 +74,14 @@ const DEMO = {
   jump: { P: 2.4, high: 2.5, keys: [[0, STAND], [0.3, P_(SQUAT, { hip: [-0.12, 0.72], torso: 20 })], [0.5, P_(STAND, { hip: [0, 1.16], legF: { to: [0.02, 0.26], b: 1 }, legB: { to: [-0.05, 0.24], b: 1 }, ...ST_ARMS([30, 30], [26, 26]) })], [0.68, STAND], [1, STAND]], fire: 0.5, low: 0.5, desc: 'Flexiona un poco y salta para meter la cabeza en el aro que espera por encima; toca las gemas con la mano.' },
   abs: { P: 2.8, keys: [[0, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }], [0.4, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [0.55, { hip: [0, 0.12], torso: -38, head: 12, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.28, 0.5], b: 1 }, armB: { to: [0.26, 0.48], b: 1 } }], [1, { hip: [0, 0.12], torso: -86, head: 0, legF: { to: [0.46, 0.04], b: 1 }, legB: { to: [0.44, 0.04], b: 1 }, armF: { to: [0.24, 0.13], b: 1 }, armB: { to: [0.22, 0.13], b: 1 } }]], fire: 0.45, low: 0.45, desc: 'Boca arriba con las rodillas dobladas: sube el tronco para meter la cabeza en el aro (de frente o girado).' }
 };
-// Flexión inchworm: de pie, te doblas, caminas con las manos por las huellas hasta la plancha, flexión (dispara) y vuelta
+// Flexión inchworm: de pie, te doblas, caminas con las manos hasta la plancha (la cabeza, a la línea del suelo: carga) y
+// vuelves; al ponerte de pie, dispara y sale la onda
 const IW_ST = P_(STAND, { hip: [-1.2, 0.92], legF: { to: [-1.18, 0.04], b: 1 }, legB: { to: [-1.24, 0.04], b: 1 } });
 const IW_LEGS = { legF: { to: [-1.18, 0.04], b: 1 }, legB: { to: [-1.24, 0.04], b: 1 } };
 const IW_FOLD = { hip: [-1.3, 0.86], torso: 160, head: -20, ...IW_LEGS, armF: { to: [-0.98, 0.03], b: -1 }, armB: { to: [-1.0, 0.03], b: -1 } };
 const IW_W1 = { hip: [-1.15, 0.75], torso: 125, head: -10, ...IW_LEGS, armF: { to: [-0.55, 0.03], b: -1 }, armB: { to: [-0.62, 0.03], b: -1 } };
 const IW_W2 = { hip: [-0.85, 0.6], torso: 100, head: 0, ...IW_LEGS, armF: { to: [-0.2, 0.03], b: -1 }, armB: { to: [-0.3, 0.03], b: -1 } };
-DEMO.inchworm = { P: 7, tiny: true, prints: [-1.0, -0.58, 0.08], keys: [[0, IW_ST], [0.08, IW_ST], [0.18, IW_FOLD], [0.27, IW_W1], [0.35, IW_W2], [0.43, PLANK_UP], [0.5, PLANK_DN], [0.55, PLANK_DN], [0.63, PLANK_UP], [0.71, IW_W2], [0.79, IW_W1], [0.87, IW_FOLD], [0.96, IW_ST], [1, IW_ST]], fire: 0.62, low: 0.53, desc: 'De pie, dóblate y camina con las manos por las tres parejas de huellas (las del medio cambian); en las últimas, flexión: disparas al subir. Vuelve andando y ponte de pie.' };
+DEMO.inchworm = { P: 6.4, tiny: true, iwLine: 0.32, keys: [[0, IW_ST], [0.08, IW_ST], [0.2, IW_FOLD], [0.31, IW_W1], [0.42, IW_W2], [0.5, PLANK_UP], [0.58, PLANK_UP], [0.67, IW_W2], [0.76, IW_W1], [0.86, IW_FOLD], [0.96, IW_ST], [1, IW_ST]], fire: 0.96, low: 0.5, desc: 'De pie, dóblate y camina con las manos hasta que tu cabeza llegue a la línea del suelo (carga). Vuelve andando y ponte de pie: disparas.' };
 // Antebrazos con la barra flexible: primer plano de frente (de lado no se ve el giro). Cada mano gira unos 90° en
 // sentido contrario a la otra, como al escurrir una toalla: el primer giro carga y el siguiente, al revés, dispara
 DEMO.twist = { P: 2.6, custom: 'twist', keys: [[0, STAND], [1, STAND]], fire: 0.9, src: 'bar', desc: 'Gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.' };
@@ -124,7 +125,7 @@ function demoPose(D, u) {
 }
 
 // Lo que hace una PERFECTA y el extra propio del ejercicio (o del modo), en una línea cada uno
-const DEMO_RANGE = { squat: 'baja hasta casi sentarte', lunge: 'la rodilla de atrás casi al suelo', jsquat: 'sentadilla a fondo y salto', pushup: 'el pecho casi al suelo', inchworm: 'el pecho casi al suelo en la flexión', dips: 'baja hasta los codos en ángulo recto',
+const DEMO_RANGE = { squat: 'baja hasta casi sentarte', lunge: 'la rodilla de atrás casi al suelo', jsquat: 'sentadilla a fondo y salto', pushup: 'el pecho casi al suelo', inchworm: 'la cabeza hasta la línea y vuelta a la salida', dips: 'baja hasta los codos en ángulo recto',
   curl: 'sube hasta el hombro y baja del todo', curl2: 'sube hasta el hombro y baja del todo', press: 'brazos estirados del todo arriba', press2: 'brazos estirados del todo arriba', fraise: 'hasta la altura de los hombros', thruster: 'sentadilla a fondo y brazos estirados',
   frontsq: 'sentadilla a fondo', swing: 'cadera bien atrás', chop: 'de arriba abajo, cruzando el cuerpo', dlrow: 'cadera atrás y espalda recta', plank1: 'cuerpo recto, sin girar la cadera', splank: 'cadera bien arriba', superman: 'brazos y piernas a la vez arriba',
   row: 'el pecho hasta la barra', pullup: 'la barbilla por encima de la barra', abs: 'sube los hombros del suelo', slam: 'a fondo y con fuerza', jump: 'salto con todo el cuerpo', combo: 'cada movimiento completo' };
@@ -169,10 +170,7 @@ function demoDraw(c, W, H, ex, mode, t) {
   const X = x => W * (D.keys[0][1].hip[0] < -0.3 ? 0.42 : 0.3) + x * s, Y = y => fy - y * s;
   c.strokeStyle = DC.floor; c.lineWidth = 3; c.beginPath(); c.moveTo(W * 0.04, fy); c.lineTo(W * 0.96, fy); c.stroke();
   const pose = demoPose(D, u), J = demoJoints(pose), lw = Math.max(3, s * 0.045);
-  if (D.prints) D.prints.forEach((x, i) => { // huellas en el suelo, una pareja por sitio: se iluminan las que ya tocaste
-    const lit = u >= [0.18, 0.27, 0.35][i] - 0.02 && u < [0.9, 0.82, 0.74][i]; c.fillStyle = lit ? 'rgba(255,154,60,.95)' : 'rgba(74,168,255,.6)';
-    c.beginPath(); c.ellipse(X(x), fy + 2, s * 0.07, s * 0.022, 0, 0, TAU); c.fill();
-  });
+  if (D.iwLine !== undefined) { const lit = u >= 0.5 && u < 0.96; c.strokeStyle = lit ? '#ffd166' : DC.teal; c.lineWidth = Math.max(3, s * 0.03); c.beginPath(); c.moveTo(X(D.iwLine) - s * 0.08, fy + 2); c.lineTo(X(D.iwLine) + s * 0.08, fy + 2); c.stroke(); } // la línea del suelo: donde llega la cabeza en la plancha
   // aparatos
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (D.chair) { c.strokeStyle = '#6d6699'; c.lineWidth = lw * 0.8; c.beginPath(); c.moveTo(X(-0.11), Y(0.45)); c.lineTo(X(-0.55), Y(0.45)); c.moveTo(X(-0.14), Y(0.45)); c.lineTo(X(-0.14), Y(0)); c.moveTo(X(-0.52), Y(0.45)); c.lineTo(X(-0.52), Y(0)); c.moveTo(X(-0.55), Y(0.45)); c.lineTo(X(-0.57), Y(0.9)); c.stroke(); }

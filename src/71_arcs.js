@@ -54,7 +54,8 @@ function arxPatterns(total) {
     [settings.arcDouble / 20, () => [S(rand(lo, hi), 1.4, { kind: 'double' })]],
     [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
     [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
-    [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]] // al suelo, en plancha (y tiempo para levantarte)
+    [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]], // al suelo, en plancha (y tiempo para levantarte)
+    [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]] // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
   while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
   const out = arxPlankRoom(list.slice(0, total));
@@ -65,8 +66,8 @@ function arxPatterns(total) {
   return out;
 }
 
-// Antes de un arco de plancha, tiempo para bajar al suelo (el anterior deja un hueco largo)
-function arxPlankRoom(list) { list.forEach((o, i) => { if (o.kind === 'plank' && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, 1.8); }); return list; }
+// Antes de un arco de plancha o de semipuente, tiempo para bajar al suelo (el anterior deja un hueco largo)
+function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' || o.low) && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, o.low ? 1.5 : 1.8); }); return list; }
 
 /* ---------- Obstáculos nuevos: láser que barre y paredes que se cierran ---------- */
 // Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,

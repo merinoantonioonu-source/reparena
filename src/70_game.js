@@ -1061,24 +1061,43 @@ function jumpTrack(dt) {
   if (dt <= 0) return; const v = (head.p.y - JUMP.lastY) / dt; JUMP.lastY = head.p.y;
   JUMP.vy = JUMP.vy * 0.5 + v * 0.5; JUMP.fastT = JUMP.vy > 0.6 ? 0 : JUMP.fastT + dt;
 }
+// Una huella de mano vista desde arriba, dentro de su círculo (la izquierda, en espejo): donde apoyar la mano en el suelo
+const HPRINT = {};
+function handPrintTex(side) {
+  if (HPRINT[side]) return HPRINT[side];
+  const c = mkCanvas(128), x = c.getContext('2d'), rp = (X, Y, w, h, r) => { x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+  x.beginPath(); x.arc(64, 64, 59, 0, TAU); x.lineWidth = 5; x.strokeStyle = '#ffffff'; x.stroke(); x.fillStyle = 'rgba(255,255,255,0.18)'; x.fill();
+  x.save(); x.translate(64, 72); if (side === 'left') x.scale(-1, 1); x.fillStyle = '#ffffff';
+  x.beginPath(); rp(-20, -6, 40, 38, 13); for (const [fx, len] of [[-14.5, 30], [-4.8, 35], [4.8, 33], [14.5, 25]]) rp(fx - 4.3, -6 - len, 8.6, len + 6, 4.3); x.fill(); // la palma y los dedos
+  x.save(); x.translate(-17, 16); x.rotate(-0.95); x.beginPath(); rp(-4.8, -26, 9.6, 28, 4.8); x.fill(); x.restore(); x.restore(); // el pulgar, hacia dentro
+  return (HPRINT[side] = texFrom(c));
+}
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
   // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
-  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0, plank = false) {
+  // low: inclinado bajo, de semipuente (ver más abajo)
+  constructor(drop, offset = 0, second = false, tilt = 0, jump = false, spin = 0, plank = false, low = false) {
     const H = arMode ? 2.25 : 2.55, tl = !!tilt && !spin && !jump && !plank, top = calibRef + HEAD_TOP;
     // inclinados: su propia bajada (en el lado alto) y la separación entre los extremos; más separados, el lado alto queda
     // más lejos y hay que cargar más el peso en esa pierna. La barra nunca se mete en el suelo por el lado bajo
     if (tl && settings.arcTiltDrop > 0) drop = settings.arcTiltDrop / 100 * rand(0.85, 1.15);
-    const hw = tl ? clamp(settings.arcTiltW / 200, 0.7, 1.6) : 1, shift = tl ? clamp(settings.arcShift / 100, 0.15, hw - 0.15) : settings.arcShift / 100;
-    if (tl) tilt = Math.sign(tilt) * Math.min(Math.abs(tilt), Math.atan(Math.max(0.05, top - drop - 0.15) / (shift + hw)));
+    // de semipuente: más ancho y tan inclinado que el lado bajo va casi a ras de suelo; en el lado alto, apartado al menos
+    // 75 cm, la cabeza tiene que quedar a arcLowH del suelo: no se llega sin apoyar una mano en el suelo
+    low = low && tl;
+    const hw = low ? Math.max(1.1, clamp(settings.arcTiltW / 200, 0.7, 1.6)) : tl ? clamp(settings.arcTiltW / 200, 0.7, 1.6) : 1;
+    const shift = low ? clamp(Math.max(0.75, settings.arcShift / 100), 0.15, hw - 0.15) : tl ? clamp(settings.arcShift / 100, 0.15, hw - 0.15) : settings.arcShift / 100;
+    const need = low ? clamp(settings.arcLowH / 100, 0.4, 1.2) + HEAD_TOP : 0; // (la barra, en el lado alto: lo alto de la cabeza ahí)
+    if (low) { tilt = Math.sign(tilt) * Math.atan(Math.max(0.05, need - 0.12) / (shift + hw)); drop = top - need; }
+    else if (tl) tilt = Math.sign(tilt) * Math.min(Math.abs(tilt), Math.atan(Math.max(0.05, top - drop - 0.15) / (shift + hw)));
     this.hw = hw; if (tl) this.leanX = Math.sign(tilt) * shift;
-    this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.maxUp = -1; this.fast = false;
-    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
+    this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.low = low; this.maxUp = -1; this.fast = false;
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump, hw); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
-    Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
+    Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : low ? arxSpeed() * 0.75 : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
     if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
     this.hum = humLoop(arena.localToWorld(new V3(0, this.barY, this.z)));
+    if (low) { this.print = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), new THREE.MeshBasicMaterial({ map: handPrintTex(this.tilt < 0 ? 'left' : 'right'), color: 0xffd166, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })); this.print.rotation.x = -Math.PI / 2; this.print.renderOrder = 3; arena.add(this.print); }
     if (!second) gates[1].openT = 1.6;
     zapLines(this.o.lines);
   }
@@ -1090,6 +1109,8 @@ class Arc {
     this.zapT -= dt; if (this.zapT <= 0) { this.zapT = 0.045; zapLines(this.o.lines); if (this.o.ends) for (const e of this.o.ends) e.scale.setScalar(rand(0.22, 0.38)); }
     if (this.o.ends && Math.random() < dt * 6 && Math.abs(this.z - HL.z) < 6) { const e = this.o.ends[Math.random() < 0.5 ? 0 : 1]; fx.sparks(e.getWorldPosition(tmpB), 3, [1, 0.6, 0.3], 1.2, 0.02); } // (chispas en los extremos de la barra)
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
+    // de semipuente: la huella de la mano en el suelo, en el lado alto, más allá de donde va la cabeza (late mientras llega)
+    if (this.print) { const d = HL.z - this.z, a = this.judged ? Math.max(0, this.print.material.opacity - dt * 2) : d < 9 ? Math.min(1, (9 - d) / 2) * (0.65 + 0.35 * Math.sin(t * 9)) : 0; this.print.material.opacity = a; this.print.visible = a > 0.01; this.print.position.set(this.leanX + Math.sign(this.leanX) * 0.3, 0.008, HL.z - 0.1); }
     const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
     const flick = (0.75 + Math.random() * 0.25) * arxBeatGlow();
@@ -1114,7 +1135,7 @@ class Arc {
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.low ? `¡Más abajo, con la mano en el suelo, a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
@@ -1122,7 +1143,7 @@ class Arc {
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false);
     if (perfect) SND.perfect();
   }
-  dispose() { arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); if (this.o.ends) this.o.ends.forEach(e => e.material.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
+  dispose() { if (this.print) { arena.remove(this.print); this.print.geometry.dispose(); this.print.material.dispose(); } arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); if (this.o.ends) this.o.ends.forEach(e => e.material.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
 }
 
 /* =================== DISPAROS =================== */
@@ -1521,53 +1542,21 @@ function twistStep(t, dt) {
   }
 }
 /* =================== FLEXIONES INCHWORM =================== */
-// Tres huellas de manos en el suelo (izquierda azul, derecha naranja), cada una dentro de su círculo y con su número de
-// orden: dos de la mano con la que empiezas (la primera, junto a los pies; la tercera, donde queda en la plancha) y una de
-// la otra (en la plancha, un paso por detrás: flexión escalonada, nunca las dos a la misma altura). En cada vuelta empieza
-// la otra mano, y las de la plancha se abren más o menos a los lados (iwSpread), para que trabajen los brazos.
-// Te doblas, pisas la primera y caminas con las manos hasta las de la plancha; puedes saltarte huellas: llegar a la última
-// vale (y carga el rayo). Ahí, la flexión dispara a las arañas al subir; luego vuelves andando con las manos y te pones de
-// pie. Cada huella es un contorno; al posar la mano en ella (con margen: no hace falta acertar dentro) destella, echa
-// chispas y se rellena de color sólido: a la ida, el de su mano; a la vuelta, dorado. Al acabar la vuelta, al despegar las
-// manos del suelo, sale una onda expansiva que lanza a los bichos por el aire hasta su trampilla. Como hay que caminar con
-// las manos, los bichos llegan mucho más despacio (IW_SLOW)
+// Se sigue la cabeza (las gafas la ven siempre, a diferencia de las manos pegadas al suelo): de pie, te doblas y caminas con
+// las manos hasta la plancha; tu cabeza tiene que llegar a la línea luminosa del suelo (donde queda en la plancha, según tu
+// altura): ahí se carga el rayo. Luego vuelves andando con las manos hasta la salida y te pones de pie: dispara y sale la onda
+// expansiva que lanza a los bichos por el aire hasta su trampilla. En el suelo, una barra de la salida a la línea se va
+// llenando con lo que avanza tu cabeza. Si te pones de pie sin llegar a la línea (o lejos de la salida), no cuenta. Como hay
+// que caminar con las manos, los bichos llegan mucho más despacio (IW_SLOW)
 // La arena tiene su origen donde queda tu cabeza en la plancha (ahí está la batalla diminuta); tú empiezas IW_OFF() detrás
 const iwReachM = () => settings.iwReach > 0 ? Math.max(0.8, settings.iwReach / 100) : clamp(calibRef * 0.8, 1.0, 1.6);
 const IW_OFF = () => settings.exercise === 'inchworm' ? iwReachM() + 0.12 : 0;
-const IW_SLOW = 2.6, IW_REACH = 0.3, IW_STEP = 0.15, IW_MAX = 3, IW_GOLD = new THREE.Color(0xffd166); // (los bichos, 2,6 veces más lentos; el margen de la huella, hasta 30 cm; el paso, ~15 cm)
-const IW = { group: new THREE.Group(), prints: [], all: [], tex: {}, first: 'left' };
+const IW_SLOW = 2.6, IW_LINE = 0.15, IW_GOLD = new THREE.Color(0xffd166), IW_TEAL = new THREE.Color(0x3cf0c6); // (los bichos, 2,6 veces más lentos; la línea vale con la cabeza a 15 cm)
+const IW = { group: new THREE.Group(), flash: 0 };
 IW.group.visible = false; arena.add(IW.group);
-// la huella: una mano humana vista desde arriba (palma abajo: el pulgar hacia dentro; la izquierda, en espejo) dentro de
-// su círculo, con su número; hueca (contorno) o rellena
-function iwPrintTex(side, n, filled) {
-  const key = side + n + (filled ? 'f' : 'h'); if (IW.tex[key]) return IW.tex[key];
-  const c = mkCanvas(128), x = c.getContext('2d');
-  x.beginPath(); x.arc(64, 64, 59, 0, TAU); x.lineWidth = 5; x.strokeStyle = '#ffffff'; x.stroke(); if (filled) { x.fillStyle = 'rgba(255,255,255,0.22)'; x.fill(); }
-  x.save(); x.translate(64, 70); if (side === 'left') x.scale(-1, 1); // la izquierda, en espejo
-  const rp = (X, Y, w, h, r) => { x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
-  const hand = () => {
-    x.beginPath(); rp(-20, -6, 40, 38, 13); // la palma
-    for (const [fx, len] of [[-14.5, 30], [-4.8, 35], [4.8, 33], [14.5, 25]]) rp(fx - 4.3, -6 - len, 8.6, len + 6, 4.3); // índice, corazón, anular y meñique
-    x.save(); x.translate(-17, 16); x.rotate(-0.95); rp(-4.8, -26, 9.6, 28, 4.8); x.restore(); // el pulgar, hacia dentro
-  };
-  if (filled) { x.fillStyle = '#ffffff'; hand(); x.fill(); }
-  else { // solo el contorno de fuera (sin las rayas de donde se juntan los dedos con la palma) y el interior, apenas
-    x.lineWidth = 9; x.strokeStyle = '#ffffff'; hand(); x.stroke(); x.globalCompositeOperation = 'destination-out'; hand(); x.fill(); x.globalCompositeOperation = 'source-over';
-    x.fillStyle = 'rgba(255,255,255,0.14)'; hand(); x.fill(); }
-  x.restore(); x.fillStyle = filled ? '#10101a' : '#ffffff'; x.font = 'bold 26px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 64, 86);
-  return (IW.tex[key] = texFrom(c));
-}
-for (let i = 0; i < IW_MAX; i++) {
-  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), mat); m.rotation.x = -Math.PI / 2; m.position.y = 0.006; m.renderOrder = 3; m.visible = false; IW.group.add(m);
-  IW.all.push({ k: i, side: 'left', x: 0, z: 0, done: false, back: false, flash: 0, m, tex: null, col: new THREE.Color() });
-}
-// La mano llega a la huella: destella, echa chispas y se rellena (a la ida, de su color; a la vuelta, dorada)
-function iwHit(p, back) {
-  if (back) p.back = true; else p.done = true; p.flash = 1;
-  const w = arena.localToWorld(_iww.set(p.x, 0.03, p.z)), c = back ? IW_GOLD : p.col;
-  fx.sparks(w, 14, [c.r, c.g, c.b], 1.3, 0.02); fx.glow(w, [c.r, c.g, c.b], 0.22, 0.25); SND.tick(); haptic(p.side, 0.45, 35);
-}
+{ const strip = (w, d, col, op) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, depthWrite: false, toneMapped: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 3; IW.group.add(m); return m; };
+  IW.line = strip(0.9, 0.06, 0x3cf0c6, 0.9); IW.lineGlow = strip(1.1, 0.28, 0x3cf0c6, 0.25); IW.track = strip(0.09, 1, 0x2f2853, 0.75); IW.fill = strip(0.09, 1, 0x3cf0c6, 0.9); IW.start = strip(0.5, 0.03, 0xeeeaff, 0.55);
+  IW.fill.geometry.translate(0, 0.5, 0); } // (la barra crece desde la salida hacia la línea)
 // Al despegar las manos del suelo tras la vuelta: una onda expansiva en el suelo que lanza a los bichos por el aire hasta su
 // trampilla. Un destello en el suelo, dos frentes de choque que se abren (el segundo, más tarde y más lento), una pared de
 // luz que se levanta con el primero y se va apagando, y polvo que levanta al pasar; con su golpe grave (SND.shock)
@@ -1601,56 +1590,37 @@ function iwWaveStep(dt) {
   if (IWW.dust < 3 && IWW.t > IWW.dust * 0.18) { const n = 18, c = IWW.g.position; for (let i = 0; i < n; i++) { const a = (i + Math.random() * 0.5) / n * TAU; fx.sparks(_iww.set(c.x + Math.sin(a) * R1, 0.04, c.z + Math.cos(a) * R1), 2, [0.75, 0.9, 1], 0.9, 0.03); if (i % 3 === 0) fx.dust(_iww, 1, 0.14); } IWW.dust++; }
   if (k >= 1) { IWW.t = -1; IWW.g.visible = false; }
 }
-// Las tres huellas, en la arena: la primera, de la mano que empieza (IW.first), junto a los pies; en la plancha, la otra mano
-// un paso por detrás y la que empieza, delante; las de la plancha, abiertas a los lados al azar (hasta iwSpread de más)
+// La línea (donde queda tu cabeza en la plancha) y la barra desde la salida, en la arena, según tu altura
 function iwLayout() {
-  const S = IW_OFF(), z0 = S - 0.35, zp = 0.12, sp = Math.max(0, settings.iwSpread || 0) / 100, other = IW.first === 'left' ? 'right' : 'left';
-  const pos = [[IW.first, 0.17, z0], [other, rand(0.15, 0.2 + sp), zp + IW_STEP / 2], [IW.first, rand(0.15, 0.2 + sp), zp - IW_STEP / 2]];
-  IW.prints = IW.all.slice(0, 3);
-  IW.prints.forEach((p, k) => {
-    const [side, x, z] = pos[k]; p.side = side; p.k = k; p.x = (side === 'left' ? -1 : 1) * x; p.z = z;
-    p.done = p.back = false; p.flash = 0; p.col.setHex(side === 'left' ? 0x4aa8ff : 0xff9a3c); p.tex = { hollow: iwPrintTex(side, k + 1, false), full: iwPrintTex(side, k + 1, true) };
-    p.m.material.map = p.tex.hollow; p.m.material.needsUpdate = true; p.m.visible = true; p.m.position.set(p.x, 0.006, p.z);
-  });
-  for (const p of IW.prints) p.reach = IW_REACH;
-  Object.assign(DET.iw, { i: 0, b: 0, phase: 'stand' });
+  const S = IW_OFF(), z1 = S - 0.25, y = 0.007;
+  IW.line.position.set(0, y, 0); IW.lineGlow.position.set(0, y - 0.001, 0); IW.start.position.set(0, y, z1);
+  IW.track.position.set(0, y - 0.002, z1 / 2); IW.track.scale.set(1, z1, 1); IW.fill.position.set(0, y, z1); IW.fill.scale.set(1, 1e-3, 1);
+  Object.assign(DET.iw, { phase: 'stand', g: 0, max: 0, t0: 0 });
 }
 const _iww = new V3();
+// cuánto ha avanzado la cabeza de la salida a la línea (0 a 1) y a qué distancia está de la línea
+function iwHead() { const S = IW_OFF(), z1 = S - 0.25, l = arena.worldToLocal(_iww.copy(head.p)); return { g: clamp((z1 - l.z) / Math.max(0.2, z1 - IW_LINE), 0, 1), z: l.z }; }
 function iwStep(t, dt) {
-  const W = DET.iw, P = IW.prints, N = P.length, standing = head.p.y > calibRef - 0.22;
-  if (W.phase === 'stand' && !standing) W.phase = 'walk';
-  if (W.phase === 'stand' || W.phase === 'walk') {
-    // la siguiente huella o cualquiera más allá (saltarse alguna vale): las de antes, dadas por pisadas
-    for (let j = N - 1; j >= W.i; j--) if (iwOn(P[j])) { while (W.i <= j) iwHit(P[W.i++], false); break; }
-    if (W.i >= N) { W.phase = 'plank'; DET.iwp.state = 'up'; DET.iwp.ref = head.p.y; onCharge(); } // en la plancha: el rayo, cargado
-  }
-  if (W.phase === 'plank') {
-    const req = dv('pushDepth') / 100, before = stats.reps;
-    vertDetector(DET.iwp, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: settings.perfectTime, partialMsg: '¡Más abajo en la flexión!' });
-    if (stats.reps > before) { W.phase = 'back'; W.b = 0; for (const p of P.slice(1)) iwHit(p, true); } // disparó: ahora, de vuelta (las de la plancha, ya pisadas) y de pie
-    else if (standing) { onPartial('Haz la flexión en las huellas del final'); iwLayout(); }
-  } else if (W.phase === 'walk' && standing) { if (W.i > 0) onPartial('Camina con las manos hasta las huellas del final'); iwLayout(); }
-  else if (W.phase === 'back') {
-    // la vuelta: la mano que empezó, a la primera huella (o, si te pones de pie sin más, también vale)
-    if (W.b >= 0 && iwOn(P[0])) { iwHit(P[0], true); W.b = -1; }
-    const up = ['left', 'right'].every(s => !hands[s].ok || arena.worldToLocal(_iww.copy(hands[s].wrist)).y > 0.3);
-    if (!W.waved && (standing || (W.b < 0 && up))) { if (W.b >= 0) { iwHit(P[0], true); W.b = -1; } W.waved = true; iwWave(); } // hecha la vuelta, al despegar las manos del suelo (o ya de pie), la onda
-    if (standing) { IW.first = IW.first === 'left' ? 'right' : 'left'; iwLayout(); W.waved = false; } // de pie otra vez: nuevas huellas, y empieza la otra mano
+  const W = DET.iw, standing = head.p.y > calibRef - 0.22, H = iwHead(); W.g = H.g;
+  if (W.phase === 'stand' && !standing) { W.phase = 'out'; W.max = 0; W.t0 = t; }
+  if (W.phase === 'out') {
+    W.max = Math.max(W.max, H.g);
+    if (H.z <= IW_LINE && head.p.y < calibRef * 0.6) { W.phase = 'back'; IW.flash = 1; onCharge(); SND.tick(); hapticBoth(0.5, 50); const w = arena.localToWorld(_iww.set(0, 0.03, 0)); fx.sparks(w, 18, [0.24, 0.94, 0.78], 1.3, 0.02); fx.glow(w, [0.24, 0.94, 0.78], 0.35, 0.3); } // en la plancha: el rayo, cargado
+    else if (standing) { if (W.max > 0.35) onPartial('Camina con las manos hasta la línea del suelo'); W.phase = 'stand'; }
+  } else if (W.phase === 'back' && standing) { // de pie otra vez: si has vuelto hasta la salida, dispara y sale la onda
+    if (H.g < 0.45) { const dur = t - W.t0, pt = settings.perfectTime; onRep({ perfect: dur >= Math.max(2, pt * 2), fast: dur < 1.6 }); iwWave(); }
+    else onPartial('Vuelve andando con las manos hasta la salida');
+    W.phase = 'stand';
   }
 }
-// ¿La mano de esta huella está sobre ella? (con margen: no hace falta acertar dentro)
-function iwOn(p) { const h = hands[p.side]; if (!h.ok) return false; arena.worldToLocal(_iww.copy(h.wrist)); return _iww.y < 0.25 && Math.hypot(_iww.x - p.x, _iww.z - (p.z + 0.06)) < (p.reach || 0.22); }
 function iwVisual(t) {
   const on = settings.exercise === 'inchworm' && ['ready', 'play', 'rest', 'paused'].includes(state); IW.group.visible = on; if (!on) return;
-  const W = DET.iw, pulse = 0.7 + 0.3 * Math.sin(t * 8), dt = Math.min(0.1, t - (IW.lastT || t)); IW.lastT = t;
-  for (const p of IW.prints) {
-    const next = ((W.phase === 'stand' || W.phase === 'walk') && p.k === W.i) || (W.phase === 'back' && p.k === W.b), full = p.done || p.back, mat = p.m.material;
-    const tex = full ? p.tex.full : p.tex.hollow; if (mat.map !== tex) { mat.map = tex; mat.needsUpdate = true; }
-    p.flash = Math.max(0, p.flash - dt * 3);
-    mat.color.copy(p.back ? IW_GOLD : p.col).lerp(_iwWhite, p.flash * 0.7); // (destella en blanco y se queda de su color)
-    mat.opacity = next ? pulse : full ? 0.95 : 0.6;
-    p.m.scale.setScalar((next ? 1.12 : 1) * (1 + 0.35 * p.flash));
-  }
+  const W = DET.iw, dt = Math.min(0.1, t - (IW.lastT || t)); IW.lastT = t; IW.flash = Math.max(0, IW.flash - dt * 1.5);
+  const S = IW_OFF(), z1 = S - 0.25, g = W.phase === 'out' ? W.g : W.phase === 'back' ? 1 : 0, len = Math.max(1e-3, (z1 - IW_LINE) * g + (g >= 1 ? IW_LINE : 0));
+  IW.fill.scale.set(1, len, 1); IW.fill.material.color.copy(W.phase === 'back' ? IW_GOLD : IW_TEAL); // (llena hasta la línea; a la vuelta, dorada)
+  const pulse = 0.65 + 0.35 * Math.sin(t * 7), col = W.phase === 'back' ? IW_GOLD : IW_TEAL;
+  IW.line.material.color.copy(col).lerp(_iwWhite, IW.flash * 0.8); IW.line.material.opacity = W.phase === 'out' ? pulse : 0.9; IW.lineGlow.material.color.copy(col); IW.lineGlow.material.opacity = 0.2 + 0.5 * IW.flash;
+  IW.line.scale.set(1 + 0.25 * IW.flash, 1 + 2 * IW.flash, 1);
 }
 const _iwWhite = new THREE.Color(1, 1, 1);
 function runDetectors(t, dt) {
@@ -2060,6 +2030,7 @@ function buildWave(i) {
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
       if (Math.random() * 100 < settings.arcPlank) { list.push({ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }); continue; } // al suelo, en plancha
+      if (Math.random() * 100 < settings.arcLow) { list.push({ kind: 'single', drop: 0, tilt: 1, hp: 1, low: true }); continue; } // de semipuente: el lado lo reparte arcRight, como en los inclinados
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
     }
@@ -2123,6 +2094,10 @@ function spawnFromQueue() {
       bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
+    else if (spec.low) { // de semipuente: más despacio y con su aviso; los de detrás esperan a que pase (y 1,5 s para levantarte)
+      const a = new Arc(spec.drop, 0, false, spec.tilt || 1, false, 0, false, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 1.5;
+      bigNotice('¡MANO AL SUELO!', `Apártate a la ${a.tilt > 0 ? 'derecha' : 'izquierda'} y apóyate en una mano`, '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
+    }
     else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
     if (Math.random() * 100 < settings.arcOrbs) ARX.orbT = spawnInterval * (spec.gap || 1) * 0.5; // un orbe a medio camino
@@ -2189,7 +2164,7 @@ function foesSummary() {
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
 function foesRows(again) {
   return [{ t: 'field', key: 'foeKind', after: again },
-    { t: 'text', text: 'Marca los que quieres. Los de las compuertas salen de pie; los de las trampillas, en flexiones y planchas sobre una mano.' },
+    { t: 'text', text: 'Marca los que quieres (los de las trampillas salen en el suelo)' },
     { t: 'field', key: 'foesGate', after: again }, { t: 'field', key: 'foesHatch', after: again }, { t: 'field', key: 'foesFly', after: again },
     { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') }];
 }
@@ -2246,48 +2221,63 @@ function armsMenu(back) {
   const rows = [{ t: 'title', text: 'ARMAS' }, ...armsRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.arms }); m.rebuild = again;
 }
-// El menú principal: a la izquierda, sus partes (cada una con su color: Jugar, Ejercicio, Enemigos, Armas, Sonido,
-// Entorno y Ajustes), el reproductor de Spotify y Salir; a la derecha, lo de la parte elegida, con su color. EMPEZAR, arriba
-// a la izquierda del título. La parte elegida se recuerda
-const LOBBY = { tab: uiPrefs().lobby || 'play' };
-const lobbyTabs = () => [['play', 'Jugar', '#5ab8ff'], ['ex', 'Ejercicio', MC.ex], ...(isCombat() ? [['foes', 'Enemigos', MC.foes]] : []), ...(armsAny() ? [['arms', 'Armas', MC.arms]] : []),
-  ['sound', 'Sonido', MC.sound], ['scene', 'Entorno', MC.scene], ['set', 'Ajustes', MC.set]];
-function lobbyPlayRows(again) {
-  const bars = isBars(), hang = settings.exercise === 'hang', k = eqKind(), placed = eqPose(k).set, n = eqName(k);
-  const M = Object.entries(MODE_NAMES), modeBtn = ([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', onPress: () => { setSetting('mode', v); again(); } });
-  // el modo, el rango (sus galones) y «Al fallo»; luego, lo que el desarrollador ha marcado con el ojo (67_dev)
-  const rows = [{ t: 'btns', items: M.map(modeBtn) },
-    { t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); again(); } })) },
+// El menú principal. Arriba, el modo (Combate, Arcos, Barras, Toques), cada uno con su color: lo decide todo lo demás. A
+// la izquierda, las partes de la ronda, cada una con su color: Ronda (el ejercicio, de los que valen para el modo, y lo
+// suyo), Dificultad (el rango, «Al fallo» y lo que marca el desarrollador con el ojo), Rivales y armas (en Combate; o las
+// armas, si el modo tiene), Sesiones (si hay) y Opciones (Sonido, Entorno y Ajustes, en pestañas); debajo, el reproductor
+// de Spotify y Salir. A la derecha, lo de la parte elegida. EMPEZAR, junto al título, y debajo lo elegido. Se recuerdan la
+// parte y la pestaña de Opciones
+const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' };
+const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound' };
+const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
+  ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
+  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['opt', 'Opciones', MC.set]];
+// Ronda: el ejercicio (al elegirlo se queda aquí) y lo que le toca: la barra o las paralelas en Barras, las combinaciones en Toques
+function lobbyRoundRows(again) {
+  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), rows = exerciseRows(again, true);
+  if (settings.mode === 'touch' && settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: again }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
+  if (bars && settings.exercise === 'hang') rows.push({ t: 'field', key: 'hangPit' });
+  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] },
+    { t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real`, color: !placed ? '#ffd166' : '#a49fc8' });
+  return rows;
+}
+// Dificultad: el rango (sus galones), «Al fallo» y lo que el desarrollador ha marcado con el ojo (67_dev)
+function lobbyDiffRows(again) {
+  const bars = isBars(), hang = settings.exercise === 'hang';
+  const rows = [{ t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); again(); } })) },
     { t: 'text', text: `${rankName()} en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`, color: '#a49fc8' },
     { t: 'field', key: 'toFail', after: again }];
   const eyeF = menuFull() ? [speedKey(), settings.mode === 'arcs' ? 'arcMax' : bars && hang ? 'hangInc' : 'repsWave'] : devEye();
   for (const key of eyeF) if (FIELD[key] && fieldVisible(FIELD[key])) rows.push({ t: 'field', key, after: FIELD[key].relayout ? again : undefined });
-  if (bars && hang) rows.push({ t: 'field', key: 'hangPit' });
-  if (settings.mode === 'touch') {
-    if (settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: again }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
-    if (menuFull()) rows.push(...tempoRows(again)); // (para el jugador, el ritmo está en Sonido)
-  }
-  if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] },
-    { t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real`, color: !placed ? '#ffd166' : '#a49fc8' });
-  rows.push(...sessionRows());
+  if (settings.mode === 'touch' && menuFull()) rows.push(...tempoRows(again)); // (para el jugador, el ritmo está en Opciones → Sonido)
   return rows;
+}
+// Opciones: Sonido, Entorno y Ajustes, en pestañas (cada una con su color)
+function lobbyOptRows(again) {
+  const tabs = [['sound', 'Sonido', MC.sound], ['scene', 'Entorno', MC.scene], ['set', 'Ajustes', MC.set]], o = tabs.some(t => t[0] === LOBBY.opt) ? LOBBY.opt : 'sound';
+  return [{ t: 'btns', h: 0.05, items: tabs.map(([k, l, col]) => ({ label: l, style: k === o ? 'selected' : 'normal', accent: col, tint: col, font: 0.48, onPress: () => { LOBBY.opt = k; uiSave('lobbyOpt', k); PREFS.resetArm = ''; again(); } })) },
+    ...(o === 'sound' ? soundRows(again, true) : o === 'scene' ? sceneRows(again) : settingsRows(g => { settingsTab = g; uiSave('tab', g); again(); }))];
 }
 function lobbyMenu() {
   endSession();
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
-  const tabs = lobbyTabs(); if (!tabs.some(t => t[0] === LOBBY.tab)) LOBBY.tab = 'play';
+  // una sesión recién preparada (en la página): el menú se abre en Sesiones, con su EMPEZAR SESIÓN
+  const sig = SES.blocks.length && !SES.active ? JSON.stringify(SES.blocks) : ''; if (sig && sig !== LOBBY.ses) LOBBY.tab = 'ses'; LOBBY.ses = sig;
+  const tabs = lobbyTabs(); if (!tabs.some(t => t[0] === LOBBY.tab)) LOBBY.tab = 'round';
   const [tab, tabName, tabCol] = tabs.find(t => t[0] === LOBBY.tab), again = () => lobbyMenu();
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
   left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'ex' ? exerciseRows(() => { LOBBY.tab = 'play'; uiSave('lobby', 'play'); lobbyMenu(); }, true) : tab === 'foes' ? foesRows(again) : tab === 'arms' ? armsRows(again) : tab === 'sound' ? soundRows(again, true)
-    : tab === 'scene' ? sceneRows(again) : tab === 'set' ? settingsRows(g => { settingsTab = g; uiSave('tab', g); lobbyMenu(); }) : lobbyPlayRows(again);
+  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? [...(isCombat() ? foesRows(again) : []), ...(armsAny() ? armsRows(again) : [])] : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
+  const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
     { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
+    { t: 'btns', h: 0.058, items: modes },
+    { t: 'text', text: `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise] || ''} · ${rankName()}`, color: MODE_COL[settings.mode] },
     { t: 'text', text: summaryText() },
     ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
-    ...(roomBad && tab !== 'scene' ? [{ t: 'text', text: 'La habitación no está lista: mira «Entorno»', color: '#ffd166' }] : []),
+    ...(roomBad && !(tab === 'opt' && LOBBY.opt === 'scene') ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
     { t: 'cols', fr: [0.29, 0.71], lw: [0.1, 0.19], titles: ['', tabName], colors: [null, tabCol], music: spConnected(), cols: [left, pane.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]))] }];
   const m = openMenu(rows);
   m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido

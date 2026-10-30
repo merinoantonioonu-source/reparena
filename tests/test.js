@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -71,16 +71,25 @@ function frame(n = 1, dtMs = 33, xrFrame) {
 function key(type, code, keyName) { (winListeners[type] || []).forEach(f => f({ code, key: keyName || code, repeat: false, preventDefault() {} })); }
 // los submenús del principal llevan «  ▸» y el ejercicio se elige en su propio menú: findW los encuentra igual
 const wLabel = w => (w.label || '').replace(/\s+▸$/, '');
-function exLabels() { const b = RA.activeWidgets().find(w => /^Ejercicio/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
+function exLabels() { const r = RA.activeWidgets().find(w => w.label === 'Ronda'); if (r) { r.onPress(); return RA.activeWidgets().map(w => w.label); }
+  const b = RA.activeWidgets().find(w => /^Ejercicio/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
+// En el menú principal, lo de cada parte va a la derecha: se busca abriendo sus partes (y las pestañas de Opciones); «volver»
+// es volver a Ronda
+const LOBBY_PARTS = ['Ronda', 'Dificultad', 'Rivales y armas', 'Armas', 'Sesiones', 'Opciones'], OPT_TABS = ['Sonido', 'Entorno', 'Ajustes'];
 function findW(label) {
-  let w = RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
-  if (!w && label === 'Volver') w = RA.activeWidgets().find(x => x.label === 'Jugar');
-  if (!w) { const j = RA.activeWidgets().find(x => x.label === 'Jugar' && x.style !== 'selected'); if (j) { j.onPress(); w = RA.activeWidgets().find(x => x.label === label || wLabel(x) === label); } } // (en el menú principal, las partes van a la derecha: «volver» es volver a Jugar)
+  const look = () => RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
+  let w = look();
+  if (!w && label === 'Volver') w = RA.activeWidgets().find(x => x.label === 'Ronda');
+  if (!w && RA.activeWidgets().some(x => x.label === 'Ronda')) for (const p of LOBBY_PARTS) {
+    const b = RA.activeWidgets().find(x => x.label === p); if (!b) continue; b.onPress(); if ((w = look())) break;
+    if (p === 'Opciones') for (const o of OPT_TABS) { const ob = RA.activeWidgets().find(x => x.label === o); if (ob) { ob.onPress(); if ((w = look())) break; } }
+    if (w) break;
+  }
   for (const re of [/^Ejercicio/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) findW('Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
 // Armas ▸ del menú principal: abrirlo, o leer lo que trae y volver (sin el botón, nada)
-function openArms() { const b = RA.activeWidgets().find(w => /^Armas/.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
+function openArms() { const b = RA.activeWidgets().find(w => /^(Armas|Rivales y armas)/.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
 function armsLabels() { if (!openArms()) return []; const l = RA.activeWidgets().map(w => w.label); press('Volver'); frame(1); return l; }
 function log(...a) { console.log(...a); }
 // centro del borde de arriba del menú (de ahí cuelga: los menús que se suceden lo comparten)
@@ -502,36 +511,31 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (D.dodges < 2) errors.push(`cada enemigo: con esquivas no se apartan nunca (${D.dodges})`);
     }
     for (const g of ['robot', 'beast']) { RA.setSetting('pace_' + g, 150); RA.setSetting('spd_' + g, 100); RA.setSetting('move_' + g, 'zigzag,bursts,dodge'); } RA.setSetting('maxAlive', 5); RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); }
-  // inchworm: seis huellas (las del medio cambian de sitio), caminar con las manos por todas y la flexión en las últimas
-  const iwMid = new Set(), IWF = { full: 0, gold: 0, flash: 0, home: 0, homeOk: 0, speed: null, firsts: new Set(), bad: false, inside: 0, wave: 0, flew: false, boom: 0 };
-  const shock0 = RA.SND.shock; RA.SND.shock = (...a) => { IWF.boom++; return shock0(...a); }; RA.PV.iwPlan = null;
+  // inchworm: se sigue la cabeza; al llegar a la línea del suelo carga (la línea destella) y la barra se llena; de vuelta y
+  // de pie, dispara y sale la onda que devuelve los bichos a su trampilla
+  const IWF = { flash: 0, fill: 0, gold: 0, home: 0, homeOk: 0, speed: null, inside: 0, wave: 0, flew: false, boom: 0, prints: 0 };
+  const shock0 = RA.SND.shock; RA.SND.shock = (...a) => { IWF.boom++; return shock0(...a); }; RA.PV.iwT = 0;
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
-    RA.PV.iwAuto = true; const P = RA.IW.prints, m = P[2]; iwMid.add(m.x.toFixed(2) + m.z.toFixed(2)); IWF.firsts.add(P[0].side);
-    if (P.some((p, k) => k && (p.side === P[k - 1].side || Math.abs(p.z - P[k - 1].z) < 0.08))) IWF.bad = true; // (por turnos y nunca a la misma altura)
-    // cada huella pisada se rellena (de su color a la ida, dorada a la vuelta) y destella; al acabar la vuelta, la onda
-    for (const p of RA.IW.prints) { if (p.m.material.map === p.tex.full) IWF.full++; if (p.back) IWF.gold++; if (p.flash > 0.9) IWF.flash++; }
+    RA.PV.iwAuto = true; if (RA.IW.flash > 0.9) IWF.flash++; IWF.fill = Math.max(IWF.fill, RA.IW.fill.scale.y); if (RA.IW.fill.material.color.getHex() === 0xffd166 && RA.IW.fill.scale.y > 0.5) IWF.gold++;
     if (RA.IWW.g && RA.IWW.g.visible) IWF.wave = Math.max(IWF.wave, RA.IWW.r1.scale.x);
-    for (const e of RA.enemies) if (e.type === 'spider' && e.alive) { const B = RA.FLOORB; const r = (e.radius || 0.05) * 0.8; if (e.pos.y < 0.3 && e.mode !== 'emerge' && Math.abs(e.pos.x) < B.hw + r && e.pos.z > B.z0 - r && e.pos.z < B.z1 + r) IWF.inside++; /* (con su cuerpo, no solo su centro) */ if (e.pos.y > 0.3) IWF.flew = true; if (IWF.speed === null && e.mode === 'run') { IWF.speed = e.avg; IWF.dist = e.startD; } if (e.mode === 'recoil' && e.lungeTo.distanceTo(e.home) < 0.01 && !e._h) { e._h = true; IWF.home++; } }
-  }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : iwMid.size < 3 ? 'inchworm: las huellas del medio no cambian de sitio' : RA.IW.prints.length !== 3 || RA.IW.prints[0].side !== RA.IW.prints[2].side ? `inchworm: ${RA.IW.prints.length} huellas (deberían ser tres: dos de la mano que empieza y una de la otra)` : IWF.bad ? 'inchworm: las huellas deberían alternar las manos, a un paso una de otra (nunca a la misma altura)' : IWF.firsts.size < 2 ? 'inchworm: cada vuelta debería empezar con la otra mano' : '');
-  log(`  inchworm prints: filled ${IWF.full} frames · gold on the way back ${IWF.gold} · flashes ${IWF.flash} · shockwaves ${RA.stats.waves || 0} · spiders sent home ${IWF.home} · spider speed ${IWF.speed && IWF.speed.toFixed(3)} m/s for ${IWF.dist && IWF.dist.toFixed(2)} m with «llegan en 10 s» (${IWF.speed && (IWF.dist / IWF.speed).toFixed(0)} s)`);
+    for (const e of RA.enemies) if (e.type === 'spider' && e.alive) { const B = RA.FLOORB; const r = (e.radius || 0.05) * 0.8; if (e.pos.y < 0.3 && e.mode !== 'emerge' && Math.abs(e.pos.x) < B.hw + r && e.pos.z > B.z0 - r && e.pos.z < B.z1 + r) IWF.inside++; /* (con su cuerpo, no solo su centro) */ if (e.pos.y > 0.3) IWF.flew = true; if (IWF.speed === null && e.mode === 'run') { IWF.speed = e.avg; IWF.dist = e.startD; } if (e.mode === 'recoil' && e.lungeTo.distanceTo(e.home) < 0.01 && !e._h) { e._h = 1; IWF.home++; } }
+  }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : '');
+  log(`  inchworm (head path): line flashes ${IWF.flash} frames · bar filled up to ${IWF.fill.toFixed(2)} m · gold on the way back ${IWF.gold} frames · shockwaves ${RA.stats.waves || 0} · spiders sent home ${IWF.home} · spider speed ${IWF.speed && IWF.speed.toFixed(3)} m/s for ${IWF.dist && IWF.dist.toFixed(2)} m with «llegan en 10 s» (${IWF.speed && (IWF.dist / IWF.speed).toFixed(0)} s)`);
   RA.SND.shock = shock0; log(`  inchworm: spiders inside the board ${IWF.inside} frames · flung through the air ${IWF.flew} · shockwave reached ${IWF.wave.toFixed(2)} m · boom sounds ${IWF.boom}`);
   if (IWF.inside) errors.push('inchworm: los bichos no deberían atravesar el marcador tumbado en el suelo');
   if (IWF.speed !== null && (IWF.wave < 2.5 || !IWF.boom || !IWF.flew)) errors.push('inchworm: la onda debería abrirse a más de 2,5 m, sonar y lanzar a los bichos por el aire');
-  if (!IWF.full || !IWF.gold || !IWF.flash) errors.push('inchworm: al pisar cada huella debería destellar y rellenarse (a la vuelta, dorada)');
-  if ((RA.stats.waves || 0) < 3 || !IWF.home) errors.push('inchworm: al acabar la vuelta y despegar las manos debería salir la onda que devuelve los bichos a su trampilla');
+  if (!IWF.flash || IWF.fill < 0.6 || !IWF.gold) errors.push('inchworm: al llegar la cabeza a la línea debería destellar, y la barra llenarse con lo que avanza (dorada a la vuelta)');
+  if ((RA.stats.waves || 0) < 3 || !IWF.home) errors.push('inchworm: al volver y ponerte de pie debería salir la onda que devuelve los bichos a su trampilla');
   if (!(IWF.dist / IWF.speed > 20)) errors.push(`inchworm: los bichos deberían llegar mucho más despacio (en ${IWF.dist / IWF.speed} s con «llegan en 10 s»)`);
   // sin disparar: los bichos llegan hasta tu cara y rodean el marcador tumbado en el suelo (nunca lo pisan)
-  { const B = { in: 0, near: 0, max: -9 }; RA.PV.iwAuto = false; RA.PV.iwT = 0; RA.PV.iwPlan = null; await runConfig('inchworm: los bichos rodean el marcador', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1, repsWave: 30, lives: 0, walkTime: 3, maxAlive: 4 }, t => { RA.PV.iwAuto = false;
+  { const B = { in: 0, near: 0, max: -9 }; RA.PV.iwAuto = false; RA.PV.iwT = 0; await runConfig('inchworm: los bichos rodean el marcador', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1, repsWave: 30, lives: 0, walkTime: 3, maxAlive: 4 }, t => { RA.PV.iwAuto = false;
       for (const e of RA.enemies) if (e.type === 'spider' && e.alive && e.mode !== 'emerge') { const F = RA.FLOORB, r = (e.radius || 0.05) * 0.8; B.max = Math.max(B.max, e.pos.z); if (e.pos.z > F.z1) B.near++; if (e.pos.y < 0.3 && Math.abs(e.pos.x) < F.hw + r && e.pos.z > F.z0 - r && e.pos.z < F.z1 + r) B.in++; } }, 70, () => '', true);
     log(`  board in the way: spider frames past the board ${B.near} (closest z ${B.max.toFixed(2)}) · inside it ${B.in}`);
     if (B.max > -9 && (!B.near || B.in)) errors.push(`inchworm: los bichos deberían rodear el marcador tumbado, no pisarlo (${B.in} fotogramas dentro)`); }
-  RA.PV.iwPlan = null; RA.PV.iwT = 0;
-  await runConfig('inchworm sin llegar a las últimas huellas', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
-    s => s.reps ? 'inchworm: sin llegar a las huellas del final no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que faltan huellas' : '', true);
-  RA.PV.iwSkip = false; RA.PV.iwPlan = null;
-  await runConfig('inchworm de una vez (saltándose huellas)', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1, repsWave: 3 }, t => { RA.PV.iwAuto = RA.PV.iwJump = true; }, 120,
-    s => s.reps < 3 ? `inchworm: llegar de una vez a la última huella debería valer (${s.reps} repeticiones)` : '');
-  RA.PV.iwJump = false; RA.PV.iwPlan = null;
+  RA.PV.iwT = 0;
+  await runConfig('inchworm sin llegar a la línea', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
+    s => s.reps ? 'inchworm: sin llegar con la cabeza a la línea del suelo no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que falta llegar a la línea' : '', true);
+  RA.PV.iwSkip = false;
   RA.PV.iwAuto = RA.PV.iwSkip = false; RA.PV.iwT = 0;
   // las compuertas son sólidas: ningún robot se mete en sus pilares o en los bloques de los lados, ni cruza el hueco con las puertas cerradas
   { let inSolid = 0, closedPass = 0, frames = 0;
@@ -642,6 +646,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.PV.noLean = true;
   await runConfig('Arcos inclinados sin apartarse', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 100, arcTiltMax: 25, arcShift: 40, arcMin: 30, arcMax: 30, waves: 1, repsWave: 6, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken < 4 ? `sin apartarse deberían golpear casi todos (${s.taken})` : '');
   RA.PV.noLean = false; RA.setSetting('arcTilt', 0);
+  // de semipuente: tan inclinados y bajos que hay que apartarse y bajar hasta apoyar una mano en el suelo (la cabeza, a
+  // arcLowH); con su aviso grande y la huella de la mano en el suelo. Agachándose como en un inclinado normal, golpean
+  { const L = { notice: 0, print: 0, low: 9, end: 9, lean: 0 };
+    await runConfig('Arcos de semipuente (mano al suelo)', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 0, arcLow: 100, arcLowH: 75, arcRight: 50, arcMin: 30, arcMax: 30, waves: 1, repsWave: 4, lives: 0 }, t => {
+      RA.PV.crouch = true; if (RA.BIGN.t >= 0 && RA.BIGN.p.mesh.visible) L.notice++;
+      for (const a of RA.arcs) if (a.low && !a.judged) { if (a.print && a.print.visible) L.print++; L.low = Math.min(L.low, a.barAt(a.leanX) - 0.1); L.end = Math.min(L.end, a.barAt(-Math.sign(a.leanX) * a.hw)); L.lean = Math.max(L.lean, Math.abs(a.leanX)); }
+    }, 240, s => s.taken ? `${s.taken} golpes bajando hasta la mano` : s.reps < 4 ? `pocas esquivadas (${s.reps})` : '');
+    log(`semipuente arcs: notice ${L.notice} frames · hand print on the floor ${L.print} frames · head must go down to ${L.low.toFixed(2)} m, ${L.lean.toFixed(2)} m aside · low end of the bar ${L.end.toFixed(2)} m`);
+    if (!L.notice || !L.print || L.low > 0.8 || L.lean < 0.7 || L.end > 0.2) errors.push('arcos de semipuente: deberían llegar con su aviso y la huella de la mano, pedir la cabeza muy baja y apartada, y la barra casi a ras de suelo por el lado bajo');
+    RA.PV.noLow = true;
+    await runConfig('Arcos de semipuente agachándose como un inclinado', { ...base, mode: 'arcs', exercise: 'squat', arcDouble: 0, arcJump: 0, arcTilt: 0, arcLow: 100, arcLowH: 75, arcMin: 30, arcMax: 30, waves: 1, repsWave: 3, lives: 0 }, t => { RA.PV.crouch = true; }, 200, s => s.taken < 3 ? `sin bajar hasta la mano deberían golpear (${s.taken} golpes)` : '');
+    RA.PV.noLow = false; RA.setSetting('arcLow', 0); }
   // vallas bajas: hay que saltarlas (subida rápida de la cabeza); de puntillas despacio no vale
   await runConfig('Arcos con vallas (saltando)', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 8, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; }, 200, s => s.taken ? `${s.taken} vallas no saltadas` : s.reps < 8 ? 'no cuenta los saltos' : '');
   await runConfig('Arcos con vallas sin saltar', { ...base, mode: 'arcs', exercise: 'squat', arcJump: 100, arcDouble: 0, waves: 1, repsWave: 4, lives: 0, jumpHeight: 10 }, t => { RA.PV.crouch = true; RA.PV.noJump = true; }, 200, s => s.reps ? 'sin saltar no deberían contar las vallas' : s.taken < 4 ? 'las vallas no golpean si no saltas' : '');
@@ -650,12 +666,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // el menú principal: a la izquierda las partes, cada una con su color; a la derecha, lo de la elegida (con su color en lo
   // elegido); EMPEZAR, pequeño, arriba a la izquierda del título
   { RA.startPreview(); frame(2); RA.lobbyMenu(); frame(1); const W = () => RA.activeWidgets(), g = l => W().find(w => w.label === l);
-    const st = g('EMPEZAR'), jug = g('Jugar'), titleY = RA.menu.H / 2 - 0.05, leftX = Math.max(...['Jugar', 'Ajustes', 'Sonido'].map(l => g(l).mesh.position.x));
-    const topLeft = st && st.mesh.position.x < -0.25 && st.mesh.position.y > titleY - 0.06 && st.w < 0.2, tinted = jug && jug.style === 'selected' && jug.tint === '#5ab8ff';
-    press('Sonido'); frame(1); const snd = W().filter(w => w.kind === 'slider').map(w => w.f.key), right = W().filter(w => w.kind === 'slider').every(w => w.mesh.position.x > leftX), sndOn = g('Sonido').style === 'selected';
-    press('Ajustes'); frame(1); const tabsIn = !!g('Tu cuerpo'); press('Jugar'); frame(1);
-    log(`lobby: EMPEZAR top left ${topLeft} · Jugar tinted ${tinted} · Sonido pane ${snd.join(',')} to the right ${right} (tab on ${sndOn}) · Ajustes tabs inside ${tabsIn}`);
-    if (!topLeft || !tinted || !snd.includes('volume') || !right || !sndOn || !tabsIn) errors.push('menú principal: las partes deberían ir a la izquierda (con su color) y lo de la elegida a la derecha, con EMPEZAR arriba a la izquierda');
+    g('Ronda').onPress(); frame(1);
+    const st = g('EMPEZAR'), ron = g('Ronda'), titleY = RA.menu.H / 2 - 0.05, leftX = Math.max(...['Ronda', 'Dificultad', 'Opciones'].map(l => g(l).mesh.position.x));
+    const topLeft = st && st.mesh.position.x < -0.25 && st.mesh.position.y > titleY - 0.06 && st.w < 0.2, tinted = ron && ron.style === 'selected' && ron.tint === '#3cf0c6';
+    // el modo, arriba (bajo el título), con su color; el ejercicio, en Ronda; el rango, en Dificultad
+    const modes = ['Combate', 'Arcos', 'Barras', 'Toques'].map(g), modeTop = modes.every(m => m && m.mesh.position.y > ron.mesh.position.y + 0.05) && (() => { const cur = modes.find(m => m.style === 'selected'); return cur && cur.label === RA.MODE_NAMES[RA.settings.mode] && cur.tint === RA.MODE_COL[RA.settings.mode]; })();
+    const exIn = W().some(w => w.label === 'Sentadillas' && w.mesh.position.x > leftX); g('Dificultad').onPress(); frame(1); const rankIn = W().filter(w => w.badge !== undefined).length === 7;
+    press('Sonido'); frame(1); const snd = W().filter(w => w.kind === 'slider').map(w => w.f.key), right = W().filter(w => w.kind === 'slider').every(w => w.mesh.position.x > leftX), sndOn = g('Sonido').style === 'selected' && g('Opciones').style === 'selected';
+    press('Ajustes'); frame(1); const tabsIn = !!g('Tu cuerpo'); g('Ronda').onPress(); frame(1);
+    log(`lobby: EMPEZAR top left ${topLeft} · Ronda tinted ${tinted} · modes on top ${modeTop} · exercises in Ronda ${exIn} · ranks in Dificultad ${rankIn} · Opciones → Sonido pane ${snd.join(',')} to the right ${right} (tab on ${sndOn}) · Ajustes tabs inside ${tabsIn}`);
+    if (!topLeft || !tinted || !modeTop || !exIn || !rankIn || !snd.includes('volume') || !right || !sndOn || !tabsIn) errors.push('menú principal: el modo arriba con su color; a la izquierda Ronda (ejercicio), Dificultad (rango) y Opciones (Sonido, Entorno, Ajustes), y lo de la elegida a la derecha, con EMPEZAR arriba a la izquierda');
     const T = RA.demoTips('squat', 'combat'); log(`caricature tips: ${T.perfect} · ${T.extra}`);
     if (!/^Perfecta:/.test(T.perfect) || !/×2/.test(T.extra) || !/onda/.test(RA.demoTips('inchworm', 'combat').extra)) errors.push('caricaturas: deberían decir cómo sale PERFECTA y el extra del ejercicio');
     RA.exitAll(); frame(1); }
@@ -905,7 +925,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // guardar la sesión con su nombre, vaciarla y cargarla de nuevo; y que vaya en el envío por código
     const okSave = RA.sessSave('Mi sesión'); RA.SES.blocks = []; const okLoad = RA.sessLoad(RA.savedSessions().findIndex(x => x.name === 'Mi sesión'));
     const back = JSON.stringify(RA.SES.blocks), inPack = !!(RA.xferPack().d['reparena3-sessions'] || []).find(x => x.name === 'Mi sesión');
-    RA.lobbyMenu(); const lob = RA.activeWidgets().find(w => /^Sesiones guardadas/.test(w.label)); if (lob) lob.onPress(); const inGame = RA.activeWidgets().map(w => w.label).filter(l => /Mi sesión/.test(l));
+    RA.lobbyMenu(); const sp = RA.activeWidgets().find(w => w.label === 'Sesiones'); if (sp) sp.onPress(); const lob = RA.activeWidgets().find(w => /^Sesiones guardadas/.test(w.label)); if (lob) lob.onPress(); const inGame = RA.activeWidgets().map(w => w.label).filter(l => /Mi sesión/.test(l));
     if (!lob || !inGame.length) errors.push('sesiones guardadas: en el menú del juego debería salir «Sesiones guardadas ▸» con las tuyas'); else log(`   in game: ${lob.label} → ${inGame.join(', ')}`);
     log(`blocks: with profile → ${b0.join(' ')} · with own settings → ${b1.join(' ')} · saved during the session lives ${saved2.lives} walk ${saved2.walkTime} · after the session ${after.join(' ')} (before ${w0} ${l0}) · own settings offered ${F.length} (fraiseRange ${F.includes('fraiseRange')}, rank ${F.includes('rank')}) · marked ${/class="bfield own"/.test(html)} · saved session ${okSave} ${okLoad} → ${back.length} chars · in the code transfer ${inPack}`);
     if (b0[0] !== 'squat' || b0[1] !== wp || b0[2] !== 5) errors.push('bloques: el perfil del bloque debería ponerse mientras se juega (sin cambiar su ejercicio)');
@@ -1139,7 +1159,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const mKeys = () => RA.menu.rows.flatMap(r => r.t === 'cols' ? r.cols.flat() : [r]).filter(r => r.t === 'field').map(r => r.key), tabKeys = t => { RA.settingsMenu(() => RA.lobbyMenu(), t); frame(1); return mKeys(); };
     const fg = RA.settings.foesGate, ff = RA.settings.foesFly; RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('foesGate', 'robots'); RA.setSetting('foesFly', ''); RA.setSetting('aim', 'hands'); RA.setSetting('menuLevel', 'full');
     const arm = tabKeys('armas'), foe = tabKeys('enemigos'); RA.lobbyMenu(); frame(1);
-    const btn = (RA.activeWidgets().find(w => /^Armas/.test(w.label)) || {}).label, inside = (openArms(), mKeys()); press('Volver'); frame(1);
+    const btn = (RA.activeWidgets().find(w => /^(Armas|Rivales y armas)/.test(w.label)) || {}).label, inside = (openArms(), mKeys()); press('Volver'); frame(1);
     const mainHas = mKeys().some(k => ['aim', 'throwPick', 'sword', 'swordKind', 'pistol'].includes(k));
     log(`arms: tab ${arm.join(',')} · enemies tab ${foe.join(',')} · button “${btn}” · submenu ${inside.join(',')} · weapons left in the main menu ${mainHas}`);
     if (!['pistol', 'aim', 'throwPick', 'sword'].every(k => arm.includes(k) && inside.includes(k)) || foe.some(k => ['pistol', 'aim', 'throwPick', 'assist'].includes(k))) errors.push('armas: las pistolas, la puntería y las espadas deberían ir juntas en Armas (y no en Enemigos)');
@@ -1149,7 +1169,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // otro selector debajo); lo que cambias en un rango se queda como valor de ese rango en ese ejercicio (en la tabla)
   { RA.setSetting('mode', 'combat'); RA.setSetting('exercise', 'squat'); RA.setSetting('rank', 'general'); const g = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
     RA.setSetting('rank', 'recluta'); const r = { lives: RA.settings.lives, walk: RA.settings.walkTime, max: RA.settings.maxAlive, gd: RA.settings.guardDiff };
-    RA.lobbyMenu(); frame(1); const badges = RA.activeWidgets().filter(w => w.badge !== undefined), dup = RA.activeWidgets().some(w => /^Rango: /.test(w.label || ''));
+    RA.lobbyMenu(); frame(1); press('Dificultad'); frame(1); const badges = RA.activeWidgets().filter(w => w.badge !== undefined), dup = RA.activeWidgets().some(w => /^Rango: /.test(w.label || ''));
     badges[3].onPress(); frame(1); const sg = [RA.settings.rank, RA.settings.walkTime];
     RA.setSetting('walkTime', 30); const cell = RA.devCell('walkTime', 3); RA.setSetting('rank', 'cabo'); const cabo = RA.settings.walkTime; RA.setSetting('rank', 'sargento'); const kept = RA.settings.walkTime;
     RA.setSetting('walkTime', 11); const back = [RA.settings.walkTime, RA.devCell('walkTime', 3)];
@@ -1189,8 +1209,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // estrellas. Luego, restablecer una pestaña, perfiles y la última pestaña recordada
   { const sl = () => RA.activeWidgets().filter(w => w.kind === 'slider').map(w => w.f.key), vals = () => RA.activeWidgets().filter(w => w.style === 'value').length;
     const fieldsNow = () => (RA.menu && RA.menu.rows || []).flatMap(r => r.t === 'cols' ? r.cols.flat() : [r]).filter(r => r.t === 'field').map(r => r.key);
-    const ml = RA.settings.menuLevel; RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); const before = fieldsNow().includes('repsInc'), stars = RA.activeWidgets().some(w => /[★☆]/.test(w.label));
-    RA.devEyeToggle('repsInc'); RA.lobbyMenu(); frame(1); const inLobby = fieldsNow().includes('repsInc');
+    const ml = RA.settings.menuLevel; RA.setSetting('menuLevel', 'simple'); RA.lobbyMenu(); frame(1); press('Dificultad'); frame(1); const before = fieldsNow().includes('repsInc'), stars = RA.activeWidgets().some(w => /[★☆]/.test(w.label));
+    RA.devEyeToggle('repsInc'); RA.lobbyMenu(); frame(1); press('Dificultad'); frame(1); const inLobby = fieldsNow().includes('repsInc');
     press('Ajustes'); frame(1); press('Partida'); frame(1); const inSet = sl().includes('repsInc'); press('Volver'); frame(1); RA.devEyeToggle('repsInc');
     const vol = !stars; RA.setSetting('menuLevel', ml);
     RA.setSetting('rest', 45); RA.setSetting('waves', 9); RA.setSetting('volume', 30);
@@ -1327,7 +1347,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`player menu: Partida ${partS.join(',')} · full (developer) ${partF.join(',')} · no full menu without developer mode ${noDev} · “el rayo va” in Armas ▸: simple ${lobbyS}, full ${lobbyF}`);
     if (partS.includes('repsInc') || !partF.includes('repsInc') || !partS.includes('rest') || lobbyS || !lobbyF || !noDev) errors.push('menú del jugador: no esconde lo de afinar, o el completo (del desarrollador) no lo enseña');
     RA.setSetting('aim', 'auto'); RA.lobbyMenu(); frame(1); }
-  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^Enemigos/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^Enemigos/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
+  press('Combate'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(exLabels(), armsLabels()); log('Combate exercises:', ['Sentadillas', 'Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l)), 'foes+aim', lw.some(l => /^(Enemigos|Rivales y armas)/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l))); if (!['Zancadas', 'Fondos silla', 'Press hombro', 'Plancha lateral', 'Plancha 1 brazo', 'Superman'].every(l => lw.includes(l))) errors.push('el menú no ofrece los ejercicios de Combate'); if (!(lw.some(l => /^(Enemigos|Rivales y armas)/.test(l)) && ['Automática', 'Con las manos', 'Con la mirada'].every(l => lw.includes(l)))) errors.push('Combate no deja elegir enemigos y puntería'); }
   // Superman: siempre voladores y puntería automática (no se ofrece elegirla); plancha con un brazo: siempre arañas
   press('Superman'); frame(1); { const lw = RA.activeWidgets().map(w => w.label).concat(armsLabels()); log('superman: foes', RA.foes(), 'aim offered', lw.includes('Con las manos')); if (RA.foes() !== 'flyers' || lw.includes('Con las manos')) errors.push('el superman debería traer voladores con puntería automática'); }
   press('Plancha 1 brazo'); frame(1); if (RA.foes() !== 'robots') errors.push('la plancha con un brazo debería traer arañas');
@@ -1350,11 +1370,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('comboFloor', 'push'); press('Combinado'); frame(1); press('Plancha'); frame(1); RA.activeWidgets().filter(w => w.label === 'Plancha')[1].onPress(); frame(1); press('Toque'); frame(1);
   log('combo floor moves:', RA.settings.comboBase, RA.settings.comboFloor);
   if (RA.settings.comboBase !== 'floor' || RA.settings.comboFloor !== 'push,plank,tap') errors.push('no se eligen los movimientos del combinado: ' + RA.settings.comboFloor);
+  press('Dificultad'); frame(1); // (el ritmo, en el menú completo, va en Dificultad)
   for (let i = 0; i < 4; i++) { findW(RA.activeWidgets().find(w => /^Al compás/.test(w.label)).label).onPress(); frame(1); await sleep(400); }
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
   // Enemigos ▸: cada uno se marca o se quita; sin ninguno de las compuertas, solo voladores
-  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^Enemigos/.test(w.label)).label); frame(1);
+  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^(Enemigos|Rivales y armas)/.test(w.label)).label); frame(1);
   const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
   for (const l of gateLabels) { RA.activeWidgets().find(w => w.label === l).onPress(); frame(1); }
   press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
@@ -1375,7 +1396,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   press('Dominadas'); frame(1); press('Ajustar'); frame(1); RA.activeWidgets().filter(w => w.label === '+').forEach(w => w.onPress()); press('Listo'); frame(1);
   press('Colocar barra'); frame(3); key('keydown', 'Escape'); key('keyup', 'Escape'); frame(2); log('cancel placement → lobby menu', !!RA.menu && RA.activeWidgets().some(w => w.label === 'EMPEZAR'), 'on', RA.PLACE.on);
   if (RA.PLACE.on || !RA.activeWidgets().some(w => w.label === 'EMPEZAR')) errors.push('Esc no cancela la colocación');
-  press('Ajustes'); frame(1); press('Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
+  press('Ajustes'); frame(1); press('Modo Barras'); frame(1); RA.activeWidgets().filter(w => w.kind === 'slider').forEach(w => { w.drag(0.6); w.commit(); }); press('Bichos'); frame(1); press('Volver'); frame(1);
   press('Colgado'); frame(1); press('EMPEZAR'); frame(60); RA.openPause(); frame(2); press('Volver a colgarme'); frame(5); log('bars recalib state', RA.state, RA.BAR.phase);
   RA.openPause(); frame(2); press('Menú principal'); frame(2); press('Combate'); frame(1); log('back to', RA.settings.mode, RA.settings.exercise);
   // ---- sesión: tres bloques seguidos, ajustes intactos y resumen ----
