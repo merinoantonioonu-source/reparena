@@ -1,5 +1,5 @@
 /* =================== CORTINILLA DE INICIO: EL DUELO =================== */
-// Al empezar cada ronda, 2 s de carátula grande (3 m de ancho) a 2,5 m (todo lo demás, en negro): tú contra el jefe de la ronda, con un VS
+// Al empezar cada ronda, 7 s de carátula grande (3 m de ancho) a 2,5 m (todo lo demás, en negro): tú contra el jefe de la ronda, con un VS
 // en medio, el nombre del ejercicio, tu rango y tu récord, y unas barras con los datos de cada uno. La ilustración se dibuja
 // aquí mismo (sin archivos): siluetas a contraluz con un filo de luz, el rayo, la arena con sus compuertas y brasas. Se salta
 // con cualquier botón del mando o con el pulgar arriba (en el ordenador, con cualquier tecla). Mientras se ve, la ronda espera
@@ -51,13 +51,13 @@ const CIN = (() => {
   }
   // las costuras del traje (dibujan el cuerpo sobre lo oscuro), el frontal de las gafas y los aros de los guantes
   function heroLights(g, tp, P, col) {
-    g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.strokeStyle = rgba(col, 0.75); g.shadowColor = col; g.shadowBlur = tp.s * 0.02; g.lineWidth = Math.max(1, tp.s * 0.0045);
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.strokeStyle = rgba(col, 0.75); g.lineWidth = Math.max(1, tp.s * 0.0045);
     const seam = (a, b, off, k0 = 0.12, k1 = 0.88) => { const A = P[a], B = P[b], dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * off, ny = dx / L * off;
       const [x1, y1] = tp(A[0] + dx * k0 + nx, A[1] + dy * k0 + ny), [x2, y2] = tp(A[0] + dx * k1 + nx, A[1] + dy * k1 + ny); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
     seam('hip', 'kn', 0.045); seam('kn', 'an', 0.03); seam('sh', 'el', 0.028); seam('el', 'wr', 0.022, 0.1, 0.7); seam('neck', 'hip', -0.055, 0.15, 0.85);
     g.globalAlpha = 0.45; seam('hip', 'kn2', 0.04); seam('kn2', 'an2', 0.028); g.globalAlpha = 1;
     const a = Math.atan2(P.head[1] - P.neck[1], P.head[0] - P.neck[0]) - Math.PI / 2, [fx, fy] = tp(P.head[0] + Math.cos(a) * 0.095, P.head[1] + Math.sin(a) * 0.095); glow(g, fx, fy, tp.s * 0.05, col, 0.6);
-    for (const w of ['wr', 'wr2']) { const [x, y] = tp(P[w][0] - 0.03, P[w][1]); g.strokeStyle = rgba(col, w === 'wr' ? 0.95 : 0.5); g.lineWidth = Math.max(1.5, tp.s * 0.008); g.shadowBlur = tp.s * 0.03; g.beginPath(); g.ellipse(x, y, tp.s * 0.012, tp.s * 0.034, 0.3, 0, TAU); g.stroke(); }
+    for (const w of ['wr', 'wr2']) { const [x, y] = tp(P[w][0] - 0.03, P[w][1]); g.strokeStyle = rgba(col, w === 'wr' ? 0.95 : 0.5); g.lineWidth = Math.max(1.5, tp.s * 0.008); g.beginPath(); g.ellipse(x, y, tp.s * 0.012, tp.s * 0.034, 0.3, 0, TAU); g.stroke(); }
     g.restore();
   }
   /* ---------- Los jefes, de perfil y mirando a la izquierda (hacia ti) ---------- */
@@ -121,7 +121,11 @@ const CIN = (() => {
   };
   // con contraluz: silueta oscura con un filo cálido hacia la luz y otro frío por el otro lado (l2); las luces locales
   // (la bola de energía, el impacto) tiñen la silueta cerca de ellas
-  function litFigure(g, W, H, o, draw) {
+  function litFigure(g, W0, H0, o, draw) {
+    // solo en el recuadro del personaje (cabe todo: de −1 a 1 de ancho y hasta 2 de alto), no en todo el lienzo: va mucho más deprisa
+    const x0 = Math.max(0, Math.floor(o.x - o.s * 1.05)), x1 = Math.min(W0, Math.ceil(o.x + o.s * 1.05)), y0 = Math.max(0, Math.floor(o.y - o.s * 2.05)), y1 = Math.min(H0, Math.ceil(o.y + o.s * 0.12));
+    const W = x1 - x0, H = y1 - y0; if (W <= 0 || H <= 0) return {};
+    o = { ...o, x: o.x - x0, y: o.y - y0, lx: o.lx - x0, ly: o.ly - y0, lights: (o.lights || []).map(([x, y, r, c, a]) => [x - x0, y - y0, r, c, a]) };
     const m = buf(0, W, H), c = m.getContext('2d');
     c.setTransform(o.s * o.flip, 0, 0, -o.s, o.x, o.y); c.fillStyle = '#fff'; const info = draw(c) || {}; c.setTransform(1, 0, 0, 1, 0, 0);
     let lx = o.lx - o.x, ly = o.ly - (o.y - o.s * 0.5); const ll = Math.hypot(lx, ly) || 1; lx /= ll; ly /= ll;
@@ -132,7 +136,7 @@ const CIN = (() => {
     fc.drawImage(dark, -lx * d, -ly * d);
     for (const [x, y, r, col, a] of o.lights || []) { const gr = fc.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(col, a)); gr.addColorStop(1, rgba(col, 0)); fc.fillStyle = gr; fc.fillRect(0, 0, W, H); }
     const gr = fc.createLinearGradient(0, o.y - o.s, 0, o.y); gr.addColorStop(0, 'rgba(255,240,230,0.08)'); gr.addColorStop(1, 'rgba(0,0,0,0.5)'); fc.fillStyle = gr; fc.fillRect(0, 0, W, H);
-    g.drawImage(f, 0, 0);
+    g.drawImage(f, x0, y0);
     return info;
   }
   /* ---------- La escena ---------- */
@@ -172,14 +176,15 @@ const CIN = (() => {
     gr = g.createLinearGradient(0, hz - H * 0.12, 0, hz + H * 0.12); gr.addColorStop(0, rgba(P.fog, 0)); gr.addColorStop(0.5, rgba(P.fog, 0.55)); gr.addColorStop(1, rgba(P.fog, 0)); g.fillStyle = gr; g.fillRect(0, hz - H * 0.12, W, H * 0.24);
     return lt;
   }
-  // un rayo en zigzag con ramas, en tres capas (halo, color y núcleo blanco), y el estallido donde da
+  // un rayo en zigzag con ramas, en tres capas (halo, color y núcleo blanco), y el estallido donde da. Sin desenfoque de
+  // sombra en ningún brillo (es lo más caro de pintar): las capas anchas y suaves ya hacen de resplandor
   function bolt(g, x1, y1, x2, y2, col, R, w) {
     const sub = (a, b, dis, n) => { if (!n) return [a]; const m = [(a[0] + b[0]) / 2 + (R() - 0.5) * dis, (a[1] + b[1]) / 2 + (R() - 0.5) * dis]; return sub(a, m, dis / 2, n - 1).concat(sub(m, b, dis / 2, n - 1)); };
     const len = Math.hypot(x2 - x1, y2 - y1), main = sub([x1, y1], [x2, y2], len * 0.28, 7).concat([[x2, y2]]), paths = [[main, w]];
     for (let k = 0; k < 4; k++) { const a = main[Math.floor(main.length * (0.2 + R() * 0.6))], ang = Math.atan2(y2 - y1, x2 - x1) + (R() - 0.5) * 1.6, l = len * (0.12 + R() * 0.18); paths.push([sub(a, [a[0] + Math.cos(ang) * l, a[1] + Math.sin(ang) * l], l * 0.4, 5), w * 0.45]); }
     g.save(); g.globalCompositeOperation = 'lighter'; g.lineJoin = 'round'; g.lineCap = 'round';
     for (const [pts, ww] of paths) for (const [lw, c, a, bl] of [[ww * 7, col, 0.1, ww * 6], [ww * 2.8, col, 0.45, ww * 3], [ww, '#ffffff', 1, ww * 2]]) {
-      g.strokeStyle = rgba(c, a); g.lineWidth = lw; g.shadowColor = c; g.shadowBlur = bl; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
+      g.strokeStyle = rgba(c, a); g.lineWidth = lw; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
     }
     glow(g, x2, y2, w * 16, col, 0.9); glow(g, x2, y2, w * 6, '#ffffff', 0.9);
     g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = Math.max(1, w * 0.35); for (let k = 0; k < 14; k++) { const a = R() * TAU, r0 = w * 3, r1 = w * (6 + R() * 12); g.beginPath(); g.moveTo(x2 + Math.cos(a) * r0, y2 + Math.sin(a) * r0); g.lineTo(x2 + Math.cos(a) * r1, y2 + Math.sin(a) * r1); g.stroke(); }
@@ -187,7 +192,7 @@ const CIN = (() => {
   }
   function energyBall(g, x, y, r, col, R) {
     g.save(); g.globalCompositeOperation = 'lighter'; glow(g, x, y, r * 3.2, col, 0.8); glow(g, x, y, r * 1.2, '#ffffff', 1);
-    g.strokeStyle = rgba(col, 0.9); g.lineWidth = Math.max(1, r * 0.08); g.shadowColor = col; g.shadowBlur = r * 0.6;
+    g.strokeStyle = rgba(col, 0.9); g.lineWidth = Math.max(1, r * 0.08); 
     for (let k = 0; k < 6; k++) { let a = R() * TAU, rr2 = r * (1.1 + R() * 0.6); g.beginPath(); g.moveTo(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6); for (let s = 0; s < 4; s++) { a += 0.35 + R() * 0.3; g.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); rr2 *= 0.92; } g.stroke(); }
     g.restore();
   }
@@ -195,11 +200,12 @@ const CIN = (() => {
     g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
     for (let t = trail; t >= 0; t--) { const k = 1 - t / (trail + 1), ox = t * rx * 0.9;
       for (const [lw, c, al, bl] of [[ry * 0.09, col, 0.12, ry * 0.12], [ry * 0.035, col, 0.6, ry * 0.05], [ry * 0.012, '#ffffff', 1, ry * 0.02]]) {
-        g.strokeStyle = rgba(c, al * a * k); g.lineWidth = lw; g.shadowColor = c; g.shadowBlur = bl; g.beginPath(); g.ellipse(cx + ox, gy, rx, ry, 0, Math.PI, TAU); g.stroke(); } }
+        g.strokeStyle = rgba(c, al * a * k); g.lineWidth = lw; g.beginPath(); g.ellipse(cx + ox, gy, rx, ry, 0, Math.PI, TAU); g.stroke(); } }
     g.restore();
   }
-  // la ilustración del duelo: S = { pose, boss (clase a dibujar), what: 'bolt' | 'arcs' | 'bubble' | 'diamond' | 'rings' }
-  function paint(g, W, H, S) {
+  // la ilustración del duelo: S = { pose, boss (clase a dibujar), what: 'bolt' | 'arcs' | 'bubble' | 'diamond' | 'rings' }.
+  // Por partes (cada yield, un fotograma): así no se congela la imagen mientras se pinta
+  function* paintGen(g, W, H, S) {
     const R = RNG(91); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
     const lt = background(g, W, H, R), pose = POSE[S.pose] || POSE.squat, floor = S.pose === 'plank';
     const hero = { x: (floor ? 0.27 : 0.14) * W, y: 0.95 * H, h: (floor ? 0.5 : S.pose === 'hang' ? 0.6 : 0.72) * H };
@@ -211,6 +217,7 @@ const CIN = (() => {
     if (boss && boss.k !== 'mace' && boss.k !== 'dragon') shadow(boss.x, boss.y, boss.s * 0.45);
     shadow(hero.x + hero.h * (floor ? -0.25 : 0.05), S.pose === 'hang' ? 0.95 * H : hero.y, hero.h * (floor ? 0.65 : 0.3));
     if (S.what === 'arcs') for (let k = 4; k >= 1; k--) { const t = (k / 4) ** 0.75, x = lerp(hero.x + hero.h * 0.5, lt.x + W * 0.25, t), gy = lerp(hero.y, 0.62 * H, t), s = lerp(0.95, 0.12, t); arch(g, x, gy, hero.h * 0.17 * s, hero.h * 0.8 * s, k % 2 ? '#ffd166' : '#ff4fa3', lerp(1, 0.55, t), 0); }
+    yield;
     // el jefe
     let info = {};
     if (boss) {
@@ -226,14 +233,17 @@ const CIN = (() => {
       if (info.core) { const [x, y] = px(info.core[0], info.core[1]); glow(g, x, y, boss.s * info.core[2] * 2.5, '#ff3b5c', 0.8); }
       g.restore();
     }
-    if (S.what === 'rings') { g.save(); g.globalCompositeOperation = 'lighter'; for (const [x, y, r] of [[0.76, 0.5, 0.17], [0.6, 0.44, 0.08], [0.9, 0.36, 0.06]]) { g.strokeStyle = 'rgba(80,240,220,0.8)'; g.shadowColor = '#3cf0c6'; g.shadowBlur = 30; g.lineWidth = H * r * 0.28; g.beginPath(); g.ellipse(x * W, y * H, H * r, H * r * 0.82, 0, 0, TAU); g.stroke(); glow(g, x * W, y * H, H * r * 1.6, '#3cf0c6', 0.35); } g.restore(); }
+    yield;
+    if (S.what === 'rings') { g.save(); g.globalCompositeOperation = 'lighter'; for (const [x, y, r] of [[0.76, 0.5, 0.17], [0.6, 0.44, 0.08], [0.9, 0.36, 0.06]]) { g.strokeStyle = 'rgba(80,240,220,0.8)'; g.lineWidth = H * r * 0.28; g.beginPath(); g.ellipse(x * W, y * H, H * r, H * r * 0.82, 0, 0, TAU); g.stroke(); glow(g, x * W, y * H, H * r * 1.6, '#3cf0c6', 0.35); } g.restore(); }
     // tú: un halo frío a la espalda, lo de atrás más oscuro y lo de delante con la luz de la bola de energía
     g.save(); g.globalCompositeOperation = 'lighter'; const [bx, by] = tp(-0.15, 0.6); glow(g, bx, by, hero.h * 0.75, '#3a5cff', 0.32); g.restore();
     if (S.pose === 'hang') { const [x1, y1] = tp(-0.35, 1.19), [x2] = tp(0.4, 1.19); g.save(); g.strokeStyle = '#9aa0b8'; g.lineWidth = hero.h * 0.03; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y1); g.stroke(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,220,180,0.5)'; g.lineWidth = hero.h * 0.008; g.beginPath(); g.moveTo(x1, y1 - hero.h * 0.008); g.lineTo(x2, y1 - hero.h * 0.008); g.stroke(); g.restore(); }
     const hand = floor ? tp(0.42, 0.24) : tp(pose.wr[0] + 0.05, pose.wr[1]), HL = [[hand[0], hand[1], hero.h * 0.42, S.what === 'arcs' ? '#ff4fa3' : P.bolt, 0.55]];
     const HO = { x: hero.x, y: hero.y, s: hero.h, flip: 1, lx: lt.x, ly: lt.y, l2: [-0.75, -0.66], rim: P.rim, rim2: '#8fb4ff', dark: '#120d1c', lights: HL };
     litFigure(g, W, H, { ...HO, rim: mix(P.rim, P.dark, 0.45), rim2: mix('#8fb4ff', P.dark, 0.45), dark: '#08060c' }, c => heroParts(c, pose, true));
+    yield;
     litFigure(g, W, H, HO, c => heroParts(c, pose)); heroLights(g, tp, pose, P.bolt);
+    yield;
     // lo que pasa entre los dos
     if (S.what === 'bolt' && boss) {
       const ty = boss.y - boss.s * (boss.k === 'spider' ? 0.35 : boss.k === 'crab' ? 0.3 : 0.55), tx = boss.x + boss.s * (boss.k === 'spider' ? -0.05 : 0);
@@ -248,12 +258,13 @@ const CIN = (() => {
     g.save(); g.globalCompositeOperation = 'soft-light'; let gr = g.createLinearGradient(0, H, W, 0); gr.addColorStop(0, 'rgba(40,200,190,0.5)'); gr.addColorStop(1, 'rgba(255,120,60,0.5)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
     gr = g.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.78); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.72)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
-  return { paint };
+  const paint = (g, W, H, S) => { for (const _ of paintGen(g, W, H, S)); }; // (de una vez)
+  return { paint, paintGen };
 })();
 
 /* ---------- Qué sale en la carátula: el ejercicio, tú (rango y récord) y el jefe de la ronda ---------- */
-const INTRO_DUR = 2;
-const INTRO = { t: -1, p: null, veil: null, mask: { left: 0, right: 0 }, thumbT: 0, skip: false, center: false };
+const INTRO_DUR = 7;
+const INTRO = { t: -1, p: null, veil: null, mask: { left: 0, right: 0 }, thumbT: 0, skip: false, center: false, wait: false };
 INTRO.p = makePanel(3, 3 * 9 / 16, 1280, { depthTest: false }); INTRO.p.mesh.renderOrder = RO.menu - 1; INTRO.p.mesh.visible = false; scene.add(INTRO.p.mesh);
 INTRO.veil = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false }));
 INTRO.veil.renderOrder = RO.menu - 2; INTRO.veil.visible = false; scene.add(INTRO.veil);
@@ -289,22 +300,47 @@ function introScene() {
   const B = introBoss(), what = m === 'arcs' ? (B.draw ? 'mace' : 'arcs') : m === 'touch' ? 'diamond' : isBars() ? 'bubble' : 'bolt';
   return { pose, boss: B.draw, what: what === 'mace' ? '' : what, B }; // (con la maza no hay rayo: es ella contra ti)
 }
-function introDraw() {
-  const P = INTRO.p, c = P.ctx, W = P.W, H = P.H, S = introScene(), B = S.B;
-  CIN.paint(c, W, H, S);
-  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.shadowBlur = 0; c.textBaseline = 'middle';
+// La ilustración se pinta antes, en el menú, por partes (una por fotograma) y se guarda: al empezar la ronda solo se copia
+// y se escriben los datos encima. Va a 960 × 540 (el texto, encima, a 1280: nítido)
+const INTRO_ART = { cv: null, card: null, key: '', gen: null, ready: false, t: 0 };
+const introName = () => (EX_NAMES[settings.exercise] || '').toUpperCase(), introSub = () => { const z = (BODY_ZONES.find(z => z[1].includes(settings.exercise)) || [''])[0]; return (MODE_NAMES[settings.mode] + (z ? ' · ' + z : '')).toUpperCase(); };
+function introPrep(steps = 1) {
+  const S = introScene(), k = `${S.pose}|${S.boss}|${S.what}|${introName()}|${introSub()}`, A = INTRO_ART;
+  if (!A.cv) { A.cv = mkCanvas(960, 540); A.card = mkCanvas(1280, 720); }
+  if (A.key !== k) { A.key = k; A.ready = false; A.gen = (function* () { yield* CIN.paintGen(A.cv.getContext('2d'), 960, 540, S); yield; introDeco(A.card.getContext('2d'), 1280, 720, A.cv); })(); }
+  while (!A.ready && steps-- > 0) { if (A.gen.next().done) A.ready = true; A.cv.getContext('2d').getImageData(0, 0, 1, 1); } // (leer un punto obliga a acabar el dibujo de este paso ya, y no todo de golpe al final)
+  return A.ready;
+}
+// cada fotograma, fuera de la partida: lo que falte por pintar (y, cada medio segundo, si ha cambiado el ejercicio o el jefe)
+function introIdle(dt) {
+  if (!settings.intro || INTRO.t >= 0 || !(xrActive || preview) || GAME_STATES.includes(state)) return;
+  INTRO_ART.t -= dt; if (INTRO_ART.ready && INTRO_ART.t > 0) return; INTRO_ART.t = 0.5;
+  try { introPrep(1); } catch (e) { console.warn('cortinilla', e && e.message); INTRO_ART.ready = true; }
+}
+// lo que no cambia de una ronda a otra (la ilustración ampliada, los tintes, el tajo de luz, el título y el VS: con
+// resplandores, lo caro de pintar), también preparado en el menú
+function introDeco(c, W, H, art) {
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, W, H); c.drawImage(art, 0, 0, W, H);
+  c.shadowBlur = 0; c.textBaseline = 'middle';
   // el tinte de cada bando y el tajo de luz del centro
   c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = 'rgba(29,107,255,0.16)'; c.beginPath(); c.moveTo(0, 0); c.lineTo(W * 0.56, 0); c.lineTo(W * 0.44, H); c.lineTo(0, H); c.closePath(); c.fill();
   c.fillStyle = 'rgba(255,42,42,0.14)'; c.beginPath(); c.moveTo(W * 0.56, 0); c.lineTo(W, 0); c.lineTo(W, H); c.lineTo(W * 0.44, H); c.closePath(); c.fill();
-  const gr = c.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.strokeStyle = gr; c.lineWidth = 6; c.shadowColor = '#ffffff'; c.shadowBlur = 30; c.beginPath(); c.moveTo(W * 0.56, 0); c.lineTo(W * 0.44, H); c.stroke(); c.restore();
+  const gr = c.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.strokeStyle = gr; for (const [lw, a] of [[40, 0.08], [20, 0.16], [6, 1]]) { c.globalAlpha = a; c.lineWidth = lw; c.beginPath(); c.moveTo(W * 0.56, 0); c.lineTo(W * 0.44, H); c.stroke(); } c.globalAlpha = 1; c.restore();
   // arriba: el modo y la zona, y el nombre del ejercicio
-  const zone = (BODY_ZONES.find(z => z[1].includes(settings.exercise)) || [''])[0], sub = (MODE_NAMES[settings.mode] + (zone ? ' · ' + zone : '')).toUpperCase();
+  const sub = introSub();
   c.textAlign = 'center'; c.fillStyle = '#ffd166'; fitFont(c, sub, W * 0.6, 28, '800 %px ' + FB); c.fillText(sub, W / 2, 44);
-  const name = (EX_NAMES[settings.exercise] || '').toUpperCase(); fitFont(c, name, W * 0.62, 76, '%px ' + FD);
+  const name = introName(); fitFont(c, name, W * 0.62, 76, '%px ' + FD);
   c.fillStyle = '#000000'; c.fillText(name, W / 2 + 4, 104); c.fillStyle = '#ffffff'; c.fillText(name, W / 2, 100);
   // el VS
   c.save(); c.translate(W / 2, H * 0.42); c.rotate(-0.1); c.font = `200px "Black Ops One",${FD}`; c.lineJoin = 'round'; c.lineWidth = 16; c.strokeStyle = '#000000'; c.strokeText('VS', 0, 0);
-  c.shadowColor = '#ffd166'; c.shadowBlur = 50; c.fillStyle = '#ffffff'; c.fillText('VS', 0, 0); c.restore();
+  c.globalCompositeOperation = 'lighter'; c.strokeStyle = '#ffd166'; for (const [lw, a] of [[70, 0.06], [46, 0.1], [28, 0.16]]) { c.globalAlpha = a; c.lineWidth = lw; c.strokeText('VS', 0, 0); } // (el resplandor, sin desenfoque: va mucho más deprisa)
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.lineWidth = 16; c.strokeStyle = '#000000'; c.strokeText('VS', 0, 0); c.fillStyle = '#ffffff'; c.fillText('VS', 0, 0); c.restore();
+}
+// al empezar la ronda: la carátula ya preparada y, encima, las placas (tu rango y tu récord, el jefe y los datos de la ronda)
+function introDraw() {
+  const P = INTRO.p, c = P.ctx, W = P.W, H = P.H, B = introScene().B;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.shadowBlur = 0; c.clearRect(0, 0, W, H); c.drawImage(INTRO_ART.card, 0, 0);
+  c.textBaseline = 'middle';
   // las placas de abajo: tú (rango y récord) y el jefe, con sus barras
   const plate = (x, right, role, who, whoCol, line, bars, cols) => {
     const al = right ? 'right' : 'left', X = right ? x - 470 : x; let y = H - 214;
@@ -327,8 +363,8 @@ function introDraw() {
 const introOn = () => !!settings.intro && (xrActive || preview);
 function introStart() {
   if (!introOn()) return;
-  try { introDraw(); } catch (e) { console.warn('cortinilla', e && e.message); return; }
-  INTRO.t = 0; INTRO.skip = false; INTRO.thumbT = 0; INTRO.center = center.mesh.visible; center.mesh.visible = false;
+  INTRO.t = 0; INTRO.wait = true; INTRO.skip = false; INTRO.thumbT = 0; INTRO.center = center.mesh.visible; center.mesh.visible = false;
+  introReady();
   for (const s of ['left', 'right']) INTRO.mask[s] = padMask(hands[s]); // (lo que ya estaba pulsado, p. ej. el gatillo de EMPEZAR, no cuenta)
   hudLocal(_inP.set(0, 0, -2.5), INTRO.p.mesh.position); INTRO.p.mesh.quaternion.copy(hudQ()); // (2,5 m delante de ti, derecha)
 }
@@ -341,19 +377,52 @@ function thumbsUp(h) {
   let curled = 0; for (const [k, t] of [[6, 9], [11, 14], [16, 19], [21, 24]]) if (J[t].p.distanceTo(J[0].p) < J[k].p.distanceTo(J[0].p) * 1.1) curled++;
   return curled >= 3;
 }
-function introClear() { INTRO.t = -1; INTRO.veil.visible = false; INTRO.p.mesh.visible = false; }
+// ya pintada (o lo que faltaba, un paso por fotograma): los datos encima y empieza a contar
+function introReady() {
+  let ok; try { ok = introPrep(1); if (ok) introDraw(); } catch (e) { console.warn('cortinilla', e && e.message); introClear(); return; }
+  if (ok) { INTRO.wait = false; INTRO.t = 0; }
+}
+function introClear() { INTRO.t = -1; INTRO.wait = false; INTRO.veil.visible = false; INTRO.p.mesh.visible = false; }
 // Cada fotograma, mientras se ve: devuelve true y la ronda espera
 function introStep(dt) {
   if (INTRO.t < 0) return false;
   if (!GAME_STATES.includes(state) && state !== 'mount') { introClear(); return false; }
+  if (INTRO.wait) { // aún pintándose: en negro, sin la carátula
+    INTRO.veil.position.copy(head.p); INTRO.veil.material.opacity = Math.min(1, INTRO.veil.material.opacity + dt * 5); INTRO.veil.visible = true;
+    introReady(); if (INTRO.wait) return true;
+  }
   INTRO.t += dt;
   for (const s of ['left', 'right']) { const m = padMask(hands[s]); if (m & ~INTRO.mask[s]) INTRO.skip = true; INTRO.mask[s] = m; }
   if (thumbsUp(hands.left) || thumbsUp(hands.right)) { INTRO.thumbT += dt; if (INTRO.thumbT > 0.25) INTRO.skip = true; } else INTRO.thumbT = 0;
   if (INTRO.skip && INTRO.t < INTRO_DUR - 0.25) { INTRO.t = INTRO_DUR - 0.25; SND.tick(); } // (salta al fundido final)
-  const t = INTRO.t, a = t < 0.2 ? smooth(t / 0.2) : clamp((INTRO_DUR - t) / 0.25, 0, 1);
-  INTRO.veil.position.copy(head.p); INTRO.veil.material.opacity = a; INTRO.veil.visible = a > 0.01;
+  const t = INTRO.t, a = t < 0.2 ? smooth(t / 0.2) : clamp((INTRO_DUR - t) / 0.25, 0, 1), v = t < 0.2 ? Math.max(a, INTRO.veil.material.opacity) : a;
+  INTRO.veil.position.copy(head.p); INTRO.veil.material.opacity = v; INTRO.veil.visible = v > 0.01;
   INTRO.p.mesh.material.opacity = a; INTRO.p.mesh.visible = a > 0.01; INTRO.p.mesh.scale.setScalar(1 + 0.04 * Math.max(0, 1 - t / 0.4));
   if (t >= INTRO_DUR) { introClear(); center.mesh.visible = INTRO.center; if (INTRO.center) drawCenter(); return false; }
   return true;
 }
 addEventListener('keydown', () => { if (INTRO.t >= 0 && preview) INTRO.skip = true; }); // (en el ordenador, cualquier tecla)
+
+/* =================== CAMBIO DE ENTORNO, A OSCURAS =================== */
+// En las gafas, montar el bosque o la isla (cargarlo, compilar sus materiales y subir sus texturas) congela la imagen un
+// rato. Se hace con todo en negro y «Cargando el entorno…» delante: primero el fundido, luego el cambio y, con el negro aún
+// delante, unos fotogramas para que se compile y se suba todo; después vuelve la luz
+const ENVSW = { ph: '', t: 0, n: 0 };
+ENVSW.veil = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false }));
+ENVSW.veil.renderOrder = RO.menu + 8; ENVSW.veil.visible = false; scene.add(ENVSW.veil);
+ENVSW.p = makePanel(0.6, 0.1, 768, { depthTest: false }); ENVSW.p.mesh.renderOrder = RO.menu + 9; ENVSW.p.mesh.visible = false; scene.add(ENVSW.p.mesh);
+{ const c = ENVSW.p.ctx; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#eeeaff'; fitFont(c, 'Cargando el entorno…', ENVSW.p.W - 40, 64, '500 %px ' + FB); c.fillText('Cargando el entorno…', ENVSW.p.W / 2, ENVSW.p.H / 2); ENVSW.p.tex.needsUpdate = true; }
+function envSwitch() { if (!xrActive || preview) { applyEnvMode(); return; } if (!ENVSW.ph) { ENVSW.ph = 'out'; ENVSW.t = 0; } else ENVSW.ph = ENVSW.ph === 'in' ? 'out' : ENVSW.ph; }
+function envSwitchStep(dt) {
+  const E = ENVSW; if (!E.ph) return; E.t += dt;
+  E.veil.position.copy(head.p); E.veil.visible = true; hudLocal(_esP.set(0, 0, -0.9), E.p.mesh.position); E.p.mesh.quaternion.copy(hudQ());
+  if (E.ph === 'out') { E.veil.material.opacity = Math.min(1, E.veil.material.opacity + dt / 0.2); if (E.veil.material.opacity >= 1) { E.ph = 'apply'; E.n = 0; E.p.mesh.visible = true; } return; }
+  if (E.ph === 'apply') { if (++E.n < 2) return; applyEnvMode(); E.ph = 'load'; E.t = 0; return; } // (antes, dos fotogramas en negro: que se vea el aviso)
+  if (E.ph === 'load') { // el bosque o la isla, si aún se están descargando (como mucho 10 s), y compilar todo de una vez, a oscuras
+    const want = sceneryPick(); if (((want === 'nature' && NAT.loading) || (want === 'island' && ISL.loading)) && E.t < 10) return;
+    try { renderer.compile(scene, camera); } catch (e) { /* (si no se puede, se compila al dibujar) */ } E.ph = 'hold'; E.n = 0; return;
+  }
+  if (E.ph === 'hold') { if (++E.n < 4) return; E.ph = 'in'; E.p.mesh.visible = false; return; } // (y las texturas se suben con el negro delante)
+  E.veil.material.opacity = Math.max(0, E.veil.material.opacity - dt / 0.4); if (E.veil.material.opacity <= 0) { E.ph = ''; E.veil.visible = false; }
+}
+const _esP = new V3();

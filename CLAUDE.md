@@ -71,7 +71,8 @@ No las cambies sin preguntarle.
   los lados (`iwSpread`). Se pueden saltar huellas: llegar a la última vale y carga el rayo. La onda del final se ve y se
   oye bien y lanza a los bichos por el aire.
 - El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
-- Mandos como manos (sentadillas y zancadas): el mando se ve como una mano; gatillo + agarre = puño; el rayo se lanza
+- Mandos como manos: con mandos se ven manos en todo el juego (en la partida, con pistolas o espada, el arma). En
+  sentadillas y zancadas: gatillo + agarre = puño; el rayo se lanza
   apuntando con la mano y con el gatillo. Con mando, la puntería por defecto es «con las manos».
 
 **Dificultad**
@@ -105,7 +106,7 @@ No las cambies sin preguntarle.
   - Tumbado y en plancha: en el suelo bajo la cara o en el techo, de cara a los ojos, con lo de arriba del texto hacia la
     cabeza y fijos (ladearla no los gira). Igual para todos los avisos de la vista.
 - Los avisos de lo que se hace mal salen grandes, impresos en el suelo, durante unos 4 s.
-- Al empezar cada ronda, la **carátula del duelo** (`src/64_intro.js`, modelo 3 de los propuestos): 2 s, grande, a 2,5 m,
+- Al empezar cada ronda, la **carátula del duelo** (`src/64_intro.js`, modelo 3 de los propuestos): 7 s, grande, a 2,5 m,
   con todo lo demás en negro; tú (rango y récord) contra el jefe de la ronda, sin la caricatura (sale después, hasta
   calibrar). Se salta con cualquier botón del mando o con el pulgar arriba.
 - Al perder todas las vidas: fundido en negro, aviso claro de derrota y resumen automático con «Otra ronda» y «Menú
@@ -113,7 +114,8 @@ No las cambies sin preguntarle.
 
 **Menús**
 - **Menú de muñeca:**
-  - se abre con el botón MENÚ de la muñeca izquierda y se queda **quieto delante del jugador**, de cara y derecho;
+  - se abre con el botón MENÚ de la muñeca izquierda y se queda **quieto delante del jugador**, de cara y derecho; ni la
+    mano ni el mando lo mueven (mirar a la muñeca no lo recoloca; con mandos, X/Y lo recoge si está a la vista);
   - se cierra con la palma izquierda hacia abajo o con el puño;
   - los menús nuevos salen solos.
 - **Cada menú sale donde estaba el anterior**: «Traer menú», «Volver», «Menú principal» y el resumen no se alejan.

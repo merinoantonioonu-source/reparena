@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -1876,19 +1876,37 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.beginRun(); frame(2, 16, xrFrame);
     const on = RA.INTRO.t >= 0 && RA.INTRO.p.mesh.visible && RA.INTRO.veil.visible, dist = RA.INTRO.p.mesh.position.distanceTo(RA.head.p), black = RA.INTRO.veil.material.opacity;
     frame(60, 16, xrFrame); const held = RA.state === 'calib' && RA.INTRO.t >= 0 && !RA.DEMOV.head.visible, black2 = RA.INTRO.veil.material.opacity;
-    frame(80, 16, xrFrame); const gone = RA.INTRO.t < 0 && !RA.INTRO.p.mesh.visible && !RA.INTRO.veil.visible && RA.DEMOV.head.visible;
-    log(`intro card: shown ${on} at ${dist.toFixed(2)} m · black ${black2.toFixed(2)} · after 1 s still waiting (${RA.state}, no caricature) ${held} · after 2.3 s gone and caricature back ${gone} · boss ${RA.introBoss().name}`);
+    frame(300, 16, xrFrame); const still = RA.INTRO.t >= 0 && RA.INTRO.p.mesh.visible; frame(110, 16, xrFrame); const gone = RA.INTRO.t < 0 && !RA.INTRO.p.mesh.visible && !RA.INTRO.veil.visible && RA.DEMOV.head.visible;
+    log(`intro card: shown ${on} at ${dist.toFixed(2)} m · black ${black2.toFixed(2)} · after 1 s still waiting (${RA.state}, no caricature) ${held} · at 5.8 s still there ${still} · after 7.6 s gone and caricature back ${gone} · boss ${RA.introBoss().name}`);
+    if (!still) errors.push('carátula: debería verse 7 s');
     if (!on || Math.abs(dist - 2.5) > 0.05 || black2 < 0.99) errors.push('carátula: debería salir a 2,5 m con todo lo demás en negro');
     if (!held) errors.push('carátula: mientras se ve, la ronda debería esperar (sin calibrar) y sin la caricatura');
-    if (!gone) errors.push('carátula: a los 2 s debería irse y volver la caricatura hasta calibrar');
+    if (!gone) errors.push('carátula: a los 7 s debería irse y volver la caricatura hasta calibrar');
     XRS.controllers = true; RA.beginRun(); frame(5, 16, xrFrame); const pre = RA.INTRO.t >= 0; XRS.trig = 'right'; frame(3, 16, xrFrame); XRS.trig = null; frame(20, 16, xrFrame); const padSkip = pre && RA.INTRO.t < 0; XRS.controllers = false; frame(5, 16, xrFrame);
     RA.beginRun(); frame(5, 16, xrFrame); const pre2 = RA.INTRO.t >= 0; XRS.thumbUp = 'right'; frame(45, 16, xrFrame); const thumbSkip = pre2 && RA.INTRO.t < 0, isThumb = RA.thumbsUp(RA.hands.right); XRS.thumbUp = null; frame(5, 16, xrFrame);
-    RA.beginRun(); frame(5, 16, xrFrame); XRS.pinch = 'right'; frame(30, 16, xrFrame); XRS.pinch = null; const noSkip = RA.INTRO.t >= 0; frame(140, 16, xrFrame);
+    RA.beginRun(); frame(5, 16, xrFrame); XRS.pinch = 'right'; frame(30, 16, xrFrame); XRS.pinch = null; const noSkip = RA.INTRO.t >= 0; frame(440, 16, xrFrame);
     log(`intro skip: any controller button ${padSkip} · thumbs up ${thumbSkip} (detected ${isThumb}) · a pinch does not skip ${noSkip}`);
     if (!padSkip) errors.push('carátula: con el mando, cualquier botón debería pasar al ejercicio');
     if (!thumbSkip || !isThumb) errors.push('carátula: con las manos, el pulgar arriba debería pasar al ejercicio');
     if (!noSkip) errors.push('carátula: otro gesto (pellizcar) no debería saltarla');
     RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
+
+  // ---- En las gafas, el cambio de entorno va a oscuras («Cargando el entorno…») y vuelve la luz al acabar ----
+  { RA.exitAll(); frame(2, 16, xrFrame); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); const sc = RA.settings.scenery;
+    RA.setSetting('scenery', 'island'); frame(2, 16, xrFrame); const dark = RA.ENVSW.veil.visible && RA.ENVSW.ph !== ''; let note = false; for (let i = 0; i < 30; i++) { frame(1, 16, xrFrame); if (RA.ENVSW.p.mesh.visible && RA.ENVSW.veil.material.opacity > 0.99) note = true; }
+    frame(60, 16, xrFrame); const back = !RA.ENVSW.ph && !RA.ENVSW.veil.visible; RA.setSetting('scenery', sc); frame(60, 16, xrFrame);
+    log(`scenery change in the glasses: fades to black ${dark} · “Cargando el entorno…” in the dark ${note} · light back ${back}`);
+    if (!dark || !note || !back) errors.push('entorno: en las gafas, el cambio debería hacerse a oscuras, con el aviso de que carga, y volver la luz al acabar');
+    // con los mandos, en el menú también se ven manos (no los mandos); X/Y recoge el menú abierto a la vista, y mirar a la
+    // muñeca no lo da por perdido (el botón de la muñeca no lo recolocaba hacia la mano)
+    RA.lobbyMenu(); frame(40, 16, xrFrame); XRS.controllers = true; frame(10, 16, xrFrame); const G = RA.gloves.right, hands = RA.hands.right.virt && G.palm.visible && !G.pad.visible;
+    const pos0 = RA.menu.group.position.clone(); XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.2, 0, 0, 'YXZ')); frame(10, 16, xrFrame); const far = RA.wristFar(); XRS.headQ = null; frame(5, 16, xrFrame); const moved = RA.menu.group.position.distanceTo(pos0);
+    const wasOn = RA.WM.on; XRS.menuBtn = 'left'; frame(3, 16, xrFrame); XRS.menuBtn = null; frame(20, 16, xrFrame); const closed = wasOn && !RA.WM.on;
+    log(`controllers in the menu: hands ${hands} · looking down at the wrist counts as lost ${far} · X/Y closes the open menu ${closed} · menu moved looking down ${(moved * 100).toFixed(1)} cm`);
+    if (!hands) errors.push('mandos como manos: en el menú también deberían verse manos, no los mandos');
+    if (far || moved > 0.005) errors.push('menú de muñeca: mirar a la muñeca no debería darlo por perdido ni moverlo (lo recolocaba hacia la mano)');
+    if (!closed) errors.push('menú de muñeca: con el menú abierto delante, X/Y deberían recogerlo, no recolocarlo');
+    XRS.controllers = false; RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- La medición de las manos: cuánto se ven, cuántas veces se pierden, dónde estaban y cuánto tardan en volver ----
   { const sv = { ...RA.settings }; applyCfg({ mode: 'combat', exercise: 'squat', intro: 0, lives: 0, waves: 1, repsWave: 30 }); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
@@ -2436,6 +2454,7 @@ function makeXRFrame() {
     const s = RA.renderer.xr.getSession(), src = XRS.controllers ? ctrls : sources; if (s) s.inputSources = src;
     pads.left.buttons[0].pressed = XRS.trig === 'left'; pads.right.buttons[0].pressed = XRS.trig === 'right';
     pads.left.buttons[1].pressed = XRS.squeeze === 'left'; pads.right.buttons[1].pressed = XRS.squeeze === 'right'; // (el botón de agarre)
+    for (const h of ['left', 'right']) { while (pads[h].buttons.length < 5) pads[h].buttons.push({ pressed: false }); pads[h].buttons[4].pressed = XRS.menuBtn === h; } // (X/Y)
     return {
       session: s || { inputSources: src },
       detectedPlanes: XRS.room ? XRS.room.planes : undefined, detectedMeshes: XRS.room ? XRS.room.meshes : undefined,
