@@ -2162,11 +2162,24 @@ function foesSummary() {
   return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : foeOnly() === 'fly' ? 'solo voladores' : foeOnly() === 'ground' ? 'solo los que andan' : `${all.length} clases`;
 }
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
-function foesRows(again) {
-  return [{ t: 'field', key: 'foeKind', after: again },
-    { t: 'text', text: 'Marca los que quieres (los de las trampillas salen en el suelo)' },
-    { t: 'field', key: 'foesGate', after: again }, { t: 'field', key: 'foesHatch', after: again }, { t: 'field', key: 'foesFly', after: again },
-    { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') }];
+// Rivales: cada grupo (de las compuertas o de las trampillas, voladores) en su pestaña, con una ficha por enemigo (su
+// retrato, su nombre, su resistencia y su fuerza, de la tabla del desarrollador); al tocarla, sale o deja de salir. Con
+// arms, las armas en otra pestaña
+const FOE_PFX = { foesGate: 'g:', foesHatch: 'h:', foesFly: 'f:' }, FOE_CARD_COLS = 6;
+function foeCardRows(key) {
+  const items = FIELD[key].opts.map(([v, lab]) => { const d = devFoe(FOE_PFX[key] + v); return { v, name: lab.replace(' (jefe)', ''), pic: v, hp: d.hp, str: d.str, boss: v === 'dragon' }; });
+  return [{ t: 'cards', key, cols: FOE_CARD_COLS, items, h: Math.ceil(items.length / FOE_CARD_COLS) * (CARD_H + GAP) - GAP }];
+}
+function foesRows(again, arms = false) {
+  const tabs = ['foesGate', 'foesHatch', 'foesFly'].filter(k => fieldVisible(FIELD[k])).map(k => [k, FIELD[k].short]), ar = arms ? armsRows(again) : [];
+  if (ar.length) tabs.push(['arms', 'Armas']);
+  if (!tabs.some(t => t[0] === LOBBY.foe)) LOBBY.foe = tabs.length ? tabs[0][0] : '';
+  const rows = [{ t: 'field', key: 'foeKind', after: again }];
+  if (tabs.length > 1) rows.push({ t: 'tabs', items: tabs.map(([k, l]) => ({ label: l, on: k === LOBBY.foe, onPress: () => { LOBBY.foe = k; again(); } })) });
+  if (LOBBY.foe === 'arms') rows.push(...ar);
+  else if (LOBBY.foe) rows.push(...foeCardRows(LOBBY.foe), { t: 'text', text: 'Escudo: su resistencia (disparos que aguanta) · Rayo: su fuerza (vidas que te quita)', color: '#a49fc8' });
+  if (Object.values(BEAST_LOAD).includes('loading')) rows.push({ t: 'text', text: 'Cargando los monstruos elegidos…', color: '#ffd166' });
+  return rows;
 }
 function foesMenu(back) {
   const rows = [{ t: 'title', text: 'ENEMIGOS' }, ...foesRows(() => foesMenu(back)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
@@ -2228,7 +2241,7 @@ function armsMenu(back) {
 // de Spotify y Salir. A la derecha, lo de la parte elegida. EMPEZAR, junto al título, y debajo lo elegido. Se recuerdan la
 // parte y la pestaña de Opciones
 const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' };
-const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound' };
+const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound', foe: '' };
 const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
   ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
   ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['opt', 'Opciones', MC.set]];
@@ -2269,7 +2282,7 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
   left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? [...(isCombat() ? foesRows(again) : []), ...(armsAny() ? armsRows(again) : [])] : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
+  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
   const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
     { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },

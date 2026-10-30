@@ -22,6 +22,9 @@ const FOE_GATE = [['robot', 'Robots'], ['imp', 'Diablillo'], ['puglin', 'Puglin'
 const FOE_HATCH = [['spider', 'Arañas'], ['crab', 'Cangrejo'], ['mushroom', 'Seta'], ['skull', 'Calavera']];
 const FOE_FLY = [['drone', 'Drones'], ['hornet', 'Avispones'], ['bee', 'Abeja'], ['bat', 'Murciélago'], ['cthulhu', 'Cthulhu'], ['dragon', 'Dragón (jefe)']];
 const PIRATE_GATE = ['skeleton', 'captain', 'sharky', 'mako']; // los piratas (Pirate Kit)
+// Sus retratos, en este orden, en models/retratos.png (hechos con sus modelos; un enemigo nuevo sale sin retrato hasta rehacer la hoja)
+const FOE_PIC = ['robot', 'imp', 'puglin', 'thrower', 'zombie', 'zgreen', 'zchubby', 'raptor', 'skeleton', 'captain', 'sharky', 'mako', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall',
+  'spider', 'crab', 'mushroom', 'drone', 'hornet', 'bee', 'bat', 'cthulhu', 'dragon'];
 const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall']; // los monstruitos (Cute Animated Monsters)
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];

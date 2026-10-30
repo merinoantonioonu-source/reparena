@@ -75,7 +75,7 @@ function exLabels() { const r = RA.activeWidgets().find(w => w.label === 'Ronda'
   const b = RA.activeWidgets().find(w => /^Ejercicio/.test(w.label)); if (!b) return []; b.onPress(); const l = RA.activeWidgets().map(w => w.label); findW('Volver').onPress(); return l; }
 // En el menú principal, lo de cada parte va a la derecha: se busca abriendo sus partes (y las pestañas de Opciones); «volver»
 // es volver a Ronda
-const LOBBY_PARTS = ['Ronda', 'Dificultad', 'Rivales y armas', 'Armas', 'Sesiones', 'Opciones'], OPT_TABS = ['Sonido', 'Entorno', 'Ajustes'];
+const LOBBY_PARTS = ['Ronda', 'Dificultad', 'Rivales y armas', 'Armas', 'Sesiones', 'Opciones'], OPT_TABS = ['Sonido', 'Entorno', 'Ajustes'], FOE_TABS = ['Compuertas', 'Trampillas', 'Voladores', 'Armas'];
 function findW(label) {
   const look = () => RA.activeWidgets().find(w => w.label === label || wLabel(w) === label);
   let w = look();
@@ -83,13 +83,14 @@ function findW(label) {
   if (!w && RA.activeWidgets().some(x => x.label === 'Ronda')) for (const p of LOBBY_PARTS) {
     const b = RA.activeWidgets().find(x => x.label === p); if (!b) continue; b.onPress(); if ((w = look())) break;
     if (p === 'Opciones') for (const o of OPT_TABS) { const ob = RA.activeWidgets().find(x => x.label === o); if (ob) { ob.onPress(); if ((w = look())) break; } }
+    if (p === 'Rivales y armas') for (const o of FOE_TABS) { const ob = RA.activeWidgets().find(x => x.label === o); if (ob) { ob.onPress(); if ((w = look())) break; } }
     if (w) break;
   }
   for (const re of [/^Ejercicio/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) findW('Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
 // Armas ▸ del menú principal: abrirlo, o leer lo que trae y volver (sin el botón, nada)
-function openArms() { const b = RA.activeWidgets().find(w => /^(Armas|Rivales y armas)/.test(w.label)); if (b) { b.onPress(); frame(1); } return !!b; }
+function openArms() { const b = RA.activeWidgets().find(w => /^(Armas|Rivales y armas)/.test(w.label)); if (b) { b.onPress(); frame(1); const t = b.label !== 'Armas' && RA.activeWidgets().find(w => w.label === 'Armas'); if (t) { t.onPress(); frame(1); } } return !!b; }
 function armsLabels() { if (!openArms()) return []; const l = RA.activeWidgets().map(w => w.label); press('Volver'); frame(1); return l; }
 function log(...a) { console.log(...a); }
 // centro del borde de arriba del menú (de ahí cuelga: los menús que se suceden lo comparten)
@@ -1377,7 +1378,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // Enemigos ▸: cada uno se marca o se quita; sin ninguno de las compuertas, solo voladores
   press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^(Enemigos|Rivales y armas)/.test(w.label)).label); frame(1);
   const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
-  for (const l of gateLabels) { RA.activeWidgets().find(w => w.label === l).onPress(); frame(1); }
+  for (const l of gateLabels) { findW(l).onPress(); frame(1); }
   press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
   press('Ajustes'); frame(1); press('Armas'); frame(1); press('Con la mirada'); frame(1); press('Volver'); frame(1);
   log('combat flyers gaze:', foesNow, flyNow, RA.settings.aim, '· gate left', JSON.stringify(RA.settings.foesGate)); if (foesNow !== 'flyers' || !flyNow.includes('bee') || RA.settings.aim !== 'gaze') errors.push('no se eligen solo voladores (con la abeja) y la mirada');
@@ -1889,6 +1890,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!opened) errors.push('menú de muñeca: también se debería poder pulsar con la mano izquierda');
     if (!(held > 0.02 && held < 0.04)) errors.push(`la tecla debería parar la mano que se ve (apartada ${(held * 100).toFixed(1)} cm con el dedo 4 cm dentro)`);
     if (back > 0.002) errors.push('al retirar el dedo, la mano que se ve debería volver con la de verdad');
+    // el panel también es sólido: por un hueco sin tecla (abajo a la derecha, junto al borde), la mano se queda en la superficie;
+    // por detrás no frena
+    RA.lobbyMenu(); frame(40, 16, xrFrame); await sleep(300); const g = RA.menu.group; g.updateMatrixWorld();
+    const ws = RA.activeWidgets(), sc = (e => Math.hypot(e[8], e[9], e[10]))(g.matrixWorld.elements); let spot = null;
+    for (let y = -RA.menuH / 2 + 0.01; y < RA.menuH / 2 && !spot; y += 0.004) for (let x = -0.44; x < 0.44 && !spot; x += 0.004) {
+      const wp = g.localToWorld(new THREE.Vector3(x, y, 0));
+      if (ws.every(k => { const l = k.mesh.worldToLocal(wp.clone()); return Math.abs(l.x) > k.w / 2 + 0.02 || Math.abs(l.y) > k.h / 2 + 0.02; })) spot = { x, y };
+    }
+    const pAt = d => g.localToWorld(new THREE.Vector3(spot.x, spot.y, d / sc));
+    for (const d of [0.08, 0.04, 0.01, -0.01, -0.025, -0.04]) { XRS.ltip = pAt(d); frame(2, 16, xrFrame); } frame(6, 16, xrFrame);
+    const pHeld = gap(); XRS.ltip = pAt(0.1); frame(20, 16, xrFrame); const pBack = gap();
+    XRS.ltip = pAt(-0.2); frame(4, 16, xrFrame); XRS.ltip = pAt(-0.04); frame(6, 16, xrFrame); const pRear = gap(); XRS.ltip = null; frame(2, 16, xrFrame);
+    log(`menu panel (gap at ${spot && spot.x.toFixed(2)}, ${spot && spot.y.toFixed(2)}): finger 4 cm in, the hand seen stays ${(pHeld * 100).toFixed(1)} cm out · pulled back ${(pBack * 100).toFixed(1)} cm · from behind ${(pRear * 100).toFixed(1)} cm`);
+    if (!(pHeld > 0.03 && pHeld < 0.05)) errors.push(`el panel del menú debería parar la mano que se ve (apartada ${(pHeld * 100).toFixed(1)} cm con el dedo 4 cm dentro)`);
+    if (pBack > 0.002 || pRear > 0.002) errors.push('panel del menú: al retirar el dedo (o entrando por detrás) la mano que se ve debería ir con la de verdad');
     RA.exitAll(); frame(2, 16, xrFrame); }
 
   // ---- La carátula del duelo al empezar la ronda: 2 s a 2,5 m con todo en negro, la ronda espera y luego sale la
