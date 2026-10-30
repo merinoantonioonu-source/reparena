@@ -63,6 +63,11 @@ No las cambies sin preguntarle.
 - Con las manos desnudas no se dispara pellizcando. Se lanza con una **sacudida de la mano hacia el enemigo**: puede
   salir de la cadera y hacerse subiendo o bajando en la sentadilla. Sin sacudida, la carga se queda en la mano. El rayo
   va al enemigo más cercano a la dirección de la sacudida, sin exigir puntería exacta.
+- El curl con kettlebell del usuario es con la pesa agarrada por el asa con las dos manos (los puños juntos, la bola
+  colgando debajo): es el «Curl con barra o kettlebell». Las gafas confunden las manos pegadas: el curl y el press con
+  barra siguen las dos manos como una sola pesa, y todo lo que se hace con las dos manos juntas en una pesa (elevación
+  frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`).
+- La flexión en pica, solo en Combate (no en Arcos).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
@@ -80,6 +85,9 @@ No las cambies sin preguntarle.
 - Sube **poco a poco de una oleada a otra**, no dentro de cada oleada: que se note un poco, pero que sea real.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
+- Para animar a volver (`src/73_career.js`): experiencia y nivel con título y colores desbloqueables (solo se ven),
+  misiones del día con su cofre, campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
+  estrellas) y, en el resumen, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
 - Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**.
 - Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
   mientras se ve, no sale nada (ni enemigos ni orbes).
@@ -133,7 +141,8 @@ No las cambies sin preguntarle.
     (modo · ejercicio · rango); a la izquierda, sus partes con su color: Ronda (el ejercicio), Dificultad (rango, «Al
     fallo», lo del ojo), Rivales y armas (en Combate), Sesiones (si hay) y Opciones (Sonido, Entorno y Ajustes, en
     pestañas), el reproductor de Spotify (pequeño, en un cuadrado, con rótulo móvil) y Salir; a la derecha, lo de la parte
-    elegida, con su color; EMPEZAR, pequeño, arriba a la izquierda del título; en Ajustes, las pestañas de los modos se
+    elegida, con su color; EMPEZAR, pequeño, arriba a la izquierda del título; Progreso (nivel, misiones, campaña y
+    semana) entre Sesiones y Opciones; en Ajustes, las pestañas de los modos se
     llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;

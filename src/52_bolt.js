@@ -7,7 +7,7 @@
 // sombras saltan. Color, grosor, ramas y luz crecen con la intensidad del disparo.
 const BOLT_COL = [0x4aa8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
 const boltLevel = (perfect, pow = 1) => Math.max(perfect ? 1 : 0, pow > 1 ? pow : 0);
-const boltRGB = L => { const c = new THREE.Color(BOLT_COL[L]); return [c.r, c.g, c.b]; };
+const boltRGB = L => { const c = new THREE.Color(L ? BOLT_COL[L] : lookHex('bolt')); return [c.r, c.g, c.b]; }; // (el normal, del color que hayas puesto: 73_career)
 const boltTex = texFrom((() => { const c = mkCanvas(64, 8), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.3, 'rgba(255,255,255,0.35)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 8); return c; })());
 const boltMatL = new THREE.MeshBasicMaterial({ map: boltTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
 const boltLight = new THREE.PointLight(0x9fd8ff, 0, 5, 2); scene.add(boltLight);

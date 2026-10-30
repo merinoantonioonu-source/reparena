@@ -164,6 +164,17 @@ button{font:inherit;cursor:pointer}
 .bar small{font-size:.7rem;color:var(--muted);min-height:1em}
 .goalLine{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,209,102,.6);pointer-events:none}
 .todayMsg{margin:12px 0 0;font-weight:500;color:var(--gold)}
+.career{margin-top:16px;padding:12px 14px;border-radius:14px;border:1px solid rgba(200,245,96,.25);background:linear-gradient(135deg,rgba(200,245,96,.12),rgba(200,245,96,.02))}
+.career .lvl{display:flex;gap:12px;align-items:center}
+.career .lvl b{flex:none;width:44px;height:44px;display:grid;place-items:center;clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);background:linear-gradient(180deg,#fff0a8,#ffc94a 55%,#b97a12);color:#2a1600;font-family:var(--display);font-weight:400;font-size:1.35rem}
+.career .lvl span{flex:1;min-width:0;font-weight:700}
+.career .lvl i{display:block;height:8px;margin:6px 0 2px;border-radius:99px;background:linear-gradient(90deg,#c8f560 var(--k),rgba(255,255,255,.1) var(--k))}
+.career .lvl small{font-weight:500;color:var(--muted);font-size:.75rem}
+.career .mis{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.career .mis li{display:flex;justify-content:space-between;gap:10px;font-size:.88rem}
+.career .mis li em{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
+.career .mis li.done span{color:var(--teal)}.career .mis li.done em{color:var(--teal);font-weight:700}
+.career .chest{margin:8px 0 0;font-size:.8rem;color:var(--muted)}
 @keyframes tileIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (max-width:560px){.todayGrid{grid-template-columns:1fr;justify-items:center}.tiles{width:100%}}
 @media (prefers-reduced-motion:reduce){.tile{animation:none}.ring .fill,.bar i{transition:none}}
@@ -363,6 +374,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-pushup" value="pushup">
         <span class="tag">Altura del visor</span><b>Flexiones</b>
         <small>La batalla ocurre en el suelo, delante de tu cara. Disparas al empujar (si apuntas tú, con la mirada).</small></label>
+      <label class="card"><input type="radio" name="exercise" id="ex-pike" value="pike">
+        <span class="tag">Altura del visor · solo Combate</span><b>Flexiones en pica</b>
+        <small>Manos y pies en el suelo con la cadera bien alta (una V invertida): baja la cabeza entre las manos hasta casi el suelo y empuja. Hombros y tríceps; los bichos salen de las trampillas, como en las flexiones.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-inchworm" value="inchworm">
         <span class="tag">Manos libres · visor y manos · 2 m de sitio</span><b>Flexiones inchworm</b>
         <small>Dóblate y camina con las manos hasta que tu cabeza llegue a la línea luminosa del suelo (carga). Vuelve andando y ponte de pie: disparas y una onda lanza a los bichos a su trampilla.</small></label>
@@ -376,8 +390,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <span class="tag">Muñecas</span><b>Press de hombro</b>
         <small>Con las mancuernas en los hombros, súbelas hasta estirar los brazos. Cada brazo dispara al llegar arriba.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-curl2" value="curl2">
-        <span class="tag">Barra o kettlebell · muñecas</span><b>Curl con barra</b>
-        <small>Con una barra, una kettlebell o dos mancuernas a la vez: sube las dos manos juntas hasta los hombros. Cada subida es un disparo.</small></label>
+        <span class="tag">Barra o kettlebell · muñecas</span><b>Curl con barra o kettlebell</b>
+        <small>Con una barra, una kettlebell agarrada por el asa con las dos manos (los puños juntos, la bola colgando) o dos mancuernas a la vez: sube las dos manos juntas hasta los hombros. Cada subida es un disparo. Las gafas siguen las dos manos como una sola pesa: basta con que vean una.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-twist" value="twist">
         <span class="tag">Barra flexible · muñecas</span><b>Antebrazos (barra flexible)</b>
         <small>Agarra la barra flexible por los extremos y gira las muñecas en sentidos contrarios, como al escurrir una toalla, y luego al revés: un giro carga y el siguiente dispara.</small></label>
@@ -535,7 +549,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>Dentro del juego</h2>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
-      <li><strong>El menú principal:</strong> arriba eliges el modo (Combate, Arcos, Barras, Toques), cada uno con su color. A la izquierda, sus partes: Ronda (el ejercicio), Dificultad (el rango y «Al fallo»), Rivales y armas (en Combate: una ficha por enemigo, con su retrato, su resistencia y su fuerza), Sesiones y Opciones (Sonido, Entorno y Ajustes), y el reproductor de Spotify; a la derecha, lo de la parte elegida. EMPEZAR, arriba a la izquierda.</li>
+      <li><strong>El menú principal:</strong> arriba eliges el modo (Combate, Arcos, Barras, Toques), cada uno con su color. A la izquierda, sus partes: Ronda (el ejercicio), Dificultad (el rango y «Al fallo»), Rivales y armas (en Combate: una ficha por enemigo, con su retrato, su resistencia y su fuerza), Sesiones, <b>Progreso</b> (tu nivel y tus colores, las misiones del día, la campaña y tu semana) y Opciones (Sonido, Entorno y Ajustes), y el reproductor de Spotify; a la derecha, lo de la parte elegida. EMPEZAR, arriba a la izquierda.</li>
       <li>El menú sale de tu <b>muñeca izquierda</b>: mírala (como para mirar un reloj) y pulsa el botón <b>MENÚ</b> con el índice derecho. El panel crece desde la muñeca y se queda <b>quieto delante de ti</b>, derecho y de cara, a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo): pulsa con calma con la punta del índice de cualquiera de las dos manos. Las teclas y el panel son sólidos: al hundir una tecla hasta el fondo, o al tocar el panel entre las teclas, tu mano se queda apoyada aunque sigas empujando, sin atravesarlo. Para cerrarlo, pon la palma izquierda hacia abajo o cierra el puño; un punto rosa en la muñeca te recuerda que hay un menú esperando, y MENÚ lo vuelve a abrir (si te giras y lo pierdes de vista, el mismo botón, «Traer menú», lo pone delante otra vez). Con mandos, X o Y lo abren y lo cierran. Los menús nuevos (el principal al entrar, el resumen de cada ronda) salen solos delante de ti. Si prefieres el atril fijo sobre un pie, cámbialo en Ajustes → Menú → Menú en.</li>
       <li><strong>Antes de cada ronda, la carátula del duelo:</strong> todo se queda en negro 7 segundos y delante de ti sale grande tu silueta contra el jefe de la ronda, con un VS, el ejercicio, tu rango, tu récord y los datos de la ronda. Para pasar antes al ejercicio, pulsa cualquier botón del mando o, con las manos, haz el gesto del pulgar arriba.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
@@ -556,6 +570,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
       <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, en cada descanso eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma): la oleada siguiente espera a que elijas. En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre en el suelo, a tu derecha, que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
+      <li><strong>Tu nivel:</strong> cada repetición te da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título (de Novato a Leyenda) y desbloqueas colores para tus manos y para el rayo normal. Solo se ven: no dan más cargas ni más daño. Se eligen en Progreso → Nivel.</li>
+      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más y un color antes de tiempo. Las ves en «Hoy» y en Progreso → Misiones.</li>
+      <li><strong>Campaña:</strong> para cada modo y ejercicio, 35 niveles en 7 regiones, una por rango (de recluta a general), cada una en su entorno; el quinto nivel de cada región, con jefe. Ganar abre el siguiente y da de 1 a 3 estrellas (la mitad de perfectas, dos; tres cuartos y sin golpes, tres). Se juega desde Progreso → Campaña; los ajustes del nivel no tocan los tuyos.</li>
+      <li><strong>Tu semana:</strong> en el resumen de cada ronda ves la experiencia ganada, los minutos de los últimos 7 días frente a tu meta y tu mejor ronda con ese ejercicio en ese modo, para saber si te has superado.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
     </ul>
   </section>
@@ -688,8 +706,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Flexiones en pica', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra o kettlebell', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Pica', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
@@ -715,13 +733,13 @@ const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'pike', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
-  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips']],
+  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips', 'pike']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
@@ -730,7 +748,7 @@ const BODY_ZONES = [
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
 const BAR_EX = MODE_EX.bars; // ejercicios del modo Barras: el resto no se usa en él
 // Al cambiar de modo, el ejercicio que se queda: el mismo si vale; si estabas en el suelo, flexiones
-function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
+function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'pike', 'inchworm', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
@@ -764,6 +782,7 @@ const SCHEMA = [
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'pikeDepth', g: 'ejercicio', label: 'Bajada en la flexión en pica', short: 'Bajada pica', type: 'num', min: 8, max: 45, step: 1, def: 22, unit: 'cm', ex: ['pike'], hint: 'Cuánto debe bajar la cabeza desde arriba (los brazos estirados, la cadera alta) hasta casi tocar el suelo entre las manos.' },
   { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
   { key: 'dipDepth', g: 'ejercicio', label: 'Bajada en el fondo', short: 'Bajada fondo', type: 'num', min: 6, max: 40, step: 1, def: 15, unit: 'cm', ex: ['dips'], hint: 'Cuánto debe bajar la cabeza al doblar los codos, con las manos en el borde de la silla.' },
@@ -929,6 +948,8 @@ const FIELD = {}; SCHEMA.forEach(f => FIELD[f.key] = f);
 const settings = { mode: 'combat', exercise: 'squat' };
 SCHEMA.forEach(f => settings[f.key] = f.def);
 const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
+// La campaña (73_career): mientras se juega un nivel, sus ajustes van por encima de los tuyos; orig guarda los tuyos
+const CAMP = { orig: null, run: null, env: null };
 
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
@@ -971,8 +992,8 @@ function fmtVal(f, v = settings[f.key]) {
   if (s.rampV !== 3) { if (settings.ramp === 6) settings.ramp = 4; } settings.rampV = 3;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
-// Durante una sesión se guardan los valores de antes, no los del bloque en curso
-function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
+// Durante una sesión (o un nivel de la campaña) se guardan los valores de antes, no los del bloque en curso
+function saveSettings() { const O = SES.active ? SES.orig : CAMP.orig; store(STORE_KEY, O ? Object.assign({}, settings, O) : settings); if (!O) comboSave(); }
 // Cada modo con cada ejercicio guarda sus ajustes de juego (su rango, la partida, tu cuerpo, los enemigos, las armas, los
 // arcos, los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil y
 // las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
@@ -994,7 +1015,7 @@ let comboLoading = false; // (al cargar los de un modo y ejercicio, su rango vie
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
-  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active ? comboId() : null;
+  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active && !CAMP.orig ? comboId() : null;
   if (prev) comboSave(prev); // lo que dejas, guardado
   settings[key] = f ? clampSetting(f, v) : v;
   // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
@@ -1068,13 +1089,13 @@ const twoShots = () => isCombat() && handsFree() && ((pistolOn() && !swordSet())
 // (si las gafas pierden las manos un momento, sigue valiendo lo último que se vio)
 const BARE = { v: false };
 const bareHands = () => { if (hands.left.ok || hands.right.ok) BARE.v = (hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand); return BARE.v; };
-const isFloor = () => ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
+const isFloor = () => ['pushup', 'pike', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
 // Sentado en el borde de una silla (fondos): la cabeza, a media altura
 const isSeated = () => settings.exercise === 'dips';
 // Tumbado boca arriba (abdominales)
 const isSupine = () => settings.exercise === 'abs' || (settings.exercise === 'combo' && settings.comboBase === 'abs');
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
-const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'inchworm' || oneArm());
+const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'pike' || settings.exercise === 'inchworm' || oneArm());
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -1196,7 +1217,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, fraise: 2.4, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, pike: 2.6, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, fraise: 2.4, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -1233,7 +1254,7 @@ function updateSummary() {
 }
 /* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
 // Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
-const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, fraise: 3.5, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, pike: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, fraise: 3.5, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
 const REST_MET = 2;
 // kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
 function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
@@ -1292,6 +1313,7 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
         ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
       </div>
     </div>
+    ${typeof careerHTML === 'function' ? careerHTML() : ''}
     ${exs ? `<div class="chips">${exs}</div>` : ''}
     <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
     <p class="todayMsg">${msg}</p>`;
@@ -2780,7 +2802,7 @@ NAT.group.visible = false; arena.add(NAT.group);
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
   Leaves: ['leaves.png', true], Flowers: ['flowers.png', true], Grass: ['grass.png', false, true], Mushrooms: ['mushrooms.jpg'], Rocks: ['rocks.jpg'] };
 // El entorno que toca: el elegido o, con «Alternar», uno distinto en cada partida
-const sceneryPick = () => settings.scenery === 'mix' ? NAT.pick : settings.scenery;
+const sceneryPick = () => CAMP.env || (settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (en la campaña, el de la región)
 function natureOn() { return !arMode && !forestOn() && sceneryPick() === 'nature' && NAT.ready; }
 // Atributos comprimidos (enteros normalizados) → números con decimales, para poder colocar cada pieza en su sitio
 function natFloat(a) {
@@ -4906,7 +4928,7 @@ function updateGloves(dt) {
     g.pulse = Math.max(0, g.pulse - dt * 3);
     // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
     if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
-    else g.tipMat.color.setRGB(0.24 + g.pulse * 0.76, 0.94 + g.pulse * 0.06, 0.78 + g.pulse * 0.2);
+    else { g.tipMat.color.setHex(lookHex('hands')); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); } // (el color que hayas puesto: 73_career)
     // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
     // viendo donde estaba en vez de parpadear
     const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off);
@@ -5376,7 +5398,7 @@ function clearFX() {
 // sombras saltan. Color, grosor, ramas y luz crecen con la intensidad del disparo.
 const BOLT_COL = [0x4aa8ff, 0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0]; // normal, perfecto, carga ×2, ×3, ×4
 const boltLevel = (perfect, pow = 1) => Math.max(perfect ? 1 : 0, pow > 1 ? pow : 0);
-const boltRGB = L => { const c = new THREE.Color(BOLT_COL[L]); return [c.r, c.g, c.b]; };
+const boltRGB = L => { const c = new THREE.Color(L ? BOLT_COL[L] : lookHex('bolt')); return [c.r, c.g, c.b]; }; // (el normal, del color que hayas puesto: 73_career)
 const boltTex = texFrom((() => { const c = mkCanvas(64, 8), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.3, 'rgba(255,255,255,0.35)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 8); return c; })());
 const boltMatL = new THREE.MeshBasicMaterial({ map: boltTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
 const boltLight = new THREE.PointLight(0x9fd8ff, 0, 5, 2); scene.add(boltLight);
@@ -6637,7 +6659,7 @@ function drawCenter() {
     centerBar(c, W, H, SES.rest ? 1 - SES.wait / SES.rest : 1);
   } else if (state === 'calib') {
     c.fillStyle = '#3cf0c6'; c.font = `50px ${FD}`; c.textAlign = 'left'; c.fillText('CALIBRACIÓN', 44, 68);
-    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
+    const L = { inchworm: ['De pie, mirando al frente, con sitio', 'delante para la plancha. Quieto 2 s.'], twist: ['Sujeta la barra flexible delante del', 'pecho, con las dos manos a la vista. 2 s.'], squat: ['De pie, mirando al frente, pies a la', 'anchura de los hombros. Quieto 2 s.'], pushup: ['Ponte en plancha: brazos estirados,', 'cuerpo recto. Quieto 2 s.'], pike: ['En pica: manos y pies en el suelo,', 'cadera alta, brazos estirados. 2 s.'], plank1: ['Ponte en plancha sobre las dos manos,', 'cuerpo recto. Quieto 2 s.'], superman: ['Túmbate boca abajo con los brazos', 'estirados hacia delante. Quieto 2 s.'], curl: ['De pie, con las mancuernas y los', 'brazos estirados abajo. Quieto 2 s.'], jump: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], lunge: ['De pie, pies juntos, con espacio', 'delante para dar el paso. Quieto 2 s.'], dips: ['En el borde de la silla, manos en el', 'asiento, brazos estirados. Quieto 2 s.'], press: ['De pie, mancuernas a la altura', 'de los hombros. Quieto 2 s.'], curl2: ['De pie, la barra (o la kettlebell) con las', 'dos manos y los brazos abajo. Quieto 2 s.'], press2: ['De pie, la barra (o la kettlebell) a la', 'altura de los hombros. Quieto 2 s.'], thruster: ['De pie, las pesas en los hombros', 'con las dos manos. Quieto 2 s.'], frontsq: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], jsquat: ['De pie, mirando al frente, con', 'espacio para saltar. Quieto 2 s.'], swing: ['De pie, la kettlebell con las dos', 'manos y los brazos abajo. Quieto 2 s.'], chop: ['De pie, la kettlebell o el disco con', 'las dos manos ante el pecho. Quieto 2 s.'], dlrow: ['De pie, las pesas en las manos', 'con los brazos abajo. Quieto 2 s.'], splank: ['De lado sobre el antebrazo,', 'cuerpo recto, cadera arriba. Quieto 2 s.'], abs: ['Túmbate boca arriba, rodillas', 'dobladas, pies al frente. Quieto 2 s.'] }[settings.exercise === 'combo' ? { stand: 'squat', floor: 'pushup', abs: 'abs' }[settings.comboBase] : settings.exercise === 'slam' ? 'squat' : settings.exercise] || ['Colócate en la postura inicial', 'y quédate quieto 2 s.'];
     c.fillStyle = '#eeeaff'; c.font = `500 40px ${FB}`; L.forEach((l, i) => c.fillText(l, 44, 148 + i * 52));
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
@@ -6852,6 +6874,9 @@ const ST_ARMS = (f, b = f) => ({ armF: { ang: f }, armB: { ang: b } });
 const P_ = (base, over) => Object.assign({}, base, over);
 const PLANK_UP = { hip: [-0.36, 0.43], torso: 72, head: 14, legF: { to: [-1.2, 0.03], b: 1 }, legB: { to: [-1.22, 0.03], b: 1 }, armF: { to: [0.1, 0.02], b: -1 }, armB: { to: [0.07, 0.02], b: -1 } };
 const PLANK_DN = P_(PLANK_UP, { hip: [-0.36, 0.24], torso: 84 });
+// en pica: la cadera alta (una V invertida), las manos delante y la cabeza baja entre ellas hasta casi el suelo
+const PIKE_UP = { hip: [-0.3, 0.74], torso: 125, head: 30, legF: { to: [-0.82, 0.03], b: 1 }, legB: { to: [-0.85, 0.03], b: 1 }, armF: { to: [0.25, 0.02], b: -1 }, armB: { to: [0.22, 0.02], b: -1 } };
+const PIKE_DN = P_(PIKE_UP, { hip: [-0.25, 0.7], torso: 150, head: 20 });
 const HINGE = { hip: [-0.16, 0.84], torso: 68, legF: { to: [0.02, 0.04], b: 1 }, legB: { to: [-0.04, 0.04], b: 1 }, armF: { ang: [2, 2] }, armB: { ang: [-2, -2] } };
 // Cada ejercicio: claves [fase 0..1, postura], instante de la repetición (fire), postura «de esfuerzo» (low:
 // donde llega la cabeza en Toques y Barras), origen del rayo, objetos y descripción
@@ -6860,9 +6885,10 @@ const DEMO = {
   lunge: { P: 2.8, keys: [[0, STAND], [0.4, { hip: [-0.02, 0.5], torso: 4, legF: { to: [0.42, 0.04], b: 1 }, legB: { to: [-0.44, 0.06], b: 1 }, armF: { ang: [6, 6] }, armB: { ang: [-6, -6] } }], [0.55, { hip: [-0.02, 0.5], torso: 4, legF: { to: [0.42, 0.04], b: 1 }, legB: { to: [-0.44, 0.06], b: 1 }, armF: { ang: [6, 6] }, armB: { ang: [-6, -6] } }], [0.9, STAND], [1, STAND]], fire: 0.84, low: 0.48, desc: 'Da un paso al frente y baja hasta que la rodilla de atrás casi toque el suelo; vuelve y alterna la pierna.' },
   jsquat: { P: 2.8, high: 2.45, keys: [[0, STAND], [0.35, SQUAT], [0.5, SQUAT], [0.62, P_(STAND, { hip: [0, 1.14], legF: { to: [0.02, 0.24], b: 1 }, legB: { to: [-0.05, 0.22], b: 1 }, ...ST_ARMS([165, 170], [160, 168]) })], [0.75, STAND], [1, STAND]], fire: 0.62, low: 0.62, desc: 'Baja en sentadilla y sube con un salto explosivo, brazos arriba. Aterriza suave con las rodillas flexionadas.' },
   pushup: { P: 2.6, keys: [[0, PLANK_UP], [0.4, PLANK_DN], [0.55, PLANK_DN], [0.9, PLANK_UP], [1, PLANK_UP]], fire: 0.84, low: 0.47, tiny: true, desc: 'Cuerpo recto de la cabeza a los talones: baja el pecho hasta casi el suelo y empuja. Disparas al subir.' },
+  pike: { P: 2.6, keys: [[0, PIKE_UP], [0.4, PIKE_DN], [0.55, PIKE_DN], [0.9, PIKE_UP], [1, PIKE_UP]], fire: 0.84, low: 0.47, tiny: true, desc: 'Manos y pies en el suelo, la cadera bien alta (una V invertida): dobla los codos hasta casi tocar el suelo con la cabeza entre las manos y empuja. Hombros y tríceps.' },
   dips: { P: 2.6, chair: true, keys: [[0, { hip: [0.1, 0.5], torso: -14, legF: { to: [0.82, 0.04], b: 1 }, legB: { to: [0.78, 0.04], b: 1 }, armF: { to: [-0.12, 0.47], b: -1 }, armB: { to: [-0.14, 0.47], b: -1 } }], [0.4, { hip: [0.08, 0.22], torso: -18, legF: { to: [0.82, 0.04], b: 1 }, legB: { to: [0.78, 0.04], b: 1 }, armF: { to: [-0.12, 0.47], b: -1 }, armB: { to: [-0.14, 0.47], b: -1 } }], [0.55, { hip: [0.08, 0.22], torso: -18, legF: { to: [0.82, 0.04], b: 1 }, legB: { to: [0.78, 0.04], b: 1 }, armF: { to: [-0.12, 0.47], b: -1 }, armB: { to: [-0.14, 0.47], b: -1 } }], [0.9, { hip: [0.1, 0.5], torso: -14, legF: { to: [0.82, 0.04], b: 1 }, legB: { to: [0.78, 0.04], b: 1 }, armF: { to: [-0.12, 0.47], b: -1 }, armB: { to: [-0.14, 0.47], b: -1 } }], [1, { hip: [0.1, 0.5], torso: -14, legF: { to: [0.82, 0.04], b: 1 }, legB: { to: [0.78, 0.04], b: 1 }, armF: { to: [-0.12, 0.47], b: -1 }, armB: { to: [-0.14, 0.47], b: -1 } }]], fire: 0.84, low: 0.47, desc: 'Manos en el borde de una silla estable, culo fuera: baja doblando los codos hasta unos 90° y estíralos.' },
   curl: { P: 3.0, dumb: true, keys: [[0, STAND], [0.22, P_(STAND, { armF: { ang: [4, 150] } })], [0.45, STAND], [0.67, P_(STAND, { armB: { ang: [-4, 148] } })], [0.9, STAND], [1, STAND]], fire: [0.2, 0.65], src: ['armF', 'armB'], desc: 'Codos pegados al cuerpo: sube la mancuerna hasta el hombro y bájala despacio. Cada brazo dispara al llegar arriba.' },
-  curl2: { P: 2.4, bar: true, keys: [[0, STAND], [0.4, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.55, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.9, STAND], [1, STAND]], fire: 0.42, desc: 'Barra con las dos manos y los codos quietos: súbela hasta los hombros y bájala controlando.' },
+  curl2: { P: 2.4, bar: true, keys: [[0, STAND], [0.4, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.55, P_(STAND, { ...ST_ARMS([6, 150], [2, 146]) })], [0.9, STAND], [1, STAND]], fire: 0.42, desc: 'Barra, o la kettlebell por el asa, con las dos manos y los codos quietos: súbela hasta los hombros y bájala controlando.' },
   press: { P: 2.6, high: 2.35, dumb: true, keys: [[0, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [0.4, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.55, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.9, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [1, P_(STAND, ST_ARMS([28, 172], [24, 170]))]], fire: 0.4, src: 'armF', desc: 'Mancuernas a la altura de los hombros: súbelas hasta estirar los brazos por encima de la cabeza.' },
   press2: { P: 2.6, high: 2.35, bar: true, keys: [[0, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [0.4, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.55, P_(STAND, ST_ARMS([172, 176], [168, 174]))], [0.9, P_(STAND, ST_ARMS([28, 172], [24, 170]))], [1, P_(STAND, ST_ARMS([28, 172], [24, 170]))]], fire: 0.4, src: 'armF', desc: 'Barra apoyada delante de los hombros: empújala hacia arriba hasta bloquear los codos.' },
   fraise: { P: 2.6, kb: true, keys: [[0, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))], [0.42, P_(STAND, ST_ARMS([90, 90], [88, 88]))], [0.55, P_(STAND, ST_ARMS([90, 90], [88, 88]))], [0.92, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))], [1, P_(STAND, ST_ARMS([-6, -6], [-8, -8]))]], fire: 0.44, src: 'armF', desc: 'Una pesa con las dos manos: súbela al frente, brazos estirados, hasta los hombros. Arriba disparas.' },
@@ -6932,7 +6958,7 @@ function demoPose(D, u) {
 }
 
 // Lo que hace una PERFECTA y el extra propio del ejercicio (o del modo), en una línea cada uno
-const DEMO_RANGE = { squat: 'baja hasta casi sentarte', lunge: 'la rodilla de atrás casi al suelo', jsquat: 'sentadilla a fondo y salto', pushup: 'el pecho casi al suelo', inchworm: 'la cabeza hasta la línea y vuelta a la salida', dips: 'baja hasta los codos en ángulo recto',
+const DEMO_RANGE = { squat: 'baja hasta casi sentarte', lunge: 'la rodilla de atrás casi al suelo', jsquat: 'sentadilla a fondo y salto', pushup: 'el pecho casi al suelo', pike: 'la cabeza casi al suelo, entre las manos', inchworm: 'la cabeza hasta la línea y vuelta a la salida', dips: 'baja hasta los codos en ángulo recto',
   curl: 'sube hasta el hombro y baja del todo', curl2: 'sube hasta el hombro y baja del todo', press: 'brazos estirados del todo arriba', press2: 'brazos estirados del todo arriba', fraise: 'hasta la altura de los hombros', thruster: 'sentadilla a fondo y brazos estirados',
   frontsq: 'sentadilla a fondo', swing: 'cadera bien atrás', chop: 'de arriba abajo, cruzando el cuerpo', dlrow: 'cadera atrás y espalda recta', plank1: 'cuerpo recto, sin girar la cadera', splank: 'cadera bien arriba', superman: 'brazos y piernas a la vez arriba',
   row: 'el pecho hasta la barra', pullup: 'la barbilla por encima de la barra', abs: 'sube los hombros del suelo', slam: 'a fondo y con fuerza', jump: 'salto con todo el cuerpo', combo: 'cada movimiento completo' };
@@ -6941,7 +6967,7 @@ function demoTips(ex, mode) {
   const perfect = ex === 'hang' ? 'Perfecta: quieto y colgado, sin balancearte.' : `Perfecta: ${DEMO_RANGE[ex] || 'recorrido completo'}${mode === 'touch' ? '' : pt}.`;
   let extra = '';
   if (mode === 'combat') extra = ex === 'inchworm' ? 'Extra: al volver, una onda aleja a los bichos.' : ex === 'superman' ? 'Extra: aguanta arriba y la bola de energía crece.'
-    : (typeof DEEP_EX !== 'undefined' && DEEP_EX.includes(ex)) || ex === 'pushup' ? 'Extra: aguanta abajo y el disparo carga ×2, ×3, ×4.' : typeof settings !== 'undefined' && settings.perks ? 'Extra: entre oleadas eliges una mejora.' : '';
+    : (typeof DEEP_EX !== 'undefined' && DEEP_EX.includes(ex)) || ex === 'pushup' || ex === 'pike' ? 'Extra: aguanta abajo y el disparo carga ×2, ×3, ×4.' : typeof settings !== 'undefined' && settings.perks ? 'Extra: entre oleadas eliges una mejora.' : '';
   else if (mode === 'arcs') extra = 'Extra: 10 seguidos sin fallo, fiebre (puntos ×2).';
   else if (mode === 'bars') extra = ex === 'hang' ? 'Extra: aguanta para cerrar el remolino.' : 'Extra: revienta pompas para más puntos.';
   else if (mode === 'touch') extra = 'Extra: vuelve a la postura entre toque y toque.';
@@ -8296,7 +8322,7 @@ function finishSession() {
   const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques${rounds > 1 ? ` × ${rounds} vueltas` : ''}`,
     sub: all ? (rounds > 1 ? `Las ${rounds} vueltas hechas` : 'Todos los bloques hechos') : `${R.length} de ${total} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
     tiles: [[`${won}/${total}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
-    chips: [], today: progressLine(), lines };
+    chips: [], today: progressLine(), lines, career: careerTake() };
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', S);
 }
 // Devuelve los ajustes como estaban antes de la sesión
@@ -10295,7 +10321,7 @@ const DET = {
   lu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, leg: 0 },
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false } },
-  pair: { side: null, t: 0, perfect: false, fast: false },
+  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, uneven: false, vy: 0, prev: 0 }, barp: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, uneven: false, vy: 0, prev: 0 },
   tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
@@ -10394,33 +10420,66 @@ function armStep(kind, side, t, dt) {
   } else if (r < d.bottom + 0.08) d.state = 'down';
   return null;
 }
-// Los dos brazos a la vez (barra o kettlebell): cada uno con su paso, y la repetición cuenta cuando los dos llegan
-// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra. Con la barra las dos suben juntas aunque el
-// seguimiento no lo vea igual en las dos (una algo más baja, o que llega un instante después): cuando una completa, vale
-// si la otra ya está arriba aguantando o ha subido al menos el 60 % del recorrido; si no, se le espera PAIR_WIN segundos
-const PAIR_WIN = 1.0;
-function pairNear(kind, side) {
-  const d = (kind === 'press' ? DET.pr : DET.curl)[side], range = (kind === 'press' ? settings.pressRange : settings.curlRange) / 100;
-  return hands[side].ok && (d.state === 'hold' || (d.state === 'rising' && d.max - d.bottom >= range * 0.6));
+// Pesas que se agarran con las dos manos juntas (barra o kettlebell: curl y press con barra, elevación frontal, leñador,
+// swing, sentadilla con press y con elevación): las gafas confunden a menudo las dos manos pegadas (pierden una, o la
+// ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
+// salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
+// así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
+const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
+const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
+function handFilter(dt) {
+  const ex = settings.exercise, vmax = HF_V[ex] || 4, up = HF_UP[ex] || 0.05;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], F = HF[s];
+    if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
+    const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
+    F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
+  }
 }
-function pairStep(kind, t, dt) {
-  const P = DET.pair, D = kind === 'press' ? DET.pr : DET.curl;
-  for (const side of ['left', 'right']) {
-    const ev = armStep(kind, side, t, dt); if (!ev) continue;
-    if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
-    const o = side === 'left' ? 'right' : 'left', od = D[o];
-    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
-    else if (!P.side && pairNear(kind, o)) { // la otra ya va arriba: cuenta ya (y la otra no contará otra vez al bajar)
-      const hold = od.state === 'hold', pow = Math.max(ev.pow || 1, hold ? od.pow || 1 : 1);
-      od.state = 'top'; onCharge(); onRep({ perfect: ev.perfect && hold && !!(od.ev && od.ev.perfect), fast: ev.fast, pow });
-    }
-    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
+// Curl y press con barra o con la kettlebell (en el curl, agarrada por el asa con los puños juntos y la bola colgando; en
+// el press, por el asa o por los cuernos): las dos manos se siguen como una sola pesa, con la altura de las muñecas
+// respecto a los ojos:
+//  · con una a la vista basta; con las dos, si coinciden, la media; si no, la más baja (una sola que sube no cuenta:
+//    avisa), salvo que la más baja ya vaya por el 60 % del recorrido (con la pesa suben juntas aunque se vea una algo más baja)
+//  · curl: arriba, aguantando, carga el disparo, que sale al empezar a bajar; press: dispara al llegar arriba
+//  · si se pierden las dos subiendo (ya por casi la mitad en el curl; en el press, a un 30 % o deprisa junto a la cara, que
+//    por encima de la cabeza las cámaras no las ven) o arriba aguantando, cuenta; y si reaparecen ya arriba, también
+function barStep(kind, t, dt) {
+  const press = kind === 'press', B = press ? DET.barp : DET.bar, range = (press ? settings.pressRange : settings.curlRange) / 100, pt = settings.perfectTime;
+  const L = ['left', 'right'].filter(s => HF[s].ok).map(s => hands[s].wrist.y - head.p.y);
+  if (!L.length) {
+    B.lost += dt;
+    if (press) {
+      if (B.state === 'down' && B.lost > 0.2 && B.vy > 0.3 && B.prev > B.bottom + 0.04) { Object.assign(B, { state: 'rising', max: B.prev, t0: t }); onCharge(); }
+      if (B.state === 'rising' && B.lost > 0.12 && (B.max - B.bottom >= range * 0.3 || (B.vy > 0.25 && B.max > -0.15))) { B.state = 'top'; onRep({ perfect: false, fast: false }); }
+    } else if (B.state === 'hold' && B.lost > 0.25) { B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); }
+    else if (B.state === 'rising' && B.lost > 0.25 && B.max - B.bottom >= range * 0.4) { B.state = 'top'; onCharge(); onRep({ perfect: false, fast: false }); }
+    return;
   }
-  if (P.side) {
-    const other = P.side === 'left' ? 'right' : 'left', lost = hands[other].ok ? 0 : (kind === 'press' ? DET.pr : DET.curl)[other].lost;
-    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast, pow: P.pow }); P.side = null; } // la otra mano no se ve: vale con una
-    else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
+  let y; const hi = Math.max(...L), lo = Math.min(...L);
+  if (L.length === 1 || hi - lo <= 0.15) y = (hi + lo) / 2;
+  else y = lo - B.bottom >= range * 0.6 ? hi : lo;
+  if (L.length === 2 && hi - B.bottom >= range && lo - B.bottom < range * 0.6) B.uneven = true; // una sola mano arriba
+  const back = B.lost; B.lost = 0;
+  if (back > 0) B.vy = 0; else if (dt > 0) B.vy += ((y - B.prev) / dt - B.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
+  B.prev = y;
+  B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
+  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); } };
+  // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
+  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? 0.8 : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
+  if (B.state === 'hold') { // aguantando arriba carga el disparo (×2, ×3, ×4); sale al empezar a bajar
+    if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = 1 + Math.min(3, Math.floor(B.holdT / POW_STEP)); if (p > B.pow) { B.pow = p; onPower(p); } return; }
+    B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); return;
   }
+  if (B.state === 'down') { if (y > B.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { Object.assign(B, { state: 'rising', max: y, t0: t }); if (press) onCharge(); } }
+  else if (B.state === 'rising') {
+    B.max = Math.max(B.max, y);
+    if (y - B.bottom >= range) { const dur = t - B.t0; B.uneven = false; top({ perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); return; }
+    if (y < B.bottom + (press ? 0.06 : 0.07)) { B.state = 'down'; if (!B.uneven && B.max - B.bottom > range * 0.55) onPartial(press ? 'Estira los brazos del todo arriba' : 'Sube hasta el hombro'); }
+  } else if (y < B.bottom + 0.08) B.state = 'down';
+  // una mano subió sola y ya han bajado las dos: avisa (una vez)
+  if (B.uneven && hi < B.bottom + 0.08) { onPartial('Sube las dos manos a la vez'); B.uneven = false; }
 }
 // Ejercicios en dos tiempos: la bajada (sentadilla, cadera atrás en el swing o peso muerto) carga como siempre y, al volver
 // arriba, un gesto de los brazos (o un salto) dispara en CH_WIN segundos. El gesto se va mirando desde que carga (en el
@@ -10449,7 +10508,7 @@ function chainStep(kind, t, dt) {
   if (K.jump) { if (head.p.y - T.ref >= settings.jsqJump / 100 && JUMP.fastT < 0.3) T.seen.left = T.seen.right = true; }
   else for (const s of ['left', 'right']) {
     const h = hands[s];
-    if (h.ok) {
+    if (HF[s].ok) { // (sin los errores del seguimiento)
       const r = h.wrist.y - head.p.y;
       arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; // f: cuánto está por delante de los ojos
       T.last[s] = r; T.lostT[s] = 0;
@@ -10477,7 +10536,7 @@ const CHOP_WIN = 2.5, _chp = new V3();
 const _frm = new V3();
 function fraiseStep(t, dt) {
   const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
-  for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
+  for (const s of ['left', 'right']) if (HF[s].ok) { _frm.add(hands[s].wrist); n++; }
   if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
     d.lost += dt;
     if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
@@ -10499,7 +10558,7 @@ function fraiseStep(t, dt) {
 }
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
-  for (const s of ['left', 'right']) if (hands[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
+  for (const s of ['left', 'right']) if (HF[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
   if (!n) { if (C.state === 'loaded' && t - C.t0 > CHOP_WIN) C.state = 'idle'; return; }
   _chp.divideScalar(n);
   const x = _chp.x - HL.x, y = _chp.y, side = Math.sign(x), low = y < calibRef * 0.64 && Math.abs(x) > 0.1, high = y > calibRef * 0.9;
@@ -10640,6 +10699,7 @@ function iwVisual(t) {
 const _iwWhite = new THREE.Color(1, 1, 1);
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
+  handFilter(dt); // (las manos que valen, sin los errores del seguimiento: HF)
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
@@ -10663,8 +10723,7 @@ function runDetectors(t, dt) {
   } else if (settings.exercise === 'twist') {
     twistStep(t, dt);
   } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
-    // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
-    pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
+    barStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt); // con barra o kettlebell: las dos manos, como una sola pesa
   } else if (CHAIN[settings.exercise]) {
     // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
@@ -10760,6 +10819,12 @@ function runDetectors(t, dt) {
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
+  } else if (settings.exercise === 'pike') {
+    // flexión en pica: la cabeza baja entre las manos (la cadera, alta) y vuelve a subir; como la flexión, con más recorrido
+    const d = DET.pu, req = dv('pikeDepth') / 100;
+    if (head.p.y > d.ref + 0.45) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la pica', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    d.awayT = 0;
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.06, req * 0.4), req, back: 0.04, partial: req * 0.5, perfectDur: pt, partialMsg: '¡La cabeza más cerca del suelo!', power: true });
   }
 }
 
@@ -11213,7 +11278,7 @@ settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) ap
 const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
 // lo que tocas tú (no lo que pone el rango, un perfil, el ejercicio al cargarse ni el bloque de una sesión), a la tabla
 settingHooks.push(k => {
-  if (RANK.applying || comboLoading || SES.active || !FIELD[k] || !devRows().includes(k)) return;
+  if (RANK.applying || comboLoading || SES.active || CAMP.orig || !FIELD[k] || !devRows().includes(k)) return;
   const i = rankIdx(), fa = (devFact().v || {})[k], base = clampSetting(FIELD[k], fa && fa[i] !== undefined && fa[i] !== null ? fa[i] : devBase(k, i));
   devSet(k, i, rankDiff(settings[k], base) ? settings[k] : null); // (igual que el de serie: la casilla vuelve a «de serie»)
 });
@@ -11259,7 +11324,7 @@ const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '
 const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound', foe: '' };
 const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
   ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
-  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['opt', 'Opciones', MC.set]];
+  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['prog', 'Progreso', PROG_COL], ['opt', 'Opciones', MC.set]];
 // Ronda: el ejercicio (al elegirlo se queda aquí) y lo que le toca: la barra o las paralelas en Barras, las combinaciones en Toques
 function lobbyRoundRows(again) {
   const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), rows = exerciseRows(again, true);
@@ -11287,7 +11352,7 @@ function lobbyOptRows(again) {
     ...(o === 'sound' ? soundRows(again, true) : o === 'scene' ? sceneRows(again) : settingsRows(g => { settingsTab = g; uiSave('tab', g); again(); }))];
 }
 function lobbyMenu() {
-  endSession();
+  endSession(); campEnd(); campEnvBack(); // (de la campaña: tus ajustes y tu entorno)
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   // una sesión recién preparada (en la página): el menú se abre en Sesiones, con su EMPEZAR SESIÓN
@@ -11297,14 +11362,14 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
   left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
+  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'prog' ? progRows(again) : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
   const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
     { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
     { t: 'btns', h: 0.058, items: modes },
     { t: 'text', text: `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise] || ''} · ${rankName()}`, color: MODE_COL[settings.mode] },
     { t: 'text', text: summaryText() },
-    ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
+    { t: 'text', text: careerLine() + (progressLine() ? ' · ' + progressLine() : ''), color: PROG_COL },
     ...(roomBad && !(tab === 'opt' && LOBBY.opt === 'scene') ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
     { t: 'cols', fr: [0.29, 0.71], lw: [0.1, 0.19], titles: ['', tabName], colors: [null, tabCol], music: spConnected(), cols: [left, pane.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]))] }];
   const m = openMenu(rows);
@@ -11436,10 +11501,10 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0, uneven: false }); Object.assign(DET.barp, { state: 'down', lost: 0, uneven: false }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
@@ -11483,6 +11548,7 @@ function calibrate() {
   if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
+  { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = DET.barp.bottom = Math.min(...v); }
   DET.sp.ref = y;
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
@@ -11525,6 +11591,7 @@ function saveRun(win) {
   const h = store(HIST_KEY) || [];
   h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
+  careerRun({ reps, perfect: stats.perfect, mins: stats.time / 60, combo: stats.bestCombo, win, taken: stats.taken, falls: stats.falls, mode: settings.mode, ex: settings.exercise, hang: settings.exercise === 'hang' }); // (experiencia, misiones y campaña: 73_career)
 }
 // Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
 const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
@@ -11550,7 +11617,7 @@ function progressLine(P = progress()) {
   return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
 }
 function endRun(win, manual) {
-  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
+  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h), best0 = bestRunOf(h);
   const failBest = h.filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); // (al fallo: la oleada más lejana)
   saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
@@ -11575,7 +11642,12 @@ function endRun(win, manual) {
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
   if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
-  if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
+  if (!SES.active && !CAMP.run && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
+  // lo ganado (experiencia, misiones, nivel), tu mejor ronda y, en la campaña, el nivel con sus estrellas (73_career)
+  if (!SES.active) S.career = careerTake();
+  if (got && best0 && !hang) S.bestTxt = got > best0.reps ? `¡Mejor que tu mejor ronda de ${(EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]).toLowerCase()} aquí (${best0.reps})!` : `Tu mejor ronda aquí: ${best0.reps} reps · ${Math.round(100 * (best0.perfect || 0) / Math.max(1, best0.reps))} % perfectas (hoy: ${got} · ${S.pct} %)`;
+  if (CAMP.run) { const c = (S.career && S.career.camp) || { lv: CAMP.run.lv, stars: 0, next: null }, L = campLv(c.lv); S.camp = c; S.ex = `Campaña · nivel ${c.lv} · ${L.name} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`; S.stars = c.stars; S.medal = ['', 'bronce', 'plata', 'oro'][c.stars] || null; }
+  campEnd(); // (los ajustes del nivel, fuera)
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
   if (SES.active && (manual || win)) go(); else showOutcome(win, go, manual); // en una sesión, entre bloques ya hay su pantalla de descanso
@@ -11709,11 +11781,16 @@ function endMenu(title, S) {
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
       { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
-    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
+    ...(S.career !== undefined ? [{ t: 'canvas', h: 0.12, text: S.career ? `+${S.career.xp} XP` : 'Tu semana', draw: (c, x, y, w, h) => { drawXP(c, x + 6, y, w * 0.46, h, S.career); drawWeek(c, x + w * 0.52, y + 4, w * 0.47, h - 8); } }] : []),
+    ...(S.career ? S.career.notes.slice(0, 3).map(([t, col]) => ({ t: 'text', text: t, color: col })) : []),
+    ...(S.bestTxt ? [{ t: 'text', text: S.bestTxt, color: '#a49fc8' }] : []),
+    ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { LOBBY.tab = 'prog'; PROG.tab = 'camp'; PROG.lv = 0; PROG.reg = -1; lobbyMenu(); } }] },
+      { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }]
+    : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }])];
   const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }
 function exitAll() {
-  endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
+  endSession(); campEnd(); CAMP.env = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
   const s = renderer.xr.getSession(); if (s) s.end().catch(() => {});
   if (preview) stopPreview();
   ambientStop(); renderHistory(); syncForm();
@@ -12562,6 +12639,249 @@ function adjustMenu(back) {
 function placeDone() {
   const k = EQ.edit; PLACE.on = PLACE.wait = false; PLACE.note = ''; placeLine.visible = false;
   if (!k) return; EQ.edit = null; if (eqPose(k).set) { equipChanged(k); equipCommit(k); }
+}
+
+/* =================== TU CARRERA: NIVEL, MISIONES DEL DÍA, CAMPAÑA Y TU SEMANA =================== */
+// Para que apetezca volver y superarse:
+//  · cada repetición da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título
+//    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
+//  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
+//    del día (+100 XP y un color antes de tiempo)
+//  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
+//    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
+//  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
+// Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560';
+const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), gain: null }; })();
+const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
+function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
+// la experiencia de una ronda guardada; la primera vez, la de todo tu historial (no empiezas de cero)
+const runXP = r => (r.ex === 'hang' ? Math.round((r.reps || 0) / 2) : (r.reps || 0) + (r.perfect || 0)) + (r.win ? 20 : 0);
+(function crSeed() { if (CR.seeded) return; CR.xp += (store(HIST_KEY) || []).reduce((a, r) => a + runXP(r), 0); CR.seeded = true; crSave(); })();
+
+/* ---------- Nivel y título ---------- */
+const lvlNeed = n => 100 + 20 * (n - 1); // de un nivel al siguiente: cada vez un poco más
+function lvlOf(xp = CR.xp) { let n = 1, r = xp; while (r >= lvlNeed(n) && n < 99) { r -= lvlNeed(n); n++; } return { n, into: r, need: lvlNeed(n) }; }
+const TITLES = [[1, 'Novato'], [3, 'Aprendiz'], [6, 'Luchador'], [10, 'Guerrero'], [15, 'Gladiador'], [20, 'Campeón'], [30, 'Héroe'], [40, 'Titán'], [50, 'Leyenda']];
+const titleOf = n => TITLES.filter(t => n >= t[0]).pop()[1];
+// Los colores que se desbloquean: [clave, nombre, nivel, color]. El rayo normal (el perfecto y los cargados no cambian:
+// su color dice lo que valen)
+const LOOKS = {
+  hands: { name: 'Manos', opts: [['teal', 'Turquesa', 1, 0x3cf0c6], ['pink', 'Rosa', 4, 0xff4fa3], ['gold', 'Oro', 8, 0xffd166], ['lime', 'Ácido', 12, 0x9dff3c], ['violet', 'Violeta', 16, 0xa68bff], ['white', 'Blanco', 22, 0xffffff]] },
+  bolt: { name: 'Rayo', opts: [['blue', 'Azul', 1, 0x4aa8ff], ['white', 'Plasma', 5, 0xe8f4ff], ['lime', 'Ácido', 10, 0x8dff5a], ['violet', 'Violeta', 18, 0xb070ff]] }
+};
+const lookOwn = (k, v) => { const o = LOOKS[k].opts.find(x => x[0] === v); return !!o && (lvlOf().n >= o[2] || CR.own.includes(k + ':' + v)); };
+const lookOpt = k => { const v = CR.equip[k], o = LOOKS[k].opts; return (lookOwn(k, v) && o.find(x => x[0] === v)) || o[0]; };
+const lookHex = k => LOOKC[k] !== undefined ? LOOKC[k] : (LOOKC[k] = lookOpt(k)[3]);
+function lookSet(k, v) { if (!lookOwn(k, v)) return; CR.equip[k] = v; crSave(); }
+const unlocksAt = n => n > 1 ? Object.values(LOOKS).flatMap(L => L.opts.filter(o => o[2] === n).map(o => `${L.name}: ${o[1]}`)) : [];
+const lockedLooks = () => Object.entries(LOOKS).flatMap(([k, L]) => L.opts.filter(o => !lookOwn(k, o[0])).map(o => ({ id: k + ':' + o[0], label: `${L.name}: ${o[1]}` })));
+// el siguiente color que se desbloquea (para el menú)
+function nextUnlock() { const n = lvlOf().n; let best = null; for (const L of Object.values(LOOKS)) for (const o of L.opts) if (o[2] > n && (!best || o[2] < best.n)) best = { n: o[2], label: `${L.name}: ${o[1]}` }; return best; }
+
+/* ---------- Misiones del día ---------- */
+// t: su tipo; n: lo que piden (según tu nivel); got: lo que llevas. Se eligen con el día como semilla y lo que ya
+// hiciste hoy antes de que salieran cuenta
+const MIS = {
+  reps: { kind: 'vol', n: L => 50 + 10 * Math.min(L, 10), txt: m => `Haz ${m.n} repeticiones` },
+  mins: { kind: 'vol', n: () => Math.max(5, settings.goalMin), txt: m => `Entrena ${m.n} minutos` },
+  perfect: { kind: 'q', n: L => 20 + 4 * Math.min(L, 10), txt: m => `Consigue ${m.n} perfectas` },
+  combo: { kind: 'q', n: L => L < 5 ? 8 : L < 15 ? 12 : 16, txt: m => `Llega a un combo de ×${m.n}` },
+  clean: { kind: 'q', n: () => 1, txt: () => 'Gana una ronda sin que te golpeen' },
+  mode: { kind: 'var', n: () => 1, txt: m => `Juega una ronda en ${MODE_NAMES[m.arg] || m.arg}` },
+  ex: { kind: 'var', n: () => 1, txt: m => `Haz una ronda de ${(EX_NAMES[m.arg] || m.arg).toLowerCase()}` },
+  star: { kind: 'var', n: () => 1, txt: () => 'Gana una estrella nueva en la campaña' }
+};
+const MIS_XP = 40, CHEST_XP = 100, STAR_XP = 15, WIN_XP = 20;
+function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = (h + 0x6D2B79F5) | 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function misAdd(list, o) {
+  for (const m of list) {
+    if (m.t === 'reps') m.got += o.reps || 0; else if (m.t === 'mins') m.got += o.mins || 0; else if (m.t === 'perfect') m.got += o.perfect || 0;
+    else if (m.t === 'combo') m.got = Math.max(m.got, o.combo || 0); else if (m.t === 'clean') { if (o.win && !o.taken) m.got = 1; }
+    else if (m.t === 'mode') { if (o.mode === m.arg) m.got = 1; } else if (m.t === 'ex') { if (o.ex === m.arg) m.got = 1; } else if (m.t === 'star') m.got += o.stars || 0;
+  }
+}
+function misToday(now = Date.now()) {
+  const day = dayKey(now); if (CR.mis && CR.mis.day === day) return CR.mis;
+  const R = seeded('reparena' + day), pickR = a => a[Math.floor(R() * a.length) % a.length], L = lvlOf().n, h = store(HIST_KEY) || [];
+  // variedad: el modo que menos has jugado esta semana, o un ejercicio que ya conoces y llevas días sin hacer
+  const week = h.filter(r => r.date > now - 7 * DAY_MS), modes = ['combat', 'arcs', 'touch', ...(h.some(r => r.mode === 'bars') ? ['bars'] : [])].sort((a, b) => week.filter(r => r.mode === a).length - week.filter(r => r.mode === b).length);
+  const recent = new Set(h.filter(r => r.date > now - 3 * DAY_MS).map(r => r.ex)), exs = [...new Set(h.map(r => r.ex))].filter(x => EX_NAMES[x] && !recent.has(x) && Object.keys(MODE_NAMES).some(m => exOk(m, x)));
+  let t3 = pickR(['mode', 'ex', 'star']); if (t3 === 'ex' && !exs.length) t3 = 'mode';
+  const list = [pickR(['reps', 'reps', 'mins']), pickR(['perfect', 'combo', 'clean']), t3].map(t => ({ t, n: MIS[t].n(L), got: 0, done: false, ...(t === 'mode' ? { arg: pickR(modes.slice(0, 2)) } : t === 'ex' ? { arg: pickR(exs) } : {}) }));
+  for (const r of h.filter(r => dayKey(r.date) === day)) misAdd(list, { reps: r.ex === 'hang' ? 0 : r.reps, perfect: r.perfect, mins: (r.time || 0) / 60, mode: r.mode, ex: r.ex, win: r.win, taken: 1 });
+  let xp = 0; list.forEach(m => { if (m.got >= m.n) { m.done = true; xp += MIS_XP; } }); CR.xp += xp; // (lo cumplido antes de salir, también)
+  CR.mis = { day, list, chest: false }; crSave(); return CR.mis;
+}
+const misLeft = () => misToday().list.filter(m => !m.done).length;
+
+/* ---------- Al acabar cada ronda ---------- */
+// o: lo de la ronda (repeticiones, perfectas, minutos, combo, si ganaste y los golpes recibidos). Lo ganado se va
+// juntando en CR.gain hasta que lo enseña el resumen (en una sesión, el de la sesión entera)
+function careerRun(o) {
+  const G = CR.gain || (CR.gain = { xp0: CR.xp, xp: 0, notes: [] });
+  let xp = (o.hang ? Math.round(o.reps / 2) : o.reps + o.perfect) + (o.win ? WIN_XP : 0);
+  if (CAMP.run) { const c = campResult(o); G.camp = c; xp += STAR_XP * c.newStars; o.stars = c.newStars; if (c.newStars) G.notes.push([`Campaña: ${c.newStars === 1 ? 'una estrella nueva' : `${c.newStars} estrellas nuevas`}`, '#ffd166']); }
+  const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
+  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
+  if (!M.chest && M.list.every(m => m.done)) {
+    M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
+    G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${p ? ` y ${p.label}` : ''}`, '#ffd166']);
+  }
+  const l0 = lvlOf().n; CR.xp += xp; G.xp += xp; const l1 = lvlOf().n;
+  for (let n = l0 + 1; n <= l1; n++) { G.notes.push([`¡Nivel ${n}!${titleOf(n) !== titleOf(n - 1) ? ` Ahora eres ${titleOf(n)}` : ''}`, '#ffd166']); unlocksAt(n).forEach(u => G.notes.push([`Desbloqueado: ${u}`, '#ff4fa3'])); }
+  crSave();
+}
+function careerTake() { const G = CR.gain; CR.gain = null; return G; }
+
+/* ---------- La campaña ---------- */
+// Una por modo y ejercicio. Cada región es un rango y un entorno; sus 5 niveles van de 3 a 5 oleadas y el quinto acaba
+// con el jefe. Mientras se juega, los ajustes del nivel van por encima de los tuyos (CAMP.orig: se devuelven al acabar y
+// no se guardan); el entorno de la región se queda hasta volver al menú
+const CAMP_REG = [['Campo de entrenamiento', 'arena'], ['Bosque del eco', 'nature'], ['Isla del capitán', 'island'], ['Fortaleza de hierro', 'arena'], ['Bosque sombrío', 'nature'], ['Isla de los tiburones', 'island'], ['Ciudadela del general', 'arena']];
+const CAMP_N = CAMP_REG.length * 5, CAMP_WAVES = [3, 3, 4, 4, 5];
+const campId = () => settings.mode + ':' + settings.exercise;
+const campOf = (id = campId()) => CR.camp[id] || { at: 1, stars: {} };
+const campLv = lv => { const r = Math.floor((lv - 1) / 5), k = (lv - 1) % 5; return { r, k, rank: RANKS[r][0], name: CAMP_REG[r][0], env: CAMP_REG[r][1], waves: CAMP_WAVES[k], boss: k === 4 }; };
+const campStars = (id = campId()) => Object.values(campOf(id).stars).reduce((a, b) => a + b, 0);
+function campStart(lv) {
+  campEnd(); const L = campLv(lv), patch = { ...rankVals(L.rank), rank: L.rank, waves: L.waves, toFail: 0 };
+  CAMP.orig = {}; for (const k in patch) CAMP.orig[k] = settings[k]; Object.assign(settings, patch);
+  CAMP.run = { id: campId(), lv };
+  if (CAMP.env !== L.env) { CAMP.env = L.env; envSwitch(); }
+  beginRun();
+}
+// los ajustes, como estaban (el entorno de la región sigue hasta volver al menú: campEnvBack)
+function campEnd() { if (CAMP.orig) { Object.assign(settings, CAMP.orig); CAMP.orig = null; } CAMP.run = null; }
+function campEnvBack() { if (CAMP.env && !CAMP.run) { CAMP.env = null; envSwitch(); } }
+// estrellas: ganar, una; con la mitad de perfectas, dos; con tres cuartos y sin que te golpeen, tres (colgado: sin caídas)
+function campResult(o) {
+  const R = CAMP.run, C = CR.camp[R.id] || (CR.camp[R.id] = { at: 1, stars: {} }), pr = o.reps ? o.perfect / o.reps : 0;
+  const stars = !o.win ? 0 : o.hang ? 1 + (o.falls ? 0 : 1) + (o.taken ? 0 : 1) : 1 + (pr >= 0.5 ? 1 : 0) + (pr >= 0.75 && !o.taken ? 1 : 0), prev = C.stars[R.lv] || 0;
+  if (stars > prev) C.stars[R.lv] = stars;
+  if (o.win && R.lv >= C.at && R.lv < CAMP_N) C.at = R.lv + 1;
+  return { lv: R.lv, stars, prev, newStars: Math.max(0, stars - prev), next: o.win && R.lv < CAMP_N ? R.lv + 1 : null };
+}
+
+/* ---------- Dibujos (menú y resumen) ---------- */
+function drawStar(c, x, y, r, on) {
+  c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath();
+  c.fillStyle = on ? '#ffd166' : 'rgba(255,255,255,0.12)'; c.fill(); if (on) { c.lineWidth = Math.max(1, r * 0.12); c.strokeStyle = '#8a5a0e'; c.stroke(); }
+}
+// la insignia del nivel: un hexágono dorado con el número
+function drawLvlBadge(c, cx, cy, R, n) {
+  c.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; c.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); } c.closePath();
+  const g = c.createLinearGradient(cx, cy - R, cx, cy + R); g.addColorStop(0, '#fff0a8'); g.addColorStop(0.55, '#ffc94a'); g.addColorStop(1, '#b97a12'); c.fillStyle = g; c.fill();
+  c.lineWidth = Math.max(2, R * 0.08); c.strokeStyle = '#6e4508'; c.stroke();
+  c.fillStyle = '#2a1600'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, String(n), R * 1.3, Math.round(R * 1.05), '%px ' + FD); c.fillText(String(n), cx, cy + R * 0.06);
+}
+// el nivel, el título y la barra de experiencia (con lo ganado en esta ronda, en dorado)
+function drawXP(c, x, y, w, h, G) {
+  const L = lvlOf(), R = Math.min(h * 0.4, w * 0.13), cx = x + R + 6, cy = y + h / 2; drawLvlBadge(c, cx, cy, R, L.n);
+  const bx = cx + R + 14, bw = x + w - bx - 6, by = y + h * 0.47, bh = Math.max(8, h * 0.15);
+  c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = '#eeeaff'; fitFont(c, `Nivel ${L.n} · ${titleOf(L.n)}`, bw, Math.round(h * 0.24), '700 %px ' + FB); c.fillText(`Nivel ${L.n} · ${titleOf(L.n)}`, bx, y + h * 0.22);
+  rr(c, bx, by, bw, bh, bh / 2); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+  const k = L.into / L.need, up = G && lvlOf(G.xp0).n < L.n, k0 = G && !up ? Math.max(0, (L.into - G.xp) / L.need) : up ? 0 : k;
+  if (k0 > 0.001) { rr(c, bx, by, Math.max(bh, bw * k0), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); }
+  if (k - k0 > 0.001) { rr(c, bx + bw * k0, by, Math.max(bh, bw * (k - k0)), bh, bh / 2); c.fillStyle = '#ffd166'; c.fill(); }
+  const t = `${L.into} / ${L.need} XP`, t2 = G && G.xp ? `+${G.xp} XP` : (() => { const u = nextUnlock(); return u ? `Nivel ${u.n}: ${u.label}` : ''; })();
+  c.fillStyle = '#a49fc8'; fitFont(c, t, bw * 0.5, Math.round(h * 0.19), '600 %px ' + FB); c.fillText(t, bx, y + h * 0.8);
+  if (t2) { c.textAlign = 'right'; c.fillStyle = G && G.xp ? '#ffd166' : '#a49fc8'; fitFont(c, t2, bw * 0.5, Math.round(h * 0.19), '700 %px ' + FB); c.fillText(t2, bx + bw, y + h * 0.8); }
+}
+// los últimos 7 días: minutos de cada uno en barras (hoy, en turquesa) y la raya de tu meta
+function drawWeek(c, x, y, w, h) {
+  const D = dayStats(store(HIST_KEY) || []), goal = settings.goalMin, mx = Math.max(goal, ...D.week.map(d => d.v.time / 60)) || 1, n = 7, gap = w * 0.025, bw = (w - gap * (n - 1)) / n, top = y + h * 0.32, base = y + h * 0.8;
+  c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = '#a49fc8'; fitFont(c, 'Tu semana (minutos)', w, Math.round(h * 0.13), '600 %px ' + FB); c.fillText('Tu semana (minutos)', x, y + h * 0.08);
+  D.week.forEach((d, i) => {
+    const m = d.v.time / 60, bh = Math.max(m > 0 ? 3 : 0, (base - top) * m / mx), bx = x + i * (bw + gap), today = i === n - 1;
+    rr(c, bx, top, bw, base - top, Math.min(8, bw / 3)); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill();
+    if (bh) { rr(c, bx, base - bh, bw, bh, Math.min(8, bw / 3, bh / 2)); c.fillStyle = today ? '#3cf0c6' : '#5ab8ff'; c.fill(); }
+    c.textAlign = 'center'; c.fillStyle = '#eeeaff'; if (m >= 1) { fitFont(c, String(Math.round(m)), bw, Math.round(h * 0.12), '700 %px ' + FB); c.fillText(String(Math.round(m)), bx + bw / 2, base - bh - h * 0.07); }
+    c.fillStyle = today ? '#3cf0c6' : '#a49fc8'; const lab = today ? 'hoy' : WDAY[d.d.getDay()].slice(0, 2); fitFont(c, lab, bw + gap, Math.round(h * 0.12), '600 %px ' + FB); c.fillText(lab, bx + bw / 2, base + h * 0.1);
+  });
+  const gy = base - (base - top) * goal / mx; c.setLineDash([8, 6]); c.lineWidth = 2; c.strokeStyle = '#ff4fa3'; c.beginPath(); c.moveTo(x, gy); c.lineTo(x + w, gy); c.stroke(); c.setLineDash([]);
+}
+// una llama (la racha) y un cofre (abierto o cerrado), dibujados
+function drawFlame(c, x, y, s) {
+  const g = c.createLinearGradient(x, y - s, x, y + s); g.addColorStop(0, '#ffd166'); g.addColorStop(1, '#ff4a2a'); c.fillStyle = g;
+  c.beginPath(); c.moveTo(x, y - s); c.bezierCurveTo(x + s * 0.9, y - s * 0.2, x + s * 0.7, y + s, x, y + s); c.bezierCurveTo(x - s * 0.7, y + s, x - s * 0.9, y - s * 0.1, x - s * 0.2, y - s * 0.45); c.bezierCurveTo(x - s * 0.1, y - s * 0.2, x + s * 0.1, y - s * 0.6, x, y - s); c.fill();
+}
+function drawChest(c, x, y, s, open) {
+  c.fillStyle = '#7a4318'; rr(c, x - s, y - s * 0.2, s * 2, s * 1.1, s * 0.12); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(x - s * 0.55, y - s * 0.2, s * 0.18, s * 1.1); c.fillRect(x + s * 0.37, y - s * 0.2, s * 0.18, s * 1.1);
+  if (open) { c.fillStyle = '#1a0d04'; c.fillRect(x - s * 0.9, y - s * 0.3, s * 1.8, s * 0.2); c.fillStyle = '#ffd166'; c.beginPath(); c.arc(x, y - s * 0.3, s * 0.55, Math.PI, 0); c.fill(); c.fillStyle = '#9a5622'; rr(c, x - s, y - s * 1.25, s * 2, s * 0.45, s * 0.12); c.fill(); }
+  else { c.fillStyle = '#9a5622'; rr(c, x - s, y - s * 0.75, s * 2, s * 0.6, s * 0.25); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(x - s * 0.12, y - s * 0.35, s * 0.24, s * 0.3); }
+}
+// las tres misiones con su progreso, el cofre del día y la racha
+function drawMissions(c, x, y, w, h) {
+  const M = misToday(), P = progress(), rh = h * 0.24;
+  M.list.forEach((m, i) => {
+    const ry = y + i * rh, cy = ry + rh * 0.45, r = rh * 0.26, done = m.done;
+    c.beginPath(); c.arc(x + r + 4, cy, r, 0, TAU); c.fillStyle = done ? '#3cf0c6' : 'rgba(255,255,255,0.08)'; c.fill();
+    if (done) { c.strokeStyle = '#06261f'; c.lineWidth = r * 0.3; c.lineCap = 'round'; c.beginPath(); c.moveTo(x + 4 + r * 0.5, cy); c.lineTo(x + 4 + r * 0.9, cy + r * 0.4); c.lineTo(x + 4 + r * 1.5, cy - r * 0.45); c.stroke(); }
+    const tx = x + r * 2 + 16, tw = w - (tx - x), txt = MIS[m.t].txt(m), got = Math.min(m.n, m.t === 'mins' ? Math.floor(m.got) : m.got);
+    c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = done ? '#3cf0c6' : '#eeeaff'; fitFont(c, txt, tw * 0.76, Math.round(rh * 0.4), '600 %px ' + FB); c.fillText(txt, tx, cy - rh * 0.14);
+    const by = cy + rh * 0.2, bh = Math.max(6, rh * 0.13); rr(c, tx, by, tw * 0.72, bh, bh / 2); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    if (got > 0) { rr(c, tx, by, Math.max(bh, tw * 0.72 * got / m.n), bh, bh / 2); c.fillStyle = done ? '#3cf0c6' : PROG_COL; c.fill(); }
+    c.textAlign = 'right'; c.fillStyle = '#a49fc8'; fitFont(c, done ? `+${MIS_XP} XP` : `${got} / ${m.n}`, tw * 0.22, Math.round(rh * 0.34), '700 %px ' + FB); c.fillText(done ? `+${MIS_XP} XP` : `${got} / ${m.n}`, x + w, cy);
+  });
+  const fy = y + h * 0.84, s = h * 0.075;
+  drawChest(c, x + s + 4, fy + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = M.chest ? '#ffd166' : '#a49fc8';
+  const ct = M.chest ? '¡Cofre del día abierto!' : 'Cofre del día: cumple las tres'; fitFont(c, ct, w * 0.44, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(ct, x + s * 2 + 14, fy);
+  drawFlame(c, x + w * 0.6, fy, s * 0.9); c.fillStyle = '#ffb36b'; const st = `Racha: ${daysTxt(P.streak)} · mejor ${daysTxt(P.best)}`; fitFont(c, st, w * 0.36, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(st, x + w * 0.6 + s + 8, fy);
+}
+// el mapa de una región de la campaña: un camino con sus cinco niveles (el del jefe, más grande y con corona), sus
+// estrellas, el siguiente por jugar en turquesa y el elegido rodeado
+function drawCampMap(c, x, y, w, h, reg, sel) {
+  const C = campOf(), env = CAMP_REG[reg][1], bg = { arena: ['#3a2f2a', '#1c1a22'], nature: ['#28503a', '#13241c'], island: ['#2a6f86', '#d9b979'] }[env];
+  const g = c.createLinearGradient(x, y, x, y + h); g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]); rr(c, x, y, w, h, 18); c.fillStyle = g; c.fill();
+  c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff'; const tt = `${reg + 1}. ${CAMP_REG[reg][0]} · ${RANKS[reg][1]}`; fitFont(c, tt, w * 0.7, Math.round(h * 0.11), '700 %px ' + FB); c.fillText(tt, x + 16, y + h * 0.12);
+  c.textAlign = 'right'; c.fillStyle = '#ffd166'; const st = `${campStars()} / ${CAMP_N * 3} estrellas`; fitFont(c, st, w * 0.28, Math.round(h * 0.09), '700 %px ' + FB); c.fillText(st, x + w - 16, y + h * 0.12);
+  const pts = [0, 1, 2, 3, 4].map(i => [x + w * (0.1 + i * 0.2), y + h * (i % 2 ? 0.45 : 0.6)]);
+  c.lineWidth = Math.max(4, h * 0.04); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.setLineDash([12, 10]); c.beginPath(); pts.forEach(([px, py], i) => i ? c.lineTo(px, py) : c.moveTo(px, py)); c.stroke(); c.setLineDash([]);
+  pts.forEach(([px, py], i) => {
+    const lv = reg * 5 + i + 1, boss = i === 4, R = h * (boss ? 0.15 : 0.12), open = lv <= C.at, st = C.stars[lv] || 0, next = lv === C.at;
+    if (lv === sel) { c.beginPath(); c.arc(px, py, R * 1.35, 0, TAU); c.lineWidth = Math.max(3, R * 0.15); c.strokeStyle = '#ffffff'; c.stroke(); }
+    c.beginPath(); c.arc(px, py, R, 0, TAU); c.fillStyle = !open ? 'rgba(0,0,0,0.55)' : next ? '#3cf0c6' : st ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = Math.max(2, R * 0.1); c.strokeStyle = 'rgba(0,0,0,0.5)'; c.stroke();
+    c.textAlign = 'center'; c.fillStyle = open ? '#1a1030' : 'rgba(255,255,255,0.4)'; fitFont(c, String(lv), R * 1.4, Math.round(R * 0.95), '%px ' + FD); c.fillText(String(lv), px, py + R * 0.05);
+    if (boss) { c.fillStyle = open ? '#ff4a6a' : 'rgba(255,74,106,0.4)'; c.beginPath(); c.moveTo(px - R * 0.7, py - R * 0.95); c.lineTo(px - R * 0.7, py - R * 1.45); c.lineTo(px - R * 0.35, py - R * 1.15); c.lineTo(px, py - R * 1.55); c.lineTo(px + R * 0.35, py - R * 1.15); c.lineTo(px + R * 0.7, py - R * 1.45); c.lineTo(px + R * 0.7, py - R * 0.95); c.closePath(); c.fill(); } // la corona del jefe
+    for (let k = 0; k < 3; k++) drawStar(c, px + (k - 1) * R * 0.75, py + R * 1.45, R * 0.32, k < st);
+  });
+}
+// tu mejor ronda con este ejercicio en este modo (sin contar la que acabas de jugar)
+function bestRunOf(h, ex = settings.exercise, mode = settings.mode) { return h.filter(r => r.ex === ex && r.mode === mode).reduce((b, r) => !b || r.reps > b.reps ? r : b, null); }
+
+/* ---------- La parte Progreso del menú principal ---------- */
+const PROG = { tab: uiPrefs().prog || 'lvl', lv: 0, reg: -1 };
+function progRows(again) {
+  const tabs = [['lvl', 'Nivel'], ['mis', 'Misiones'], ['camp', 'Campaña'], ['week', 'Semana']], rows = [];
+  rows.push({ t: 'tabs', items: tabs.map(([k, l]) => ({ label: k === 'mis' && misLeft() ? `${l} (${misLeft()})` : l, on: k === PROG.tab, onPress: () => { PROG.tab = k; uiSave('prog', k); again(); } })) });
+  if (PROG.tab === 'lvl') {
+    const L = lvlOf(); rows.push({ t: 'canvas', h: 0.1, text: `Nivel ${L.n} · ${titleOf(L.n)} · ${L.into} / ${L.need} XP`, draw: (c, x, y, w, h) => drawXP(c, x, y, w, h, null) });
+    for (const k in LOOKS) { const O = LOOKS[k].opts, per = Math.ceil(O.length / Math.ceil(O.length / 3)); for (let i = 0; i < O.length; i += per) rows.push({ t: 'choice', label: i ? '' : LOOKS[k].name, value: lookOpt(k)[0], opts: O.slice(i, i + per).map(o => [o[0], lookOwn(k, o[0]) ? o[1] : `Nivel ${o[2]}`, !lookOwn(k, o[0])]), onPick: v => { lookSet(k, v); again(); } }); } // (de tres en tres como mucho: si no, no se leen)
+    rows.push({ t: 'text', text: 'Cada repetición da experiencia (las perfectas, el doble). Los colores solo se ven', color: '#a49fc8' });
+  } else if (PROG.tab === 'mis') {
+    rows.push({ t: 'canvas', h: 0.24, text: misToday().list.map(m => MIS[m.t].txt(m) + (m.done ? ' ✓' : '')).join(' · '), draw: drawMissions });
+    rows.push({ t: 'text', text: `Tres nuevas cada día: +${MIS_XP} XP cada una; con las tres, el cofre (+${CHEST_XP} XP y un color)`, color: '#a49fc8' });
+  } else if (PROG.tab === 'camp') {
+    const C = campOf(), sel = clamp(PROG.lv || C.at, 1, CAMP_N), reg = PROG.reg >= 0 ? PROG.reg : Math.floor((sel - 1) / 5);
+    rows.push({ t: 'canvas', h: 0.2, text: `Campaña de ${EX_NAMES[settings.exercise]} en ${MODE_NAMES[settings.mode]} · ${CAMP_REG[reg][0]}`, draw: (c, x, y, w, h) => drawCampMap(c, x, y, w, h, reg, sel) });
+    rows.push({ t: 'btns', items: [0, 1, 2, 3, 4].map(i => { const lv = reg * 5 + i + 1, open = lv <= C.at; return { label: i === 4 ? `${lv} Jefe` : String(lv), style: !open ? 'ghost' : lv === sel ? 'selected' : 'normal', onPress: () => { if (!open) return; PROG.lv = lv; PROG.reg = reg; again(); } }; }) });
+    rows.push({ t: 'btns', items: [{ label: '◀ Región', style: reg > 0 ? 'normal' : 'ghost', onPress: () => { if (reg > 0) { PROG.reg = reg - 1; again(); } } }, { label: `Jugar nivel ${sel}`, style: 'primary', flex: 2, onPress: () => campStart(sel) }, { label: 'Región ▶', style: reg < CAMP_REG.length - 1 ? 'normal' : 'ghost', onPress: () => { if (reg < CAMP_REG.length - 1) { PROG.reg = reg + 1; again(); } } }] });
+    const L = campLv(sel); rows.push({ t: 'text', text: `Nivel ${sel}: ${RANKS[L.r][1].toLowerCase()}, ${L.waves} oleadas${L.boss && isCombat() ? ', con jefe' : ''} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} en ${MODE_NAMES[settings.mode]}`, color: '#a49fc8' });
+  } else {
+    rows.push({ t: 'canvas', h: 0.17, text: 'Tu semana', draw: drawWeek });
+    const b = bestRunOf(store(HIST_KEY) || []); rows.push({ t: 'text', text: b ? `Tu mejor ronda de ${(EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]).toLowerCase()} en ${MODE_NAMES[settings.mode]}: ${b.reps} ${b.ex === 'hang' ? 's' : 'reps'}${b.reps && b.ex !== 'hang' ? ` · ${Math.round(100 * (b.perfect || 0) / b.reps)} % perfectas` : ''}` : 'Aún no tienes ninguna ronda de este ejercicio en este modo', color: '#a49fc8' });
+  }
+  return rows;
+}
+// para la línea de arriba del menú principal
+function careerLine() { const L = lvlOf(), n = misLeft(); return `Nivel ${L.n} · ${titleOf(L.n)}${n ? ` · ${n} ${n === 1 ? 'misión' : 'misiones'} para hoy` : ' · misiones de hoy cumplidas'}`; }
+// y para la página: el nivel y las misiones de hoy, en el panel de Hoy
+function careerHTML() {
+  const L = lvlOf(), M = misToday(), esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  return `<div class="career"><div class="lvl"><b>${L.n}</b><span>Nivel ${L.n} · ${titleOf(L.n)}<i style="--k:${Math.round(100 * L.into / L.need)}%"></i><small>${L.into} / ${L.need} XP</small></span></div>
+    <ul class="mis">${M.list.map(m => `<li class="${m.done ? 'done' : ''}"><span>${esc(MIS[m.t].txt(m))}</span><em>${m.done ? '✓' : `${Math.min(m.n, Math.floor(m.got))} / ${m.n}`}</em></li>`).join('')}</ul>
+    <p class="chest">${M.chest ? 'Cofre del día abierto' : 'Cumple las tres misiones y se abre el cofre del día'}</p></div>`;
 }
 
 
@@ -14057,7 +14377,7 @@ function iwSim(dt) {
 }
 function previewInput(dt) {
   const ex = settings.exercise;
-  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
+  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : ex === 'pike' ? dv('pikeDepth') / 100 + 0.05 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
   let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'fraise', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
@@ -14174,7 +14494,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu();
 }
-function stopPreview() { preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { campEnd(); CAMP.env = null; preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -14189,7 +14509,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
   if (e.code === 'KeyF') PV.fall = true;
   if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; if (isBars()) { barRep({ perfect: true }); return; } onCharge(); onRep({ perfect: true }); }
-  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
+  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', pike: '¡La cabeza más cerca del suelo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
 });
 addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; if (e.code === 'KeyH') PV.handsUp = false; });
 const cv = renderer.domElement, ray = new THREE.Raycaster(), _plane = new THREE.Plane(), _pt = new V3(), _nrm = new V3();
@@ -14344,7 +14664,7 @@ async function startXR(ar) {
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
-    session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)

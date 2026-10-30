@@ -118,7 +118,7 @@ function iwSim(dt) {
 }
 function previewInput(dt) {
   const ex = settings.exercise;
-  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
+  const dropAmt = ex === 'splank' ? settings.splDrop / 100 + 0.06 : ex === 'pike' ? dv('pikeDepth') / 100 + 0.05 : isFloor() ? 0.19 : settings.mode === 'arcs' ? Math.max(settings.arcMin, settings.arcMax) / 100 + 0.08 : ex === 'lunge' ? dv('lungeDepth') / 100 + 0.1 : ex === 'dips' ? dv('dipDepth') / 100 + 0.06 : ex === 'swing' ? settings.swingDrop / 100 + 0.08 : ex === 'dlrow' ? settings.dlDepth / 100 + 0.08 : dv('squatDepth') / 100 + 0.12;
   let target = PV.crouch && !['curl', 'curl2', 'press', 'press2', 'fraise', 'chop'].includes(ex) ? PV.baseY - dropAmt : PV.baseY;
   // barras: Espacio sube (remo o dominada), F te suelta
   if (settings.exercise === 'superman') target = PV.crouch ? PV.baseY + settings.supRange / 100 + 0.05 : PV.baseY; // Espacio: subir el tronco
@@ -235,7 +235,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu();
 }
-function stopPreview() { preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { campEnd(); CAMP.env = null; preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -250,7 +250,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (settings.exercise === 'curl') { onCharge(); const side = Math.random() < 0.5 ? 'left' : 'right'; setTimeout(() => onRep({ perfect: false }, side), 90); } else PV.crouch = true; } }
   if (e.code === 'KeyF') PV.fall = true;
   if (e.code === 'KeyP') { if (settings.mode === 'arcs') return; if (isBars()) { barRep({ perfect: true }); return; } onCharge(); onRep({ perfect: true }); }
-  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
+  if (e.code === 'KeyX') onPartial({ squat: '¡Baja más!', pushup: '¡Más abajo!', pike: '¡La cabeza más cerca del suelo!', curl: 'Sube hasta el hombro', row: '¡Más arriba!', pullup: '¡Más arriba!', hang: '¡Aguanta!' }[settings.exercise]);
 });
 addEventListener('keyup', e => { PV.keys[e.code] = false; if (e.code === 'Space') PV.crouch = false; if (e.code === 'KeyF') PV.fall = false; if (e.code === 'KeyH') PV.handsUp = false; });
 const cv = renderer.domElement, ray = new THREE.Raycaster(), _plane = new THREE.Plane(), _pt = new V3(), _nrm = new V3();
@@ -405,7 +405,7 @@ async function startXR(ar) {
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
-    session.addEventListener('end', () => { endSession(); xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)

@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -272,6 +272,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // apuntando con la mirada, el jugador mira al bicho más cercano (si no, desde trampillas a 2 m casi nunca cruzan delante)
   const lookNearest = sim => t => { sim(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); };
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, lookNearest(squatSim()));
+  // flexión en pica (solo en Combate): la cabeza baja entre las manos, con más recorrido que la flexión; salen los bichos de las trampillas
+  await runConfig('Combate flexiones en pica', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'pike', walkTime: 8 }, squatSim(2.8), 420, s => s.reps < 9 ? 'la flexión en pica no cuenta las repeticiones' : s.partial > 2 ? 'la flexión en pica da medias de más' : !RA.MODE_EX.combat.includes('pike') || RA.MODE_EX.arcs.includes('pike') || RA.MODE_EX.touch.includes('pike') ? 'la flexión en pica debería estar solo en Combate' : '');
   RA.camera.rotation.set(0, 0, 0);
   // con barra o kettlebell: las dos manos a la vez; sentadilla con press: hay que subir las pesas para disparar
   await runConfig('Combate curl con barra', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2' }, squatSim(2.0), 420, s => s.reps < 9 ? 'el curl con barra no cuenta las repeticiones' : s.partial > 2 ? 'el curl con barra da medias de más' : '');
@@ -1491,6 +1493,40 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (t1.distanceTo(t2) > 0.005) errors.push('el menú que sigue al resumen no sale en el mismo sitio');
     if (dist > 0.75) errors.push('el menú sale demasiado lejos');
     frame(1); }
+  // ---- Tu carrera: experiencia y nivel, misiones del día con su cofre, campaña con estrellas y tu semana en el resumen ----
+  { const sv = { ...RA.settings }; applyCfg({ mode: 'combat', exercise: 'squat', foes: 'robots', aim: 'auto', intro: 0, rank: 'cabo', waves: 5, toFail: 0, scenery: 'arena' });
+    const xp0 = RA.CR.xp, L0 = RA.lvlOf().n, lv5 = RA.lvlOf(100 + 120 + 140 + 160).n;
+    RA.careerRun({ reps: 30, perfect: 10, mins: 4, combo: 6, win: true, taken: 1, mode: 'combat', ex: 'squat' }); const G = RA.careerTake();
+    log(`career: +${G.xp} XP for 30 reps (10 perfect) and a win · level ${L0} → ${RA.lvlOf().n} · 520 XP is level ${lv5} (${RA.titleOf(lv5)})`);
+    if (G.xp < 60 || RA.CR.xp - xp0 !== G.xp) errors.push('carrera: una ronda debería dar su experiencia (repeticiones, las perfectas el doble y ganar)');
+    if (lv5 !== 5 || RA.titleOf(1) !== 'Novato' || RA.titleOf(6) !== 'Luchador') errors.push('carrera: los niveles o los títulos no van como deben');
+    // los colores: uno bloqueado no se puede poner; con nivel, sí; el rayo normal toma su color (el perfecto, no)
+    const own0 = RA.CR.own.slice(); RA.CR.own = []; RA.CR.xp = 0; RA.CR.equip = {}; const lockTry = (RA.lookSet('hands', 'white'), RA.lookHex('hands')); RA.CR.xp = 1e6; RA.CR.own = []; RA.lookSet('hands', 'gold'); RA.lookSet('bolt', 'lime'); const gold = RA.lookHex('hands'), bolt = RA.boltRGB(0), perf = RA.boltRGB(1);
+    log(`looks: locked white kept ${lockTry.toString(16)} · at a high level gold ${gold.toString(16)} · normal bolt ${bolt.map(v => v.toFixed(2))} · perfect bolt ${perf.map(v => v.toFixed(2))}`);
+    if (lockTry === 0xffffff || gold !== 0xffd166 || !(bolt[1] > 0.8 && bolt[0] < 0.7) || !(perf[1] > 0.8 && perf[2] > 0.6)) errors.push('carrera: los colores desbloqueados no se aplican (o se puede poner uno bloqueado)');
+    RA.CR.equip = {}; RA.CR.xp = xp0 + G.xp; RA.CR.own = own0;
+    // misiones de hoy: tres, de volumen, calidad y variedad; cumplirlas da experiencia y, las tres, el cofre del día
+    RA.CR.mis = null; const M = RA.misToday(), kinds = M.list.map(m => RA.MIS[m.t].kind).join(','), xp1 = RA.CR.xp;
+    for (const m of M.list) { m.n = 1; m.got = 0; m.done = false; m.t === 'mode' && (m.arg = 'combat'); m.t === 'ex' && (m.arg = 'squat'); } M.chest = false;
+    RA.careerRun({ reps: 12, perfect: 12, mins: 3, combo: 20, win: true, taken: 0, mode: 'combat', ex: 'squat', stars: 1 }); const G2 = RA.careerTake();
+    log(`missions: ${M.list.map(m => `${RA.MIS[m.t].txt(m)} ${m.done ? '✓' : '·'}`).join(' | ')} · kinds ${kinds} · chest ${M.chest} · +${G2.xp} XP · notes ${G2.notes.map(n => n[0]).join(' / ')}`);
+    if (kinds !== 'vol,q,var') errors.push('misiones: deberían ser tres, una de volumen, una de calidad y una de variedad');
+    if (!M.chest || !M.list.every(m => m.done) || G2.xp < 3 * 40 + 100) errors.push('misiones: cumplidas, deberían dar su experiencia y abrir el cofre del día');
+    // la campaña: el nivel pone sus ajustes (rango y oleadas) sin tocar los tuyos; ganar da estrellas y abre el siguiente
+    const id = 'combat:squat'; delete RA.CR.camp[id]; const before = [RA.settings.rank, RA.settings.waves];
+    RA.startPreview(); frame(2); RA.campStart(1); frame(3); const inLv = [RA.settings.rank, RA.settings.waves], stored = JSON.parse(storage.get('reparena3-settings') || '{}');
+    RA.stats.reps = 20; RA.stats.perfect = 18; RA.stats.taken = 0; RA.endRun(true); for (let i = 0; i < 260 && !RA.menu; i++) frame(1);
+    const C = RA.campOf(id), after = [RA.settings.rank, RA.settings.waves], lw = RA.activeWidgets().map(w => w.label);
+    log(`campaign: level 1 plays as ${inLv.join(' / ')} (yours ${before.join(' / ')}, stored ${stored.rank}) · after: ${after.join(' / ')} · stars ${C.stars[1]} · next open ${C.at} · summary buttons ${['Nivel 2', 'Repetir nivel', 'Mapa', 'Menú principal'].filter(l => lw.includes(l)).join(', ')}`);
+    if (inLv[0] !== 'recluta' || inLv[1] !== 3) errors.push('campaña: el nivel 1 debería jugarse de recluta y con 3 oleadas');
+    if (after[0] !== before[0] || after[1] !== before[1] || stored.rank !== before[0]) errors.push('campaña: al acabar deberían volver tus ajustes (y no guardarse los del nivel)');
+    if (C.stars[1] !== 3 || C.at !== 2) errors.push('campaña: ganar con muchas perfectas y sin golpes debería dar 3 estrellas y abrir el nivel 2');
+    if (!['Nivel 2', 'Repetir nivel', 'Mapa'].every(l => lw.includes(l))) errors.push('campaña: el resumen debería ofrecer el nivel siguiente, repetirlo y el mapa');
+    press('Mapa'); frame(2); const onMap = RA.activeWidgets().some(w => w.label === 'Jugar nivel 2'), parts = RA.activeWidgets().some(w => w.label === 'Progreso');
+    for (const k of ['lvl', 'mis', 'week']) { RA.PROG.tab = k; RA.lobbyMenu(); frame(1); }
+    log(`progress part: in the main menu ${parts} · map offers «Jugar nivel 2» ${onMap} · line «${RA.careerLine()}»`);
+    if (!parts || !onMap) errors.push('progreso: el menú principal debería tener Progreso, con el mapa de la campaña');
+    RA.PROG.tab = 'lvl'; RA.exitAll(); frame(1); applyCfg(sv); RA.startPreview(); frame(2); } // (lo que sigue, en el ordenador)
   // pausa durante partida
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat'); RA.lobbyMenu(); frame(1); press('EMPEZAR'); frame(120);
   RA.openPause(); frame(2); press('Ajustes'); frame(1); press('Volver'); frame(1); press('Continuar'); frame(10);
@@ -2300,7 +2336,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
   if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
   // ---- Curl con barra en XR: solo cuenta si suben las dos manos juntas ----
-  applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2', lives: 0, waves: 1, repsWave: 30, walkTime: 20 });
+  applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2', lives: 0, waves: 1, repsWave: 60, walkTime: 20 }); // (de sobra: con los disparos cargados la oleada podía acabarse antes de las últimas pruebas)
   XRS.headY = 1.7; XRS.headQ = null; XRS.hands = { left: { x: -0.2, y: 0.95, z: -0.2 }, right: { x: 0.2, y: 0.95, z: -0.2 } };
   await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
   const curlCycle = (sides, n) => { for (let c = 0; c < n; c++) for (let i = 0; i < 80; i++) { const up = i >= 20 && i < 50; for (const sd of ['left', 'right']) XRS.hands[sd].y = up && sides.includes(sd) ? 1.42 : 0.95; frame(1, 16, xrFrame); } };
@@ -2321,6 +2357,35 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (up && RA.stats.reps > r0) early = true; const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); }
     log(`curl con barra XR aguantando 2,7 s arriba: disparo ×${pow} · ${RA.stats.reps - r0} rep · salió antes de bajar ${early}`);
     if (pow < 3 || early || RA.stats.reps - r0 !== 1) errors.push('curl: aguantar la pesa a la altura de los hombros debería cargar el disparo (×3 o más) y dispararlo al bajarla'); }
+  // la kettlebell agarrada por el asa con las dos manos (los puños juntos): las gafas confunden las manos pegadas. Un salto
+  // suelto de una mano no dispara; con una sola a la vista, o perdiéndose por turnos, cuenta cada subida una vez; perdidas
+  // las dos al subir, cuenta; y si reaparecen ya arriba, también (una sola vez)
+  { const both = y => { XRS.hands.left.y = XRS.hands.right.y = y; }, curl = (n, each) => { for (let c = 0; c < n; c++) for (let i = 0; i < 90; i++) { const k = i < 15 ? 0 : i < 35 ? (i - 15) / 20 : i < 50 ? 1 : i < 70 ? 1 - (i - 50) / 20 : 0; both(0.95 + 0.45 * k); if (each) each(i); frame(1, 16, xrFrame); } XRS.noLeft = XRS.noRight = XRS.noHands = false; };
+    both(0.95); frame(30, 16, xrFrame); let r0 = RA.stats.reps, p0 = RA.stats.partial;
+    for (let g = 0; g < 6; g++) { const sd = g % 2 ? 'right' : 'left'; XRS.hands[sd].y = 1.45; frame(g < 3 ? 1 : 2, 16, xrFrame); XRS.hands[sd].y = 0.95; frame(25, 16, xrFrame); }
+    const glitch = RA.stats.reps - r0, glitchMsg = RA.stats.partial - p0;
+    r0 = RA.stats.reps; curl(4, () => { XRS.noRight = true; }); const one = RA.stats.reps - r0;
+    r0 = RA.stats.reps; curl(4, i => { const a = Math.floor(i / 6) % 3; XRS.noLeft = a === 1; XRS.noRight = a === 2; }); const swap = RA.stats.reps - r0;
+    r0 = RA.stats.reps; curl(3, i => { XRS.noHands = i >= 27 && i < 75; }); const dark = RA.stats.reps - r0;
+    r0 = RA.stats.reps; curl(3, i => { XRS.noHands = i >= 17 && i < 42; }); const reapp = RA.stats.reps - r0;
+    log(`kettlebell curl by the handle (both fists together): one-hand glitches → ${glitch} reps, ${glitchMsg} warnings · only one hand seen ${one}/4 · hands lost by turns ${swap}/4 · both lost while rising ${dark}/3 · reappearing already up ${reapp}/3`);
+    if (glitch || glitchMsg) errors.push('curl con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
+    if (one !== 4 || swap !== 4) errors.push(`curl con kettlebell: con una sola mano a la vista, o perdiéndose por turnos, debería contar cada subida una vez (${one}, ${swap} de 4)`);
+    if (dark !== 3 || reapp !== 3) errors.push(`curl con kettlebell: perdidas las dos al subir, o reapareciendo ya arriba, debería contar una vez (${dark}, ${reapp} de 3)`); }
+  // lo mismo en el press con barra o kettlebell (las dos manos juntas; por encima de la cabeza las cámaras las pierden)
+  { RA.exitAll(); frame(2, 16, xrFrame); applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press2', lives: 0, waves: 1, repsWave: 40, walkTime: 20, pressRange: 35 });
+    XRS.headY = 1.7; XRS.hands = { left: { x: -0.1, y: 1.5, z: -0.25 }, right: { x: 0.1, y: 1.5, z: -0.25 } }; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
+    const both = y => { XRS.hands.left.y = XRS.hands.right.y = y; }, press = (n, each) => { for (let c = 0; c < n; c++) for (let i = 0; i < 90; i++) { const k = i < 15 ? 0 : i < 35 ? (i - 15) / 20 : i < 50 ? 1 : i < 70 ? 1 - (i - 50) / 20 : 0; both(1.5 + 0.45 * k); if (each) each(i); frame(1, 16, xrFrame); } XRS.noLeft = XRS.noRight = XRS.noHands = false; };
+    both(1.5); frame(30, 16, xrFrame); let r0 = RA.stats.reps, p0 = RA.stats.partial;
+    for (let g = 0; g < 6; g++) { const sd = g % 2 ? 'right' : 'left'; XRS.hands[sd].y = 1.98; frame(g < 3 ? 1 : 2, 16, xrFrame); XRS.hands[sd].y = 1.5; frame(25, 16, xrFrame); }
+    const glitch = RA.stats.reps - r0, glitchMsg = RA.stats.partial - p0;
+    r0 = RA.stats.reps; press(4); const two = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(4, () => { XRS.noRight = true; }); const one = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(4, i => { const a = Math.floor(i / 6) % 3; XRS.noLeft = a === 1; XRS.noRight = a === 2; }); const swap = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(3, i => { XRS.noHands = i >= 27 && i < 75; }); const dark = RA.stats.reps - r0;
+    log(`kettlebell press (both hands together): one-hand glitches → ${glitch} reps, ${glitchMsg} warnings · both seen ${two}/4 · only one hand ${one}/4 · lost by turns ${swap}/4 · both lost overhead ${dark}/3`);
+    if (glitch || glitchMsg) errors.push('press con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
+    if (two !== 4 || one !== 4 || swap !== 4 || dark !== 3) errors.push(`press con kettlebell: cada subida debería contar una vez (las dos ${two}, una ${one}, por turnos ${swap} de 4; perdidas arriba ${dark} de 3)`); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
   // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la
