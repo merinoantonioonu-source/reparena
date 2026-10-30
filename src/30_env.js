@@ -291,8 +291,16 @@ function applyEnvMode() {
   hemi.intensity = arMode ? 0.95 : 0.42; hemi.color.setHex(arMode ? 0xdfe6ff : 0x8d98b8);
   keyLight.intensity = arMode ? 0.9 : 1.05; rimLight.intensity = arMode ? 0.25 : 0.9;
   renderer.toneMappingExposure = arMode ? 1.0 : 1.2;
-  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland(); applyComic();
+  layoutArena(); applyVolume(); applyForest(); applyNature(); applyIsland(); applyComic(); underFill();
 }
+// Tumbado debajo de lo que llega (remo invertido bajo la barra, abdominales boca arriba) lo ves desde abajo, donde no da
+// ninguna luz (el avispón se veía negro): la luz de contorno pasa a venir de abajo, en un tono neutro (sin añadir otra luz)
+const underView = () => (settings.mode === 'bars' && settings.exercise === 'row') || isSupine();
+function underFill() {
+  if (underView() && !arMode) { rimLight.position.set(0, -6, -3); rimLight.target.position.set(0, 2, -3); rimLight.color.setHex(0xaab4d8); rimLight.intensity = 0.85; }
+  else { rimLight.position.set(2, 4, -12); rimLight.target.position.set(0, 0, 0); }
+}
+settingHooks.push(k => { if (k === 'mode' || k === 'exercise') applyEnvMode(); });
 function applyShadows() {
   const on = !!settings.shadows && settings.look !== 'comic'; // (el estilo cómic va sin sombras en tiempo real)
   renderer.shadowMap.enabled = on; keyLight.castShadow = on;

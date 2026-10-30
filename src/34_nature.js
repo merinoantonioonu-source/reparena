@@ -232,7 +232,7 @@ function natGateStyle(on) {
   }
   gateLight.color.setHex(on ? 0xff8a30 : 0xff3a10);
 }
-settingHooks.push(k => { if (k === 'scenery' || k === '*') applyEnvMode(); });
+settingHooks.push(k => { if (k === 'scenery') envSwitch(); else if (k === '*') applyEnvMode(); }); // (en las gafas, a oscuras: 64_intro)
 // Con «Alternar», cada partida en un sitio distinto
 function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = { arena: 'nature', nature: 'island' }[NAT.pick] || 'arena'; applyEnvMode(); } // fortaleza → bosque → isla
 // Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles

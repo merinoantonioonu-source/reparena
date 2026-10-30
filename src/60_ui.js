@@ -606,7 +606,8 @@ function updateWatch(dt) {
   const h = hands.left;
   let show = false;
   // con mandos, X/Y del mando izquierdo hacen de botón de menú
-  if (h.btnMenu && !watch.btnPrev) onWatch(); watch.btnPrev = h.btnMenu; // (se cierra con «✕ Cerrar», como con las manos)
+  // (con el menú de muñeca abierto y a la vista, X/Y lo recogen: no lo vuelven a colocar)
+  if (h.btnMenu && !watch.btnPrev) { if (menu && menu.wrist && WM.on && !wristFar() && !menu.perks && !GAME_STATES.includes(state)) menuClose(); else onWatch(); } watch.btnPrev = h.btnMenu;
   const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
   const wristUp = menu && menu.wrist && WM.on && !wristFar(); // con el panel abierto delante, el botón sobra
   if (wristLook(h) && !wristUp && !guns) {
@@ -629,15 +630,14 @@ const WMS = 0.46; // escala del panel a 45 cm de los ojos: 0,76 m de ancho en el
 const wristScale = () => WMS * clamp(settings.wristDist / 45, 0.8, 1.7);
 const WM = { e: 0, on: false, init: false, top: new V3(), q: new Q4(), from: new V3() };
 const wristHint = glowSprite(0xff4fa3, 0.05, 0.8); wristHint.visible = false; scene.add(wristHint);
-const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3(), _wmu = new V3();
+const _wm4 = new THREE.Matrix4(), _wmt = new V3(), _wmq = new Q4(), _wml = new V3(), _wmu = new V3(), _wmd = new V3();
 // Abrir (o traer delante) el panel: sale otra vez desde la muñeca
 function wristOpen() { WM.on = true; WM.e = 0; WM.init = false; }
 settingHooks.push(k => { if (k === 'wristDist' || k === '*') WM.init = false; }); // otra distancia: se recoloca
-// Dónde se queda: hacia donde miras (en horizontal; mirando arriba o abajo, hacia la mano izquierda), con el borde de arriba
-// algo por debajo de los ojos, inclinado hacia ellos y siempre derecho (no se ladea aunque ladees la cabeza)
+// Dónde se queda: hacia donde mira tu cara (en horizontal, también mirando a la muñeca: nunca hacia la mano), con el borde de
+// arriba algo por debajo de los ojos, inclinado hacia ellos y siempre derecho (no se ladea aunque ladees la cabeza)
 function wristTarget(H, S) {
-  const f = fwd(); let dir = fwdH();
-  if (Math.abs(f.y) > 0.7 && hands.left.ok) { _wml.copy(hands.left.wrist).sub(head.p); _wml.y = 0; if (_wml.lengthSq() > 0.01) dir = _wml.normalize().clone(); }
+  const yw = bodyYaw(), dir = _wmd.set(-Math.sin(yw), 0, -Math.cos(yw));
   // el centro, a wristDist en horizontal y con el borde de arriba algo por debajo de los ojos (sin bajar del suelo)
   _wmt.copy(head.p).addScaledVector(dir, settings.wristDist / 100); _wmt.y = Math.max(head.p.y - 0.06, H * S + 0.08) - H * S / 2;
   _wm4.lookAt(head.p, _wmt, _up); _wm4.decompose(_wml, _wmq, _wmu);
@@ -654,11 +654,12 @@ function wristPose(group, H, dt = 0) {
   group.position.lerpVectors(WM.from, _wml, e);
   group.quaternion.copy(WM.q); group.scale.setScalar(Math.max(0.001, s)); group.visible = WM.e > 0.01;
 }
-// ¿Está abierto pero no lo ves (te giraste o te fuiste)? Entonces el botón MENÚ lo trae delante
+// ¿Está abierto pero no lo ves (te giraste o te fuiste)? Entonces el botón MENÚ lo trae delante. Solo cuenta girarse o
+// alejarse: mirar abajo, a la muñeca, no (si no, el botón lo recolocaba y parecía que el menú se arrastraba con la mano)
 function wristFar() {
   if (!menu || !menu.wrist || !WM.on) return false;
-  menu.group.getWorldPosition(_wml); const d = _wml.sub(head.p), len = d.length();
-  return len > 1.3 || d.angleTo(fwd()) > 55 * Math.PI / 180;
+  menu.group.getWorldPosition(_wml); const d = _wml.sub(head.p), len = d.length(); d.y = 0; const yw = bodyYaw();
+  return len > 1.3 || (d.lengthSq() > 1e-4 && d.angleTo(_wmd.set(-Math.sin(yw), 0, -Math.cos(yw))) > 55 * Math.PI / 180);
 }
 function updateWristMenu(dt) {
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }

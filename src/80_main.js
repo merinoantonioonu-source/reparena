@@ -320,6 +320,7 @@ renderer.setAnimationLoop((time, frame) => {
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
   if (WARM.q.length && !['play', 'rest'].includes(state)) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida
+  introIdle(dt); envSwitchStep(dt); // (la ilustración de la carátula, por partes, mientras estás en el menú; el cambio de entorno, a oscuras)
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   qualStep(dt);
   const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();
@@ -352,6 +353,10 @@ function qualStep(dt) {
   // nítidas (también en realidad mixta, donde la calidad automática solía bajar); al volver a jugar, la que tenía
   if (menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state)) { if (QUAL.applied !== -2) { QUAL.applied = -3; qualApply(0, s, true); QUAL.applied = -2; } QUAL.t = 0; QUAL.n = 0; return; }
   if (QUAL.applied !== QUAL.lv) { QUAL.applied = -1; qualApply(QUAL.lv, s); }
+  // un tirón suelto (compilar un entorno o un monstruo, cargar una textura) no es que el juego vaya lento: ese segundo no
+  // cuenta (si no, bajaba la resolución tras cada cambio de entorno y tardaba mucho en recuperarla)
+  const nowR = performance.now() / 1000, raw = nowR - (QUAL.last || nowR); QUAL.last = nowR;
+  if (raw > 0.1) { QUAL.t = 0; QUAL.n = 0; return; }
   const hz = s.frameRate || +settings.xrHz || 72; QUAL.now += dt; QUAL.t += dt; QUAL.n++; QUAL.cool -= dt; QUAL.block -= dt;
   if (QUAL.t < 1) return;
   const fps = QUAL.n / QUAL.t; QUAL.t = 0; QUAL.n = 0;
@@ -420,7 +425,7 @@ async function startXR(ar) {
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
-    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet() && !padHandsOn()) openPause(); }); // (con mandos como manos, el gatillo lanza el rayo: el menú, con X o Y)
+    session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet() && !padFire()) openPause(); }); // (con mandos como manos, el gatillo lanza el rayo: el menú, con X o Y)
     ambientStart();
     setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(); }, 600);
   } catch (err) {
