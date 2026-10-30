@@ -13856,18 +13856,40 @@ function beatLightStep(dt) {
 /* ---------- Sorpresas: el cofre que se abre saltando ---------- */
 // En algunos descansos (de pie, en Combate) sale un cofre en el suelo, delante y a un lado: un salto lo abre y da una
 // mejora más (si quedan), una vida o puntos
+// El cofre es hueco: fondo y paredes con grosor, por dentro de madera oscura, y dentro un montón de monedas y gemas que
+// brillan al abrirse; la tapa también es hueca por debajo (abierta, se ve su interior oscuro, no la madera de fuera)
 const CHEST = (() => {
-  const g = new THREE.Group(), k = new Kit(), wood = col(0.11, 0.05, 0.02), band = col(0.85, 0.5, 0.06); // (colores lineales: se ven bastante más claros)
-  k.add('m', G.box(0.5, 0.26, 0.34), wood, 0, 0.13, 0);
-  for (const x of [-0.17, 0.17]) k.add('m', G.box(0.04, 0.27, 0.35), band, x, 0.135, 0);
-  g.add(k.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
-  const lid = new THREE.Group(); lid.position.set(0, 0.26, -0.17); g.add(lid);
-  const kl = new Kit(); kl.add('m', G.box(0.5, 0.1, 0.34), wood, 0, 0.05, 0.17); kl.add('m', G.box(0.08, 0.08, 0.03), band, 0, 0.0, 0.345);
-  for (const x of [-0.17, 0.17]) kl.add('m', G.box(0.04, 0.11, 0.35), band, x, 0.05, 0.17);
-  lid.add(kl.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
+  const g = new THREE.Group(), k = new Kit(), wood = col(0.11, 0.05, 0.02), band = col(0.85, 0.5, 0.06), dark = col(0.025, 0.012, 0.006), t = 0.03; // (colores lineales: se ven bastante más claros)
+  const W = 0.5, H = 0.26, D = 0.34, wall = (kit, w, h, d, x, y, z, c = wood) => kit.add('m', G.box(w, h, d), c, x, y, z);
+  wall(k, W, t, D, 0, t / 2, 0); wall(k, W, H, t, 0, H / 2, D / 2 - t / 2); wall(k, W, H, t, 0, H / 2, -D / 2 + t / 2); // fondo, delante y detrás
+  for (const sx of [-1, 1]) wall(k, t, H, D - 2 * t, sx * (W / 2 - t / 2), H / 2, 0); // los lados
+  const ki = new Kit(); // el forro de dentro, oscuro
+  ki.add('m', G.box(W - 2 * t, 0.004, D - 2 * t), dark, 0, t + 0.002, 0);
+  for (const sz of [-1, 1]) ki.add('m', G.box(W - 2 * t, H - t, 0.004), dark, 0, t + (H - t) / 2, sz * (D / 2 - t - 0.002));
+  for (const sx of [-1, 1]) ki.add('m', G.box(0.004, H - t, D - 2 * t), dark, sx * (W / 2 - t - 0.002), t + (H - t) / 2, 0);
+  for (const x of [-0.17, 0.17]) { for (const sz of [-1, 1]) wall(k, 0.04, H + 0.01, 0.012, x, H / 2, sz * (D / 2 + 0.006), band); wall(k, 0.04, 0.012, D + 0.024, x, -0.002, 0, band); } // los flejes, por fuera
+  for (const sz of [-1, 1]) wall(k, W + 0.01, 0.014, t + 0.006, 0, H - 0.007, sz * (D / 2 - t / 2), band); for (const sx of [-1, 1]) wall(k, t + 0.006, 0.014, D, sx * (W / 2 - t / 2), H - 0.007, 0, band); // el borde de arriba
+  // el tesoro: un montón de oro con monedas sueltas y unas gemas, por debajo del borde
+  const kt = new Kit(), gold = col(1, 0.62, 0.08);
+  kt.add('m', G.sph(0.2, 18, 8, TS, 0, TAU, 0, Math.PI / 2), gold, 0, t, 0, 0, 0, 0, 1.05, 0.75, 0.62);
+  const top = (x, z) => t + 0.15 * Math.sqrt(Math.max(0, 1 - (x / 0.21) ** 2 - (z / 0.124) ** 2)); // (la altura del montón en cada punto)
+  for (let n = 0; n < 16; n++) { const a = n * 2.4, r = 0.2 + (n % 5) * 0.17, x = Math.cos(a) * r * 0.2, z = Math.sin(a) * r * 0.12; kt.add('m', G.cyl(0.028, 0.028, 0.006, 14), gold, x, top(x, z) + 0.004, z, 0.5 * Math.sin(n), 0, 0.6 * Math.cos(n * 1.7)); }
+  for (const [x, z, c] of [[-0.08, 0.03, col(0.9, 0.05, 0.12)], [0.09, -0.04, col(0.05, 0.75, 0.6)], [0.02, 0.06, col(0.3, 0.1, 0.9)]]) kt.add('m', G.sph(0.026, 6, 4), c, x, top(x, z) + 0.012, z);
+  g.add(k.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }), ki.build({ m: std({ vertexColors: true, roughness: 1, metalness: 0 }) }));
+  const treasure = kt.build({ m: std({ vertexColors: true, roughness: 0.3, metalness: 0.85, emissive: 0x3a2400 }) }); g.add(treasure);
+  // la tapa: tablero de arriba y faldón hacia abajo (hueca), con su forro oscuro, los flejes y la cerradura
+  const lid = new THREE.Group(); lid.position.set(0, H, -D / 2); g.add(lid);
+  const LH = 0.1, kl = new Kit(), kli = new Kit();
+  wall(kl, W, t, D, 0, LH - t / 2, D / 2); wall(kl, W, LH - t, t, 0, (LH - t) / 2, D - t / 2); wall(kl, W, LH - t, t, 0, (LH - t) / 2, t / 2);
+  for (const sx of [-1, 1]) wall(kl, t, LH - t, D - 2 * t, sx * (W / 2 - t / 2), (LH - t) / 2, D / 2);
+  kli.add('m', G.box(W - 2 * t, 0.004, D - 2 * t), dark, 0, LH - t - 0.002, D / 2);
+  for (const x of [-0.17, 0.17]) { wall(kl, 0.04, 0.012, D + 0.012, x, LH + 0.004, D / 2, band); wall(kl, 0.04, LH + 0.01, 0.012, x, LH / 2, D + 0.006, band); wall(kl, 0.04, LH + 0.01, 0.012, x, LH / 2, -0.006, band); }
+  wall(kl, 0.08, 0.08, 0.03, 0, 0.0, D + 0.01, band); // la cerradura
+  lid.add(kl.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }), kli.build({ m: std({ vertexColors: true, roughness: 1, metalness: 0 }) }));
   const glow = glowSprite(0xffd166, 0.9, 0.5); glow.position.y = 0.3; g.add(glow);
+  const shine = glowSprite(0xffc040, 0.55, 0); shine.position.y = 0.2; g.add(shine); // el brillo del oro al abrirse
   g.visible = false; arena.add(g);
-  return { g, lid, glow, on: false, open: 0, opened: false, t: 0, vy: 0, lastY: 0 };
+  return { g, lid, glow, shine, treasure, on: false, open: 0, opened: false, t: 0, vy: 0, lastY: 0 };
 })();
 const chestWaits = () => CHEST.on && !CHEST.opened && state === 'rest';
 const chestCan = () => surpriseOn() && !isFloor() && !isSeated() && !isSupine() && !isBars() && settings.exercise !== 'inchworm';
@@ -13887,6 +13909,7 @@ function chestStep(dt, t) {
   const vy = dt > 0 ? (head.p.y - CHEST.lastY) / dt : 0; CHEST.vy += (vy - CHEST.vy) * Math.min(1, dt * 20); CHEST.lastY = head.p.y;
   if (!CHEST.opened && CHEST.t > 1 && CHEST.vy > 0.6 && head.p.y > standHeadY() + 0.06) chestOpen();
   if (CHEST.opened) { CHEST.open = Math.min(1, CHEST.open + dt * 2.5); CHEST.lid.rotation.x = -1.9 * (1 - Math.pow(1 - CHEST.open, 3)); }
+  CHEST.shine.material.opacity = CHEST.opened ? CHEST.open * (0.55 + 0.15 * Math.sin(t * 6)) : 0;
 }
 function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
