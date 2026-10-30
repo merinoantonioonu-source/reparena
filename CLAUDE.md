@@ -64,7 +64,9 @@ No las cambies sin preguntarle.
   salir de la cadera y hacerse subiendo o bajando en la sentadilla. Sin sacudida, la carga se queda en la mano. El rayo
   va al enemigo más cercano a la dirección de la sacudida, sin exigir puntería exacta.
 - El curl con kettlebell del usuario es con la pesa agarrada por el asa con las dos manos (los puños juntos, la bola
-  colgando debajo): es el «Curl con barra o kettlebell», que sigue las dos manos como una sola pesa.
+  colgando debajo): es el «Curl con barra o kettlebell». Las gafas confunden las manos pegadas: el curl y el press con
+  barra siguen las dos manos como una sola pesa, y todo lo que se hace con las dos manos juntas en una pesa (elevación
+  frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`).
 - La flexión en pica, solo en Combate (no en Arcos).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.

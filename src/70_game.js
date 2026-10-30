@@ -1280,8 +1280,7 @@ const DET = {
   lu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, leg: 0 },
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false } },
-  pair: { side: null, t: 0, perfect: false, fast: false },
-  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, uneven: false, left: { n: 0, last: 0, has: false }, right: { n: 0, last: 0, has: false } },
+  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, uneven: false, vy: 0, prev: 0 }, barp: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, uneven: false, vy: 0, prev: 0 },
   tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
@@ -1380,79 +1379,63 @@ function armStep(kind, side, t, dt) {
   } else if (r < d.bottom + 0.08) d.state = 'down';
   return null;
 }
-// Los dos brazos a la vez (barra o kettlebell): cada uno con su paso, y la repetición cuenta cuando los dos llegan
-// casi a la vez. Si una mano no se ve (la barra la tapa), basta con la otra. Con la barra las dos suben juntas aunque el
-// seguimiento no lo vea igual en las dos (una algo más baja, o que llega un instante después): cuando una completa, vale
-// si la otra ya está arriba aguantando o ha subido al menos el 60 % del recorrido; si no, se le espera PAIR_WIN segundos
-const PAIR_WIN = 1.0;
-function pairNear(kind, side) {
-  const d = (kind === 'press' ? DET.pr : DET.curl)[side], range = (kind === 'press' ? settings.pressRange : settings.curlRange) / 100;
-  return hands[side].ok && (d.state === 'hold' || (d.state === 'rising' && d.max - d.bottom >= range * 0.6));
-}
-function pairStep(kind, t, dt) {
-  const P = DET.pair, D = kind === 'press' ? DET.pr : DET.curl;
-  for (const side of ['left', 'right']) {
-    const ev = armStep(kind, side, t, dt); if (!ev) continue;
-    if (ev.msg) { if (!P.side) onPartial(ev.msg); continue; }
-    const o = side === 'left' ? 'right' : 'left', od = D[o];
-    if (P.side && P.side !== side && t - P.t <= PAIR_WIN) { const pow = Math.max(P.pow || 1, ev.pow || 1); onCharge(); onRep({ perfect: P.perfect && ev.perfect, fast: P.fast || ev.fast, pow }); P.side = null; }
-    else if (!P.side && pairNear(kind, o)) { // la otra ya va arriba: cuenta ya (y la otra no contará otra vez al bajar)
-      const hold = od.state === 'hold', pow = Math.max(ev.pow || 1, hold ? od.pow || 1 : 1);
-      od.state = 'top'; onCharge(); onRep({ perfect: ev.perfect && hold && !!(od.ev && od.ev.perfect), fast: ev.fast, pow });
-    }
-    else Object.assign(P, { side, t, perfect: ev.perfect, fast: ev.fast, pow: ev.pow || 1 });
-  }
-  if (P.side) {
-    const other = P.side === 'left' ? 'right' : 'left', lost = hands[other].ok ? 0 : (kind === 'press' ? DET.pr : DET.curl)[other].lost;
-    if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast, pow: P.pow }); P.side = null; } // la otra mano no se ve: vale con una
-    else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
+// Pesas que se agarran con las dos manos juntas (barra o kettlebell: curl y press con barra, elevación frontal, leñador,
+// swing, sentadilla con press y con elevación): las gafas confunden a menudo las dos manos pegadas (pierden una, o la
+// ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
+// salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
+// así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
+const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
+const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
+function handFilter(dt) {
+  const ex = settings.exercise, vmax = HF_V[ex] || 4, up = HF_UP[ex] || 0.05;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], F = HF[s];
+    if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
+    const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
+    F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
-// Curl con barra o con la kettlebell agarrada por el asa con las dos manos (los puños juntos, la bola colgando debajo): las
-// gafas confunden a menudo las dos manos pegadas (pierden una, o la ven un momento en otro sitio), así que se siguen como
-// una sola pesa, con la altura de las muñecas respecto a los ojos:
-//  · cada mano solo vale si está donde puede estar (delante de ti, por debajo de los ojos y a tu alcance) y quieta en lo
-//    que cabe: un salto de más de BAR_V m/s es un error del seguimiento, y al reaparecer tiene que verse igual dos
-//    fotogramas seguidos
-//  · con una a la vista basta; con las dos, si coinciden, la media; si no, la más baja (una sola que sube no cuenta: avisa),
-//    salvo que la más baja ya vaya por el 60 % del recorrido (con la pesa suben juntas aunque se vea una algo más baja)
-//  · si se pierden las dos subiendo (ya por casi la mitad) o arriba aguantando, cuenta; y si reaparecen ya arriba, también
-const BAR_V = 3.2;
-function barSample(side, dt) {
-  const h = hands[side], S = DET.bar[side];
-  if (!h.ok) { S.n = 0; S.has = false; return null; }
-  const r = h.wrist.y - head.p.y, f = fwdH(), dx = h.wrist.x - head.p.x, dz = h.wrist.z - head.p.z, ahead = dx * f.x + dz * f.z, side_ = Math.abs(dx * f.z - dz * f.x);
-  const ok = r < 0.05 && r > -1.15 && ahead > -0.12 && ahead < 0.8 && side_ < 0.6;
-  const steady = S.has && Math.abs(r - S.last) <= Math.max(0.03, BAR_V * dt); S.last = r; S.has = true;
-  S.n = ok && steady ? S.n + 1 : 0;
-  return ok && S.n >= 2 ? r : null;
-}
-function barStep(t, dt) {
-  const B = DET.bar, range = settings.curlRange / 100, pt = settings.perfectTime;
-  const a = barSample('left', dt), b = barSample('right', dt), L = [a, b].filter(v => v !== null);
+// Curl y press con barra o con la kettlebell (en el curl, agarrada por el asa con los puños juntos y la bola colgando; en
+// el press, por el asa o por los cuernos): las dos manos se siguen como una sola pesa, con la altura de las muñecas
+// respecto a los ojos:
+//  · con una a la vista basta; con las dos, si coinciden, la media; si no, la más baja (una sola que sube no cuenta:
+//    avisa), salvo que la más baja ya vaya por el 60 % del recorrido (con la pesa suben juntas aunque se vea una algo más baja)
+//  · curl: arriba, aguantando, carga el disparo, que sale al empezar a bajar; press: dispara al llegar arriba
+//  · si se pierden las dos subiendo (ya por casi la mitad en el curl; en el press, a un 30 % o deprisa junto a la cara, que
+//    por encima de la cabeza las cámaras no las ven) o arriba aguantando, cuenta; y si reaparecen ya arriba, también
+function barStep(kind, t, dt) {
+  const press = kind === 'press', B = press ? DET.barp : DET.bar, range = (press ? settings.pressRange : settings.curlRange) / 100, pt = settings.perfectTime;
+  const L = ['left', 'right'].filter(s => HF[s].ok).map(s => hands[s].wrist.y - head.p.y);
   if (!L.length) {
     B.lost += dt;
-    if (B.state === 'hold' && B.lost > 0.25) { B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); }
+    if (press) {
+      if (B.state === 'down' && B.lost > 0.2 && B.vy > 0.3 && B.prev > B.bottom + 0.04) { Object.assign(B, { state: 'rising', max: B.prev, t0: t }); onCharge(); }
+      if (B.state === 'rising' && B.lost > 0.12 && (B.max - B.bottom >= range * 0.3 || (B.vy > 0.25 && B.max > -0.15))) { B.state = 'top'; onRep({ perfect: false, fast: false }); }
+    } else if (B.state === 'hold' && B.lost > 0.25) { B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); }
     else if (B.state === 'rising' && B.lost > 0.25 && B.max - B.bottom >= range * 0.4) { B.state = 'top'; onCharge(); onRep({ perfect: false, fast: false }); }
     return;
   }
-  let y, hi = Math.max(...L), lo = Math.min(...L);
+  let y; const hi = Math.max(...L), lo = Math.min(...L);
   if (L.length === 1 || hi - lo <= 0.15) y = (hi + lo) / 2;
   else y = lo - B.bottom >= range * 0.6 ? hi : lo;
   if (L.length === 2 && hi - B.bottom >= range && lo - B.bottom < range * 0.6) B.uneven = true; // una sola mano arriba
   const back = B.lost; B.lost = 0;
-  B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido
+  if (back > 0) B.vy = 0; else if (dt > 0) B.vy += ((y - B.prev) / dt - B.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
+  B.prev = y;
+  B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
+  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); } };
   // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
-  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * 0.85) { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev: { perfect: false, fast: false } }); onCharge(); return; }
+  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? 0.8 : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
   if (B.state === 'hold') { // aguantando arriba carga el disparo (×2, ×3, ×4); sale al empezar a bajar
     if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = 1 + Math.min(3, Math.floor(B.holdT / POW_STEP)); if (p > B.pow) { B.pow = p; onPower(p); } return; }
     B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); return;
   }
-  if (B.state === 'down') { if (y > B.bottom + Math.min(0.12, range * 0.45)) Object.assign(B, { state: 'rising', max: y, t0: t }); }
+  if (B.state === 'down') { if (y > B.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { Object.assign(B, { state: 'rising', max: y, t0: t }); if (press) onCharge(); } }
   else if (B.state === 'rising') {
     B.max = Math.max(B.max, y);
-    if (y - B.bottom >= range) { const dur = t - B.t0; Object.assign(B, { state: 'hold', holdT: 0, pow: 1, uneven: false, ev: { perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 } }); onCharge(); return; }
-    if (y < B.bottom + 0.07) { B.state = 'down'; if (!B.uneven && B.max - B.bottom > range * 0.55) onPartial('Sube hasta el hombro'); }
+    if (y - B.bottom >= range) { const dur = t - B.t0; B.uneven = false; top({ perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); return; }
+    if (y < B.bottom + (press ? 0.06 : 0.07)) { B.state = 'down'; if (!B.uneven && B.max - B.bottom > range * 0.55) onPartial(press ? 'Estira los brazos del todo arriba' : 'Sube hasta el hombro'); }
   } else if (y < B.bottom + 0.08) B.state = 'down';
   // una mano subió sola y ya han bajado las dos: avisa (una vez)
   if (B.uneven && hi < B.bottom + 0.08) { onPartial('Sube las dos manos a la vez'); B.uneven = false; }
@@ -1484,7 +1467,7 @@ function chainStep(kind, t, dt) {
   if (K.jump) { if (head.p.y - T.ref >= settings.jsqJump / 100 && JUMP.fastT < 0.3) T.seen.left = T.seen.right = true; }
   else for (const s of ['left', 'right']) {
     const h = hands[s];
-    if (h.ok) {
+    if (HF[s].ok) { // (sin los errores del seguimiento)
       const r = h.wrist.y - head.p.y;
       arena.worldToLocal(_chw.copy(h.wrist)); if (K.ok(r, HL.z - _chw.z)) T.seen[s] = true; // f: cuánto está por delante de los ojos
       T.last[s] = r; T.lostT[s] = 0;
@@ -1512,7 +1495,7 @@ const CHOP_WIN = 2.5, _chp = new V3();
 const _frm = new V3();
 function fraiseStep(t, dt) {
   const d = DET.fr, range = settings.fraiseRange / 100; let n = 0; _frm.set(0, 0, 0);
-  for (const s of ['left', 'right']) if (hands[s].ok) { _frm.add(hands[s].wrist); n++; }
+  for (const s of ['left', 'right']) if (HF[s].ok) { _frm.add(hands[s].wrist); n++; }
   if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
     d.lost += dt;
     if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
@@ -1534,7 +1517,7 @@ function fraiseStep(t, dt) {
 }
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
-  for (const s of ['left', 'right']) if (hands[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
+  for (const s of ['left', 'right']) if (HF[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
   if (!n) { if (C.state === 'loaded' && t - C.t0 > CHOP_WIN) C.state = 'idle'; return; }
   _chp.divideScalar(n);
   const x = _chp.x - HL.x, y = _chp.y, side = Math.sign(x), low = y < calibRef * 0.64 && Math.abs(x) > 0.1, high = y > calibRef * 0.9;
@@ -1675,6 +1658,7 @@ function iwVisual(t) {
 const _iwWhite = new THREE.Color(1, 1, 1);
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
+  handFilter(dt); // (las manos que valen, sin los errores del seguimiento: HF)
   if (settings.mode === 'arcs' || settings.mode === 'touch') return;
   const pt = settings.perfectTime;
   if (settings.exercise === 'squat') {
@@ -1697,11 +1681,8 @@ function runDetectors(t, dt) {
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
   } else if (settings.exercise === 'twist') {
     twistStep(t, dt);
-  } else if (settings.exercise === 'press2') {
-    // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
-    pairStep('press', t, dt);
-  } else if (settings.exercise === 'curl2') {
-    barStep(t, dt); // (las dos manos, como una sola pesa)
+  } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
+    barStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt); // con barra o kettlebell: las dos manos, como una sola pesa
   } else if (CHAIN[settings.exercise]) {
     // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
@@ -2479,7 +2460,7 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0, uneven: false }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0, uneven: false }); Object.assign(DET.barp, { state: 'down', lost: 0, uneven: false }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
@@ -2526,7 +2507,7 @@ function calibrate() {
   if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
-  { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = Math.min(...v); }
+  { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = DET.barp.bottom = Math.min(...v); }
   DET.sp.ref = y;
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;

@@ -2336,7 +2336,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
   if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
   // ---- Curl con barra en XR: solo cuenta si suben las dos manos juntas ----
-  applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2', lives: 0, waves: 1, repsWave: 30, walkTime: 20 });
+  applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2', lives: 0, waves: 1, repsWave: 60, walkTime: 20 }); // (de sobra: con los disparos cargados la oleada podía acabarse antes de las últimas pruebas)
   XRS.headY = 1.7; XRS.headQ = null; XRS.hands = { left: { x: -0.2, y: 0.95, z: -0.2 }, right: { x: 0.2, y: 0.95, z: -0.2 } };
   await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
   const curlCycle = (sides, n) => { for (let c = 0; c < n; c++) for (let i = 0; i < 80; i++) { const up = i >= 20 && i < 50; for (const sd of ['left', 'right']) XRS.hands[sd].y = up && sides.includes(sd) ? 1.42 : 0.95; frame(1, 16, xrFrame); } };
@@ -2372,6 +2372,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (glitch || glitchMsg) errors.push('curl con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
     if (one !== 4 || swap !== 4) errors.push(`curl con kettlebell: con una sola mano a la vista, o perdiéndose por turnos, debería contar cada subida una vez (${one}, ${swap} de 4)`);
     if (dark !== 3 || reapp !== 3) errors.push(`curl con kettlebell: perdidas las dos al subir, o reapareciendo ya arriba, debería contar una vez (${dark}, ${reapp} de 3)`); }
+  // lo mismo en el press con barra o kettlebell (las dos manos juntas; por encima de la cabeza las cámaras las pierden)
+  { RA.exitAll(); frame(2, 16, xrFrame); applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press2', lives: 0, waves: 1, repsWave: 40, walkTime: 20, pressRange: 35 });
+    XRS.headY = 1.7; XRS.hands = { left: { x: -0.1, y: 1.5, z: -0.25 }, right: { x: 0.1, y: 1.5, z: -0.25 } }; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
+    const both = y => { XRS.hands.left.y = XRS.hands.right.y = y; }, press = (n, each) => { for (let c = 0; c < n; c++) for (let i = 0; i < 90; i++) { const k = i < 15 ? 0 : i < 35 ? (i - 15) / 20 : i < 50 ? 1 : i < 70 ? 1 - (i - 50) / 20 : 0; both(1.5 + 0.45 * k); if (each) each(i); frame(1, 16, xrFrame); } XRS.noLeft = XRS.noRight = XRS.noHands = false; };
+    both(1.5); frame(30, 16, xrFrame); let r0 = RA.stats.reps, p0 = RA.stats.partial;
+    for (let g = 0; g < 6; g++) { const sd = g % 2 ? 'right' : 'left'; XRS.hands[sd].y = 1.98; frame(g < 3 ? 1 : 2, 16, xrFrame); XRS.hands[sd].y = 1.5; frame(25, 16, xrFrame); }
+    const glitch = RA.stats.reps - r0, glitchMsg = RA.stats.partial - p0;
+    r0 = RA.stats.reps; press(4); const two = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(4, () => { XRS.noRight = true; }); const one = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(4, i => { const a = Math.floor(i / 6) % 3; XRS.noLeft = a === 1; XRS.noRight = a === 2; }); const swap = RA.stats.reps - r0;
+    r0 = RA.stats.reps; press(3, i => { XRS.noHands = i >= 27 && i < 75; }); const dark = RA.stats.reps - r0;
+    log(`kettlebell press (both hands together): one-hand glitches → ${glitch} reps, ${glitchMsg} warnings · both seen ${two}/4 · only one hand ${one}/4 · lost by turns ${swap}/4 · both lost overhead ${dark}/3`);
+    if (glitch || glitchMsg) errors.push('press con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
+    if (two !== 4 || one !== 4 || swap !== 4 || dark !== 3) errors.push(`press con kettlebell: cada subida debería contar una vez (las dos ${two}, una ${one}, por turnos ${swap} de 4; perdidas arriba ${dark} de 3)`); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
   // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la
