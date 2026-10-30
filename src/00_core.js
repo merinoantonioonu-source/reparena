@@ -9,8 +9,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const smooth = t => t * t * (3 - 2 * t);
 
-const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
-const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Flexiones en pica', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra o kettlebell', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
+const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Pica', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
 const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
@@ -36,13 +36,13 @@ const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'pike', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
-  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips']],
+  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips', 'pike']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
@@ -51,7 +51,7 @@ const BODY_ZONES = [
 const exOk = (mode, ex) => !!MODE_EX[mode] && MODE_EX[mode].includes(ex);
 const BAR_EX = MODE_EX.bars; // ejercicios del modo Barras: el resto no se usa en él
 // Al cambiar de modo, el ejercicio que se queda: el mismo si vale; si estabas en el suelo, flexiones
-function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'inchworm', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
+function exFor(mode, ex) { return exOk(mode, ex) ? ex : ['pushup', 'pike', 'inchworm', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(ex) && exOk(mode, 'pushup') ? 'pushup' : MODE_EX[mode][0]; }
 const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 
 /* =================== AJUSTES =================== */
@@ -85,6 +85,7 @@ const SCHEMA = [
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'pikeDepth', g: 'ejercicio', label: 'Bajada en la flexión en pica', short: 'Bajada pica', type: 'num', min: 8, max: 45, step: 1, def: 22, unit: 'cm', ex: ['pike'], hint: 'Cuánto debe bajar la cabeza desde arriba (los brazos estirados, la cadera alta) hasta casi tocar el suelo entre las manos.' },
   { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
   { key: 'dipDepth', g: 'ejercicio', label: 'Bajada en el fondo', short: 'Bajada fondo', type: 'num', min: 6, max: 40, step: 1, def: 15, unit: 'cm', ex: ['dips'], hint: 'Cuánto debe bajar la cabeza al doblar los codos, con las manos en el borde de la silla.' },
@@ -250,6 +251,8 @@ const FIELD = {}; SCHEMA.forEach(f => FIELD[f.key] = f);
 const settings = { mode: 'combat', exercise: 'squat' };
 SCHEMA.forEach(f => settings[f.key] = f.def);
 const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
+// La campaña (73_career): mientras se juega un nivel, sus ajustes van por encima de los tuyos; orig guarda los tuyos
+const CAMP = { orig: null, run: null, env: null };
 
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
@@ -292,8 +295,8 @@ function fmtVal(f, v = settings[f.key]) {
   if (s.rampV !== 3) { if (settings.ramp === 6) settings.ramp = 4; } settings.rampV = 3;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
-// Durante una sesión se guardan los valores de antes, no los del bloque en curso
-function saveSettings() { store(STORE_KEY, SES.active ? Object.assign({}, settings, SES.orig) : settings); if (!SES.active) comboSave(); }
+// Durante una sesión (o un nivel de la campaña) se guardan los valores de antes, no los del bloque en curso
+function saveSettings() { const O = SES.active ? SES.orig : CAMP.orig; store(STORE_KEY, O ? Object.assign({}, settings, O) : settings); if (!O) comboSave(); }
 // Cada modo con cada ejercicio guarda sus ajustes de juego (su rango, la partida, tu cuerpo, los enemigos, las armas, los
 // arcos, los toques y las barras): al volver a él salen como los dejaste. Lo común (entorno, sonido, menú, tu perfil y
 // las medidas de los aparatos) no cambia. Un modo o ejercicio que aún no has tocado empieza con los ajustes que tenías
@@ -315,7 +318,7 @@ let comboLoading = false; // (al cargar los de un modo y ejercicio, su rango vie
 function setSetting(key, v) {
   if (key === 'foes') { Object.assign(settings, foeCatPatch(v)); saveSettings(); onSettingChanged('foesGate'); return; } // el atajo de antes: robots, voladores o mezcla
   if (key === 'mode' && LEGACY_MODES[v]) { const { foes: c, ...rest } = LEGACY_MODES[v]; Object.assign(settings, rest, foeCatPatch(c)); v = 'combat'; } // Asalto → robots y automática; Enjambre → voladores y a mano
-  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active ? comboId() : null;
+  const f = FIELD[key], prev = (key === 'mode' || key === 'exercise') && !SES.active && !CAMP.orig ? comboId() : null;
   if (prev) comboSave(prev); // lo que dejas, guardado
   settings[key] = f ? clampSetting(f, v) : v;
   // cada modo tiene sus ejercicios: cambiar uno arrastra al otro si no casan
@@ -389,13 +392,13 @@ const twoShots = () => isCombat() && handsFree() && ((pistolOn() && !swordSet())
 // (si las gafas pierden las manos un momento, sigue valiendo lo último que se vio)
 const BARE = { v: false };
 const bareHands = () => { if (hands.left.ok || hands.right.ok) BARE.v = (hands.left.ok && hands.left.isHand) || (hands.right.ok && hands.right.isHand); return BARE.v; };
-const isFloor = () => ['pushup', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
+const isFloor = () => ['pushup', 'pike', 'plank1', 'plankrow', 'superman', 'abs', 'splank'].includes(settings.exercise) || (settings.exercise === 'combo' && settings.comboBase !== 'stand');
 // Sentado en el borde de una silla (fondos): la cabeza, a media altura
 const isSeated = () => settings.exercise === 'dips';
 // Tumbado boca arriba (abdominales)
 const isSupine = () => settings.exercise === 'abs' || (settings.exercise === 'combo' && settings.comboBase === 'abs');
 // Batalla diminuta bajo tu cara (flexiones y plancha); en el superman los bichos vuelan de frente a tamaño normal
-const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'inchworm' || oneArm());
+const isTiny = () => settings.mode !== 'touch' && (settings.exercise === 'pushup' || settings.exercise === 'pike' || settings.exercise === 'inchworm' || oneArm());
 const isBars = () => settings.mode === 'bars';
 // Se completa en otros módulos: aplica efectos inmediatos (volumen, sombras, distancia…)
 const settingHooks = [];
@@ -517,7 +520,7 @@ function renderPick() {
   const mi = $('#modeInfo'); if (mi && mc) mi.innerHTML = part(mc, 'small');
   const box = $('#pickBox'); if (box && ec) box.innerHTML = `<span class="label">${MODE_NAMES[settings.mode]} · elegido</span><h3>${EX_NAMES[settings.exercise]}</h3><span class="tag">${part(ec, '.tag')}</span><p>${part(ec, 'small')}</p>`;
 }
-function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, fraise: 2.4, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
+function repTimeOf(ex, mode = settings.mode) { return mode === 'touch' ? settings.tchGap : { squat: 2.3, pushup: 2.4, pike: 2.6, inchworm: 8, curl: 1.3, curl2: 2.0, twist: 1.6, press2: 2.0, fraise: 2.4, thruster: 3.4, frontsq: 3.0, jsquat: 2.6, swing: 2.0, chop: 2.4, dlrow: 3.0, plank1: 2.2, plankrow: 2.4, superman: settings.supHold + 3, row: 2.6, pullup: 3.2, hang: 1, jump: 2.2, abs: 2.6, combo: 2.4, lunge: 2.6, dips: 2.4, press: 1.6, splank: settings.splHold + 0.5 }[ex]; }
 function repTime() { return repTimeOf(settings.exercise); }
 // En una sesión, cada bloque trae su reparto exacto de repeticiones (o segundos) por oleada
 const sesWave = i => SES.active && SES.waves ? SES.waves[Math.min(i, SES.waves.length - 1)] : null;
@@ -554,7 +557,7 @@ function updateSummary() {
 }
 /* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
 // Esfuerzo de cada ejercicio en MET (veces el gasto en reposo), aproximado del Compendium of Physical Activities; en los descansos, 2
-const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, fraise: 3.5, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
+const EX_MET = { slam: 7.5, squat: 5.5, lunge: 5, jsquat: 8, pushup: 6, pike: 6, inchworm: 6.5, dips: 5, curl: 3.5, curl2: 3.5, press: 4, press2: 4, fraise: 3.5, thruster: 7, frontsq: 6, swing: 9.8, chop: 5, dlrow: 6, plank1: 4, plankrow: 5, splank: 3, superman: 3.5, row: 6, pullup: 8, hang: 3.5, jump: 8, abs: 3.8, combo: 6 };
 const REST_MET = 2;
 // kcal por minuto = MET × 3,5 × kg / 200; work son los segundos de oleada y rest los de descanso
 function kcalOf(ex, work, rest, kg = settings.weight) { return ((EX_MET[ex] || 5) * work + REST_MET * Math.max(0, rest)) * 3.5 * kg / 200 / 60; }
@@ -613,6 +616,7 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
         ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
       </div>
     </div>
+    ${typeof careerHTML === 'function' ? careerHTML() : ''}
     ${exs ? `<div class="chips">${exs}</div>` : ''}
     <div class="week" aria-label="Minutos de los últimos 7 días">${D.week.map((w, i) => `<div class="bar${i === 6 ? ' now' : ''}"><div class="col"><small>${w.v.time ? Math.round(w.v.time / 60) : ''}</small><i data-h="${Math.round(100 * w.v.time / maxW)}" style="height:0"></i></div><span>${i === 6 ? 'hoy' : WDAY[w.d.getDay()].slice(0, 2)}</span></div>`).join('')}<div class="goalLine" style="bottom:${22 + Math.round(76 * goal / maxW)}px" title="tu meta"></div></div>
     <p class="todayMsg">${msg}</p>`;

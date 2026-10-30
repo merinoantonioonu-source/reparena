@@ -134,7 +134,7 @@ function finishSession() {
   const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques${rounds > 1 ? ` × ${rounds} vueltas` : ''}`,
     sub: all ? (rounds > 1 ? `Las ${rounds} vueltas hechas` : 'Todos los bloques hechos') : `${R.length} de ${total} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
     tiles: [[`${won}/${total}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
-    chips: [], today: progressLine(), lines };
+    chips: [], today: progressLine(), lines, career: careerTake() };
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', S);
 }
 // Devuelve los ajustes como estaban antes de la sesión

@@ -1281,6 +1281,7 @@ const DET = {
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false } },
   pair: { side: null, t: 0, perfect: false, fast: false },
+  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, uneven: false, left: { n: 0, last: 0, has: false }, right: { n: 0, last: 0, has: false } },
   tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
@@ -1406,6 +1407,55 @@ function pairStep(kind, t, dt) {
     if (lost > 0.3) { onCharge(); onRep({ perfect: false, fast: P.fast, pow: P.pow }); P.side = null; } // la otra mano no se ve: vale con una
     else if (t - P.t > PAIR_WIN) { onPartial('Sube las dos manos a la vez'); P.side = null; }
   }
+}
+// Curl con barra o con la kettlebell agarrada por el asa con las dos manos (los puños juntos, la bola colgando debajo): las
+// gafas confunden a menudo las dos manos pegadas (pierden una, o la ven un momento en otro sitio), así que se siguen como
+// una sola pesa, con la altura de las muñecas respecto a los ojos:
+//  · cada mano solo vale si está donde puede estar (delante de ti, por debajo de los ojos y a tu alcance) y quieta en lo
+//    que cabe: un salto de más de BAR_V m/s es un error del seguimiento, y al reaparecer tiene que verse igual dos
+//    fotogramas seguidos
+//  · con una a la vista basta; con las dos, si coinciden, la media; si no, la más baja (una sola que sube no cuenta: avisa),
+//    salvo que la más baja ya vaya por el 60 % del recorrido (con la pesa suben juntas aunque se vea una algo más baja)
+//  · si se pierden las dos subiendo (ya por casi la mitad) o arriba aguantando, cuenta; y si reaparecen ya arriba, también
+const BAR_V = 3.2;
+function barSample(side, dt) {
+  const h = hands[side], S = DET.bar[side];
+  if (!h.ok) { S.n = 0; S.has = false; return null; }
+  const r = h.wrist.y - head.p.y, f = fwdH(), dx = h.wrist.x - head.p.x, dz = h.wrist.z - head.p.z, ahead = dx * f.x + dz * f.z, side_ = Math.abs(dx * f.z - dz * f.x);
+  const ok = r < 0.05 && r > -1.15 && ahead > -0.12 && ahead < 0.8 && side_ < 0.6;
+  const steady = S.has && Math.abs(r - S.last) <= Math.max(0.03, BAR_V * dt); S.last = r; S.has = true;
+  S.n = ok && steady ? S.n + 1 : 0;
+  return ok && S.n >= 2 ? r : null;
+}
+function barStep(t, dt) {
+  const B = DET.bar, range = settings.curlRange / 100, pt = settings.perfectTime;
+  const a = barSample('left', dt), b = barSample('right', dt), L = [a, b].filter(v => v !== null);
+  if (!L.length) {
+    B.lost += dt;
+    if (B.state === 'hold' && B.lost > 0.25) { B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); }
+    else if (B.state === 'rising' && B.lost > 0.25 && B.max - B.bottom >= range * 0.4) { B.state = 'top'; onCharge(); onRep({ perfect: false, fast: false }); }
+    return;
+  }
+  let y, hi = Math.max(...L), lo = Math.min(...L);
+  if (L.length === 1 || hi - lo <= 0.15) y = (hi + lo) / 2;
+  else y = lo - B.bottom >= range * 0.6 ? hi : lo;
+  if (L.length === 2 && hi - B.bottom >= range && lo - B.bottom < range * 0.6) B.uneven = true; // una sola mano arriba
+  const back = B.lost; B.lost = 0;
+  B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : 0.0012); // lo más bajo del recorrido
+  // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
+  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * 0.85) { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev: { perfect: false, fast: false } }); onCharge(); return; }
+  if (B.state === 'hold') { // aguantando arriba carga el disparo (×2, ×3, ×4); sale al empezar a bajar
+    if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = 1 + Math.min(3, Math.floor(B.holdT / POW_STEP)); if (p > B.pow) { B.pow = p; onPower(p); } return; }
+    B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); return;
+  }
+  if (B.state === 'down') { if (y > B.bottom + Math.min(0.12, range * 0.45)) Object.assign(B, { state: 'rising', max: y, t0: t }); }
+  else if (B.state === 'rising') {
+    B.max = Math.max(B.max, y);
+    if (y - B.bottom >= range) { const dur = t - B.t0; Object.assign(B, { state: 'hold', holdT: 0, pow: 1, uneven: false, ev: { perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 } }); onCharge(); return; }
+    if (y < B.bottom + 0.07) { B.state = 'down'; if (!B.uneven && B.max - B.bottom > range * 0.55) onPartial('Sube hasta el hombro'); }
+  } else if (y < B.bottom + 0.08) B.state = 'down';
+  // una mano subió sola y ya han bajado las dos: avisa (una vez)
+  if (B.uneven && hi < B.bottom + 0.08) { onPartial('Sube las dos manos a la vez'); B.uneven = false; }
 }
 // Ejercicios en dos tiempos: la bajada (sentadilla, cadera atrás en el swing o peso muerto) carga como siempre y, al volver
 // arriba, un gesto de los brazos (o un salto) dispara en CH_WIN segundos. El gesto se va mirando desde que carga (en el
@@ -1647,9 +1697,11 @@ function runDetectors(t, dt) {
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
   } else if (settings.exercise === 'twist') {
     twistStep(t, dt);
-  } else if (settings.exercise === 'press2' || settings.exercise === 'curl2') {
+  } else if (settings.exercise === 'press2') {
     // con barra o kettlebell: los dos brazos suben juntos y la repetición es una
-    pairStep(settings.exercise === 'press2' ? 'press' : 'curl', t, dt);
+    pairStep('press', t, dt);
+  } else if (settings.exercise === 'curl2') {
+    barStep(t, dt); // (las dos manos, como una sola pesa)
   } else if (CHAIN[settings.exercise]) {
     // en dos tiempos (sentadilla con press o con elevación, swing, sentadilla con salto): bajar carga y el gesto al subir dispara
     chainStep(settings.exercise, t, dt);
@@ -1745,6 +1797,12 @@ function runDetectors(t, dt) {
     if (head.p.y > d.ref + 0.35) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
     vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Más abajo!', power: true });
+  } else if (settings.exercise === 'pike') {
+    // flexión en pica: la cabeza baja entre las manos (la cadera, alta) y vuelve a subir; como la flexión, con más recorrido
+    const d = DET.pu, req = dv('pikeDepth') / 100;
+    if (head.p.y > d.ref + 0.45) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la pica', '#ff8a3d', 1.2); d.state = 'up'; return; }
+    d.awayT = 0;
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.06, req * 0.4), req, back: 0.04, partial: req * 0.5, perfectDur: pt, partialMsg: '¡La cabeza más cerca del suelo!', power: true });
   }
 }
 
@@ -2198,7 +2256,7 @@ settingHooks.push(k => { if (k === 'rank' && !RANK.applying && !comboLoading) ap
 const rankDiff = (a, b) => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
 // lo que tocas tú (no lo que pone el rango, un perfil, el ejercicio al cargarse ni el bloque de una sesión), a la tabla
 settingHooks.push(k => {
-  if (RANK.applying || comboLoading || SES.active || !FIELD[k] || !devRows().includes(k)) return;
+  if (RANK.applying || comboLoading || SES.active || CAMP.orig || !FIELD[k] || !devRows().includes(k)) return;
   const i = rankIdx(), fa = (devFact().v || {})[k], base = clampSetting(FIELD[k], fa && fa[i] !== undefined && fa[i] !== null ? fa[i] : devBase(k, i));
   devSet(k, i, rankDiff(settings[k], base) ? settings[k] : null); // (igual que el de serie: la casilla vuelve a «de serie»)
 });
@@ -2244,7 +2302,7 @@ const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '
 const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound', foe: '' };
 const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
   ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
-  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['opt', 'Opciones', MC.set]];
+  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['prog', 'Progreso', PROG_COL], ['opt', 'Opciones', MC.set]];
 // Ronda: el ejercicio (al elegirlo se queda aquí) y lo que le toca: la barra o las paralelas en Barras, las combinaciones en Toques
 function lobbyRoundRows(again) {
   const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), rows = exerciseRows(again, true);
@@ -2272,7 +2330,7 @@ function lobbyOptRows(again) {
     ...(o === 'sound' ? soundRows(again, true) : o === 'scene' ? sceneRows(again) : settingsRows(g => { settingsTab = g; uiSave('tab', g); again(); }))];
 }
 function lobbyMenu() {
-  endSession();
+  endSession(); campEnd(); campEnvBack(); // (de la campaña: tus ajustes y tu entorno)
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
   const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
   // una sesión recién preparada (en la página): el menú se abre en Sesiones, con su EMPEZAR SESIÓN
@@ -2282,14 +2340,14 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
   left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
+  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'prog' ? progRows(again) : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
   const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
     { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
     { t: 'btns', h: 0.058, items: modes },
     { t: 'text', text: `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise] || ''} · ${rankName()}`, color: MODE_COL[settings.mode] },
     { t: 'text', text: summaryText() },
-    ...(progressLine() ? [{ t: 'text', text: progressLine(), color: '#3cf0c6' }] : []),
+    { t: 'text', text: careerLine() + (progressLine() ? ' · ' + progressLine() : ''), color: PROG_COL },
     ...(roomBad && !(tab === 'opt' && LOBBY.opt === 'scene') ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
     { t: 'cols', fr: [0.29, 0.71], lw: [0.1, 0.19], titles: ['', tabName], colors: [null, tabCol], music: spConnected(), cols: [left, pane.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]))] }];
   const m = openMenu(rows);
@@ -2421,10 +2479,10 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0, uneven: false }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
@@ -2468,6 +2526,7 @@ function calibrate() {
   if (settings.exercise === 'inchworm') { arenaFromHead(); iwLayout(); } // la plancha, según tu altura
   Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
+  { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = Math.min(...v); }
   DET.sp.ref = y;
   DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
@@ -2510,6 +2569,7 @@ function saveRun(win) {
   const h = store(HIST_KEY) || [];
   h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
+  careerRun({ reps, perfect: stats.perfect, mins: stats.time / 60, combo: stats.bestCombo, win, taken: stats.taken, falls: stats.falls, mode: settings.mode, ex: settings.exercise, hang: settings.exercise === 'hang' }); // (experiencia, misiones y campaña: 73_career)
 }
 // Calorías de esta ronda (estimadas) y la línea de progreso: lo de hoy y la racha de días
 const runStatsKcal = () => kcalOf(settings.exercise, stats.work, stats.time - stats.work);
@@ -2535,7 +2595,7 @@ function progressLine(P = progress()) {
   return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
 }
 function endRun(win, manual) {
-  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
+  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h), best0 = bestRunOf(h);
   const failBest = h.filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); // (al fallo: la oleada más lejana)
   saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
@@ -2560,7 +2620,12 @@ function endRun(win, manual) {
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
   if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
-  if (!SES.active && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
+  if (!SES.active && !CAMP.run && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
+  // lo ganado (experiencia, misiones, nivel), tu mejor ronda y, en la campaña, el nivel con sus estrellas (73_career)
+  if (!SES.active) S.career = careerTake();
+  if (got && best0 && !hang) S.bestTxt = got > best0.reps ? `¡Mejor que tu mejor ronda de ${(EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]).toLowerCase()} aquí (${best0.reps})!` : `Tu mejor ronda aquí: ${best0.reps} reps · ${Math.round(100 * (best0.perfect || 0) / Math.max(1, best0.reps))} % perfectas (hoy: ${got} · ${S.pct} %)`;
+  if (CAMP.run) { const c = (S.career && S.career.camp) || { lv: CAMP.run.lv, stars: 0, next: null }, L = campLv(c.lv); S.camp = c; S.ex = `Campaña · nivel ${c.lv} · ${L.name} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`; S.stars = c.stars; S.medal = ['', 'bronce', 'plata', 'oro'][c.stars] || null; }
+  campEnd(); // (los ajustes del nivel, fuera)
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
   if (SES.active && (manual || win)) go(); else showOutcome(win, go, manual); // en una sesión, entre bloques ya hay su pantalla de descanso
@@ -2694,11 +2759,16 @@ function endMenu(title, S) {
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
       { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
-    { t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }];
+    ...(S.career !== undefined ? [{ t: 'canvas', h: 0.12, text: S.career ? `+${S.career.xp} XP` : 'Tu semana', draw: (c, x, y, w, h) => { drawXP(c, x + 6, y, w * 0.46, h, S.career); drawWeek(c, x + w * 0.52, y + 4, w * 0.47, h - 8); } }] : []),
+    ...(S.career ? S.career.notes.slice(0, 3).map(([t, col]) => ({ t: 'text', text: t, color: col })) : []),
+    ...(S.bestTxt ? [{ t: 'text', text: S.bestTxt, color: '#a49fc8' }] : []),
+    ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { LOBBY.tab = 'prog'; PROG.tab = 'camp'; PROG.lv = 0; PROG.reg = -1; lobbyMenu(); } }] },
+      { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }]
+    : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }])];
   const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }
 function exitAll() {
-  endSession(); hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
+  endSession(); campEnd(); CAMP.env = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle';
   const s = renderer.xr.getSession(); if (s) s.end().catch(() => {});
   if (preview) stopPreview();
   ambientStop(); renderHistory(); syncForm();

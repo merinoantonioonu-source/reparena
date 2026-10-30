@@ -11,7 +11,7 @@ NAT.group.visible = false; arena.add(NAT.group);
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
   Leaves: ['leaves.png', true], Flowers: ['flowers.png', true], Grass: ['grass.png', false, true], Mushrooms: ['mushrooms.jpg'], Rocks: ['rocks.jpg'] };
 // El entorno que toca: el elegido o, con «Alternar», uno distinto en cada partida
-const sceneryPick = () => settings.scenery === 'mix' ? NAT.pick : settings.scenery;
+const sceneryPick = () => CAMP.env || (settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (en la campaña, el de la región)
 function natureOn() { return !arMode && !forestOn() && sceneryPick() === 'nature' && NAT.ready; }
 // Atributos comprimidos (enteros normalizados) → números con decimales, para poder colocar cada pieza en su sitio
 function natFloat(a) {
