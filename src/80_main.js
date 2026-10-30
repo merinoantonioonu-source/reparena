@@ -98,39 +98,22 @@ const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exerci
 function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
 const _pvw = new V3();
 // Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición: te doblas, caminas con las
-// manos huella a huella (por turnos, cada mano a su siguiente), flexión, vuelves igual al revés y te pones de pie.
-// PV.iwSkip: no llega a la última huella
-function iwPlan() {
-  const P = IW.prints, N = P.length, ev = []; let t = 0.9; const D = 0.5;
-  for (let j = 2; j < N; j++) { ev.push({ t, s: P[j].side, from: PV.iwSkip && j === 4 ? 0 : j - 2, to: PV.iwSkip && j === 2 ? 0 : j }); t += D; }
-  const tw = t; t += 1.3; const tb = t;
-  for (let j = N - 3; j >= 0; j--) { ev.push({ t, s: P[j].side, from: j + 2, to: j, back: true }); t += D; }
-  return { ev, tw, tb, te: t, end: t + 1.6, D };
-}
+// manos hasta la línea, vuelves igual al revés y te pones de pie. PV.iwSkip: solo llega a la mitad
 function iwSim(dt) {
-  const P = IW.prints; if (!P.length) return {};
-  const plan = PV.iwPlan || (PV.iwPlan = iwPlan());
-  if (PV.crouch || PV.iwAuto) { PV.iwT = (PV.iwT || 0) + dt; if (PV.iwT >= plan.end) { PV.iwT = 0; PV.iwPlan = null; } }
-  const u = PV.iwT || 0, S = IW_OFF(), low = 0.45 - dv('pushDepth') / 100 - 0.06, z0 = P[0].z, zN = P[P.length - 1].z;
-  const stand = s => new V3(s === 'left' ? -0.22 : 0.22, 0.85, S), pp = (k, s) => { const pr = P[k] && P[k].side === s ? P[k] : P[k + 1] && P[k + 1].side === s ? P[k + 1] : P[k - 1]; return new V3(pr.x, 0.05, pr.z + 0.06); };
-  const out = {}; let zs = 0;
-  for (const s of ['left', 'right']) {
-    const k0 = P[0].side === s ? (PV.iwJump ? P.length - 1 : 0) : 1; let w; /* (PV.iwJump: la mano que empieza, de una vez a la última) */
-    if (u < 0.9) w = stand(s).lerp(pp(k0, s), smooth(u / 0.9));
-    else if (u >= plan.te) w = pp(k0, s).lerp(stand(s), smooth(clamp((u - plan.te) / 1.0, 0, 1)));
-    else { // la última huella de esta mano y, si se está moviendo, de dónde viene
-      let at = k0, mv = null; for (const e of plan.ev) if (e.s === s && u >= e.t) { if (u < e.t + plan.D) mv = e; at = e.to; }
-      w = mv ? pp(mv.from, s).lerp(pp(mv.to, s), smooth((u - mv.t) / plan.D)) : pp(at, s);
-      if (mv) w.y += 0.5 * Math.min(1, 2.5 * Math.sin(Math.PI * (u - mv.t) / plan.D)); // la mano va levantada entre huella y huella y solo baja al llegar
-    }
-    zs += w.z; out[s] = arena.localToWorld(w);
-  }
-  // la cabeza: de pie, detrás; al avanzar las manos, va hacia la plancha (y baja); en la plancha, la flexión
-  const g = clamp((z0 - zs / 2) / Math.max(0.1, z0 - zN), 0, 1), up = u < 0.9 ? smooth(u / 0.9) : u >= plan.te ? 1 - smooth(clamp((u - plan.te) / 1.0, 0, 1)) : 1;
-  let y = lerp(1.6, lerp(0.95, 0.45, g), up), z = lerp(S, lerp(S - 0.3, 0, g), up);
-  if (u >= plan.tw && u < plan.tb) { const q = (u - plan.tw) / 1.3; y = lerp(0.45, low, Math.sin(Math.PI * clamp(q * 1.2, 0, 1))); }
+  // la cabeza: de pie; se dobla; avanza bajando hasta la línea (PV.iwSkip: solo hasta la mitad); un momento en la plancha;
+  // vuelve andando con las manos y se pone de pie. Las manos, bajo la cabeza en el suelo
+  const T = [0.9, 2.4, 3.2, 4.7, 5.7, 6.4];
+  if (PV.crouch || PV.iwAuto) { PV.iwT = (PV.iwT || 0) + dt; if (PV.iwT >= T[5]) PV.iwT = 0; }
+  const u = PV.iwT || 0, S = IW_OFF(), z1 = S - 0.25, zEnd = PV.iwSkip ? lerp(z1, 0, 0.5) : 0.02, k = (a, b) => smooth(clamp((u - a) / (b - a), 0, 1));
+  let y, z;
+  if (u < T[0]) { y = lerp(1.6, 0.95, k(0, T[0])); z = lerp(S, z1, k(0, T[0])); }
+  else if (u < T[1]) { y = lerp(0.95, 0.5, k(T[0], T[1])); z = lerp(z1, zEnd, k(T[0], T[1])); }
+  else if (u < T[2]) { y = 0.5; z = zEnd; }
+  else if (u < T[3]) { y = lerp(0.5, 0.95, k(T[2], T[3])); z = lerp(zEnd, z1, k(T[2], T[3])); }
+  else { y = lerp(0.95, 1.6, k(T[3], T[4])); z = lerp(z1, S, k(T[3], T[4])); }
   camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;
   if (PV.crouch || PV.iwAuto) camera.rotation.x = lerp(-0.12, -0.75, clamp((1.6 - y) / 1.1, 0, 1)); // mirando al suelo al bajar
+  const out = {}, low = y < 1.0; for (const s of ['left', 'right']) out[s] = arena.localToWorld(new V3(s === 'left' ? -0.2 : 0.2, low ? 0.05 : 0.85, low ? z - 0.15 : S));
   return out;
 }
 function previewInput(dt) {
@@ -148,6 +131,7 @@ function previewInput(dt) {
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
     if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
     else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
+    else if (nx && nx.low) { target = PV.crouch && !PV.noLow ? settings.arcLowH / 100 - 0.06 : PV.baseY; PV.jumping = false; } // de semipuente: Espacio te baja hasta la mano en el suelo (PV.noLow: solo como un inclinado normal)
     else if (nx && nx.kind === 'mace') { target = PV.crouch ? PV.baseY - (settings.arcMaceDrop / 100 + 0.38) : PV.baseY; PV.jumping = false; } // la maza: Espacio, por debajo de la bola
     else PV.jumping = false;
   }

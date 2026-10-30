@@ -66,10 +66,11 @@ No las cambies sin preguntarle.
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
-- Inchworm: tres huellas de mano humana dentro de círculos (dos de la mano que empieza, junto a los pies y al final, y una
-  de la otra, un paso por detrás: nunca a la misma altura); en cada vuelta empieza la otra mano y las del final se abren a
-  los lados (`iwSpread`). Se pueden saltar huellas: llegar a la última vale y carga el rayo. La onda del final se ve y se
-  oye bien y lanza a los bichos por el aire.
+- Inchworm: se sigue la **cabeza**, no las manos. Llegar con la cabeza a la línea luminosa del suelo (donde queda en la
+  plancha, según la altura) carga el rayo; volver andando con las manos hasta la salida y ponerse de pie dispara y saca la
+  onda, que se ve y se oye bien y lanza a los bichos por el aire. Una barra en el suelo enseña lo que avanza la cabeza.
+- Arcos de semipuente (`arcLow`): inclinados tan bajos que hay que apartarse al lado alto y bajar hasta apoyar una mano en
+  el suelo; llegan más despacio, con aviso grande y la huella de la mano en el suelo.
 - El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
 - Mandos como manos: con mandos se ven manos en todo el juego (en la partida, con pistolas o espada, el arma). En
   sentadillas y zancadas: gatillo + agarre = puño; el rayo se lanza
@@ -125,9 +126,12 @@ No las cambies sin preguntarle.
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:
   - lo poco usado va en submenús (Sonido, Entorno, Ajustes…);
-  - el menú principal: a la izquierda sus partes, cada una con su color (también Sonido, Entorno, Ajustes) y el reproductor
-    de Spotify (pequeño, en un cuadrado, con rótulo móvil); a la derecha, lo de la parte elegida, con su color; EMPEZAR,
-    pequeño, arriba a la izquierda del título;
+  - el menú principal: arriba, el **modo** (Combate, Arcos, Barras, Toques) en pestañas con su color, y debajo lo elegido
+    (modo · ejercicio · rango); a la izquierda, sus partes con su color: Ronda (el ejercicio), Dificultad (rango, «Al
+    fallo», lo del ojo), Rivales y armas (en Combate), Sesiones (si hay) y Opciones (Sonido, Entorno y Ajustes, en
+    pestañas), el reproductor de Spotify (pequeño, en un cuadrado, con rótulo móvil) y Salir; a la derecha, lo de la parte
+    elegida, con su color; EMPEZAR, pequeño, arriba a la izquierda del título; en Ajustes, las pestañas de los modos se
+    llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;
   - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla);
