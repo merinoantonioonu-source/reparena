@@ -70,9 +70,31 @@ function drawMedal(c, kind, x, y, R) {
   const sg = c.createLinearGradient(0, -R * 0.5, 0, R * 0.5); sg.addColorStop(0, M[0]); sg.addColorStop(1, M[2]); c.fillStyle = sg; c.fill(); c.lineWidth = R * 0.03; c.strokeStyle = M[2]; c.stroke();
   c.restore();
 }
+// Los retratos de los enemigos (models/retratos.png, en el orden de FOE_PIC): se cargan la primera vez que hace falta uno y,
+// al llegar, se repintan las fichas que esperaban
+const FOE_SHEET = { img: null, ok: false, wait: [], S: 192, cols: 7 };
+function foeSheet(btn) {
+  const F = FOE_SHEET; if (F.ok) return F.img;
+  if (btn) F.wait.push(btn);
+  if (!F.img && typeof Image !== 'undefined') { F.img = new Image(); F.img.onload = () => { F.ok = true; F.wait.splice(0).forEach(b => b.draw()); }; F.img.src = 'models/retratos.png'; }
+  return null;
+}
+const CARD_H = 0.11;
+// la ficha de un enemigo: su retrato, su nombre, su resistencia (el escudo: disparos que aguanta) y su fuerza (el rayo:
+// vidas que quita); el jefe, «JEFE»
+function drawFoeCard(b, c, W, H, it, tc) {
+  const img = foeSheet(b), i = FOE_PIC.indexOf(it.pic), S = Math.min(W * 0.96, H * 0.56), F = FOE_SHEET, m = F.S * 0.1; // (sin el margen del retrato: más grande)
+  if (img && i >= 0) c.drawImage(img, (i % F.cols) * F.S + m, Math.floor(i / F.cols) * F.S + m, F.S - 2 * m, F.S - 2 * m, (W - S) / 2, H * 0.025, S, S);
+  c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, it.name, W * 0.92, Math.round(H * 0.12), '700 %px ' + FB); c.fillText(it.name, W / 2, H * 0.65);
+  if (it.boss) { c.fillStyle = '#ffd166'; c.font = '800 ' + Math.round(H * 0.12) + 'px ' + FB; c.fillText('JEFE', W / 2, H * 0.84); return; }
+  const y = H * 0.855, k = H * 0.085, n = Math.round(H * 0.15);
+  c.beginPath(); c.moveTo(W * 0.2, y - k); c.lineTo(W * 0.2 + k * 0.85, y - k * 0.65); c.lineTo(W * 0.2 + k * 0.75, y + k * 0.15); c.quadraticCurveTo(W * 0.2 + k * 0.5, y + k * 0.75, W * 0.2, y + k); c.quadraticCurveTo(W * 0.2 - k * 0.5, y + k * 0.75, W * 0.2 - k * 0.75, y + k * 0.15); c.lineTo(W * 0.2 - k * 0.85, y - k * 0.65); c.closePath(); c.fillStyle = '#3cf0c6'; c.fill(); // escudo: resistencia
+  const bx = W * 0.6; c.beginPath(); [[0.25, -1], [-0.55, 0.15], [-0.05, 0.15], [-0.3, 1], [0.6, -0.25], [0.08, -0.25], [0.35, -1]].forEach(([u, v], q) => q ? c.lineTo(bx + u * k, y + v * k) : c.moveTo(bx + u * k, y + v * k)); c.closePath(); c.fillStyle = '#ff5a6e'; c.fill(); // rayo: fuerza
+  c.textAlign = 'left'; c.font = '800 ' + n + 'px ' + FB; c.fillStyle = tc; c.fillText(String(it.hp), W * 0.2 + k * 1.15, y + 2); c.fillText(String(it.str), bx + k * 0.95, y + 2);
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card;
     this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -83,6 +105,7 @@ class Btn {
       const tc = keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
+      if (this.card) { drawFoeCard(this, c, W, H, this.card, tc); this.p.tex.needsUpdate = true; return; }
       if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, tc); // (sin texto: el galón solo, en medio)
       const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
       fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
@@ -97,6 +120,7 @@ class Btn {
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
+    if (this.card) { drawFoeCard(this, c, W, H, this.card, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; }
     if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
     const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
@@ -261,10 +285,25 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = 
 //  · la tecla es sólida: al llegar al fondo de su recorrido, la mano que se ve se queda apoyada en ella aunque la de
 //    verdad siga empujando (POKE.lock: el plano del fondo de la tecla; sigue parando si el dedo resbala a la vecina o si
 //    la pulsación abre otro menú en el mismo sitio, hasta que sale por delante). El dedo de verdad sigue contando para pulsar
-const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} } };
+//  · el panel del menú también es sólido: el dedo que llega por delante al fondo o a un hueco entre teclas se queda
+//    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
+const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
 const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
 function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
+// el panel del menú (su cara, en z = 0 del grupo): delante y dentro, el dedo queda «armado»; si sigue y lo cruza, la mano
+// que se ve se queda en la superficie hasta que salga por delante, por un lado o se hunda más de POKE_HOLD_MAX
+const _pnN = new V3();
+function pokePanel(side, f, shown, Hd) {
+  const P = POKE.pan[side], g = menu && menu.group;
+  if (!shown || !g || !menu.H) { P.front = false; return; }
+  g.updateMatrixWorld(); const e = g.matrixWorld.elements, sc = Math.hypot(e[8], e[9], e[10]) || 1, l = g.worldToLocal(_wl.copy(f.p));
+  const m = 0.012 / sc, inR = Math.abs(l.x) < MW / 2 + m && Math.abs(l.y) < menu.H / 2 + m, z = l.z * sc;
+  if (!inR) { P.front = false; return; }
+  if (z > 0) { P.front = z < 0.25; return; }
+  if (!P.front || -z >= POKE_HOLD_MAX) { P.front = false; return; }
+  if (-z > Hd.v.length()) Hd.v.copy(_pnN.set(e[8], e[9], e[10]).normalize()).multiplyScalar(-z);
+}
 const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
@@ -280,6 +319,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       const e = _pkL.subVectors(L.p, f.p).dot(L.n), lat = _pkL.addScaledVector(L.n, -e).length();
       if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
     }
+    if (isMenu) pokePanel(side, f, shown, Hd);
     if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
     S.prev.copy(f.p); S.has = true;
     // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
@@ -308,7 +348,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
         if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
           const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
           Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
-          if (ex > 0) Hd.v.copy(Lk.n).multiplyScalar(ex); else Hd.v.set(0, 0, 0);
+          if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
         }
         if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
         else {
@@ -451,6 +491,13 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'); addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint }), x + w / 2, cy); x += w + GAP; });
+    } else if (r.t === 'cards') { // fichas que se marcan y desmarcan (los enemigos: foeCardRows), sin etiqueta, a todo el ancho
+      const cols = r.cols, w = (CW - GAP * (cols - 1)) / cols, sel = () => foeList(r.key), btns = [];
+      r.items.forEach((it, k) => { const x = X0 + (k % cols) * (w + GAP) + w / 2, yy = cy + h / 2 - CARD_H / 2 - Math.floor(k / cols) * (CARD_H + GAP);
+        btns.push(addW(new Btn(it.name, w, CARD_H, () => {
+          const cur = sel(), next = cur.includes(it.v) ? cur.filter(v => v !== it.v) : [...cur, it.v]; if (!next.length && !FIELD[r.key].empty) return;
+          setSetting(r.key, next.join(',')); btns.forEach((b, j) => b.setLabel(b.label, sel().includes(r.items[j].v) ? 'selected' : 'normal'));
+        }, { style: sel().includes(it.v) ? 'selected' : 'normal', card: it, tint }), x, yy)); });
     } else if (r.t === 'choice') {
       label(r.label, cy, undefined, 0, X0, LW); const n = r.opts.length, avail = CW - LW - GAP * (n - 1); let x = X0 + LW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38, tint }), x + w / 2, cy); x += w + GAP; });

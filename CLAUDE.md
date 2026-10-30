@@ -92,6 +92,8 @@ No las cambies sin preguntarle.
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
 - Los voladores baten las alas siempre rápido, a su ritmo, sin depender de lo deprisa que avancen.
 - Cada enemigo tiene resistencia, fuerza y dureza en la tabla del desarrollador; los nuevos entran solos en ella.
+- En el menú, cada enemigo es una ficha con su retrato (de su modelo), su nombre, su resistencia y su fuerza. Un enemigo
+  nuevo: añádelo a `FOE_PIC` (`src/00_core.js`) y rehaz `models/retratos.png` con `node tests/retratos.js`.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
@@ -121,7 +123,8 @@ No las cambies sin preguntarle.
   - los menús nuevos salen solos.
 - **Cada menú sale donde estaba el anterior**: «Traer menú», «Volver», «Menú principal» y el resumen no se alejan.
 - Los botones de los menús se pulsan con **las dos manos** (el botón MENÚ de la muñeca izquierda, con la derecha). Las
-  teclas son **sólidas**: al llegar al fondo, la mano que se ve se queda apoyada en ella y no la atraviesa.
+  teclas son **sólidas**: al llegar al fondo, la mano que se ve se queda apoyada en ella y no la atraviesa; el panel
+  también (el fondo y los huecos entre teclas).
 - Tras pulsar un botón, hay que **retirar el dedo** antes de que cuente otra pulsación, para que no se toquen dos
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:

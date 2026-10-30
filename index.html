@@ -535,8 +535,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>Dentro del juego</h2>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
-      <li><strong>El menú principal:</strong> arriba eliges el modo (Combate, Arcos, Barras, Toques), cada uno con su color. A la izquierda, sus partes: Ronda (el ejercicio), Dificultad (el rango y «Al fallo»), Rivales y armas (en Combate), Sesiones y Opciones (Sonido, Entorno y Ajustes), y el reproductor de Spotify; a la derecha, lo de la parte elegida. EMPEZAR, arriba a la izquierda.</li>
-      <li>El menú sale de tu <b>muñeca izquierda</b>: mírala (como para mirar un reloj) y pulsa el botón <b>MENÚ</b> con el índice derecho. El panel crece desde la muñeca y se queda <b>quieto delante de ti</b>, derecho y de cara, a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo): pulsa con calma con la punta del índice de cualquiera de las dos manos. Las teclas son sólidas: al hundir una hasta el fondo, tu mano se queda apoyada en ella aunque sigas empujando, sin atravesarla. Para cerrarlo, pon la palma izquierda hacia abajo o cierra el puño; un punto rosa en la muñeca te recuerda que hay un menú esperando, y MENÚ lo vuelve a abrir (si te giras y lo pierdes de vista, el mismo botón, «Traer menú», lo pone delante otra vez). Con mandos, X o Y lo abren y lo cierran. Los menús nuevos (el principal al entrar, el resumen de cada ronda) salen solos delante de ti. Si prefieres el atril fijo sobre un pie, cámbialo en Ajustes → Menú → Menú en.</li>
+      <li><strong>El menú principal:</strong> arriba eliges el modo (Combate, Arcos, Barras, Toques), cada uno con su color. A la izquierda, sus partes: Ronda (el ejercicio), Dificultad (el rango y «Al fallo»), Rivales y armas (en Combate: una ficha por enemigo, con su retrato, su resistencia y su fuerza), Sesiones y Opciones (Sonido, Entorno y Ajustes), y el reproductor de Spotify; a la derecha, lo de la parte elegida. EMPEZAR, arriba a la izquierda.</li>
+      <li>El menú sale de tu <b>muñeca izquierda</b>: mírala (como para mirar un reloj) y pulsa el botón <b>MENÚ</b> con el índice derecho. El panel crece desde la muñeca y se queda <b>quieto delante de ti</b>, derecho y de cara, a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo): pulsa con calma con la punta del índice de cualquiera de las dos manos. Las teclas y el panel son sólidos: al hundir una tecla hasta el fondo, o al tocar el panel entre las teclas, tu mano se queda apoyada aunque sigas empujando, sin atravesarlo. Para cerrarlo, pon la palma izquierda hacia abajo o cierra el puño; un punto rosa en la muñeca te recuerda que hay un menú esperando, y MENÚ lo vuelve a abrir (si te giras y lo pierdes de vista, el mismo botón, «Traer menú», lo pone delante otra vez). Con mandos, X o Y lo abren y lo cierran. Los menús nuevos (el principal al entrar, el resumen de cada ronda) salen solos delante de ti. Si prefieres el atril fijo sobre un pie, cámbialo en Ajustes → Menú → Menú en.</li>
       <li><strong>Antes de cada ronda, la carátula del duelo:</strong> todo se queda en negro 7 segundos y delante de ti sale grande tu silueta contra el jefe de la ronda, con un VS, el ejercicio, tu rango, tu récord y los datos de la ronda. Para pasar antes al ejercicio, pulsa cualquier botón del mando o, con las manos, haz el gesto del pulgar arriba.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
       <li><strong>Menú y salida en cualquier momento:</strong> mira el dorso de tu muñeca izquierda como si miraras un reloj y aparecerá un botón MENÚ. Tócalo con el índice derecho. También funciona juntar pulgar e índice de las dos manos durante 1 segundo, o el gatillo si usas mandos.</li>
@@ -701,6 +701,9 @@ const FOE_GATE = [['robot', 'Robots'], ['imp', 'Diablillo'], ['puglin', 'Puglin'
 const FOE_HATCH = [['spider', 'Arañas'], ['crab', 'Cangrejo'], ['mushroom', 'Seta'], ['skull', 'Calavera']];
 const FOE_FLY = [['drone', 'Drones'], ['hornet', 'Avispones'], ['bee', 'Abeja'], ['bat', 'Murciélago'], ['cthulhu', 'Cthulhu'], ['dragon', 'Dragón (jefe)']];
 const PIRATE_GATE = ['skeleton', 'captain', 'sharky', 'mako']; // los piratas (Pirate Kit)
+// Sus retratos, en este orden, en models/retratos.png (hechos con sus modelos; un enemigo nuevo sale sin retrato hasta rehacer la hoja)
+const FOE_PIC = ['robot', 'imp', 'puglin', 'thrower', 'zombie', 'zgreen', 'zchubby', 'raptor', 'skeleton', 'captain', 'sharky', 'mako', 'demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall',
+  'spider', 'crab', 'mushroom', 'drone', 'hornet', 'bee', 'bat', 'cthulhu', 'dragon'];
 const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', 'alientall']; // los monstruitos (Cute Animated Monsters)
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
@@ -5758,9 +5761,31 @@ function drawMedal(c, kind, x, y, R) {
   const sg = c.createLinearGradient(0, -R * 0.5, 0, R * 0.5); sg.addColorStop(0, M[0]); sg.addColorStop(1, M[2]); c.fillStyle = sg; c.fill(); c.lineWidth = R * 0.03; c.strokeStyle = M[2]; c.stroke();
   c.restore();
 }
+// Los retratos de los enemigos (models/retratos.png, en el orden de FOE_PIC): se cargan la primera vez que hace falta uno y,
+// al llegar, se repintan las fichas que esperaban
+const FOE_SHEET = { img: null, ok: false, wait: [], S: 192, cols: 7 };
+function foeSheet(btn) {
+  const F = FOE_SHEET; if (F.ok) return F.img;
+  if (btn) F.wait.push(btn);
+  if (!F.img && typeof Image !== 'undefined') { F.img = new Image(); F.img.onload = () => { F.ok = true; F.wait.splice(0).forEach(b => b.draw()); }; F.img.src = 'models/retratos.png'; }
+  return null;
+}
+const CARD_H = 0.11;
+// la ficha de un enemigo: su retrato, su nombre, su resistencia (el escudo: disparos que aguanta) y su fuerza (el rayo:
+// vidas que quita); el jefe, «JEFE»
+function drawFoeCard(b, c, W, H, it, tc) {
+  const img = foeSheet(b), i = FOE_PIC.indexOf(it.pic), S = Math.min(W * 0.96, H * 0.56), F = FOE_SHEET, m = F.S * 0.1; // (sin el margen del retrato: más grande)
+  if (img && i >= 0) c.drawImage(img, (i % F.cols) * F.S + m, Math.floor(i / F.cols) * F.S + m, F.S - 2 * m, F.S - 2 * m, (W - S) / 2, H * 0.025, S, S);
+  c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, it.name, W * 0.92, Math.round(H * 0.12), '700 %px ' + FB); c.fillText(it.name, W / 2, H * 0.65);
+  if (it.boss) { c.fillStyle = '#ffd166'; c.font = '800 ' + Math.round(H * 0.12) + 'px ' + FB; c.fillText('JEFE', W / 2, H * 0.84); return; }
+  const y = H * 0.855, k = H * 0.085, n = Math.round(H * 0.15);
+  c.beginPath(); c.moveTo(W * 0.2, y - k); c.lineTo(W * 0.2 + k * 0.85, y - k * 0.65); c.lineTo(W * 0.2 + k * 0.75, y + k * 0.15); c.quadraticCurveTo(W * 0.2 + k * 0.5, y + k * 0.75, W * 0.2, y + k); c.quadraticCurveTo(W * 0.2 - k * 0.5, y + k * 0.75, W * 0.2 - k * 0.75, y + k * 0.15); c.lineTo(W * 0.2 - k * 0.85, y - k * 0.65); c.closePath(); c.fillStyle = '#3cf0c6'; c.fill(); // escudo: resistencia
+  const bx = W * 0.6; c.beginPath(); [[0.25, -1], [-0.55, 0.15], [-0.05, 0.15], [-0.3, 1], [0.6, -0.25], [0.08, -0.25], [0.35, -1]].forEach(([u, v], q) => q ? c.lineTo(bx + u * k, y + v * k) : c.moveTo(bx + u * k, y + v * k)); c.closePath(); c.fillStyle = '#ff5a6e'; c.fill(); // rayo: fuerza
+  c.textAlign = 'left'; c.font = '800 ' + n + 'px ' + FB; c.fillStyle = tc; c.fillText(String(it.hp), W * 0.2 + k * 1.15, y + 2); c.fillText(String(it.str), bx + k * 0.95, y + 2);
+}
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card;
     this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -5771,6 +5796,7 @@ class Btn {
       const tc = keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
+      if (this.card) { drawFoeCard(this, c, W, H, this.card, tc); this.p.tex.needsUpdate = true; return; }
       if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, tc); // (sin texto: el galón solo, en medio)
       const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
       fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
@@ -5785,6 +5811,7 @@ class Btn {
     if (acc) { rr(c, H * 0.12, H * 0.22, Math.max(6, H * 0.07), H * 0.56, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); }
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
+    if (this.card) { drawFoeCard(this, c, W, H, this.card, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; }
     if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
     const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
@@ -5949,10 +5976,25 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = 
 //  · la tecla es sólida: al llegar al fondo de su recorrido, la mano que se ve se queda apoyada en ella aunque la de
 //    verdad siga empujando (POKE.lock: el plano del fondo de la tecla; sigue parando si el dedo resbala a la vecina o si
 //    la pulsación abre otro menú en el mismo sitio, hasta que sale por delante). El dedo de verdad sigue contando para pulsar
-const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} } };
+//  · el panel del menú también es sólido: el dedo que llega por delante al fondo o a un hueco entre teclas se queda
+//    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
+const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
 const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
 function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
+// el panel del menú (su cara, en z = 0 del grupo): delante y dentro, el dedo queda «armado»; si sigue y lo cruza, la mano
+// que se ve se queda en la superficie hasta que salga por delante, por un lado o se hunda más de POKE_HOLD_MAX
+const _pnN = new V3();
+function pokePanel(side, f, shown, Hd) {
+  const P = POKE.pan[side], g = menu && menu.group;
+  if (!shown || !g || !menu.H) { P.front = false; return; }
+  g.updateMatrixWorld(); const e = g.matrixWorld.elements, sc = Math.hypot(e[8], e[9], e[10]) || 1, l = g.worldToLocal(_wl.copy(f.p));
+  const m = 0.012 / sc, inR = Math.abs(l.x) < MW / 2 + m && Math.abs(l.y) < menu.H / 2 + m, z = l.z * sc;
+  if (!inR) { P.front = false; return; }
+  if (z > 0) { P.front = z < 0.25; return; }
+  if (!P.front || -z >= POKE_HOLD_MAX) { P.front = false; return; }
+  if (-z > Hd.v.length()) Hd.v.copy(_pnN.set(e[8], e[9], e[10]).normalize()).multiplyScalar(-z);
+}
 const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
@@ -5968,6 +6010,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       const e = _pkL.subVectors(L.p, f.p).dot(L.n), lat = _pkL.addScaledVector(L.n, -e).length();
       if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
     }
+    if (isMenu) pokePanel(side, f, shown, Hd);
     if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
     S.prev.copy(f.p); S.has = true;
     // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
@@ -5996,7 +6039,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
         if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
           const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
           Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
-          if (ex > 0) Hd.v.copy(Lk.n).multiplyScalar(ex); else Hd.v.set(0, 0, 0);
+          if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
         }
         if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
         else {
@@ -6139,6 +6182,13 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'); addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint }), x + w / 2, cy); x += w + GAP; });
+    } else if (r.t === 'cards') { // fichas que se marcan y desmarcan (los enemigos: foeCardRows), sin etiqueta, a todo el ancho
+      const cols = r.cols, w = (CW - GAP * (cols - 1)) / cols, sel = () => foeList(r.key), btns = [];
+      r.items.forEach((it, k) => { const x = X0 + (k % cols) * (w + GAP) + w / 2, yy = cy + h / 2 - CARD_H / 2 - Math.floor(k / cols) * (CARD_H + GAP);
+        btns.push(addW(new Btn(it.name, w, CARD_H, () => {
+          const cur = sel(), next = cur.includes(it.v) ? cur.filter(v => v !== it.v) : [...cur, it.v]; if (!next.length && !FIELD[r.key].empty) return;
+          setSetting(r.key, next.join(',')); btns.forEach((b, j) => b.setLabel(b.label, sel().includes(r.items[j].v) ? 'selected' : 'normal'));
+        }, { style: sel().includes(it.v) ? 'selected' : 'normal', card: it, tint }), x, yy)); });
     } else if (r.t === 'choice') {
       label(r.label, cy, undefined, 0, X0, LW); const n = r.opts.length, avail = CW - LW - GAP * (n - 1); let x = X0 + LW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38, tint }), x + w / 2, cy); x += w + GAP; });
@@ -11127,11 +11177,24 @@ function foesSummary() {
   return !all.length ? (isTiny() ? 'arañas' : 'robots') : all.length <= 2 ? all.join(' y ') : foeOnly() === 'fly' ? 'solo voladores' : foeOnly() === 'ground' ? 'solo los que andan' : `${all.length} clases`;
 }
 // Elegir los enemigos: los de las compuertas, los de las trampillas y los voladores (cada uno se marca o se quita)
-function foesRows(again) {
-  return [{ t: 'field', key: 'foeKind', after: again },
-    { t: 'text', text: 'Marca los que quieres (los de las trampillas salen en el suelo)' },
-    { t: 'field', key: 'foesGate', after: again }, { t: 'field', key: 'foesHatch', after: again }, { t: 'field', key: 'foesFly', after: again },
-    { t: 'text', text: animStatus() + (Object.values(BEAST_LOAD).includes('loading') ? ' · cargando los monstruos elegidos…' : '') }];
+// Rivales: cada grupo (de las compuertas o de las trampillas, voladores) en su pestaña, con una ficha por enemigo (su
+// retrato, su nombre, su resistencia y su fuerza, de la tabla del desarrollador); al tocarla, sale o deja de salir. Con
+// arms, las armas en otra pestaña
+const FOE_PFX = { foesGate: 'g:', foesHatch: 'h:', foesFly: 'f:' }, FOE_CARD_COLS = 6;
+function foeCardRows(key) {
+  const items = FIELD[key].opts.map(([v, lab]) => { const d = devFoe(FOE_PFX[key] + v); return { v, name: lab.replace(' (jefe)', ''), pic: v, hp: d.hp, str: d.str, boss: v === 'dragon' }; });
+  return [{ t: 'cards', key, cols: FOE_CARD_COLS, items, h: Math.ceil(items.length / FOE_CARD_COLS) * (CARD_H + GAP) - GAP }];
+}
+function foesRows(again, arms = false) {
+  const tabs = ['foesGate', 'foesHatch', 'foesFly'].filter(k => fieldVisible(FIELD[k])).map(k => [k, FIELD[k].short]), ar = arms ? armsRows(again) : [];
+  if (ar.length) tabs.push(['arms', 'Armas']);
+  if (!tabs.some(t => t[0] === LOBBY.foe)) LOBBY.foe = tabs.length ? tabs[0][0] : '';
+  const rows = [{ t: 'field', key: 'foeKind', after: again }];
+  if (tabs.length > 1) rows.push({ t: 'tabs', items: tabs.map(([k, l]) => ({ label: l, on: k === LOBBY.foe, onPress: () => { LOBBY.foe = k; again(); } })) });
+  if (LOBBY.foe === 'arms') rows.push(...ar);
+  else if (LOBBY.foe) rows.push(...foeCardRows(LOBBY.foe), { t: 'text', text: 'Escudo: su resistencia (disparos que aguanta) · Rayo: su fuerza (vidas que te quita)', color: '#a49fc8' });
+  if (Object.values(BEAST_LOAD).includes('loading')) rows.push({ t: 'text', text: 'Cargando los monstruos elegidos…', color: '#ffd166' });
+  return rows;
 }
 function foesMenu(back) {
   const rows = [{ t: 'title', text: 'ENEMIGOS' }, ...foesRows(() => foesMenu(back)), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
@@ -11193,7 +11256,7 @@ function armsMenu(back) {
 // de Spotify y Salir. A la derecha, lo de la parte elegida. EMPEZAR, junto al título, y debajo lo elegido. Se recuerdan la
 // parte y la pestaña de Opciones
 const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' };
-const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound' };
+const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound', foe: '' };
 const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
   ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
   ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['opt', 'Opciones', MC.set]];
@@ -11234,7 +11297,7 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
   left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? [...(isCombat() ? foesRows(again) : []), ...(armsAny() ? armsRows(again) : [])] : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
+  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
   const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
     { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
@@ -13793,18 +13856,40 @@ function beatLightStep(dt) {
 /* ---------- Sorpresas: el cofre que se abre saltando ---------- */
 // En algunos descansos (de pie, en Combate) sale un cofre en el suelo, delante y a un lado: un salto lo abre y da una
 // mejora más (si quedan), una vida o puntos
+// El cofre es hueco: fondo y paredes con grosor, por dentro de madera oscura, y dentro un montón de monedas y gemas que
+// brillan al abrirse; la tapa también es hueca por debajo (abierta, se ve su interior oscuro, no la madera de fuera)
 const CHEST = (() => {
-  const g = new THREE.Group(), k = new Kit(), wood = col(0.11, 0.05, 0.02), band = col(0.85, 0.5, 0.06); // (colores lineales: se ven bastante más claros)
-  k.add('m', G.box(0.5, 0.26, 0.34), wood, 0, 0.13, 0);
-  for (const x of [-0.17, 0.17]) k.add('m', G.box(0.04, 0.27, 0.35), band, x, 0.135, 0);
-  g.add(k.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
-  const lid = new THREE.Group(); lid.position.set(0, 0.26, -0.17); g.add(lid);
-  const kl = new Kit(); kl.add('m', G.box(0.5, 0.1, 0.34), wood, 0, 0.05, 0.17); kl.add('m', G.box(0.08, 0.08, 0.03), band, 0, 0.0, 0.345);
-  for (const x of [-0.17, 0.17]) kl.add('m', G.box(0.04, 0.11, 0.35), band, x, 0.05, 0.17);
-  lid.add(kl.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }));
+  const g = new THREE.Group(), k = new Kit(), wood = col(0.11, 0.05, 0.02), band = col(0.85, 0.5, 0.06), dark = col(0.025, 0.012, 0.006), t = 0.03; // (colores lineales: se ven bastante más claros)
+  const W = 0.5, H = 0.26, D = 0.34, wall = (kit, w, h, d, x, y, z, c = wood) => kit.add('m', G.box(w, h, d), c, x, y, z);
+  wall(k, W, t, D, 0, t / 2, 0); wall(k, W, H, t, 0, H / 2, D / 2 - t / 2); wall(k, W, H, t, 0, H / 2, -D / 2 + t / 2); // fondo, delante y detrás
+  for (const sx of [-1, 1]) wall(k, t, H, D - 2 * t, sx * (W / 2 - t / 2), H / 2, 0); // los lados
+  const ki = new Kit(); // el forro de dentro, oscuro
+  ki.add('m', G.box(W - 2 * t, 0.004, D - 2 * t), dark, 0, t + 0.002, 0);
+  for (const sz of [-1, 1]) ki.add('m', G.box(W - 2 * t, H - t, 0.004), dark, 0, t + (H - t) / 2, sz * (D / 2 - t - 0.002));
+  for (const sx of [-1, 1]) ki.add('m', G.box(0.004, H - t, D - 2 * t), dark, sx * (W / 2 - t - 0.002), t + (H - t) / 2, 0);
+  for (const x of [-0.17, 0.17]) { for (const sz of [-1, 1]) wall(k, 0.04, H + 0.01, 0.012, x, H / 2, sz * (D / 2 + 0.006), band); wall(k, 0.04, 0.012, D + 0.024, x, -0.002, 0, band); } // los flejes, por fuera
+  for (const sz of [-1, 1]) wall(k, W + 0.01, 0.014, t + 0.006, 0, H - 0.007, sz * (D / 2 - t / 2), band); for (const sx of [-1, 1]) wall(k, t + 0.006, 0.014, D, sx * (W / 2 - t / 2), H - 0.007, 0, band); // el borde de arriba
+  // el tesoro: un montón de oro con monedas sueltas y unas gemas, por debajo del borde
+  const kt = new Kit(), gold = col(1, 0.62, 0.08);
+  kt.add('m', G.sph(0.2, 18, 8, TS, 0, TAU, 0, Math.PI / 2), gold, 0, t, 0, 0, 0, 0, 1.05, 0.75, 0.62);
+  const top = (x, z) => t + 0.15 * Math.sqrt(Math.max(0, 1 - (x / 0.21) ** 2 - (z / 0.124) ** 2)); // (la altura del montón en cada punto)
+  for (let n = 0; n < 16; n++) { const a = n * 2.4, r = 0.2 + (n % 5) * 0.17, x = Math.cos(a) * r * 0.2, z = Math.sin(a) * r * 0.12; kt.add('m', G.cyl(0.028, 0.028, 0.006, 14), gold, x, top(x, z) + 0.004, z, 0.5 * Math.sin(n), 0, 0.6 * Math.cos(n * 1.7)); }
+  for (const [x, z, c] of [[-0.08, 0.03, col(0.9, 0.05, 0.12)], [0.09, -0.04, col(0.05, 0.75, 0.6)], [0.02, 0.06, col(0.3, 0.1, 0.9)]]) kt.add('m', G.sph(0.026, 6, 4), c, x, top(x, z) + 0.012, z);
+  g.add(k.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }), ki.build({ m: std({ vertexColors: true, roughness: 1, metalness: 0 }) }));
+  const treasure = kt.build({ m: std({ vertexColors: true, roughness: 0.3, metalness: 0.85, emissive: 0x3a2400 }) }); g.add(treasure);
+  // la tapa: tablero de arriba y faldón hacia abajo (hueca), con su forro oscuro, los flejes y la cerradura
+  const lid = new THREE.Group(); lid.position.set(0, H, -D / 2); g.add(lid);
+  const LH = 0.1, kl = new Kit(), kli = new Kit();
+  wall(kl, W, t, D, 0, LH - t / 2, D / 2); wall(kl, W, LH - t, t, 0, (LH - t) / 2, D - t / 2); wall(kl, W, LH - t, t, 0, (LH - t) / 2, t / 2);
+  for (const sx of [-1, 1]) wall(kl, t, LH - t, D - 2 * t, sx * (W / 2 - t / 2), (LH - t) / 2, D / 2);
+  kli.add('m', G.box(W - 2 * t, 0.004, D - 2 * t), dark, 0, LH - t - 0.002, D / 2);
+  for (const x of [-0.17, 0.17]) { wall(kl, 0.04, 0.012, D + 0.012, x, LH + 0.004, D / 2, band); wall(kl, 0.04, LH + 0.01, 0.012, x, LH / 2, D + 0.006, band); wall(kl, 0.04, LH + 0.01, 0.012, x, LH / 2, -0.006, band); }
+  wall(kl, 0.08, 0.08, 0.03, 0, 0.0, D + 0.01, band); // la cerradura
+  lid.add(kl.build({ m: std({ vertexColors: true, roughness: 0.6, metalness: 0.3 }) }, { cast: true }), kli.build({ m: std({ vertexColors: true, roughness: 1, metalness: 0 }) }));
   const glow = glowSprite(0xffd166, 0.9, 0.5); glow.position.y = 0.3; g.add(glow);
+  const shine = glowSprite(0xffc040, 0.55, 0); shine.position.y = 0.2; g.add(shine); // el brillo del oro al abrirse
   g.visible = false; arena.add(g);
-  return { g, lid, glow, on: false, open: 0, opened: false, t: 0, vy: 0, lastY: 0 };
+  return { g, lid, glow, shine, treasure, on: false, open: 0, opened: false, t: 0, vy: 0, lastY: 0 };
 })();
 const chestWaits = () => CHEST.on && !CHEST.opened && state === 'rest';
 const chestCan = () => surpriseOn() && !isFloor() && !isSeated() && !isSupine() && !isBars() && settings.exercise !== 'inchworm';
@@ -13824,6 +13909,7 @@ function chestStep(dt, t) {
   const vy = dt > 0 ? (head.p.y - CHEST.lastY) / dt : 0; CHEST.vy += (vy - CHEST.vy) * Math.min(1, dt * 20); CHEST.lastY = head.p.y;
   if (!CHEST.opened && CHEST.t > 1 && CHEST.vy > 0.6 && head.p.y > standHeadY() + 0.06) chestOpen();
   if (CHEST.opened) { CHEST.open = Math.min(1, CHEST.open + dt * 2.5); CHEST.lid.rotation.x = -1.9 * (1 - Math.pow(1 - CHEST.open, 3)); }
+  CHEST.shine.material.opacity = CHEST.opened ? CHEST.open * (0.55 + 0.15 * Math.sin(t * 6)) : 0;
 }
 function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
