@@ -318,15 +318,22 @@ renderer.setAnimationLoop((time, frame) => {
 // (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
 const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
+// La foveación se cambia en la capa de ahora; solo la resolución o el antialias piden una capa nueva, y cada capa nueva ocupa
+// otra memoria de vídeo (la vieja no se libera enseguida): al cambiarla en cada menú y al empezar cada partida, las gafas
+// acababan pintando planos de basura, blancos y azules, pegados a la vista. Ahora el menú solo afina la foveación y la
+// resolución cambia como mucho QUAL_SWAPS veces por sesión
+const QUAL_SWAPS = 3;
 function qualApply(lv, session = renderer.xr.getSession(), sharp = false) {
   if (!sharp) QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
   const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
   if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+  const cur = session.renderState && session.renderState.baseLayer, L0 = QUAL.layer;
+  if (cur && L0 && (sharp || (L0.sc === Q.sc && L0.aa === Q.aa) || QUAL.swaps >= QUAL_SWAPS)) { if ('fixedFoveation' in cur) cur.fixedFoveation = sharp ? 0.4 : 1; return; }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
     const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
     if ('fixedFoveation' in L) L.fixedFoveation = sharp ? 0.4 : 1;
-    session.updateRenderState({ baseLayer: L });
+    session.updateRenderState({ baseLayer: L }); if (L0) QUAL.swaps++; QUAL.layer = { sc: Q.sc, aa: Q.aa };
   } catch (e) { console.warn('calidad', e && e.message); }
 }
 function qualStep(dt) {
@@ -404,7 +411,7 @@ async function startXR(ar) {
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; QUAL.layer = null; QUAL.swaps = 0; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
     session.addEventListener('end', () => { endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });

@@ -572,7 +572,7 @@ function spListsPage() {
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
   }
-  host.innerHTML = h;
+  htmlKeep(host, h, open || ''); // (sin volver arriba de la lista cada vez que llega un compás)
   if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
   host.addEventListener('change', ev => {
     const el = ev.target;

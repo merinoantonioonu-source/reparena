@@ -51,7 +51,7 @@ const expose = `
 window.__RA = { FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
-  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine };
+  COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
@@ -95,9 +95,9 @@ function findW(label) {
   if (!w && inLobby()) {
     modeBtn() && modeBtn().onPress(); w = look();
     if (!w) { RA.activeWidgets().find(x => x.label === 'Sesiones').onPress(); w = look(); if (!w) modeBtn() && modeBtn().onPress(); }
-    if (!w) { RA.activeWidgets().find(x => wLabel(x) === 'Opciones').onPress(); w = findOpt(look); if (!w) RA.activeWidgets().find(x => x.label === 'Volver').onPress(); }
+    if (!w) { RA.activeWidgets().find(x => wLabel(x) === 'Opciones').onPress(); w = findOpt(look); if (!w) { RA.activeWidgets().find(x => x.label === 'Volver').onPress(); w = look(); } } // (al volver, el principal se rehace: otra mirada)
   }
-  if (!w && inOptions()) w = findOpt(look);
+  if (!w && inOptions()) { w = findOpt(look); if (!w) { RA.activeWidgets().find(x => x.label === 'Volver').onPress(); w = look(); } } // (si no está en Opciones, en el principal)
   for (const re of [/^Ejercicio/, /^Entorno/, /^Sonido/]) { if (w) break; const b = RA.activeWidgets().find(x => re.test(x.label)); if (b) { b.onPress(); w = RA.activeWidgets().find(x => x.label === label); if (!w) findW('Volver').onPress(); } }
   if (!w) throw new Error('widget not found: ' + label + ' in [' + RA.activeWidgets().map(w => w.label).join('|') + ']'); return w; }
 function press(label) { findW(label).onPress(); }
@@ -1476,7 +1476,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('tap tempo bpm', RA.settings.bpm); if (Math.abs(RA.settings.bpm - 150) > 12) errors.push('marcar el ritmo al compás no da ~150 BPM: ' + RA.settings.bpm);
   press('Sin ritmo'); frame(1); RA.setSetting('comboBase', 'stand');
   // Enemigos ▸: cada uno se marca o se quita; sin ninguno de las compuertas, solo voladores
-  press('Combate'); frame(1); press(RA.activeWidgets().find(w => /^(Enemigos|Rivales y armas)/.test(w.label)).label); frame(1);
+  press('Combate'); frame(1); press('Rivales y armas'); frame(1); // (en Opciones)
   const gate0 = RA.settings.foesGate, gateLabels = RA.FOE_GATE.filter(o => gate0.split(',').includes(o[0])).map(o => o[1]);
   for (const l of gateLabels) { findW(l).onPress(); frame(1); }
   press('Abeja'); frame(1); const flyNow = RA.settings.foesFly, foesNow = RA.foes(); press('Volver'); frame(1);
@@ -1522,7 +1522,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // vueltas y rango por bloque: dos bloques × 2 vueltas; el segundo, de general (sus vidas, mientras dura), y al acabar, tu rango
   { const rk0 = RA.settings.rank, lv0 = RA.settings.lives, gen = RA.rankVals('general');
     RA.SES.blocks = [{ mode: 'arcs', ex: 'squat', n: 4 }, { mode: 'arcs', ex: 'squat', n: 4, rank: 'general' }]; RA.SES.rounds = 2; RA.SES.rest = 1;
-    const lbl = (RA.lobbyMenu(), frame(2), (RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)) || {}).label || '');
+    const lbl = (RA.lobbyMenu(), frame(2), [(RA.activeWidgets().find(w => /EMPEZAR SESIÓN/.test(w.label)) || {}).label || '', ...RA.menu.rows.map(r => r.text || '')].join(' | ')); // (el botón y, debajo, la sesión)
     RA.startSession(); frame(2); const seen = [], rankIn = {};
     for (let i = 0; i < 20000 && (RA.SES.active || RA.state !== 'end'); i++) { // (un bloque perdido también pasa al siguiente)
       const k = RA.SES.round + ':' + RA.SES.idx; if (RA.state === 'play' && seen[seen.length - 1] !== k) { seen.push(k); rankIn[k] = [RA.settings.rank, RA.settings.lives]; }
@@ -1530,7 +1530,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }
     RA.PV.crouch = false; const R = RA.SES.results;
     log(`session rounds: lobby “${lbl}” · played ${seen.join(' ')} · results ${R.length} (rounds ${R.map(r => r.round).join('')}) · block 2 rank ${JSON.stringify(rankIn['0:1'])} (general lives ${gen.lives}) · after: rank ${RA.settings.rank} lives ${RA.settings.lives}`);
-    if (seen.join(' ') !== '0:0 0:1 1:0 1:1' || R.length !== 4 || !/× 2/.test(lbl)) errors.push('sesión: con 2 vueltas debería jugar los bloques dos veces seguidas');
+    if (seen.join(' ') !== '0:0 0:1 1:0 1:1' || R.length !== 4 || !/EMPEZAR SESIÓN/.test(lbl) || !/× 2/.test(lbl)) errors.push('sesión: con 2 vueltas debería jugar los bloques dos veces seguidas');
     if (!rankIn['0:1'] || rankIn['0:1'][0] !== 'general' || rankIn['0:1'][1] !== gen.lives || (rankIn['0:0'] && rankIn['0:0'][0] !== rk0)) errors.push('sesión: el rango del bloque debería ponerse solo mientras se juega ese bloque');
     if (RA.settings.rank !== rk0 || RA.settings.lives !== lv0) errors.push('sesión: al acabar, el rango y sus ajustes deberían volver a los tuyos');
     RA.SES.rounds = 1; }
@@ -1860,11 +1860,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.exitAll(); frame(2); }
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
-  // el reproductor pequeño, en el principal: sus cinco botones juntos y el rótulo de lo que suena, que se desplaza si no cabe
+  // el reproductor, en el principal (bajo los ejercicios y la dificultad): sus cinco botones en una fila y, encima, el
+  // rótulo de lo que suena, que se desplaza si no cabe
   { const W = RA.activeWidgets(), ids = ['Anterior', 'Siguiente', 'Vol −', 'Vol +'].map(l => W.find(w => w.label === l)), M = RA.MARQ, x0 = M.x; for (let i = 0; i < 10; i++) frame(1);
-    const box = ids.every(Boolean) && Math.max(...ids.map(w => w.mesh.position.x)) - Math.min(...ids.map(w => w.mesh.position.x)) < 0.3;
-    log(`spotify mini player: buttons together ${box} · marquee “${M.text}” on ${!!(M.p && M.p.mesh.parent)} · scrolls ${M.x > x0}`);
-    if (!box || !M.p || !(M.x > x0) || !/♪|Spotify/.test(M.text)) errors.push('Spotify: el menú principal debería llevar el reproductor pequeño (botones juntos y rótulo que se mueve)'); }
+    const box = ids.every(Boolean) && Math.max(...ids.map(w => w.mesh.position.y)) - Math.min(...ids.map(w => w.mesh.position.y)) < 0.001;
+    log(`spotify player: buttons in one row ${box} · marquee “${M.text}” on ${!!(M.p && M.p.mesh.parent)} · scrolls ${M.x > x0}`);
+    if (!box || !M.p || !(M.x > x0) || !/♪|Spotify/.test(M.text)) errors.push('Spotify: el menú principal debería llevar el reproductor (sus botones en una fila y el rótulo que se mueve)'); }
   press('Sonido'); frame(1); press('Pausa'); await sleep(20); frame(2); log('after Pausa: playing', SPOT.playing, 'button', RA.activeWidgets().some(w => w.label === 'Play'));
   press('Siguiente'); await sleep(20); press('Vol +'); await sleep(320); await RA.spRefresh(); frame(2);
   log('after next/vol:', RA.spNowText());
@@ -1929,7 +1930,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.headQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.44, 'YXZ')); RA.setSetting('wristDist', 55); frame(60, 16, xrFrame);
     const L1 = level(); XRS.headQ = null; frame(2, 16, xrFrame);
     log('wrist menu with the head tilted 25°: roll', L1.roll.toFixed(3)); if (L1.roll > 0.01) errors.push('el menú de muñeca se ladea con la cabeza');
-    const w = RA.activeWidgets().find(w => /^Ajustes/.test(w.label)), wp = new V(), wn = new V(0, 0, 1);
+    const w = RA.activeWidgets().find(w => /^Opciones/.test(w.label)), wp = new V(), wn = new V(0, 0, 1); // (abre Opciones, con su «Volver»)
     w.mesh.getWorldPosition(wp); wn.copy(w.mesh.localToWorld(new V(0, 0, 1))).sub(wp).normalize();
     const top0 = RA.WM.top.clone();
     for (const d of [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]) { XRS.tip = wp.clone().addScaledVector(wn, d); frame(2, 16, xrFrame); }
@@ -2001,7 +2002,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { RA.setSetting('menuWhere', 'stand'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(30, 16, xrFrame); RA.lobbyMenu(); frame(40, 16, xrFrame);
     const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
     const poke = (w, ds) => { for (const d of ds) { XRS.tip = at(w, d); frame(2, 16, xrFrame); if (process.env.DBG) log('  poke', w.label, d, 'need', RA.POKE.need.right, 'menuH', RA.menuH && RA.menuH.toFixed(2)); } };
-    poke(findW('Ajustes'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver' || w.label === 'Tu cuerpo');
+    RA.LOBBY.opt = 'set'; poke(findW('Opciones'), [0.08, 0.05, 0.03, 0.015, 0.0, -0.01]); const opened = RA.activeWidgets().some(w => w.label === 'Volver' || w.label === 'Tu cuerpo');
     const tab = RA.activeWidgets().find(w => w.style === 'tab'), before = JSON.stringify(RA.settings);
     await sleep(500); poke(tab, [-0.01, 0.015, -0.01, 0.015, -0.01]); const sameTab = !RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected'), same = JSON.stringify(RA.settings) === before;
     poke(tab, [0.06]); await sleep(500); poke(tab, [0.06, 0.03, 0.015, 0.0, -0.01]); const nowTab = RA.activeWidgets().some(w => w.label === tab.label && w.style === 'selected');
@@ -2013,7 +2014,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // ---- Menú de muñeca: se pulsa con cualquiera de las dos manos, y la tecla es sólida: la mano que se ve se queda apoyada en ella ----
   { RA.setSetting('menuWhere', 'wrist'); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(40, 16, xrFrame); RA.lobbyMenu(); frame(60, 16, xrFrame);
     const at = (w, d) => { const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.localToWorld(new THREE.Vector3(0, 0, 1)).sub(p).normalize(); return p.addScaledVector(n, d); };
-    const w = findW('Ajustes'), pts = [0.08, 0.05, 0.03, 0.015, 0.0, -0.01, -0.025, -0.04].map(d => at(w, d)), out = at(w, 0.1); await sleep(300);
+    const w = findW('Opciones'), pts = [0.08, 0.05, 0.03, 0.015, 0.0, -0.01, -0.025, -0.04].map(d => at(w, d)), out = at(w, 0.1); await sleep(300);
     const gap = () => RA.gloves.left.palm.position.distanceTo(RA.hands.left.J[0].s);
     for (const p of pts) { XRS.ltip = p; frame(2, 16, xrFrame); }
     const opened = RA.activeWidgets().some(x => x.label === 'Volver' || x.label === 'Tu cuerpo'); frame(10, 16, xrFrame);

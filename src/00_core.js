@@ -258,6 +258,15 @@ const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
 const CAMP = { orig: null, run: null, env: null };
 
 let storeHook = null; // (al guardar algo: la sincronización, 69_xfer, apunta qué cambió y cuándo)
+// Rehace el contenido de un bloque de la página sin perder dónde estabas en sus listas con barra (las canciones de una
+// lista de Spotify, las de un bloque…): mientras se buscan los compases, se redibujan cada poco y volvían arriba. key: lo
+// que se enseña (otra lista, otro bloque): si cambia, empiezan arriba
+function htmlKeep(host, html, key = '') {
+  const sel = '.sptracks, .tracks, .lpick', can = !!host.querySelectorAll, same = host.dataset && host.dataset.keep === String(key);
+  const tops = can && same ? [...host.querySelectorAll(sel)].map(e => e.scrollTop) : [];
+  host.innerHTML = html; if (host.dataset) host.dataset.keep = String(key);
+  if (can) [...host.querySelectorAll(sel)].forEach((e, i) => { if (tops[i]) e.scrollTop = tops[i]; });
+}
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); const old = storeHook ? localStorage.getItem(k) : null; localStorage.setItem(k, JSON.stringify(v)); if (storeHook) storeHook(k, old); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
 function clampSetting(f, v) {

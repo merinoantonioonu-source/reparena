@@ -1,8 +1,8 @@
 /* =================== DIANA: EL ENEMIGO APUNTADO =================== */
 // Al enemigo al que apuntas le sale una marca que sigue su silueta en cada momento (si levanta un brazo o se agacha, va
 // con él). Se elige en Entorno → Diana (settings.lockStyle):
-//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, de largos
-//    distintos, que cambian a saltos.
+//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, cortas y vivas:
+//    giran despacio a su alrededor y por cada una corren tramos de luz hacia fuera (como las líneas de velocidad).
 //  - Tinta: línea negra de rotulador pegada a la figura que «hierve» (se redibuja temblando 8 veces por segundo, como el
 //    dibujo animado a mano) y un halo amarillo plano desplazado, como la sombra recortada de una viñeta.
 //  - Trama de puntos: la trama roja de los cómics impresos, puntos gordos pegados al cuerpo y cada vez más pequeños hacia
@@ -23,9 +23,9 @@ const LKL = {
     neon: [['mask', 0.012], ['band', 0.036, 0xff1a1a, 0.2], ['band', 0.026, 0xff1a1a, 0.42], ['band', 0.0175, 0xff3a2e, 1]],
     tinta: [['mask', 0.003], ['band', 0.013, 0x0b0710, 1, { once: 1, boil: 0.7 }], ['band', 0.024, 0xffc21a, 1, { once: 1, off: [0.008, -0.011] }]],
     trama: [['mask', 0.005], ['band', 0.016, 0xff2a1f, 1, { once: 1, dot: 0.5 }], ['band', 0.03, 0xff2a1f, 1, { once: 1, dot: 0.36 }], ['band', 0.046, 0xff2a1f, 1, { once: 1, dot: 0.22 }]],
-    enfoque: [['mask', 0.022], ['band', 0.05, 0xff3a2e, 1, { once: 1, ray: [0.15, 0.1] }], ['band', 0.085, 0xff3a2e, 1, { once: 1, ray: [0.45, 0.14] }], ['band', 0.12, 0xff3a2e, 1, { once: 1, ray: [0.75, 0.18] }]]
+    enfoque: [['mask', 0.02], ['band', 0.04, 0xff3a2e, 1, { once: 1, ray: [0.15, 0.1] }], ['band', 0.062, 0xff3a2e, 1, { once: 1, ray: [0.45, 0.14] }], ['band', 0.085, 0xff3a2e, 1, { once: 1, ray: [0.75, 0.18] }]]
   },
-  mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, box: null
+  mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, time: { value: 0 }, box: null
 };
 const LKL_BIT = 2; // (el bit 1 del stencil es la boca del remolino del bosque)
 const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'enfoque';
@@ -38,7 +38,7 @@ function lklMat(style, i, skin, thin, ctr) {
   if (mode === 'mask') Object.assign(m, { colorWrite: false, depthTest: false, stencilWriteMask: LKL_BIT, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp });
   else Object.assign(m, { stencilWriteMask: X.once ? LKL_BIT : 0, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: X.once ? THREE.ReplaceStencilOp : THREE.KeepStencilOp });
   m.userData.base = op || 1; m.userData.style = style;
-  const U = { uLkW: { value: w }, uLkO: { value: new THREE.Vector2(...(X.off || [0, 0])) }, uLkB: { value: X.boil || 0 }, uLkS: LKL.seed, uLkC: ctr || { value: new V3() },
+  const U = { uLkW: { value: w }, uLkO: { value: new THREE.Vector2(...(X.off || [0, 0])) }, uLkB: { value: X.boil || 0 }, uLkS: LKL.seed, uLkT: LKL.time, uLkC: ctr || { value: new V3() },
     uLkP: { value: X.dot ? 1 : X.ray ? 2 : 0 }, uLkQ: { value: new THREE.Vector2(X.dot || (X.ray ? X.ray[0] : 0), X.ray ? X.ray[1] : 0) } };
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -53,16 +53,18 @@ function lklMat(style, i, skin, thin, ctr) {
 	vec3 lV = vec3( lO.x * gl_Position.w / projectionMatrix[0][0], lO.y * gl_Position.w / projectionMatrix[1][1], 0.0 );
 	vLkW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz + ( vec4( lV, 0.0 ) * viewMatrix ).xyz;
 	gl_Position.xy += lO * gl_Position.w;`);
-    sh.fragmentShader = `uniform vec3 uLkC;\nuniform float uLkP, uLkS;\nuniform vec2 uLkQ;\nvarying vec3 vLkW;
+    sh.fragmentShader = `uniform vec3 uLkC;\nuniform float uLkP, uLkS, uLkT;\nuniform vec2 uLkQ;\nvarying vec3 vLkW;
 float lkH1(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float lkPat() {
 	if (uLkP < 0.5) return 1.0;
 	vec3 n = normalize(cameraPosition - uLkC), r = normalize(cross(vec3(0.0, 1.0, 0.0), n)), u = cross(n, r), d = vLkW - uLkC;
 	vec2 q = vec2(dot(d, r), dot(d, u));
 	if (uLkP < 1.5) { vec2 g = mat2(0.7071, 0.7071, -0.7071, 0.7071) * q / (0.008 * length(cameraPosition - uLkC)); return 1.0 - smoothstep(uLkQ.x - 0.07, uLkQ.x + 0.05, length(fract(g) - 0.5)); }
-	float a = atan(q.y, q.x) * 5.7296, s = floor(a);
+	float a = atan(q.y, q.x) * 5.7296 + uLkT * 0.45, s = floor(a);
 	if (lkH1(s + 1.0 + uLkS * 7.0) < uLkQ.x) return 0.0;
-	return 1.0 - smoothstep(uLkQ.y * 0.6, uLkQ.y, abs(fract(a) - 0.5));
+	float ray = 1.0 - smoothstep(uLkQ.y * 0.6, uLkQ.y, abs(fract(a) - 0.5));
+	float rd = length(q) / (0.012 * length(cameraPosition - uLkC)), dash = fract(rd * 0.35 - uLkT * 2.2 + lkH1(s * 3.7 + 11.0));
+	return ray * smoothstep(0.0, 0.12, dash) * (1.0 - smoothstep(0.55, 0.7, dash));
 }\n` + sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n\tgl_FragColor.a *= lkPat();');
   };
   m.customProgramCacheKey = () => 'lockline' + (skin ? 's' : 'n'); // (todo va en uniformes: un programa para todas las capas)
@@ -133,7 +135,7 @@ function lockShow(e, hot) { if (e && e.alive && e.root) LKL.on.set(e, LKL.on.get
 // Al final de updateAim: enseña la diana de los apuntados (en el estilo elegido) y la quita a los demás
 function lockStep(t) {
   const st = lklStyle(), dt = clamp(t - (LKL.t || t), 0, 0.1); LKL.t = t; let hot = false;
-  LKL.seed.value = Math.floor(t * 8) % 97 * 0.37; // (la tinta tiembla y las rayas cambian a saltos, 8 veces por segundo)
+  LKL.seed.value = Math.floor(t * 8) % 97 * 0.37; LKL.time.value = t % 1000; // (la tinta tiembla 8 veces por segundo; las rayas de enfoque giran y corren)
   for (const [e, h] of LKL.on) {
     if (!e.lks) e.lks = {};
     if (!e.lks[st]) {

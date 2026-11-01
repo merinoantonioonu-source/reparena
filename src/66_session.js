@@ -293,7 +293,7 @@ const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<butto
 // de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
-  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><button type="button" class="sesgrip" aria-label="Bloque ${i + 1}: arrástralo para cambiarlo de sitio (o flechas arriba y abajo)" title="Arrastra para cambiar de sitio">${SES_ICON.grip}<span class="sesn">${i + 1}</span></button>
+  const html = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><button type="button" class="sesgrip" aria-label="Bloque ${i + 1}: arrástralo para cambiarlo de sitio (o flechas arriba y abajo)" title="Arrastra para cambiar de sitio">${SES_ICON.grip}<span class="sesn">${i + 1}</span></button>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
@@ -301,6 +301,7 @@ function renderSession() {
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
     <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
+  htmlKeep(host, html, `${SES.musicOpen},${SES.exOpen},${SES.rankOpen},${SES.setOpen}`); // (sus listas, sin volver arriba al redibujar)
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const rounds = $('#sesRounds'); if (rounds && document.activeElement !== rounds) rounds.value = SES.rounds;
   const sum = $('#sesSummary');

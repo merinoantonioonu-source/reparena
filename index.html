@@ -560,7 +560,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>Dentro del juego</h2>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
-      <li><strong>El menú principal:</strong> arriba eliges el modo (Combate, Arcos, Barras, Toques), cada uno con su color. A la izquierda, sus partes: Ronda (el ejercicio), Dificultad (el rango y «Al fallo»), Rivales y armas (en Combate: una ficha por enemigo, con su retrato, su resistencia y su fuerza), Sesiones, <b>Progreso</b> (tu nivel y tus colores, las misiones del día, la campaña y tu semana) y Opciones (Sonido, Entorno y Ajustes), y el reproductor de Spotify; a la derecha, lo de la parte elegida. EMPEZAR, arriba a la izquierda.</li>
+      <li><strong>El menú principal:</strong> arriba, EMPEZAR, grande; debajo, tus cifras (nivel, hoy, racha y misiones: al tocarlas, Progreso); luego el modo (Combate, Arcos, Barras, Toques), cada uno con su color, y Sesiones. Con un modo, sus ejercicios y la dificultad (los galones, «Al fallo» y cómo es la ronda); con Sesiones, la sesión bloque a bloque y EMPEZAR SESIÓN arriba. Abajo, Spotify y <b>Opciones</b>, con lo demás en pestañas: Rivales y armas (una ficha por enemigo, con su retrato, su resistencia y su fuerza), Progreso (nivel, misiones, campaña y semana), Sonido, Entorno y Ajustes.</li>
       <li>El menú sale de tu <b>muñeca izquierda</b>: mírala (como para mirar un reloj) y pulsa el botón <b>MENÚ</b> con el índice derecho. El panel crece desde la muñeca y se queda <b>quieto delante de ti</b>, derecho y de cara, a la distancia de los ojos que elijas en Ajustes → Menú (si te cuesta enfocarlo, aléjalo): pulsa con calma con la punta del índice de cualquiera de las dos manos. Las teclas y el panel son sólidos: al hundir una tecla hasta el fondo, o al tocar el panel entre las teclas, tu mano se queda apoyada aunque sigas empujando, sin atravesarlo. Para cerrarlo, pon la palma izquierda hacia abajo o cierra el puño; un punto rosa en la muñeca te recuerda que hay un menú esperando, y MENÚ lo vuelve a abrir (si te giras y lo pierdes de vista, el mismo botón, «Traer menú», lo pone delante otra vez). Con mandos, X o Y lo abren y lo cierran. Los menús nuevos (el principal al entrar, el resumen de cada ronda) salen solos delante de ti. Si prefieres el atril fijo sobre un pie, cámbialo en Ajustes → Menú → Menú en.</li>
       <li><strong>Antes de cada ronda, la carátula del duelo:</strong> todo se queda en negro 7 segundos y delante de ti sale grande tu silueta contra el jefe de la ronda, con un VS, el ejercicio, tu rango, tu récord y los datos de la ronda. Para pasar antes al ejercicio, pulsa cualquier botón del mando o, con las manos, haz el gesto del pulgar arriba.</li>
       <li>Los valores numéricos se ajustan con el deslizador, con los botones − y +, o tocando el número para escribirlo en un teclado.</li>
@@ -966,6 +966,15 @@ const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
 const CAMP = { orig: null, run: null, env: null };
 
 let storeHook = null; // (al guardar algo: la sincronización, 69_xfer, apunta qué cambió y cuándo)
+// Rehace el contenido de un bloque de la página sin perder dónde estabas en sus listas con barra (las canciones de una
+// lista de Spotify, las de un bloque…): mientras se buscan los compases, se redibujan cada poco y volvían arriba. key: lo
+// que se enseña (otra lista, otro bloque): si cambia, empiezan arriba
+function htmlKeep(host, html, key = '') {
+  const sel = '.sptracks, .tracks, .lpick', can = !!host.querySelectorAll, same = host.dataset && host.dataset.keep === String(key);
+  const tops = can && same ? [...host.querySelectorAll(sel)].map(e => e.scrollTop) : [];
+  host.innerHTML = html; if (host.dataset) host.dataset.keep = String(key);
+  if (can) [...host.querySelectorAll(sel)].forEach((e, i) => { if (tops[i]) e.scrollTop = tops[i]; });
+}
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); const old = storeHook ? localStorage.getItem(k) : null; localStorage.setItem(k, JSON.stringify(v)); if (storeHook) storeHook(k, old); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
 function clampSetting(f, v) {
@@ -8195,7 +8204,7 @@ function spListsPage() {
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
   }
-  host.innerHTML = h;
+  htmlKeep(host, h, open || ''); // (sin volver arriba de la lista cada vez que llega un compás)
   if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
   host.addEventListener('change', ev => {
     const el = ev.target;
@@ -8511,7 +8520,7 @@ const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<butto
 // de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
-  host.innerHTML = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><button type="button" class="sesgrip" aria-label="Bloque ${i + 1}: arrástralo para cambiarlo de sitio (o flechas arriba y abajo)" title="Arrastra para cambiar de sitio">${SES_ICON.grip}<span class="sesn">${i + 1}</span></button>
+  const html = SES.blocks.length ? SES.blocks.map((b, i) => `<div class="sesrow" data-i="${i}"><button type="button" class="sesgrip" aria-label="Bloque ${i + 1}: arrástralo para cambiarlo de sitio (o flechas arriba y abajo)" title="Arrastra para cambiar de sitio">${SES_ICON.grip}<span class="sesn">${i + 1}</span></button>
     <select data-f="mode" aria-label="Modo del bloque ${i + 1}">${sesOpts(Object.entries(MODE_NAMES), b.mode)}</select>
     <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
@@ -8519,6 +8528,7 @@ function renderSession() {
     <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
     <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
+  htmlKeep(host, html, `${SES.musicOpen},${SES.exOpen},${SES.rankOpen},${SES.setOpen}`); // (sus listas, sin volver arriba al redibujar)
   const rest = $('#sesRest'); if (rest && document.activeElement !== rest) rest.value = SES.rest;
   const rounds = $('#sesRounds'); if (rounds && document.activeElement !== rounds) rounds.value = SES.rounds;
   const sum = $('#sesSummary');
@@ -14221,8 +14231,8 @@ function braceBreakFx() { if (!BRACE.g.visible) return; fx.sparks(BRACE.g.positi
 /* =================== DIANA: EL ENEMIGO APUNTADO =================== */
 // Al enemigo al que apuntas le sale una marca que sigue su silueta en cada momento (si levanta un brazo o se agacha, va
 // con él). Se elige en Entorno → Diana (settings.lockStyle):
-//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, de largos
-//    distintos, que cambian a saltos.
+//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, cortas y vivas:
+//    giran despacio a su alrededor y por cada una corren tramos de luz hacia fuera (como las líneas de velocidad).
 //  - Tinta: línea negra de rotulador pegada a la figura que «hierve» (se redibuja temblando 8 veces por segundo, como el
 //    dibujo animado a mano) y un halo amarillo plano desplazado, como la sombra recortada de una viñeta.
 //  - Trama de puntos: la trama roja de los cómics impresos, puntos gordos pegados al cuerpo y cada vez más pequeños hacia
@@ -14243,9 +14253,9 @@ const LKL = {
     neon: [['mask', 0.012], ['band', 0.036, 0xff1a1a, 0.2], ['band', 0.026, 0xff1a1a, 0.42], ['band', 0.0175, 0xff3a2e, 1]],
     tinta: [['mask', 0.003], ['band', 0.013, 0x0b0710, 1, { once: 1, boil: 0.7 }], ['band', 0.024, 0xffc21a, 1, { once: 1, off: [0.008, -0.011] }]],
     trama: [['mask', 0.005], ['band', 0.016, 0xff2a1f, 1, { once: 1, dot: 0.5 }], ['band', 0.03, 0xff2a1f, 1, { once: 1, dot: 0.36 }], ['band', 0.046, 0xff2a1f, 1, { once: 1, dot: 0.22 }]],
-    enfoque: [['mask', 0.022], ['band', 0.05, 0xff3a2e, 1, { once: 1, ray: [0.15, 0.1] }], ['band', 0.085, 0xff3a2e, 1, { once: 1, ray: [0.45, 0.14] }], ['band', 0.12, 0xff3a2e, 1, { once: 1, ray: [0.75, 0.18] }]]
+    enfoque: [['mask', 0.02], ['band', 0.04, 0xff3a2e, 1, { once: 1, ray: [0.15, 0.1] }], ['band', 0.062, 0xff3a2e, 1, { once: 1, ray: [0.45, 0.14] }], ['band', 0.085, 0xff3a2e, 1, { once: 1, ray: [0.75, 0.18] }]]
   },
-  mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, box: null
+  mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, time: { value: 0 }, box: null
 };
 const LKL_BIT = 2; // (el bit 1 del stencil es la boca del remolino del bosque)
 const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'enfoque';
@@ -14258,7 +14268,7 @@ function lklMat(style, i, skin, thin, ctr) {
   if (mode === 'mask') Object.assign(m, { colorWrite: false, depthTest: false, stencilWriteMask: LKL_BIT, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp });
   else Object.assign(m, { stencilWriteMask: X.once ? LKL_BIT : 0, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: X.once ? THREE.ReplaceStencilOp : THREE.KeepStencilOp });
   m.userData.base = op || 1; m.userData.style = style;
-  const U = { uLkW: { value: w }, uLkO: { value: new THREE.Vector2(...(X.off || [0, 0])) }, uLkB: { value: X.boil || 0 }, uLkS: LKL.seed, uLkC: ctr || { value: new V3() },
+  const U = { uLkW: { value: w }, uLkO: { value: new THREE.Vector2(...(X.off || [0, 0])) }, uLkB: { value: X.boil || 0 }, uLkS: LKL.seed, uLkT: LKL.time, uLkC: ctr || { value: new V3() },
     uLkP: { value: X.dot ? 1 : X.ray ? 2 : 0 }, uLkQ: { value: new THREE.Vector2(X.dot || (X.ray ? X.ray[0] : 0), X.ray ? X.ray[1] : 0) } };
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -14273,16 +14283,18 @@ function lklMat(style, i, skin, thin, ctr) {
 	vec3 lV = vec3( lO.x * gl_Position.w / projectionMatrix[0][0], lO.y * gl_Position.w / projectionMatrix[1][1], 0.0 );
 	vLkW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz + ( vec4( lV, 0.0 ) * viewMatrix ).xyz;
 	gl_Position.xy += lO * gl_Position.w;`);
-    sh.fragmentShader = `uniform vec3 uLkC;\nuniform float uLkP, uLkS;\nuniform vec2 uLkQ;\nvarying vec3 vLkW;
+    sh.fragmentShader = `uniform vec3 uLkC;\nuniform float uLkP, uLkS, uLkT;\nuniform vec2 uLkQ;\nvarying vec3 vLkW;
 float lkH1(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float lkPat() {
 	if (uLkP < 0.5) return 1.0;
 	vec3 n = normalize(cameraPosition - uLkC), r = normalize(cross(vec3(0.0, 1.0, 0.0), n)), u = cross(n, r), d = vLkW - uLkC;
 	vec2 q = vec2(dot(d, r), dot(d, u));
 	if (uLkP < 1.5) { vec2 g = mat2(0.7071, 0.7071, -0.7071, 0.7071) * q / (0.008 * length(cameraPosition - uLkC)); return 1.0 - smoothstep(uLkQ.x - 0.07, uLkQ.x + 0.05, length(fract(g) - 0.5)); }
-	float a = atan(q.y, q.x) * 5.7296, s = floor(a);
+	float a = atan(q.y, q.x) * 5.7296 + uLkT * 0.45, s = floor(a);
 	if (lkH1(s + 1.0 + uLkS * 7.0) < uLkQ.x) return 0.0;
-	return 1.0 - smoothstep(uLkQ.y * 0.6, uLkQ.y, abs(fract(a) - 0.5));
+	float ray = 1.0 - smoothstep(uLkQ.y * 0.6, uLkQ.y, abs(fract(a) - 0.5));
+	float rd = length(q) / (0.012 * length(cameraPosition - uLkC)), dash = fract(rd * 0.35 - uLkT * 2.2 + lkH1(s * 3.7 + 11.0));
+	return ray * smoothstep(0.0, 0.12, dash) * (1.0 - smoothstep(0.55, 0.7, dash));
 }\n` + sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n\tgl_FragColor.a *= lkPat();');
   };
   m.customProgramCacheKey = () => 'lockline' + (skin ? 's' : 'n'); // (todo va en uniformes: un programa para todas las capas)
@@ -14353,7 +14365,7 @@ function lockShow(e, hot) { if (e && e.alive && e.root) LKL.on.set(e, LKL.on.get
 // Al final de updateAim: enseña la diana de los apuntados (en el estilo elegido) y la quita a los demás
 function lockStep(t) {
   const st = lklStyle(), dt = clamp(t - (LKL.t || t), 0, 0.1); LKL.t = t; let hot = false;
-  LKL.seed.value = Math.floor(t * 8) % 97 * 0.37; // (la tinta tiembla y las rayas cambian a saltos, 8 veces por segundo)
+  LKL.seed.value = Math.floor(t * 8) % 97 * 0.37; LKL.time.value = t % 1000; // (la tinta tiembla 8 veces por segundo; las rayas de enfoque giran y corren)
   for (const [e, h] of LKL.on) {
     if (!e.lks) e.lks = {};
     if (!e.lks[st]) {
@@ -14968,15 +14980,22 @@ renderer.setAnimationLoop((time, frame) => {
 // (sm: tamaño de la textura de sombras; aa: suavizado de bordes, el último recurso)
 const QLV = [{ sc: 1, sh: 1, sm: 1024, aa: true }, { sc: 0.85, sh: 2, sm: 1024, aa: true }, { sc: 0.72, sh: 2, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: true }, { sc: 0.6, sh: 3, sm: 512, aa: false }], QFIX = { alta: 0, media: 1, baja: 3 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, applied: -1 };
+// La foveación se cambia en la capa de ahora; solo la resolución o el antialias piden una capa nueva, y cada capa nueva ocupa
+// otra memoria de vídeo (la vieja no se libera enseguida): al cambiarla en cada menú y al empezar cada partida, las gafas
+// acababan pintando planos de basura, blancos y azules, pegados a la vista. Ahora el menú solo afina la foveación y la
+// resolución cambia como mucho QUAL_SWAPS veces por sesión
+const QUAL_SWAPS = 3;
 function qualApply(lv, session = renderer.xr.getSession(), sharp = false) {
   if (!sharp) QUAL.lv = lv; if (!session || typeof XRWebGLLayer === 'undefined' || QUAL.applied === lv) return; QUAL.applied = lv;
   const Q = QLV[lv], sh = keyLight.shadow; // sombras más bastas (sin recompilar nada: solo otra textura)
   if (sh.mapSize.x !== Q.sm) { sh.mapSize.set(Q.sm, Q.sm); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+  const cur = session.renderState && session.renderState.baseLayer, L0 = QUAL.layer;
+  if (cur && L0 && (sharp || (L0.sc === Q.sc && L0.aa === Q.aa) || QUAL.swaps >= QUAL_SWAPS)) { if ('fixedFoveation' in cur) cur.fixedFoveation = sharp ? 0.4 : 1; return; }
   try {
     const gl = renderer.getContext(), a = gl.getContextAttributes();
     const L = new XRWebGLLayer(session, gl, { antialias: a.antialias && Q.aa, alpha: a.alpha, depth: a.depth, stencil: a.stencil, framebufferScaleFactor: Q.sc });
     if ('fixedFoveation' in L) L.fixedFoveation = sharp ? 0.4 : 1;
-    session.updateRenderState({ baseLayer: L });
+    session.updateRenderState({ baseLayer: L }); if (L0) QUAL.swaps++; QUAL.layer = { sc: Q.sc, aa: Q.aa };
   } catch (e) { console.warn('calidad', e && e.message); }
 }
 function qualStep(dt) {
@@ -15054,7 +15073,7 @@ async function startXR(ar) {
     const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); QUAL.applied = -1; QUAL.layer = null; QUAL.swaps = 0; qualApply(settings.quality === 'auto' ? QUAL.lv : QFIX[settings.quality] || 0, session); warmQueue();
     session.addEventListener('end', () => { endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
