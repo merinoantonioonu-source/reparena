@@ -10,7 +10,10 @@ const RAMP = { lvl: 0, t0: 0, f0: 0, note: '', up: false }; // nivel de la dific
 let msg = { text: '', color: '#fff', t: 0 };
 let charged = false, chargePow = 1, nextArcDrop = 0, nextArcTilt = 0, nextArcJump = false, nextArcPlank = false, nextArcMace = false, calibRef = 1.6, runSaved = false;
 // Carga de las flexiones: cuanto más aguantas abajo, más fuerte el disparo
-const POW_STEP = 0.8, POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
+const POW_COL = [0x3cf0c6, 0xffd166, 0xff8a2a, 0xff3cf0], POW_DMG = [0, 1, 2, 4];
+// Cuánto hay que aguantar en la postura para cada nivel de carga: ×2 tras «powHold» s y cada nivel siguiente pide «powHoldInc» s
+// más que el anterior (con 1,5 y 0,5: ×2 a 1,5 s, ×3 a 3,5 s y ×4 a 6 s)
+const powLevel = h => { let p = 1, need = settings.powHold, acc = 0; while (p < 4 && h >= acc + need) { acc += need; need += settings.powHoldInc; p++; } return p; };
 const HL = new V3(); // cabeza del jugador en coordenadas de la arena
 const tmpA = new V3(), tmpB = new V3(), tmpC = new V3();
 const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1304,8 +1307,9 @@ function vertDetector(d, y, t, dt, cfg) {
     if (y < d.min) d.min = y;
     const drop = d.ref - d.min;
     if (!d.charged && drop >= cfg.req) { d.charged = true; onCharge(); }
-    // carga: cada POW_STEP segundos abajo (cerca del fondo) sube un nivel, hasta 4
-    if (cfg.power && d.charged && y < d.ref - cfg.req * 0.8) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } }
+    // carga: aguantando abajo en la postura perfecta (lo que pide el ejercicio y 3 cm más, con 1,5 cm de margen) sube de
+    // nivel, hasta ×4, y cada nivel pide aguantar más que el anterior (powLevel); si subes un poco, el tiempo se para
+    if (cfg.power && d.charged && y <= d.ref - cfg.req - 0.015) { d.holdT += dt; const p = powLevel(d.holdT); if (p > d.pow) { d.pow = p; onPower(p); } }
     // recarga profunda: bajando mucho más de lo pedido (Ajustes → Ejercicio), la carga máxima al instante
     if (cfg.power && d.charged && d.pow < 4 && deepOn() && drop >= cfg.req + settings.deepDrop / 100) { d.pow = 4; onPower(4, true); }
     d.stillT = still ? d.stillT + dt : 0;
@@ -1362,9 +1366,9 @@ function armStep(kind, side, t, dt) {
   d.lost = 0;
   d.bottom += (r - d.bottom) * (r < d.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
   // curl: aguantando la pesa a la altura del hombro (el brazo doblado, haciendo fuerza) el disparo se carga, como abajo en
-  // la sentadilla: un nivel cada POW_STEP s, hasta ×4; sale al empezar a bajarla
+  // la sentadilla: cada nivel pide aguantar más (powLevel), hasta ×4; sale al empezar a bajarla
   if (d.state === 'hold') {
-    if (r >= d.bottom + range * 0.75) { d.holdT += dt; const p = 1 + Math.min(3, Math.floor(d.holdT / POW_STEP)); if (p > d.pow) { d.pow = p; onPower(p); } return null; }
+    if (r >= d.bottom + range * 0.75) { d.holdT += dt; const p = powLevel(d.holdT); if (p > d.pow) { d.pow = p; onPower(p); } return null; }
     d.state = 'top'; return { top: true, ...d.ev, pow: d.pow };
   }
   if (d.state === 'down') { if (r > d.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { d.state = 'rising'; d.max = r; d.t0 = t; d.lostUp = false; if (press) onCharge(); } }
@@ -1428,7 +1432,7 @@ function barStep(kind, t, dt) {
   // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
   if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? 0.8 : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
   if (B.state === 'hold') { // aguantando arriba carga el disparo (×2, ×3, ×4); sale al empezar a bajar
-    if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = 1 + Math.min(3, Math.floor(B.holdT / POW_STEP)); if (p > B.pow) { B.pow = p; onPower(p); } return; }
+    if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = powLevel(B.holdT); if (p > B.pow) { B.pow = p; onPower(p); } return; }
     B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); return;
   }
   if (B.state === 'down') { if (y > B.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { Object.assign(B, { state: 'rising', max: y, t0: t }); if (press) onCharge(); } }
