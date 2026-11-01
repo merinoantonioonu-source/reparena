@@ -832,7 +832,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (o.method === 'PUT') { const v = JSON.parse(o.body); if (!v.meta || typeof v.blob !== 'string') return { ok: false, status: 400 }; db.set(m[1], v); return { ok: true, status: 200, json: async () => v }; }
       const v = db.get(m[1]) || null; return { ok: true, status: 200, json: async () => (v && m[2] ? v.meta : v) };
     };
-    RA.SYNC.db = base; const R = {}; let bad = '';
+    const db0 = RA.SYNC.db; RA.SYNC.db = base; const R = {}; let bad = '';
     try {
       // aparato A (las gafas): sus perfiles y 3 partidas; crea el código
       put({ 'reparena3-profiles': JSON.stringify([{ name: 'Mañana suave', s: {} }]), 'reparena3-history': JSON.stringify([1, 2, 3].map(i => ({ ex: 'squat', reps: 10 + i, date: 1.80e12 + i }))), 'reparena3-sync': JSON.stringify({ at: Date.now() - 36e5 }) }); // (sus datos, de hace una hora)
@@ -870,7 +870,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       put(B2); const askD = await RA.syncCheck(); R.cfgAskB = askD && askD.news; R.cfgText = askD ? RA.syncAskText(askD) : '';
       if (askD) await RA.syncImport(askD, false); clearTimeout(RA.SYNC.t); R.cfgB = JSON.parse(storage.get('reparena3-settings'));
     } catch (e) { bad = e.stack.split('\n').slice(0, 3).join(' '); }
-    RA.SYNC.db = ''; clearTimeout(RA.SYNC.t); globalThis.fetch = realFetch; put(before); RA.setSetting('lives', 0);
+    RA.SYNC.db = db0; clearTimeout(RA.SYNC.t); globalThis.fetch = realFetch; put(before); RA.setSetting('lives', 0);
     log(`sync: code ${R.code} · stored ${R.stored} · readable ${R.readable} · B asked on linking ${R.askB} → profiles ${R.profB}, history ${R.histB}, asks again ${R.askAgainB} · B pushed ${R.upB} · A asked ${R.askA}, after «Ahora no» ${R.askA2} · A pushed with ${R.upA} games · B imports → history ${R.histB2}, profiles ${R.profB2}${bad ? ' · ERROR ' + bad : ''}`);
     log(`   settings: B linked → ask ${!!R.cfgLink} · A asked ${JSON.stringify(R.cfgAskA)} (says «Ahora no», changes walk time) → A keeps lives ${R.cfgA && R.cfgA.lives} walk ${R.cfgA && R.cfgA.walkTime} · B asked ${JSON.stringify(R.cfgAskB)} → B has lives ${R.cfgB && R.cfgB.lives}, walk ${R.cfgB && R.cfgB.walkTime} · «${R.cfgText}»`);
     log(`   sync menu: ${R.menu} · ask: ${R.askMenu} · keypad 16 digits → ${R.keypad}`);
