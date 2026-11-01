@@ -411,7 +411,7 @@ async function startXR(ar) {
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
     session.addEventListener('selectstart', e => { if (!e.inputSource.hand && GAME_STATES.includes(state) && !pistolOn() && !swordSet() && !padFire()) openPause(); }); // (con mandos como manos, el gatillo lanza el rayo: el menú, con X o Y)
     ambientStart();
-    setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(); }, 600);
+    setTimeout(() => { arenaFromHead(); lastStandY = head.p.y > 1.1 ? head.p.y : 1.6; lobbyMenu(); syncAskOnEntry(); }, 600);
   } catch (err) {
     $('#xrStatus').textContent = 'No se pudo iniciar la sesión: ' + (err && err.message ? err.message : err);
   }
