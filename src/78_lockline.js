@@ -1,12 +1,12 @@
 /* =================== DIANA: EL ENEMIGO APUNTADO =================== */
 // Al enemigo al que apuntas le sale una marca que sigue su silueta en cada momento (si levanta un brazo o se agacha, va
 // con él). Se elige en Entorno → Diana (settings.lockStyle):
+//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, de largos
+//    distintos, que cambian a saltos.
 //  - Tinta: línea negra de rotulador pegada a la figura que «hierve» (se redibuja temblando 8 veces por segundo, como el
 //    dibujo animado a mano) y un halo amarillo plano desplazado, como la sombra recortada de una viñeta.
 //  - Trama de puntos: la trama roja de los cómics impresos, puntos gordos pegados al cuerpo y cada vez más pequeños hacia
 //    fuera.
-//  - Líneas de enfoque: rayas en estrella del manga que apuntan al enemigo sin tocarlo, de largos distintos, que cambian
-//    a saltos.
 //  - Corchetes: cuatro esquinas de pincel que lo enmarcan y se cierran sobre él con un rebote al empezar a apuntarle.
 //  - Neón: el contorno rojo con un pulso lento de antes.
 // No cambian con la carga (la carga ya se ve en la bola de energía), salvo el neón, que late algo más vivo.
@@ -28,7 +28,7 @@ const LKL = {
   mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, box: null
 };
 const LKL_BIT = 2; // (el bit 1 del stencil es la boca del remolino del bosque)
-const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'tinta';
+const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'enfoque';
 // El material de una capa. Los de trama y enfoque llevan el centro del enemigo: uno por enemigo (ctr), los demás se comparten
 function lklMat(style, i, skin, thin, ctr) {
   const key = style + i + (skin ? 's' : 'n') + (thin ? 't' : ''); if (!ctr && LKL.mats[key]) return LKL.mats[key];

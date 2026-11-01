@@ -611,7 +611,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
     log(`lock outline: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · glow ${LK.kLo.toFixed(2)}–${LK.kHi.toFixed(2)}, biggest step per frame ${(LK.jump || 0).toFixed(3)}`);
     if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.3 || LK.jump > 0.12) errors.push('diana: el robot apuntado debería llevar el contorno de neón con un brillo que sube y baja despacio (solo él, nunca el aro antiguo)');
-    RA.setSetting('lockStyle', 'tinta'); }
+    RA.setSetting('lockStyle', 'enfoque'); }
   // las dianas de cómic (tinta, trama, enfoque y corchetes): cada una sale solo en el apuntado y, al cambiar de estilo, la de antes se quita
   { const ST = ['tinta', 'trama', 'enfoque', 'corchetes'], LC = Object.fromEntries(ST.map(k => [k, { on: 0, n: 0 }])); let other = 0, stale = 0, cur = '';
     await runConfig('Combate robots: dianas de cómic', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t);
@@ -621,7 +621,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if (g && RA.state === 'play' && g.lks && g.lks[st]) { LC[st].n++; if (vis(g)) LC[st].on++; }
       for (const x of RA.enemies) { if (x !== g && vis(x)) other++; if (x.lks && !sw) for (const k in x.lks) if (k !== st && x.lks[k].some(o => o.visible)) stale++; }
     }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : '');
-    RA.setSetting('lockStyle', 'tinta');
+    RA.setSetting('lockStyle', 'enfoque');
     log(`comic lock styles: ${ST.map(k => `${k} ${LC[k].on}/${LC[k].n}`).join(' · ')} · on others ${other} · old style left visible ${stale}`);
     if (ST.some(k => !LC[k].n || LC[k].on < LC[k].n * 0.9) || other || stale) errors.push('diana de cómic: cada estilo (tinta, trama, enfoque, corchetes) debería salir solo en el apuntado y quitarse al cambiar de estilo'); }
   // la mirada baja al agacharse y aún no ha vuelto al subir (cuando se dispara): el rayo va igual al robot que mirabas
