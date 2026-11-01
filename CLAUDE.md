@@ -43,6 +43,9 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
 - Cuidado con poner `//` en mitad de una línea de una sola línea: comenta todo lo que sigue.
 - Ajustes: todos en `SCHEMA` (`src/00_core.js`), con grupo (`g`), condición (`cond`), explicación (`hint`) y `relayout`
   si cambia qué otros campos se ven. El formulario de la página y los menús del juego salen de ahí.
+- Dianas y marcas en las gafas: tiras planas de cara al jugador (como los corchetes y las líneas de enfoque). Las de
+  silueta (stencil y copias de la figura del enemigo) dejaban planos de basura blancos y azules pegados a la vista en
+  cuanto salía la primera diana.
 - En las gafas, no cambies la capa de imagen (`XRWebGLLayer`) a menudo: cada una ocupa otra memoria de vídeo y, con
   muchos cambios, las gafas pintan planos de basura blancos y azules. La foveación se cambia en la capa de ahora.
 - Los modelos 3D están en `models/` (Quaternius, cada pack con su licencia). Los sonidos se pueden sustituir con
