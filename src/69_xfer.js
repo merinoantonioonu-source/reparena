@@ -6,7 +6,7 @@
 // cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
 const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-rankfit', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify', 'reparena3-exsongs',
-  'reparena3-career', 'reparena3-ghosts', 'reparena3-dev']; // (tu carrera, tus mejores rondas y la tabla del desarrollador, también)
+  'reparena3-career', 'reparena3-ghosts', 'reparena3-dev', 'reparena3-devon']; // (tu carrera, tus mejores rondas y la tabla y el modo del desarrollador, también)
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
 const XFER_HOURS = 12;
 const _xEnc = new TextEncoder(), _xDec = new TextDecoder();
@@ -85,10 +85,10 @@ async function xferFetch(code) {
 const histMerge = (a, b) => { const seen = new Set(a.map(r => `${r.date}|${r.ex}|${r.reps}`)); return a.concat((b || []).filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`))).sort((x, y) => (x.date || 0) - (y.date || 0)).slice(-400); };
 // Cargar lo recibido: sustituye lo de este aparato (el historial se junta, sin repetir partidas; de Spotify se conserva el
 // inicio de sesión de aquí) y vuelve a empezar la página para que todo lo lea
-function xferApply(p, reload = true) {
+function xferApply(p, reload = true, merged = false) {
   for (const k of XFER_KEYS) {
     const v = p.d[k]; if (v === undefined) continue;
-    if (k === 'reparena3-history') {
+    if (k === 'reparena3-history' && !merged) {
       store(k, histMerge(store(k) || [], v));
     } else if (k === 'reparena3-spotify') store(k, Object.assign({}, store(k) || {}, v.clientId ? { clientId: v.clientId } : {}, v.lists ? { lists: v.lists } : {}, v.picks ? { picks: v.picks } : {}, v.favs ? { favs: v.favs } : {}, v.bpms ? { bpms: v.bpms } : {}));
     else store(k, v);
@@ -118,57 +118,108 @@ function syncWhen(at) {
 }
 async function syncUrl(sub = '') { return `${SYNC.db.replace(/\/+$/, '')}/sync/${xferHex(await crypto.subtle.digest('SHA-256', _xEnc.encode('reparena-sync:' + syncSt().code)))}${sub}.json`; }
 async function syncGet(sub) { const r = await fetch(await syncUrl(sub)); if (!r.ok) throw new Error('Firebase respondió ' + r.status); return r.json(); }
-// Cada cambio en lo que viaja apunta la hora (es la de los datos de este aparato) y, con un código, sube a los 4 s. Lo que
-// la página guarda sola al cargarse (las misiones del día, los ajustes recolocados…) no cuenta: si no, al abrirla siempre
-// parecería lo más nuevo y nunca preguntaría (SYNC.ready, a los 3 s de arrancar)
-function syncTouch(k) {
+// Cada ajuste lleva su hora: al guardar algo que viaja, se apunta la de cada campo que cambió (en los ajustes, cada ajuste;
+// en lo que no es una ficha de campos, como los perfiles o el historial, la clave entera) y, con un código, sube a los 4 s.
+// Así, al juntar lo de los dos aparatos, de cada ajuste gana el que se cambió más tarde, venga de donde venga: un ajuste
+// tocado en el PC no se pierde porque luego juegues en las gafas sin importar. Lo que la página guarda sola al cargarse
+// (las misiones del día, los ajustes recolocados…) no cuenta: si no, al abrirla siempre parecería lo más nuevo (SYNC.ready)
+const syncIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const syncParse = raw => { try { return JSON.parse(raw); } catch (e) { return null; } };
+function syncTouch(k, oldRaw) {
   if (SYNC.applying || !SYNC.ready || !XFER_KEYS.includes(k)) return;
-  syncSet({ at: Date.now() }); if (syncOn()) { clearTimeout(SYNC.t); SYNC.t = setTimeout(() => syncPush().catch(() => {}), 4000); }
+  const raw = localStorage.getItem(k); if (raw === oldRaw) return;
+  const now = Date.now(), st = syncSt(), kt = st.kt || (st.kt = {}), T = kt[k] || (kt[k] = {}), nv = syncParse(raw), ov = syncParse(oldRaw);
+  if (k !== 'reparena3-history' && syncIsObj(nv) && syncIsObj(ov)) { let any = false; for (const f of new Set([...Object.keys(nv), ...Object.keys(ov)])) if (JSON.stringify(nv[f]) !== JSON.stringify(ov[f])) { T[f] = now; any = true; } if (!any) return; }
+  else T['*'] = now;
+  st.at = now; store(SYNC.key, st); if (syncOn()) { clearTimeout(SYNC.t); SYNC.t = setTimeout(() => syncPush().catch(() => {}), 4000); }
 }
 storeHook = syncTouch;
-// Subir: lo de aquí con las partidas del otro aparato juntas (si lo que hay arriba es suyo)
+const syncFt = (T, f) => Math.max((T && T[f]) || 0, (T && T['*']) || 0); // (la hora de un campo: la suya o la de la clave entera)
+const syncKt = T => Math.max(0, ...Object.values(T || {}));
+// Juntar lo de aquí (L) y lo de allí (R), cada uno { d: datos, kt: horas }: el historial, sumado; en las fichas de campos
+// (los ajustes…), cada campo del lado que lo cambió más tarde; lo demás, entero del lado más reciente. Empate: lo de aquí,
+// salvo al importar (preferR), que es lo que se ha pedido
+function syncMerge(L, R, preferR = false) {
+  const d = {}, kt = {}, Ld = L.d || {}, Rd = R.d || {};
+  const pick = (ta, tb) => tb > ta || (tb === ta && preferR);
+  for (const k of new Set([...Object.keys(Ld), ...Object.keys(Rd)])) {
+    const a = Ld[k], b = Rd[k], A = (L.kt || {})[k] || {}, B = (R.kt || {})[k] || {}, T = kt[k] = {};
+    if (k === 'reparena3-history') { d[k] = histMerge(a || [], b || []); T['*'] = Math.max(syncKt(A), syncKt(B)); continue; }
+    if (b === undefined) { d[k] = a; Object.assign(T, A); continue; }
+    if (a === undefined) { d[k] = b; Object.assign(T, B); continue; }
+    if (syncIsObj(a) && syncIsObj(b)) {
+      const o = {}; for (const f of new Set([...Object.keys(a), ...Object.keys(b)])) { const ta = syncFt(A, f), tb = syncFt(B, f), src = pick(ta, tb) ? b : a; if (f in src) o[f] = src[f]; if (ta || tb) T[f] = Math.max(ta, tb); }
+      d[k] = o;
+    } else { const ta = syncKt(A), tb = syncKt(B); d[k] = pick(ta, tb) ? b : a; if (ta || tb) T['*'] = Math.max(ta, tb); }
+  }
+  return { d, kt };
+}
+// Lo que trae lo de allí que aquí aún no está: ajustes más nuevos, otras cosas más nuevas y partidas que faltan
+function syncNews(L, R) {
+  const Ld = L.d || {}, Rd = R.d || {}, fresh = !syncKt(Object.assign({}, ...Object.values(L.kt || {}))); // (aquí nunca se ha apuntado nada: todo lo de allí vale)
+  let sets = 0, other = 0, games = 0;
+  for (const k of Object.keys(Rd)) {
+    const a = Ld[k], b = Rd[k], A = (L.kt || {})[k] || {}, B = (R.kt || {})[k] || {};
+    if (k === 'reparena3-history') { const seen = new Set((a || []).map(r => `${r.date}|${r.ex}|${r.reps}`)); games += (b || []).filter(r => r && !seen.has(`${r.date}|${r.ex}|${r.reps}`)).length; continue; }
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (syncIsObj(a) && syncIsObj(b)) { for (const f of new Set([...Object.keys(a), ...Object.keys(b)])) if (JSON.stringify(a[f]) !== JSON.stringify(b[f]) && (fresh || syncFt(B, f) > syncFt(A, f))) { if (k === STORE_KEY) sets++; else other++; } }
+    else if (a === undefined || fresh || syncKt(B) > syncKt(A)) other++;
+  }
+  return sets || other || games ? { sets, other, games } : null;
+}
+const syncLocal = () => ({ d: xferPack().d, kt: syncSt().kt || {} });
+async function syncRemote() { const cur = await syncGet(); if (!cur || !cur.blob) return null; const o = await xferOpen(syncSt().code, cur.blob, SYNC.salt); return { meta: cur.meta || {}, d: o.d, kt: o.kt || {} }; }
+// Subir: lo de aquí junto con lo de allí (de cada ajuste, el más reciente; las partidas de los dos)
 async function syncPush() {
   if (!syncOn() || SYNC.busy) return false; SYNC.busy = true;
   try {
-    const s = syncSt(), p = xferPack(), dev = syncDev(); p.at = s.at || Date.now();
-    const cur = await syncGet();
-    if (cur && cur.meta && cur.meta.dev !== dev && cur.blob) { try { const o = await xferOpen(s.code, cur.blob, SYNC.salt); p.d['reparena3-history'] = histMerge(p.d['reparena3-history'] || [], o.d['reparena3-history']); } catch (e) { /* (otro código o datos rotos: se sobrescribe) */ } }
-    const meta = { at: p.at, dev, from: syncWho(), n: (p.d['reparena3-history'] || []).length }, blob = await xferSeal(s.code, p, SYNC.salt);
+    const st = syncSt(), dev = syncDev(), L = syncLocal(); let M = L;
+    try { const R = await syncRemote(); if (R) M = syncMerge(L, R); } catch (e) { /* (otro código o datos rotos: se sobrescribe) */ }
+    const ver = Date.now(), at = Math.max(st.at || 0, ...Object.values(M.kt).map(syncKt)) || ver;
+    const meta = { ver, at, dev, from: syncWho(), n: (M.d['reparena3-history'] || []).length };
+    const blob = await xferSeal(st.code, { v: 1, at, from: syncWho(), d: M.d, kt: M.kt }, SYNC.salt);
     const r = await fetch(await syncUrl(), { method: 'PUT', body: JSON.stringify({ meta, blob }) }); // (sin cabeceras propias)
     if (!r.ok) throw new Error('Firebase respondió ' + r.status);
-    syncSet({ up: p.at }); return true;
+    syncSet({ up: st.at || ver }); return true;
   } finally { SYNC.busy = false; }
 }
-// Al entrar: ¿tiene el otro aparato algo más reciente que lo de aquí (y que no se haya rechazado ya)? Devuelve sus datos
-// (hora, de dónde, partidas) para preguntar; si lo de aquí es lo más nuevo y aún no ha subido, lo sube
+// Al entrar: si lo último que hay arriba lo subió el otro aparato y trae algo que aquí no está (y no se ha contestado ya),
+// devuelve qué trae para preguntar; si no, y aquí hay cambios sin subir, los sube
 async function syncCheck() {
   if (!syncOn()) return null;
-  const s = syncSt(), meta = await syncGet('/meta');
+  const st = syncSt(), meta = await syncGet('/meta');
   if (!meta) { await syncPush(); return null; }
-  if (meta.dev !== syncDev() && meta.at > (s.at || 0) && meta.at > (s.seen || 0)) return meta;
-  if ((s.at || 0) > meta.at && (s.up || 0) < (s.at || 0)) await syncPush();
+  const ver = meta.ver || meta.at || 0;
+  if (meta.dev !== syncDev() && ver > (st.seen || 0)) {
+    const R = await syncRemote(), news = R && syncNews(syncLocal(), R);
+    if (news) return Object.assign({}, meta, { news });
+    syncSet({ seen: ver }); // (nada nuevo para aquí)
+  }
+  if ((st.at || 0) > (st.up || 0)) await syncPush();
   return null;
 }
-// Importar lo del otro aparato (como al recibir por código: el historial se junta, lo demás se sustituye) y reiniciar
+// Importar: lo de aquí junto con lo de allí, ganando lo de allí salvo lo que aquí se cambió después; y reiniciar
 async function syncImport(meta, reload = true) {
-  const cur = await syncGet(); if (!cur || !cur.blob) throw new Error('ya no hay datos que importar');
-  const p = await xferOpen(syncSt().code, cur.blob, SYNC.salt), at = (cur.meta && cur.meta.at) || (meta && meta.at) || Date.now();
-  SYNC.applying = true; try { xferApply(p, false); } finally { SYNC.applying = false; }
-  syncSet({ at, seen: at, up: at }); if (reload) setTimeout(() => location.reload(), 300);
-  return p;
+  const R = await syncRemote(); if (!R) throw new Error('ya no hay datos que importar');
+  const M = syncMerge(syncLocal(), R, true), st = syncSt();
+  SYNC.applying = true; try { xferApply({ v: 1, d: M.d }, false, true); } finally { SYNC.applying = false; }
+  const at = Math.max(st.at || 0, ...Object.values(M.kt).map(syncKt));
+  syncSet({ kt: M.kt, at, seen: (R.meta.ver || R.meta.at || 0), up: R.meta.at >= at ? at : 0 }); // (si aquí queda algo más nuevo, se sube luego)
+  if (reload) setTimeout(() => location.reload(), 300);
+  return M;
 }
-const syncDecline = meta => syncSet({ seen: meta.at }); // («Ahora no»: no vuelve a preguntar por estos datos)
+const syncDecline = meta => syncSet({ seen: meta.ver || meta.at }); // («Ahora no»: no vuelve a preguntar por estos datos)
 function syncNewCode() { const r = crypto.getRandomValues(new Uint32Array(2)); return String(r[0] % 1e8).padStart(8, '0') + String(r[1] % 1e8).padStart(8, '0'); }
-// Crear un código en este aparato (y subir ya lo de aquí) o vincular con el del otro (devuelve sus datos, si hay, para preguntar)
+// Crear un código en este aparato (y subir ya lo de aquí) o vincular con el del otro (devuelve qué trae, si hay, para preguntar)
 async function syncCreate() { const code = syncNewCode(); syncSet({ code, seen: 0, up: 0 }); syncDev(); await syncPush(); return code; }
 async function syncLink(code) {
   code = String(code).replace(/\D/g, ''); if (!syncCodeOk(code)) throw new Error('el código tiene 16 cifras');
   syncSet({ code, seen: 0, up: 0 }); syncDev();
-  const meta = await syncGet('/meta'); if (!meta) { await syncPush(); return null; }
-  return meta.dev !== syncDev() ? meta : null;
+  return syncCheck();
 }
 function syncUnlink() { clearTimeout(SYNC.t); syncSet({ code: null }); }
-const syncAskText = m => `${m.from ? m.from[0].toUpperCase() + m.from.slice(1) : 'El otro aparato'} tiene datos más recientes (${syncWhen(m.at)}${m.n ? `, ${m.n} ${m.n === 1 ? 'partida' : 'partidas'}` : ''}). ¿Importarlos? Se juntan las partidas; los ajustes, perfiles, rangos y tu carrera pasan a ser los de allí.`;
+const syncAskText = m => { const n = m.news || {}, parts = [n.sets ? `${n.sets} ${n.sets === 1 ? 'ajuste' : 'ajustes'}` : '', n.other ? `${n.other} ${n.other === 1 ? 'cambio' : 'cambios'} más (perfiles, rangos, sesiones…)` : '', n.games ? `${n.games} ${n.games === 1 ? 'partida' : 'partidas'}` : ''].filter(Boolean);
+  return `${m.from ? m.from[0].toUpperCase() + m.from.slice(1) : 'El otro aparato'} tiene cambios más recientes (${syncWhen(m.at)}${parts.length ? ': ' + parts.join(', ') : ''}). ¿Importarlos? Se queda lo más nuevo de cada ajuste (lo que hayas cambiado aquí después no se toca) y se juntan las partidas.`; };
 
 /* ---------- En el juego ---------- */
 function xferMenu(back, view = {}) {

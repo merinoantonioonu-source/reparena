@@ -257,8 +257,8 @@ const STORE_KEY = 'reparena3-settings', HIST_KEY = 'reparena3-history';
 // La campaña (73_career): mientras se juega un nivel, sus ajustes van por encima de los tuyos; orig guarda los tuyos
 const CAMP = { orig: null, run: null, env: null };
 
-let storeHook = null; // (al guardar algo: la sincronización, 69_xfer, apunta que hay datos nuevos)
-function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); if (storeHook) storeHook(k); } catch (e) { return null; } return null; }
+let storeHook = null; // (al guardar algo: la sincronización, 69_xfer, apunta qué cambió y cuándo)
+function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); const old = storeHook ? localStorage.getItem(k) : null; localStorage.setItem(k, JSON.stringify(v)); if (storeHook) storeHook(k, old); } catch (e) { return null; } return null; }
 function decimals(f) { return f.step < 1 ? (String(f.step).split('.')[1] || '').length : 0; }
 function clampSetting(f, v) {
   if (f.type === 'multi') { const on = String(v || '').split(','), out = f.opts.map(o => o[0]).filter(k => on.includes(k)); return out.length ? out.join(',') : f.empty ? '' : f.def; }
