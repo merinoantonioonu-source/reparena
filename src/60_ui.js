@@ -610,9 +610,9 @@ function drawKeypad() {
   const c = kp.bg.ctx, W = kp.bg.W, H = kp.bg.H, s = W / kp.KW, f = kp.f;
   c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, 26); c.fillStyle = 'rgba(10,7,22,0.98)'; c.fill(); c.lineWidth = 5; c.strokeStyle = '#ffd166'; c.stroke();
   c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = '#a49fc8'; fitFont(c, f.short || f.label, W - 40, 24, '500 %px ' + FB); c.fillText(f.short || f.label, 22, 18);
-  const shown = kp.opt ? (kp.str ? kp.str.replace(/^(\d{4})(\d+)$/, '$1 $2') : '— — — —') : kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
+  const shown = kp.opt ? (kp.str ? kp.str.replace(/(\d{4})(?=\d)/g, '$1 ') : '— — — —') : kp.fresh ? fmtNum(settings[f.key], f) : (kp.str || '0');
   rr(c, 18, 50, W - 36, kp.dispH * s - 30, 12); c.fillStyle = '#1d1738'; c.fill();
-  c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = kp.fresh ? '#7d77a8' : '#ffffff'; c.font = `700 40px ${FB}`; c.fillText(shown + (f.unit ? ' ' + f.unit : ''), W - 34, 50 + (kp.dispH * s - 30) / 2);
+  c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = kp.fresh ? '#7d77a8' : '#ffffff'; fitFont(c, shown + (f.unit ? ' ' + f.unit : ''), W - 70, 40, '700 %px ' + FB); c.fillText(shown + (f.unit ? ' ' + f.unit : ''), W - 34, 50 + (kp.dispH * s - 30) / 2);
   if (!kp.opt) { c.textAlign = 'left'; c.fillStyle = '#7d77a8'; c.font = `500 20px ${FB}`; c.fillText(`${fmtNum(f.min, f)}–${fmtNum(f.max, f)}`, 30, 50 + (kp.dispH * s - 30) / 2); }
   kp.bg.tex.needsUpdate = true;
 }

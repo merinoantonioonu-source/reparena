@@ -48,13 +48,14 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
 const errors = [];
+const syncFmtT = c => String(c).replace(/(\d{4})(?=\d)/g, '$1 '); // (el código con espacios, como lo escribe la gente)
 const origWarn = console.warn; console.warn = (...a) => { errors.push('WARN ' + a.join(' ')); };
 vm.runInThisContext(src, { filename: 'game.js' });
 const RA = window.__RA;
@@ -823,6 +824,62 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       const l2 = RA.activeWidgets().map(w => w.label).join('|'); log(`   typed the code on the keypad → ${l2}`); if (!/Cargar y reiniciar/.test(l2)) errors.push('envío por código: al escribir el código en el teclado del juego debería ofrecer cargar lo recibido');
       RA.activeWidgets().find(w => w.label === 'Cancelar').onPress(); }
     globalThis.fetch = realFetch; storage.set('reparena3-session', ses0); storage.delete('reparena3-profiles'); storage.delete('reparena3-roomset'); storage.delete('reparena3-spotify'); storage.delete('reparena3-history'); }
+  // ---- Sincronización automática con un código fijo (con una base de datos de mentira: como la Realtime Database de Firebase) ----
+  { const db = new Map(), realFetch = globalThis.fetch, base = 'https://prueba-rtdb.europe-west1.firebasedatabase.app', K = ['reparena3-profiles', 'reparena3-history', 'reparena3-sync', 'reparena3-settings'];
+    const snap = () => Object.fromEntries(K.map(k => [k, storage.get(k)])), put = o => { for (const k of K) if (o[k] == null) storage.delete(k); else storage.set(k, o[k]); }, before = snap();
+    globalThis.fetch = async (url, o = {}) => {
+      const m = String(url).match(/^https:\/\/prueba-rtdb\.europe-west1\.firebasedatabase\.app\/sync\/([0-9a-f]{64})(\/meta)?\.json$/); if (!m) return realFetch ? realFetch(url, o) : { ok: false, status: 404 };
+      if (o.method === 'PUT') { const v = JSON.parse(o.body); if (!v.meta || typeof v.blob !== 'string') return { ok: false, status: 400 }; db.set(m[1], v); return { ok: true, status: 200, json: async () => v }; }
+      const v = db.get(m[1]) || null; return { ok: true, status: 200, json: async () => (v && m[2] ? v.meta : v) };
+    };
+    RA.SYNC.db = base; const R = {}; let bad = '';
+    try {
+      // aparato A (las gafas): sus perfiles y 3 partidas; crea el código
+      put({ 'reparena3-profiles': JSON.stringify([{ name: 'Mañana suave', s: {} }]), 'reparena3-history': JSON.stringify([1, 2, 3].map(i => ({ ex: 'squat', reps: 10 + i, date: 1.80e12 + i }))), 'reparena3-sync': JSON.stringify({ at: Date.now() - 36e5 }) }); // (sus datos, de hace una hora)
+      const code = await RA.syncCreate(); R.code = code; clearTimeout(RA.SYNC.t); const rec = [...db.values()][0];
+      R.stored = db.size; R.readable = /Mañana|squat/.test(JSON.stringify(rec)); R.devA = rec && rec.meta.dev; const A = snap();
+      // aparato B (el ordenador): otros perfiles y 2 partidas suyas; al vincular con el código, pregunta si importa lo de A
+      put({ 'reparena3-profiles': JSON.stringify([{ name: 'Tarde', s: {} }]), 'reparena3-history': JSON.stringify([1, 2].map(i => ({ ex: 'pushup', reps: 5 + i, date: 1.81e12 + i }))), 'reparena3-sync': null });
+      const ask = await RA.syncLink(syncFmtT(code)); R.askB = !!ask && ask.dev === R.devA;
+      if (ask) await RA.syncImport(ask, false); clearTimeout(RA.SYNC.t);
+      R.profB = JSON.parse(storage.get('reparena3-profiles'))[0].name; R.histB = JSON.parse(storage.get('reparena3-history')).length; R.askAgainB = !!(await RA.syncCheck());
+      // B cambia algo y sube: arriba quedan sus datos con las 5 partidas
+      RA.setSetting('lives', 7); clearTimeout(RA.SYNC.t); await RA.syncPush(); const recB = db.get([...db.keys()][0]); R.upB = recB.meta.dev !== R.devA && recB.meta.n === 5; const B = snap();
+      // vuelta a A: al entrar, pregunta (lo de B es más nuevo); con «Ahora no» ya no vuelve a preguntar por eso
+      await sleep(5); put(A); const askA = await RA.syncCheck(); R.askA = !!askA; if (askA) RA.syncDecline(askA); R.askA2 = !!(await RA.syncCheck());
+      // A juega otra ronda (otra partida suya) y sube: arriba, lo de A con las partidas de los dos juntas (6)
+      storage.set('reparena3-history', JSON.stringify(JSON.parse(storage.get('reparena3-history')).concat([{ ex: 'squat', reps: 30, date: 1.82e12 }]))); await sleep(5); RA.setSetting('lives', 5); clearTimeout(RA.SYNC.t); await RA.syncPush(); clearTimeout(RA.SYNC.t);
+      R.upA = db.get([...db.keys()][0]).meta.n;
+      // y B, al entrar, pregunta; al importar, las partidas de los dos (6) y los perfiles de A
+      put(B); const askB2 = await RA.syncCheck(); if (askB2) await RA.syncImport(askB2, false); clearTimeout(RA.SYNC.t); R.histB2 = JSON.parse(storage.get('reparena3-history')).length; R.profB2 = JSON.parse(storage.get('reparena3-profiles'))[0].name;
+      // en el juego: vinculado, con «Sincronizar ahora»; y la pregunta con «Importar y reiniciar»
+      RA.syncMenu(() => {}); R.menu = RA.activeWidgets().map(w => w.label).join('|');
+      RA.syncMenu(() => {}, { ask: { at: Date.now(), from: 'las gafas', n: 6 } }); R.askMenu = RA.activeWidgets().map(w => w.label).join('|');
+      // sin vincular: el teclado del juego admite el código de 16 cifras
+      storage.set('reparena3-sync', JSON.stringify({ dev: 'nuevo' })); RA.syncMenu(() => {}); RA.activeWidgets().find(w => /^Vincular/.test(w.label)).onPress(); for (const d of code) RA.keypadKey(d); RA.keypadOK();
+      for (let i = 0; i < 60 && !RA.activeWidgets().some(w => /Importar y reiniciar|Sincronizar ahora/.test(w.label)); i++) await sleep(50); R.keypad = RA.activeWidgets().map(w => w.label).join('|'); clearTimeout(RA.SYNC.t);
+      // lo principal, la configuración: cada ajuste lleva su hora y gana el cambiado más tarde, venga de donde venga
+      const S0 = { lives: 0, walkTime: 10, quality: 'auto' }, setS = o => RA.store('reparena3-settings', Object.assign({}, JSON.parse(storage.get('reparena3-settings') || '{}'), o));
+      put({ 'reparena3-settings': JSON.stringify(S0), 'reparena3-profiles': '[]', 'reparena3-history': '[]', 'reparena3-sync': JSON.stringify({ dev: 'aaaa' }) });
+      const code2 = await RA.syncCreate(); clearTimeout(RA.SYNC.t); const A2 = snap();
+      put({ 'reparena3-settings': JSON.stringify(S0), 'reparena3-profiles': '[]', 'reparena3-history': '[]', 'reparena3-sync': JSON.stringify({ dev: 'bbbb' }) });
+      R.cfgLink = await RA.syncLink(code2); clearTimeout(RA.SYNC.t);
+      await sleep(5); setS({ lives: 7 }); clearTimeout(RA.SYNC.t); await RA.syncPush(); const B2 = snap();      // B: más vidas
+      put(A2); const askC = await RA.syncCheck(); R.cfgAskA = askC && askC.news; if (askC) RA.syncDecline(askC);   // A: dice «Ahora no»…
+      await sleep(5); setS({ walkTime: 33 }); clearTimeout(RA.SYNC.t); await RA.syncPush(); R.cfgA = JSON.parse(storage.get('reparena3-settings'));  // …y cambia otro ajuste y sube
+      put(B2); const askD = await RA.syncCheck(); R.cfgAskB = askD && askD.news; R.cfgText = askD ? RA.syncAskText(askD) : '';
+      if (askD) await RA.syncImport(askD, false); clearTimeout(RA.SYNC.t); R.cfgB = JSON.parse(storage.get('reparena3-settings'));
+    } catch (e) { bad = e.stack.split('\n').slice(0, 3).join(' '); }
+    RA.SYNC.db = ''; clearTimeout(RA.SYNC.t); globalThis.fetch = realFetch; put(before); RA.setSetting('lives', 0);
+    log(`sync: code ${R.code} · stored ${R.stored} · readable ${R.readable} · B asked on linking ${R.askB} → profiles ${R.profB}, history ${R.histB}, asks again ${R.askAgainB} · B pushed ${R.upB} · A asked ${R.askA}, after «Ahora no» ${R.askA2} · A pushed with ${R.upA} games · B imports → history ${R.histB2}, profiles ${R.profB2}${bad ? ' · ERROR ' + bad : ''}`);
+    log(`   settings: B linked → ask ${!!R.cfgLink} · A asked ${JSON.stringify(R.cfgAskA)} (says «Ahora no», changes walk time) → A keeps lives ${R.cfgA && R.cfgA.lives} walk ${R.cfgA && R.cfgA.walkTime} · B asked ${JSON.stringify(R.cfgAskB)} → B has lives ${R.cfgB && R.cfgB.lives}, walk ${R.cfgB && R.cfgB.walkTime} · «${R.cfgText}»`);
+    log(`   sync menu: ${R.menu} · ask: ${R.askMenu} · keypad 16 digits → ${R.keypad}`);
+    if (bad || !/^\d{16}$/.test(R.code || '') || R.stored !== 1 || R.readable) errors.push('sincronización: crear el código debería subir los datos cifrados (' + (bad || '') + ')');
+    if (!R.askB || R.profB !== 'Mañana suave' || R.histB !== 5 || R.askAgainB) errors.push('sincronización: al vincular, debería preguntar e importar lo del otro aparato (con las partidas juntas)');
+    if (!R.upB || !R.askA || R.askA2) errors.push('sincronización: al entrar debería preguntar si el otro aparato tiene algo más reciente, y no volver a hacerlo tras «Ahora no»');
+    if (R.upA !== 6 || R.histB2 !== 6 || R.profB2 !== 'Mañana suave') errors.push('sincronización: al subir deberían juntarse las partidas de los dos aparatos');
+    if (R.cfgLink || !R.cfgAskA || R.cfgAskA.sets !== 1 || !R.cfgAskB || R.cfgAskB.sets !== 1 || !R.cfgB || R.cfgB.lives !== 7 || R.cfgB.walkTime !== 33 || R.cfgA.lives !== 0) errors.push('sincronización: de cada ajuste debería quedar el cambiado más tarde, en cualquiera de los dos aparatos');
+    if (!/Sincronizar ahora/.test(R.menu || '') || !/Importar y reiniciar/.test(R.askMenu || '') || !/Importar y reiniciar|Sincronizar ahora/.test(R.keypad || '')) errors.push('sincronización: falta el menú en el juego (o el teclado no admite el código de 16 cifras)'); }
   // ---- Spotify: elegir lista y canción en el juego, y la música de cada bloque (varias canciones, en orden y en bucle) ----
   { const realFetch = globalThis.fetch, calls = [], cfg0 = RA.SP.cfg, st0 = RA.SP.st; let oldCalls = 0;
     // (como la API desde 2026: las canciones, en /items y cada una en «item»; /tracks responde 403; la lista 10 es de otro usuario)

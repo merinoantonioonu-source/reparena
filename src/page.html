@@ -85,6 +85,9 @@ h2{font-family:var(--display);font-weight:400;font-size:1.05rem;letter-spacing:.
 .levelnote{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.9rem;color:var(--muted)}
 .profiles{margin-top:22px}.profiles h3{margin:0 0 6px;font-size:1rem}
 .profsave{display:flex;gap:8px;flex-wrap:wrap;max-width:520px;align-items:stretch}
+/* la pregunta de la sincronización: arriba, sin tapar los botones de entrar más de lo justo */
+.syncAsk{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:60;width:min(620px,calc(100% - 32px));box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:2px solid var(--gold);border-radius:16px;background:var(--panel2);box-shadow:0 10px 40px rgba(0,0,0,.55)}
+.syncAsk[hidden]{display:none}.syncAsk p{margin:0;font-size:.95rem}.syncAsk div{display:flex;gap:8px;flex-wrap:wrap}
 .profiles .status{min-height:1.4em;margin:8px 0 4px}.profsave input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit}
 .proflist{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-width:640px}
 .profrow{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px}
@@ -312,6 +315,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 </style>
 </head>
 <body>
+<div class="syncAsk" id="syncAsk" role="alertdialog" aria-live="assertive" hidden><p id="syncAskTxt"></p><div><button class="btn small alt" id="btnSyncYes">Importar</button><button class="btn small" id="btnSyncNo">Ahora no</button></div></div>
 <main class="wrap">
   <!-- Panel fijo: entrar, lo elegido con su explicación y su animación, y lo de hoy. En el móvil se reparte por la página
        y los botones de entrar van en una barra abajo -->
@@ -509,6 +513,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <p class="note">Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Ajustes ▸ → Perfiles ▸ → A otro dispositivo → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
       <div class="profsave"><button class="btn small alt" id="btnXferSend">Enviar desde aquí</button><input id="xferCode" type="text" inputmode="numeric" maxlength="9" placeholder="Código de 8 cifras" aria-label="Código del otro dispositivo"><button class="btn small" id="btnXferRecv">Recibir</button></div>
       <p class="status" id="xferStatus" aria-live="polite"></p>
+      <div id="syncBox" hidden>
+        <h3>Sincronización automática</h3>
+        <p class="note">Con un <b>código fijo</b> de 16 cifras, tus ajustes, perfiles, sesiones, historial y carrera pasan solos de un aparato a otro: <b>Crear código</b> en uno y escribirlo en el otro con <b>Vincular</b> (en el juego, Ajustes ▸ → Perfiles ▸ → Sincronización); los dos lo recuerdan. Cada aparato guarda lo suyo, cifrado con el código, en Firebase al poco de cambiar algo, y al abrir RepArena, si el otro tiene ajustes o partidas más recientes, te pregunta si los importas. Cada ajuste lleva su hora: de cada uno se queda el que cambiaste más tarde, en cualquiera de los dos aparatos, y las partidas de los dos se juntan siempre.</p>
+        <div class="profsave" id="syncNew"><button class="btn small alt" id="btnSyncNew">Crear código</button><input id="syncCode" type="text" inputmode="numeric" maxlength="19" placeholder="16 cifras" aria-label="Código fijo del otro aparato (16 cifras)"><button class="btn small" id="btnSyncLink">Vincular</button></div>
+        <div class="profsave" id="syncLinked" hidden><button class="btn small alt" id="btnSyncNow">Sincronizar ahora</button><button class="btn small" id="btnSyncOff">Desvincular</button></div>
+        <p class="status" id="syncStatus" aria-live="polite"></p>
+      </div>
     </div>
   </section>
 
