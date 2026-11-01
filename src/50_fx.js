@@ -6,9 +6,12 @@ void main(){
   vec2 q = vec2(position.x*c - position.y*s, position.x*s + position.y*c) * iMisc.x;
   vec4 mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += q;
   gl_Position = projectionMatrix * mv;
+  // pegada a los ojos, una chispa se ve como un cuadrado enorme que tapa media vista (en las gafas): se apaga antes de
+  // llegar y, a menos de 12 cm, ni se dibuja
+  float dc = -mv.z; if (dc < 0.12) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
   float tx = mod(iMisc.z, 2.0), ty = floor(iMisc.z / 2.0);
   vUv = vec2((position.x + 0.5 + tx) * 0.5, (position.y + 0.5 + (1.0 - ty)) * 0.5);
-  vCol = iCol;
+  vCol = iCol; vCol.a *= smoothstep(0.15, 0.45, dc);
 }`;
 const P_FS = `uniform sampler2D map; varying vec2 vUv; varying vec4 vCol;
 void main(){ vec4 t = texture2D(map, vUv); gl_FragColor = vec4(vCol.rgb * t.rgb, vCol.a * t.a); }`;

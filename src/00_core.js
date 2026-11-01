@@ -106,7 +106,7 @@ const SCHEMA = [
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
   { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
   { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
-  { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 15, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0: sin recarga profunda.' },
+  { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 0, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0 (de serie): sin recarga profunda; la carga solo sube aguantando en la postura perfecta.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
   { key: 'walkTime', g: 'enemigos', label: 'Tiempo que tarda un enemigo en alcanzarte', short: 'Tiempo llegada', type: 'num', min: 3, max: 120, step: 1, def: 14, unit: 's', modes: ['combat'], cond: () => foesHas('robots') },
@@ -297,6 +297,9 @@ function fmtVal(f, v = settings[f.key]) {
   if (s.rampV !== 2) { if (s.ramp === undefined || s.ramp === 3) settings.ramp = 6; } settings.rampV = 2;
   // y con el 6 % subía demasiado deprisa: a quien lo tenía así (lo de antes) se le pasa a 4 % una vez
   if (s.rampV !== 3) { if (settings.ramp === 6) settings.ramp = 4; } settings.rampV = 3;
+  // la recarga profunda (15 cm de serie) daba ×4 en cada sentadilla honda, sin aguantar: pasa a estar apagada de serie; a
+  // quien la tenía como venía (15 cm, también en lo guardado de cada modo y ejercicio) se le apaga una vez
+  if (s.deepV !== 2) { if (s.deepDrop === undefined || s.deepDrop === 15) settings.deepDrop = 0; const C = store('reparena3-combos'); if (C && typeof C === 'object') { for (const id in C) if (C[id] && C[id].deepDrop === 15) C[id].deepDrop = 0; store('reparena3-combos', C); } } settings.deepV = 2;
   settings.exercise = exFor(settings.mode, settings.exercise);
 })();
 // Durante una sesión (o un nivel de la campaña) se guardan los valores de antes, no los del bloque en curso
