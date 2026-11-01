@@ -1215,7 +1215,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.setSetting('rank', 'soldado'); storage.delete('reparena3-rankfit'); RA.rankFitAdd(false, 40); const down2 = RA.rankFitAdd(false, 40);
     if (down2 !== 'recluta') errors.push('rangos: tras 2 derrotas seguidas debería proponer bajar'); log(`   demotion from soldado after 2 defeats → ${down2}`);
     { // en el resumen, el botón para subir (y al pulsarlo, sube ese ejercicio y desaparece la propuesta)
-      const S = { win: true, manual: false, hang: false, got: 12, unit: 'repeticiones', ex: 'x', sub: 'y', pct: 90, stars: 3, tiles: [[1, 'a'], [2, 'b'], [3, 'c'], [4, 'd'], [5, 'e'], [6, 'f']], chips: [], today: '', rankTo: 'cabo' };
+      const S = { win: true, manual: false, hang: false, got: 12, unit: 'repeticiones', where: 'x', sub: 'y', pct: 90, stars: 3, tiles: [[1, 'a'], [2, 'b'], [3, 'c']], chips: [], rankTo: 'cabo' };
       RA.endMenu('¡VICTORIA!', S); frame(1); const b = RA.activeWidgets().find(w => w.label === 'Subir a Cabo'); if (b) b.onPress(); frame(1);
       const gone = !RA.activeWidgets().some(w => /^Subir a/.test(w.label)); log(`   summary offers “Subir a Cabo” ${!!b} → rank ${RA.settings.rank}, offer gone ${gone}`);
       if (!b || RA.settings.rank !== 'cabo' || !gone) errors.push('rangos: el resumen debería ofrecer subir de rango con un botón'); }

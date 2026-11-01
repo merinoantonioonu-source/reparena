@@ -129,12 +129,12 @@ function finishSession() {
   const lines = R.slice(0, 6).map((r, i) => `${i + 1}. ${blockLabel(r.b)}${rounds > 1 ? ` (vuelta ${r.round + 1})` : ''}: ${r.reps} ${blockUnit(r.b)}${r.win ? '' : ' (sin acabar)'}`);
   if (R.length > 6) lines.push(`… y ${R.length - 6} bloques más`);
   if (all) SND.victory();
-  // la misma ficha que al acabar una ronda, con el total de la sesión (y la lista de bloques debajo)
+  // la misma ficha que al acabar una ronda, con el total de la sesión: puntos, tiempo y kcal (y la lista de bloques debajo)
   const perf = R.reduce((a, r) => a + (r.perfect || 0), 0), won = R.filter(r => r.win).length, pr = tot.reps ? perf / tot.reps : 0;
-  const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', ex: `Sesión · ${SES.blocks.length} bloques${rounds > 1 ? ` × ${rounds} vueltas` : ''}`,
+  const S = { win: all, manual: !all, hang: !tot.reps && tot.secs > 0, got: tot.reps || tot.secs, unit: tot.reps ? 'repeticiones en la sesión' : 's colgado en la sesión', where: `Sesión de ${SES.blocks.length} bloques${rounds > 1 ? ` × ${rounds}` : ''}`,
     sub: all ? (rounds > 1 ? `Las ${rounds} vueltas hechas` : 'Todos los bloques hechos') : `${R.length} de ${total} bloques`, pct: tot.reps ? Math.round(pr * 100) : null, stars: R.length ? 1 + (pr >= 0.5 ? 1 : 0) + (all && won === R.length ? 1 : 0) : 0,
-    tiles: [[`${won}/${total}`, 'bloques superados'], [perf, 'perfectas'], [tot.secs ? `${tot.secs} s` : '—', 'colgado'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal'], [tot.score, 'puntos']],
-    chips: [], today: progressLine(), lines, career: careerTake() };
+    tiles: [[tot.score, 'puntos'], [`${Math.floor(tot.time / 60)}:${String(Math.round(tot.time % 60)).padStart(2, '0')}`, 'tiempo'], [`≈ ${Math.round(tot.kcal)}`, 'kcal']], lines };
+  S.chips = sumChips([], careerTake()); // (lo esencial, como al acabar una ronda; debajo, la lista de bloques)
   endMenu(all ? 'SESIÓN COMPLETADA' : 'SESIÓN TERMINADA', S);
 }
 // Devuelve los ajustes como estaban antes de la sesión

@@ -2580,36 +2580,33 @@ function progressLine(P = progress()) {
   return P.today.runs ? `Hoy: ${fmtDur(P.today.time)} · ≈ ${Math.round(P.today.kcal)} kcal · racha ${daysTxt(P.streak)}` : P.streak ? `Racha: ${daysTxt(P.streak)} (entrena hoy para seguirla)` : '';
 }
 function endRun(win, manual) {
-  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h), best0 = bestRunOf(h);
+  const h = store(HIST_KEY) || [], prevBest = h.filter(r => r.ex === settings.exercise).reduce((a, r) => Math.max(a, r.reps), 0), P0 = progress(h);
   const failBest = h.filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); // (al fallo: la oleada más lejana)
   saveRun(win); ghostEnd();
   const P = progress(), streakUp = P.streak > P0.streak && P.streak > 1;
   state = 'end'; center.mesh.visible = false; chargeOrb.visible = false; spawnQueue = []; boardDirty = true;
   AUD.loops.forEach(l => l.stop()); if (!SES.active) spRoundEnd(); // (en una sesión, al acabar el último bloque)
   const mm = Math.floor(stats.time / 60), ss = String(Math.round(stats.time % 60)).padStart(2, '0');
-  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps, bars = isBars();
-  const pr = stats.reps ? stats.perfect / stats.reps : 0, acc = isCombat() && stats.shots ? Math.round(100 * stats.hits / stats.shots) : null;
+  const hang = settings.exercise === 'hang', got = hang ? Math.round(stats.hold) : stats.reps;
+  const pr = stats.reps ? stats.perfect / stats.reps : 0;
   const AX = settings.mode === 'arcs' ? arxEnd() : null; // (medalla, metros, orbes y fantasma)
-  const tiles = AX ? [[stats.perfect, 'perfectas'], [stats.taken, 'golpes'], [`${AX.dist} m`, 'recorridos']] : hang ? [[stats.falls, 'caídas'], [`${stats.bestCombo} s`, 'racha máxima'], [waveIdx + (win ? 1 : 0), 'oleadas superadas']]
-    : bars ? [[stats.kills, 'reventados'], [stats.falls, 'caídas'], [`×${stats.bestCombo}`, 'combo máximo']]
-    : isCombat() ? [[stats.kills, 'derribados'], [acc === null ? '—' : acc + ' %', 'precisión'], [`×${stats.bestCombo}`, 'combo máximo']]
-    : [[stats.perfect, 'perfectas'], [stats.partial, 'a medias'], [`×${stats.bestCombo}`, 'combo máximo']];
-  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', ex: EX_NAMES[settings.exercise] + ' · ' + MODE_NAMES[settings.mode] + ' · ' + rankName(),
-    sub: !win && !manual ? `Has caído en la oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
+  // el resumen, lo esencial (opción A): el número grande, la medalla y las perfectas; puntos, tiempo y kcal; un solo logro
+  const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', where: EX_NAMES[settings.exercise],
+    sub: !win && !manual ? `Oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
-    tiles: [...tiles, [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal'], [score, 'puntos']],
-    chips: [settings.toFail && got ? (waveIdx + 1 > failBest && failBest ? [`¡Récord al fallo: oleada ${waveIdx + 1}!`, '#ffd166'] : [`Al fallo: oleada ${waveIdx + 1}${failBest ? ` · tu récord, ${failBest}` : ''}`, '#a68bff']) : null, got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
-      RAMP.lvl && settings.ramp > 0 ? [`Dificultad +${Math.round(Math.min(RAMP_CAP, settings.ramp / 100 * RAMP.lvl) * 100)} %`, '#ff8a3d'] : null,
-      AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null, AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null].filter(Boolean),
-    today: progressLine(P) };
+    tiles: [[score, 'puntos'], [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal']],
+    // los logros, del más importante al menos; se enseña el primero
+    chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, settings.toFail && got && waveIdx + 1 > failBest && failBest ? [`¡Récord al fallo: oleada ${waveIdx + 1}!`, '#ffd166'] : null,
+      AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
+      settings.toFail && got ? [`Al fallo: oleada ${waveIdx + 1}${failBest ? ` · tu récord, ${failBest}` : ''}`, '#a68bff'] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null].filter(Boolean) };
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
   if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
   if (!SES.active && !CAMP.run && !manual && got) S.rankTo = rankFitAdd(win, hang ? (stats.falls === 0 ? 100 : 0) : S.pct);
   // lo ganado (experiencia, misiones, nivel), tu mejor ronda y, en la campaña, el nivel con sus estrellas (73_career)
   if (!SES.active) S.career = careerTake();
-  if (got && best0 && !hang) S.bestTxt = got > best0.reps ? `¡Mejor que tu mejor ronda de ${(EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]).toLowerCase()} aquí (${best0.reps})!` : `Tu mejor ronda aquí: ${best0.reps} reps · ${Math.round(100 * (best0.perfect || 0) / Math.max(1, best0.reps))} % perfectas (hoy: ${got} · ${S.pct} %)`;
-  if (CAMP.run) { const c = (S.career && S.career.camp) || { lv: CAMP.run.lv, stars: 0, next: null }, L = campLv(c.lv); S.camp = c; S.ex = `Campaña · nivel ${c.lv} · ${L.name} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`; S.stars = c.stars; S.medal = ['', 'bronce', 'plata', 'oro'][c.stars] || null; }
+  S.chips = sumChips(S.chips, S.career);
+  if (CAMP.run) { const c = (S.career && S.career.camp) || { lv: CAMP.run.lv, stars: 0, next: null }, L = campLv(c.lv); S.camp = c; S.where = `Campaña, nivel ${c.lv} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`; S.stars = c.stars; S.medal = ['', 'bronce', 'plata', 'oro'][c.stars] || null; }
   campEnd(); // (los ajustes del nivel, fuera)
   if (win) SND.victory(); else if (!manual) { SND.defeat(); hapticBoth(1, 450); }
   const go = () => SES.active ? sessionBlockDone(win, manual) : endMenu(win ? '¡VICTORIA!' : manual ? 'RESUMEN' : 'DERROTA', S); // en una sesión, al siguiente bloque
@@ -2704,52 +2701,56 @@ function updateWaveIntro(dt) {
   WIN.p.mesh.material.opacity = a; WIN.p.mesh.visible = a > 0.01; WIN.p.mesh.scale.setScalar(1 + 0.08 * Math.max(0, 1 - t / 0.5));
   if (t >= WIN.dur) waveIntroClear();
 }
-// El resumen: una ficha con el número grande (repeticiones o segundos colgado), la medalla y el porcentaje de perfectas,
-// seis casillas con lo demás y los logros; debajo, los botones. Se queda hasta que pulses uno (sin cuenta atrás)
+// El resumen (opción A, lo esencial): una línea con dónde acabó la ronda y el ejercicio; la ficha con el número grande
+// (repeticiones o segundos colgado), la medalla y el porcentaje de perfectas; tres casillas (puntos, tiempo y kcal) y,
+// si hay, un solo logro, el más importante. Se queda hasta que pulses un botón (sin cuenta atrás)
+const SUM_H = 0.3, SUM_CHIP = 0.05; // (alto de la ficha, en metros, y lo que añade el logro)
+// Los logros por orden de importancia: un nivel nuevo, luego el primero de la ronda (un récord), lo ganado en la carrera
+// (estrellas, cofre, misiones) y el resto; el resumen enseña solo el primero
+const sumChips = (chips, G) => { if (!G) return chips; const lv = G.notes.find(([t]) => /^¡Nivel/.test(t)); return [...(lv ? [lv] : []), ...chips.slice(0, 1), ...G.notes.filter(n => n !== lv && !/^Desbloqueado/.test(n[0])), ...chips.slice(1)]; };
 function summaryDraw(S, c, x, y, w, h) {
-  const gold = '#ffd166', teal = '#3cf0c6', pink = '#ff4fa3', ink = '#eeeaff', dim = '#a49fc8';
-  c.textBaseline = 'middle'; c.textAlign = 'center';
-  c.fillStyle = dim; fitFont(c, S.ex, w - 40, 28, '500 %px ' + FB); c.fillText(S.ex, x + w / 2, y + 22);
-  c.fillStyle = S.win ? teal : S.manual ? ink : '#ff8a8a'; fitFont(c, S.sub, w - 40, 30, '600 %px ' + FB); c.fillText(S.sub, x + w / 2, y + 60);
+  const gold = '#ffd166', teal = '#3cf0c6', ink = '#eeeaff', dim = '#a49fc8', chip = S.chips[0], H = h - (chip ? h * SUM_CHIP / (SUM_H + SUM_CHIP) : 0);
+  c.textBaseline = 'middle';
+  // la línea: «Oleada 1 de 5» (en su color) · el ejercicio
+  const a = S.sub, b = S.where ? '  ·  ' + S.where : ''; c.font = '600 34px ' + FB; const wa = c.measureText(a).width; c.font = '500 34px ' + FB; const wb = c.measureText(b).width;
+  const fs = Math.min(34, Math.floor(34 * (w - 40) / (wa + wb))), x0 = x + (w - (wa + wb) * fs / 34) / 2, ly = y + H * 0.08;
+  c.textAlign = 'left'; c.font = `600 ${fs}px ${FB}`; c.fillStyle = S.win ? teal : S.manual ? ink : '#ff8a8a'; c.fillText(a, x0, ly);
+  c.font = `500 ${fs}px ${FB}`; c.fillStyle = dim; c.fillText(b, x0 + wa * fs / 34, ly); c.textAlign = 'center';
   // el número grande, con su brillo
-  const hy = y + 92, hh = h * 0.36; rr(c, x + 10, hy, w - 20, hh, 26); c.fillStyle = 'rgba(255,209,102,0.07)'; c.fill(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,209,102,0.35)'; c.stroke();
+  const hy = y + H * 0.17, hh = H * 0.54; rr(c, x + 10, hy, w - 20, hh, 26); c.fillStyle = 'rgba(255,209,102,0.07)'; c.fill(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,209,102,0.35)'; c.stroke();
   const nx = x + w * 0.3; c.save(); c.shadowColor = gold; c.shadowBlur = 24; c.fillStyle = gold; fitFont(c, String(S.got), w * 0.42, Math.round(hh * 0.62), '%px ' + FD); c.fillText(String(S.got), nx, hy + hh * 0.43); c.restore();
-  c.fillStyle = ink; fitFont(c, S.unit, w * 0.42, 30, '500 %px ' + FB); c.fillText(S.unit, nx, hy + hh * 0.82);
+  c.fillStyle = ink; fitFont(c, S.unit, w * 0.42, 32, '500 %px ' + FB); c.fillText(S.unit, nx, hy + hh * 0.82);
   // la medalla conseguida (oro, plata o bronce, con su cinta) y las perfectas; sin medalla, su hueco vacío
-  const sx = x + w * 0.72, mR = hh * 0.2, my = hy + hh * 0.42;
+  const sx = x + w * 0.72, mR = hh * 0.18, my = hy + hh * 0.42;
   if (S.medal) drawMedal(c, S.medal, sx, my, mR); else { c.setLineDash([10, 8]); c.lineWidth = 4; c.strokeStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.arc(sx, my, mR, 0, TAU); c.stroke(); c.setLineDash([]); }
   if (S.pct !== null) {
-    const bw = w * 0.36, bx = sx - bw / 2, by = hy + hh * 0.72; rr(c, bx, by, bw, 18, 9); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    const bw = w * 0.36, bx = sx - bw / 2, by = hy + hh * 0.68; rr(c, bx, by, bw, 18, 9); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
     if (S.pct > 0) { rr(c, bx, by, Math.max(18, bw * S.pct / 100), 18, 9); c.fillStyle = teal; c.fill(); }
-    c.fillStyle = ink; fitFont(c, `${S.pct} % perfectas`, bw, 28, '600 %px ' + FB); c.fillText(`${S.pct} % perfectas`, sx, by + 44);
-  } else { c.fillStyle = ink; c.font = '600 28px ' + FB; c.fillText(S.win ? '¡Aguantaste!' : '¡Sigue así!', sx, hy + hh * 0.72); }
-  // seis casillas
-  const gy = hy + hh + 16, cols = 3, gap = 12, tw = (w - 20 - gap * (cols - 1)) / cols, th = (h - (gy - y) - 70 - gap) / 2, cc = [teal, pink, gold, '#a68bff', '#7ee081', '#5ab8ff'];
+    c.fillStyle = ink; fitFont(c, `${S.pct} % perfectas`, bw, 32, '600 %px ' + FB); c.fillText(`${S.pct} % perfectas`, sx, hy + hh * 0.87);
+  } else { c.fillStyle = ink; c.font = '600 32px ' + FB; c.fillText(S.win ? '¡Aguantaste!' : '¡Sigue así!', sx, hy + hh * 0.72); }
+  // tres casillas: puntos, tiempo y kcal
+  const gy = hy + hh + H * 0.05, gap = 12, n = S.tiles.length, tw = (w - 20 - gap * (n - 1)) / n, th = y + H - gy;
   S.tiles.forEach(([v, l], k) => {
-    const tx = x + 10 + (k % cols) * (tw + gap), ty = gy + Math.floor(k / cols) * (th + gap);
-    rr(c, tx, ty, tw, th, 18); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill(); rr(c, tx, ty + th * 0.18, 7, th * 0.64, 4); c.fillStyle = cc[k]; c.fill();
-    c.fillStyle = ink; fitFont(c, String(v), tw - 40, Math.round(th * 0.42), '700 %px ' + FB); c.fillText(String(v), tx + tw / 2 + 4, ty + th * 0.42);
-    c.fillStyle = dim; fitFont(c, l, tw - 30, Math.round(th * 0.27), '500 %px ' + FB); c.fillText(l, tx + tw / 2 + 4, ty + th * 0.78);
+    const tx = x + 10 + k * (tw + gap); rr(c, tx, gy, tw, th, 18); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill();
+    c.fillStyle = ink; fitFont(c, String(v), tw - 30, Math.round(th * 0.42), '700 %px ' + FB); c.fillText(String(v), tx + tw / 2, gy + th * 0.4);
+    c.fillStyle = dim; fitFont(c, l, tw - 30, Math.round(th * 0.26), '500 %px ' + FB); c.fillText(l, tx + tw / 2, gy + th * 0.76);
   });
-  // logros (récord, racha, dificultad) o, si no hay, lo de hoy
-  const cy0 = y + h - 32, chips = (S.chips.length ? S.chips : S.today ? [[S.today, dim]] : []).slice(0, 3); // (caben tres)
-  c.font = '600 26px ' + FB; const cw = chips.map(([t]) => Math.min(w - 20, c.measureText(t).width + 44)), tot = cw.reduce((a, b) => a + b, 0) + 12 * Math.max(0, chips.length - 1);
-  let cx = x + (w - Math.min(w, tot)) / 2;
-  chips.forEach(([t, col], k) => { rr(c, cx, cy0 - 22, cw[k], 44, 22); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); c.fillStyle = col; fitFont(c, t, cw[k] - 30, 26, '600 %px ' + FB); c.fillText(t, cx + cw[k] / 2, cy0 + 1); cx += cw[k] + 12; });
+  // el logro más importante (récord, nivel nuevo, racha…), uno solo
+  if (chip) {
+    const [t, col] = chip, cy = y + H + (h - H) * 0.55; c.font = '600 30px ' + FB; const cw = Math.min(w - 20, c.measureText(t).width + 50), cx = x + (w - cw) / 2;
+    rr(c, cx, cy - 25, cw, 50, 25); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); c.fillStyle = col; fitFont(c, t, cw - 30, 30, '600 %px ' + FB); c.fillText(t, x + w / 2, cy);
+  }
 }
 function endMenu(title, S) {
   const rows = [{ t: 'title', text: title, color: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' },
-    { t: 'canvas', h: 0.43, text: [S.ex, S.sub, `${S.got} ${S.unit}`, S.medal ? `Medalla de ${S.medal}` : null, ...S.tiles.map(([v, l]) => `${v} ${l}`), ...S.chips.map(([t]) => t), S.today].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
+    { t: 'canvas', h: SUM_H + (S.chips.length ? SUM_CHIP : 0), text: [S.sub, S.where, `${S.got} ${S.unit}`, S.medal ? `Medalla de ${S.medal}` : null, S.pct !== null ? `${S.pct} % perfectas` : null, ...S.tiles.map(([v, l]) => `${v} ${l}`), S.chips.length ? S.chips[0][0] : null].filter(Boolean).join(' · '), draw: (c, x, y, w, h) => summaryDraw(S, c, x, y, w, h) },
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
       { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
-    ...(S.career !== undefined ? [{ t: 'canvas', h: 0.12, text: S.career ? `+${S.career.xp} XP` : 'Tu semana', draw: (c, x, y, w, h) => { drawXP(c, x + 6, y, w * 0.46, h, S.career); drawWeek(c, x + w * 0.52, y + 4, w * 0.47, h - 8); } }] : []),
-    ...(S.career ? S.career.notes.slice(0, 3).map(([t, col]) => ({ t: 'text', text: t, color: col })) : []),
-    ...(S.bestTxt ? [{ t: 'text', text: S.bestTxt, color: '#a49fc8' }] : []),
     ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { LOBBY.tab = 'prog'; PROG.tab = 'camp'; PROG.lv = 0; PROG.reg = -1; lobbyMenu(); } }] },
-      { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }]
-    : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }, { label: 'Salir del juego', style: 'danger', onPress: exitAll }] }])];
+      { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }] }] // (salir del juego, desde el menú principal)
+    : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }] }])];
   const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);
 }
 function exitAll() {
