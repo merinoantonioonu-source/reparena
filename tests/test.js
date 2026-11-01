@@ -603,14 +603,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // Combate: cualquier enemigo con cualquier puntería
   // la diana es un contorno de neón rojo en el robot al que apuntas: sale en él (solo en él), parpadea y nunca el aro antiguo
   { const LK = { on: 0, n: 0, other: 0, ring: 0, kLo: 1, kHi: 0, dead: 0 };
-    await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
+    await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10, lockStyle: 'neon' }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
       const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl.length && x.lkl[0].visible);
       if (g && RA.state === 'play') { LK.n++; if (vis(g)) LK.on++; LK.kLo = Math.min(LK.kLo, RA.LKL.k); LK.kHi = Math.max(LK.kHi, RA.LKL.k); if (LK.prev !== undefined) LK.jump = Math.max(LK.jump || 0, Math.abs(RA.LKL.k - LK.prev)); LK.prev = RA.LKL.k; } else LK.prev = undefined;
       for (const x of RA.enemies) { if (x !== g && x.alive && vis(x)) LK.other++; if (!x.alive && vis(x)) LK.dead++; }
       if (Object.values(RA.locks).some(r => r.visible)) LK.ring++;
     }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
     log(`lock outline: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · glow ${LK.kLo.toFixed(2)}–${LK.kHi.toFixed(2)}, biggest step per frame ${(LK.jump || 0).toFixed(3)}`);
-    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.3 || LK.jump > 0.12) errors.push('diana: el robot apuntado debería llevar el contorno de neón con un brillo que sube y baja despacio (solo él, nunca el aro antiguo)'); }
+    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.3 || LK.jump > 0.12) errors.push('diana: el robot apuntado debería llevar el contorno de neón con un brillo que sube y baja despacio (solo él, nunca el aro antiguo)');
+    RA.setSetting('lockStyle', 'enfoque'); }
+  // las dianas de cómic (tinta, trama, enfoque y corchetes): cada una sale solo en el apuntado y, al cambiar de estilo, la de antes se quita
+  { const ST = ['tinta', 'trama', 'enfoque', 'corchetes'], LC = Object.fromEntries(ST.map(k => [k, { on: 0, n: 0 }])); let other = 0, stale = 0, cur = '';
+    await runConfig('Combate robots: dianas de cómic', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t);
+      const st = ST[Math.floor(t / 2) % ST.length], sw = st !== cur; if (sw) { cur = st; RA.setSetting('lockStyle', st); } // (el cambio se ve en el fotograma siguiente)
+      const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
+      const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl.length && x.lkl[0].visible);
+      if (g && RA.state === 'play' && g.lks && g.lks[st]) { LC[st].n++; if (vis(g)) LC[st].on++; }
+      for (const x of RA.enemies) { if (x !== g && vis(x)) other++; if (x.lks && !sw) for (const k in x.lks) if (k !== st && x.lks[k].some(o => o.visible)) stale++; }
+    }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : '');
+    RA.setSetting('lockStyle', 'enfoque');
+    log(`comic lock styles: ${ST.map(k => `${k} ${LC[k].on}/${LC[k].n}`).join(' · ')} · on others ${other} · old style left visible ${stale}`);
+    if (ST.some(k => !LC[k].n || LC[k].on < LC[k].n * 0.9) || other || stale) errors.push('diana de cómic: cada estilo (tinta, trama, enfoque, corchetes) debería salir solo en el apuntado y quitarse al cambiar de estilo'); }
   // la mirada baja al agacharse y aún no ha vuelto al subir (cuando se dispara): el rayo va igual al robot que mirabas
   { let crT = -9; await runConfig('Combate mirada que se mueve en la sentadilla', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); if (RA.PV.crouch) crT = t; const e = RA.enemies.find(x => x.alive); if (e) { RA.camera.lookAt(e.center(new THREE.Vector3())); if (t - crT < 0.5) RA.camera.rotateX(-0.42); } }, 420, s => s.kills < 3 ? 'con la mirada moviéndose no se derriban robots' : s.shots > s.hits * 2.5 || s.taken > 4 ? `con la mirada moviéndose en la sentadilla se falla demasiado (${s.hits}/${s.shots}, golpes recibidos ${s.taken})` : ''); } // los fallos que quedan: disparos sin ningún robot a la vista
   RA.camera.rotation.set(0, 0, 0);
