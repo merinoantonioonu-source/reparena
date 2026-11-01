@@ -2277,67 +2277,118 @@ function armsMenu(back) {
   const rows = [{ t: 'title', text: 'ARMAS' }, ...armsRows(again), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
   const m = openMenu(rows, { accent: MC.arms }); m.rebuild = again;
 }
-// El menú principal. Arriba, el modo (Combate, Arcos, Barras, Toques), cada uno con su color: lo decide todo lo demás. A
-// la izquierda, las partes de la ronda, cada una con su color: Ronda (el ejercicio, de los que valen para el modo, y lo
-// suyo), Dificultad (el rango, «Al fallo» y lo que marca el desarrollador con el ojo), Rivales y armas (en Combate; o las
-// armas, si el modo tiene), Sesiones (si hay) y Opciones (Sonido, Entorno y Ajustes, en pestañas); debajo, el reproductor
-// de Spotify y Salir. A la derecha, lo de la parte elegida. EMPEZAR, junto al título, y debajo lo elegido. Se recuerdan la
-// parte y la pestaña de Opciones
-const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' };
-const LOBBY = { tab: uiPrefs().lobby || 'round', opt: uiPrefs().lobbyOpt || 'sound', foe: '' };
-const lobbyTabs = () => [['round', 'Ronda', MC.ex], ['diff', 'Dificultad', '#5ab8ff'],
-  ...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []),
-  ...(sessionRows().length ? [['ses', 'Sesiones', '#b9a6ff']] : []), ['prog', 'Progreso', PROG_COL], ['opt', 'Opciones', MC.set]];
-// Ronda: el ejercicio (al elegirlo se queda aquí) y lo que le toca: la barra o las paralelas en Barras, las combinaciones en Toques
-function lobbyRoundRows(again) {
-  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), rows = exerciseRows(again, true);
+// El menú principal, simple (lo demás, en Opciones):
+//  · arriba, EMPEZAR, grande (con Sesiones elegido, EMPEZAR SESIÓN); a su derecha, Cerrar
+//  · tus cifras en fichas: nivel, hoy, racha y misiones (al tocarlas, Opciones → Progreso)
+//  · el modo (Combate, Arcos, Barras, Toques), cada uno con su color, y, tras una raya, Sesiones
+//  · con un modo: sus ejercicios (de los que valen para él) y la dificultad (los galones, «Al fallo» y cómo es la ronda);
+//    con Sesiones: la sesión preparada, bloque a bloque, y las guardadas
+//  · Spotify (si está conectado) y, abajo, Opciones (rivales y armas, progreso, sonido, entorno y ajustes) y Salir
+// Se recuerdan la vista (modo o sesiones) y la pestaña de Opciones
+const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff';
+const LOBBY = { view: uiPrefs().lobbyView === 'ses' ? 'ses' : 'mode', opt: uiPrefs().lobbyOpt || 'foes', foe: '' };
+// Los ejercicios del modo, en rejilla (6 por fila si son muchos), y lo que le toca: la barra o las paralelas en Barras,
+// las combinaciones en Toques
+function lobbyExRows(again) {
+  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), col = MODE_COL[settings.mode];
+  let list = MODE_EX[settings.mode].slice(); if (settings.exSort === 'body') { const z = x => { const i = BODY_ZONES.findIndex(b => b[1].includes(x)); return i < 0 ? 99 : i; }; list.sort((a, b) => z(a) - z(b)); }
+  const per = list.length > 15 ? 6 : list.length > 4 ? 5 : 4, rows = [];
+  for (let i = 0; i < list.length; i += per) {
+    const items = list.slice(i, i + per).map(x => ({ label: EX_SHORT[x] || EX_NAMES[x], style: x === settings.exercise ? 'selected' : 'normal', tint: col, font: 0.42, onPress: () => { setSetting('exercise', x); again(); } }));
+    while (items.length < per && list.length > per) items.push({ sep: true, blank: true }); // (la última fila, con las teclas del mismo ancho)
+    rows.push({ t: 'btns', h: 0.05, items });
+  }
   if (settings.mode === 'touch' && settings.exercise === 'combo') rows.push({ t: 'field', key: 'comboBase', after: again }, { t: 'field', key: { stand: 'comboStand', floor: 'comboFloor', abs: 'comboAbs' }[settings.comboBase] }, { t: 'field', key: 'comboOrder' });
   if (bars && settings.exercise === 'hang') rows.push({ t: 'field', key: 'hangPit' });
   if (bars) rows.push({ t: 'btns', items: [{ label: `Colocar ${n.name}`, style: placed ? 'normal' : 'primary', onPress: () => startPlace(lobbyMenu) }, ...(placed ? [{ label: 'Ajustar', onPress: () => { PLACE.note = ''; adjustMenu(lobbyMenu); } }] : [])] },
     { t: 'text', text: !placed ? `Primero coloca ${n.the}: pulsa Colocar` : `Comprueba que ${n.the} ${n.pl ? 'virtuales coinciden' : 'virtual coincide'} con la real`, color: !placed ? '#ffd166' : '#a49fc8' });
   return rows;
 }
-// Dificultad: el rango (sus galones), «Al fallo» y lo que el desarrollador ha marcado con el ojo (67_dev)
+// La dificultad: los galones del rango, «Al fallo», cómo es la ronda (en una ficha) y lo que el desarrollador ha marcado
+// con el ojo (67_dev)
 function lobbyDiffRows(again) {
-  const bars = isBars(), hang = settings.exercise === 'hang';
-  const rows = [{ t: 'btns', h: 0.056, items: RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', onPress: () => { setSetting('rank', v); again(); } })) },
-    { t: 'text', text: `${rankName()} en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`, color: '#a49fc8' },
-    { t: 'field', key: 'toFail', after: again }];
+  const bars = isBars(), hang = settings.exercise === 'hang', fail = fieldVisible(FIELD.toFail);
+  const rows = [{ t: 'btns', h: 0.052, items: [...RANKS.map(([v], i) => ({ label: '', badge: i, style: i === rankIdx() ? 'selected' : 'normal', tint: DIFF_COL, onPress: () => { setSetting('rank', v); again(); } })),
+      ...(fail ? [{ sep: true, flex: 0.25 }, { label: 'Al fallo', flex: 1.7, font: 0.42, style: settings.toFail ? 'selected' : 'normal', tint: DIFF_COL, onPress: () => { setSetting('toFail', settings.toFail ? 0 : 1); again(); } }] : [])] },
+    { t: 'canvas', h: 0.05, text: `${rankName()} en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} · ${summaryText()}`, draw: drawRoundInfo }];
   const eyeF = menuFull() ? [speedKey(), settings.mode === 'arcs' ? 'arcMax' : bars && hang ? 'hangInc' : 'repsWave'] : devEye();
-  for (const key of eyeF) if (FIELD[key] && fieldVisible(FIELD[key])) rows.push({ t: 'field', key, after: FIELD[key].relayout ? again : undefined });
+  for (const key of eyeF) if (FIELD[key] && fieldVisible(FIELD[key]) && key !== 'toFail') rows.push({ t: 'field', key, after: FIELD[key].relayout ? again : undefined });
   if (settings.mode === 'touch' && menuFull()) rows.push(...tempoRows(again)); // (para el jugador, el ritmo está en Opciones → Sonido)
   return rows;
 }
-// Opciones: Sonido, Entorno y Ajustes, en pestañas (cada una con su color)
-function lobbyOptRows(again) {
-  const tabs = [['sound', 'Sonido', MC.sound], ['scene', 'Entorno', MC.scene], ['set', 'Ajustes', MC.set]], o = tabs.some(t => t[0] === LOBBY.opt) ? LOBBY.opt : 'sound';
-  return [{ t: 'btns', h: 0.05, items: tabs.map(([k, l, col]) => ({ label: l, style: k === o ? 'selected' : 'normal', accent: col, tint: col, font: 0.48, onPress: () => { LOBBY.opt = k; uiSave('lobbyOpt', k); PREFS.resetArm = ''; again(); } })) },
-    ...(o === 'sound' ? soundRows(again, true) : o === 'scene' ? sceneRows(again) : settingsRows(g => { settingsTab = g; uiSave('tab', g); again(); }))];
+// Cómo es la ronda, en una ficha: el galón y el rango a la izquierda; a la derecha, oleadas, repeticiones, vidas y descanso
+function drawRoundInfo(c, x, y, w, h) {
+  rr(c, x, y, w, h, h * 0.3); c.fillStyle = 'rgba(90,184,255,0.08)'; c.fill();
+  drawRank(c, rankIdx(), x + h * 0.55, y + h / 2, h * 0.62, '#eeeaff');
+  const t1 = `${rankName()} · ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = DIFF_COL; fitFont(c, t1, w * 0.3, Math.round(h * 0.42), '700 %px ' + FB); c.fillText(t1, x + h * 1.05, y + h / 2);
+  const hang = settings.exercise === 'hang', chips = [[nWaves() ? `${nWaves()} oleadas` : settings.toFail ? 'al fallo' : 'sin fin', '#ffd166'], [hang ? `${hangSecs(0)} s (+${settings.hangInc})` : `${waveReps(0)} reps (+${settings.repsInc})`, '#3cf0c6'], [`${nLives() || '∞'} vidas`, '#ff4fa3'], [`${settings.rest} s descanso`, '#a68bff']];
+  const x0 = x + w * 0.4, cw = (w * 0.6 - 10) / chips.length;
+  chips.forEach(([t, col], k) => { const cx = x0 + k * cw; rr(c, cx + 4, y + h * 0.16, cw - 8, h * 0.68, h * 0.3); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.lineWidth = 2; c.strokeStyle = col; c.stroke(); c.textAlign = 'center'; c.fillStyle = col; fitFont(c, t, cw - 20, Math.round(h * 0.36), '600 %px ' + FB); c.fillText(t, cx + cw / 2, y + h / 2 + 1); });
 }
+// La sesión preparada, bloque a bloque (en fichas de tres en tres que se leen), y las guardadas
+function sesPreviewRows() {
+  const rows = [], B = SES.blocks, saved = savedSessions().length;
+  if (B.length) {
+    const nr = Math.ceil(B.length / 3), bh = 0.062;
+    rows.push({ t: 'text', text: `${B.length} ${B.length === 1 ? 'bloque' : 'bloques'}${SES.rounds > 1 ? ` × ${SES.rounds} vueltas` : ''} · ${SES.rest} s de descanso entre bloques · unos ${sessionMinutes()} min`, color: SES_COL });
+    rows.push({ t: 'canvas', h: nr * bh + (nr - 1) * GAP, text: B.map((b, i) => `${i + 1}. ${b.n} ${b.ex === 'hang' ? 's colgado' : EX_NAMES[b.ex].toLowerCase()} (${MODE_NAMES[b.mode]})`).join(' · '), draw: (c, x, y, w, h) => drawSesBlocks(c, x, y, w, h, nr) });
+  } else rows.push({ t: 'text', text: 'Aún no hay ninguna sesión preparada: ármala en la página (Sesiones) o elige una guardada', color: '#a49fc8' });
+  if (saved) rows.push({ t: 'btns', items: [{ label: `Sesiones guardadas (${saved})  ▸`, accent: SES_COL, onPress: () => sessionsMenu(lobbyMenu) }] });
+  return rows;
+}
+function drawSesBlocks(c, x, y, w, h, nr) {
+  const per = 3, g = 12, cw = (w - g * (per - 1)) / per, ch = (h - g * (nr - 1)) / nr;
+  SES.blocks.forEach((b, i) => {
+    const bx = x + (i % per) * (cw + g), by = y + Math.floor(i / per) * (ch + g), col = MODE_COL[b.mode] || SES_COL;
+    rr(c, bx, by, cw, ch, ch * 0.22); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); rr(c, bx, by + ch * 0.15, 8, ch * 0.7, 4); c.fillStyle = col; c.fill();
+    const r = ch * 0.3, cx = bx + 18 + r; c.beginPath(); c.arc(cx, by + ch / 2, r, 0, TAU); c.fillStyle = col; c.fill();
+    c.fillStyle = '#1a1030'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, String(i + 1), r * 1.5, Math.round(r * 1.2), '%px ' + FD); c.fillText(String(i + 1), cx, by + ch / 2 + 1);
+    const tx = cx + r + 12, tw = bx + cw - tx - 10, t1 = EX_SHORT[b.ex] || EX_NAMES[b.ex], t2 = `${b.n} ${b.ex === 'hang' ? 's' : 'reps'} · ${MODE_NAMES[b.mode]}${b.rank ? ' · ' + rankName(b.rank) : ''}`;
+    c.textAlign = 'left'; c.fillStyle = '#eeeaff'; fitFont(c, t1, tw, Math.round(ch * 0.36), '700 %px ' + FB); c.fillText(t1, tx, by + ch * 0.35);
+    c.fillStyle = '#a49fc8'; fitFont(c, t2, tw, Math.round(ch * 0.27), '600 %px ' + FB); c.fillText(t2, tx, by + ch * 0.72);
+  });
+}
+// Spotify, a todo el ancho: el rótulo con lo que suena y, en una fila, anterior, play/pausa, siguiente y el volumen
+function spWideRows() { const R = spPlayerRows(); return R.length ? [R[0], { t: 'btns', h: 0.05, items: [...R[1].items, ...R[2].items] }] : []; }
 function lobbyMenu() {
   endSession(); campEnd(); campEnvBack(); // (de la campaña: tus ajustes y tu entorno)
   state = 'lobby'; resetWorld(); center.mesh.visible = false; boardDayRefresh(); if (preview) previewBarPose(false);
-  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), start = () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
+  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), again = () => lobbyMenu();
   // una sesión recién preparada (en la página): el menú se abre en Sesiones, con su EMPEZAR SESIÓN
-  const sig = SES.blocks.length && !SES.active ? JSON.stringify(SES.blocks) : ''; if (sig && sig !== LOBBY.ses) LOBBY.tab = 'ses'; LOBBY.ses = sig;
-  const tabs = lobbyTabs(); if (!tabs.some(t => t[0] === LOBBY.tab)) LOBBY.tab = 'round';
-  const [tab, tabName, tabCol] = tabs.find(t => t[0] === LOBBY.tab), again = () => lobbyMenu();
+  const sig = SES.blocks.length && !SES.active ? JSON.stringify(SES.blocks) : ''; if (sig && sig !== LOBBY.ses) LOBBY.view = 'ses'; LOBBY.ses = sig;
+  const ses = LOBBY.view === 'ses', view = v => { LOBBY.view = v; uiSave('lobbyView', v); PREFS.resetArm = ''; lobbyMenu(); };
+  const start = ses ? () => { if (SES.blocks.length) startSession(); else say('Prepara una sesión en la página o elige una guardada', '#ffd166', 2); }
+    : () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
+  const modes = [...Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: !ses && v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.46, onPress: () => { setSetting('mode', v); view('mode'); } })),
+    { sep: true, flex: 0.2 }, { label: 'Sesiones', style: ses ? 'selected' : 'normal', accent: SES_COL, tint: SES_COL, font: 0.46, onPress: () => view('ses') }];
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
-  const left = tabs.map(([key, label, col]) => ({ t: 'btns', h: 0.052, items: [{ label, style: key === tab ? 'selected' : 'normal', font: 0.5, accent: col, tint: col, onPress: () => { LOBBY.tab = key; uiSave('lobby', key); PREFS.resetArm = ''; lobbyMenu(); } }] }));
-  left.push(...spPlayerRows(), { t: 'btns', h: 0.05, items: [{ label: 'Salir', style: 'danger', onPress: exitAll }] });
-  const pane = tab === 'diff' ? lobbyDiffRows(again) : tab === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : tab === 'ses' ? sessionRows() : tab === 'prog' ? progRows(again) : tab === 'opt' ? lobbyOptRows(again) : lobbyRoundRows(again);
-  const modes = Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.5, onPress: () => { setSetting('mode', v); lobbyMenu(); } }));
   const rows = [
-    { t: 'title', text: 'REPARENA', lead: { label: 'EMPEZAR', onPress: start } },
-    { t: 'btns', h: 0.058, items: modes },
-    { t: 'text', text: `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise] || ''} · ${rankName()}`, color: MODE_COL[settings.mode] },
-    { t: 'text', text: summaryText() },
-    { t: 'text', text: careerLine() + (progressLine() ? ' · ' + progressLine() : ''), color: PROG_COL },
-    ...(roomBad && !(tab === 'opt' && LOBBY.opt === 'scene') ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
-    { t: 'cols', fr: [0.29, 0.71], lw: [0.1, 0.19], titles: ['', tabName], colors: [null, tabCol], music: spConnected(), cols: [left, pane.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]))] }];
+    { t: 'title', text: '', big: { label: ses ? (SES.blocks.length ? 'EMPEZAR SESIÓN' : 'SESIONES') : 'EMPEZAR', onPress: start } },
+    { t: 'btns', h: 0.085, items: statTiles() },
+    { t: 'btns', h: 0.056, items: modes },
+    ...(ses ? sesPreviewRows() : [...lobbyExRows(again), ...lobbyDiffRows(again)]).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])),
+    ...(roomBad ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
+    ...spWideRows(),
+    { t: 'btns', h: 0.052, items: [{ label: 'Opciones  ▸', flex: 3, accent: MC.set, onPress: () => optionsMenu() }, { label: 'Salir', style: 'danger', onPress: exitAll }] }];
   const m = openMenu(rows);
-  m.rebuild = () => lobbyMenu(); demoAttach(m); // al lado, la caricatura del ejercicio elegido
+  m.rebuild = again; demoAttach(m); // al lado, la caricatura del ejercicio elegido
 }
+// Opciones: todo lo que no está en el principal, en pestañas con su color (rivales y armas, progreso, sonido, entorno y
+// ajustes); «Volver» deja el principal en el mismo sitio
+function optionsMenu() {
+  const again = () => optionsMenu();
+  const tabs = [...(isCombat() ? [['foes', 'Rivales y armas', MC.foes]] : armsAny() ? [['foes', 'Armas', MC.arms]] : []), ['prog', 'Progreso', PROG_COL], ['sound', 'Sonido', MC.sound], ['scene', 'Entorno', MC.scene], ['set', 'Ajustes', MC.set]];
+  if (!tabs.some(t => t[0] === LOBBY.opt)) LOBBY.opt = tabs[0][0];
+  const o = LOBBY.opt, col = tabs.find(t => t[0] === o)[2];
+  const body = o === 'foes' ? (isCombat() ? foesRows(again, armsAny()) : armsRows(again)) : o === 'prog' ? progRows(again) : o === 'sound' ? soundRows(again, true) : o === 'scene' ? sceneRows(again) : settingsRows(g => { settingsTab = g; uiSave('tab', g); again(); });
+  const rows = [{ t: 'title', text: 'OPCIONES', color: col },
+    { t: 'btns', h: 0.052, items: tabs.map(([k, l, c2]) => ({ label: l, style: k === o ? 'selected' : 'normal', accent: c2, tint: c2, font: 0.44, onPress: () => { LOBBY.opt = k; uiSave('lobbyOpt', k); PREFS.resetArm = ''; again(); } })) },
+    ...body.filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])),
+    { t: 'btns', items: [{ label: 'Volver', onPress: lobbyMenu }] }];
+  const m = openMenu(rows, { accent: col }); m.rebuild = again;
+}
+// Al tocar una ficha de tus cifras, su pestaña de Progreso
+function progressOpen(tab) { PROG.tab = tab; uiSave('prog', tab); LOBBY.opt = 'prog'; optionsMenu(); }
 // Submenús del principal: elegir ejercicio, sonido y música, y entorno y vista; «Volver» deja el principal en el mismo sitio
 function exerciseMenu(back) {
   const rows = [{ t: 'title', text: 'EJERCICIO' }, ...exerciseRows(back), { t: 'btns', items: [{ label: 'Volver', onPress: back }] }];
@@ -2748,7 +2799,7 @@ function endMenu(title, S) {
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
       { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
-    ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { LOBBY.tab = 'prog'; PROG.tab = 'camp'; PROG.lv = 0; PROG.reg = -1; lobbyMenu(); } }] },
+    ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { PROG.lv = 0; PROG.reg = -1; progressOpen('camp'); } }] },
       { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }] }] // (salir del juego, desde el menú principal)
     : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }] }])];
   const m = openMenu(rows, { accent: title === 'DERROTA' ? '#ff4a6a' : '#ffd166' }); m.rebuild = () => endMenu(title, S);

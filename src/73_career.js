@@ -240,3 +240,27 @@ function careerHTML() {
     <ul class="mis">${M.list.map(m => `<li class="${m.done ? 'done' : ''}"><span>${esc(MIS[m.t].txt(m))}</span><em>${m.done ? '✓' : `${Math.min(m.n, Math.floor(m.got))} / ${m.n}`}</em></li>`).join('')}</ul>
     <p class="chest">${M.chest ? 'Cofre del día abierto' : 'Cumple las tres misiones y se abre el cofre del día'}</p></div>`;
 }
+// Las fichas de tus cifras en el menú principal (teclas: al tocarlas, Opciones → Progreso): nivel, hoy, racha y misiones.
+// Dibujadas en la cara de la tecla; tc es el color de su letra
+function statTiles() {
+  const L = lvlOf(), P = progress(), M = misToday(), done = M.list.filter(m => m.done).length, mins = Math.round(P.today.time / 60), goal = settings.goalMin;
+  const txt = (c, t, x, y, maxW, px, col, w = 700, al = 'left') => { c.textAlign = al; c.textBaseline = 'middle'; c.fillStyle = col; fitFont(c, t, maxW, Math.round(px), `${w} %px ` + FB); c.fillText(t, x, y); };
+  return [
+    { label: `Nivel ${L.n} · ${titleOf(L.n)}`, flex: 1.35, onPress: () => progressOpen('lvl'), paint: (c, W, H, tc) => {
+      const R = H * 0.3; drawLvlBadge(c, H * 0.18 + R, H / 2, R, L.n); const x = H * 0.28 + 2 * R, w = W - x - H * 0.14;
+      txt(c, titleOf(L.n), x, H * 0.3, w, H * 0.24, tc); const by = H * 0.56, bh = H * 0.11; rr(c, x, by, w, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.35)'; c.fill();
+      if (L.into) { rr(c, x, by, Math.max(bh, w * L.into / L.need), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); } txt(c, `${L.into} / ${L.need} XP`, x, H * 0.8, w, H * 0.16, tc, 600); } },
+    { label: `Hoy: ${mins} de ${goal} min`, onPress: () => progressOpen('week'), paint: (c, W, H, tc) => {
+      const R = H * 0.28, cx = H * 0.16 + R, cy = H / 2, k = Math.min(1, mins / Math.max(1, goal)); c.lineCap = 'round';
+      c.lineWidth = H * 0.08; c.strokeStyle = 'rgba(128,128,128,0.35)'; c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+      if (k > 0) { c.strokeStyle = k >= 1 ? '#3cf0c6' : '#ff4fa3'; c.beginPath(); c.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke(); }
+      txt(c, String(mins), cx, cy + 1, R * 1.4, R * 0.95, tc, 800, 'center'); const x = cx + R + H * 0.14;
+      txt(c, 'Hoy', x, H * 0.36, W - x - 6, H * 0.24, tc); txt(c, `de ${goal} min`, x, H * 0.66, W - x - 6, H * 0.18, tc, 600); } },
+    { label: `Racha de ${daysTxt(P.streak)}`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
+      drawFlame(c, H * 0.4, H / 2, H * 0.27); const x = H * 0.78;
+      txt(c, daysTxt(P.streak), x, H * 0.36, W - x - 6, H * 0.26, tc); txt(c, `racha · mejor ${P.best}`, x, H * 0.68, W - x - 6, H * 0.17, tc, 600); } },
+    { label: `Misiones: ${done} de 3`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
+      const r = H * 0.1; for (let i = 0; i < 3; i++) { const cx = H * 0.2 + r + i * r * 2.6, cy = H * 0.34; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = i < done ? '#3cf0c6' : 'rgba(128,128,128,0.35)'; c.fill(); }
+      txt(c, M.chest ? '¡Cofre abierto!' : `Misiones ${done}/3`, H * 0.2, H * 0.7, W - H * 0.3, H * 0.2, M.chest ? '#ffd166' : tc);
+      if (done === 3) drawChest(c, W - H * 0.32, H * 0.38, H * 0.14, M.chest); } }];
+}
