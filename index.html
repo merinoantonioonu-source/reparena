@@ -14231,8 +14231,9 @@ function braceBreakFx() { if (!BRACE.g.visible) return; fx.sparks(BRACE.g.positi
 /* =================== DIANA: EL ENEMIGO APUNTADO =================== */
 // Al enemigo al que apuntas le sale una marca que sigue su silueta en cada momento (si levanta un brazo o se agacha, va
 // con él). Se elige en Entorno → Diana (settings.lockStyle):
-//  - Líneas de enfoque (la de serie): rayas en estrella del manga que apuntan al enemigo sin tocarlo, cortas y vivas:
-//    giran despacio a su alrededor y por cada una corren tramos de luz hacia fuera (como las líneas de velocidad).
+//  - Líneas de enfoque (la de serie): rayas cortas en estrella, del manga, alrededor del enemigo, que giran despacio y
+//    corren hacia fuera (como las líneas de velocidad). Son tiras planas de cara a ti, como los corchetes: en las gafas,
+//    las de silueta (con stencil y copias de la figura) dejaban planos de basura blancos y azules pegados a la vista.
 //  - Tinta: línea negra de rotulador pegada a la figura que «hierve» (se redibuja temblando 8 veces por segundo, como el
 //    dibujo animado a mano) y un halo amarillo plano desplazado, como la sombra recortada de una viñeta.
 //  - Trama de puntos: la trama roja de los cómics impresos, puntos gordos pegados al cuerpo y cada vez más pequeños hacia
@@ -14252,13 +14253,12 @@ const LKL = {
   styles: {
     neon: [['mask', 0.012], ['band', 0.036, 0xff1a1a, 0.2], ['band', 0.026, 0xff1a1a, 0.42], ['band', 0.0175, 0xff3a2e, 1]],
     tinta: [['mask', 0.003], ['band', 0.013, 0x0b0710, 1, { once: 1, boil: 0.7 }], ['band', 0.024, 0xffc21a, 1, { once: 1, off: [0.008, -0.011] }]],
-    trama: [['mask', 0.005], ['band', 0.016, 0xff2a1f, 1, { once: 1, dot: 0.5 }], ['band', 0.03, 0xff2a1f, 1, { once: 1, dot: 0.36 }], ['band', 0.046, 0xff2a1f, 1, { once: 1, dot: 0.22 }]],
-    enfoque: [['mask', 0.02], ['band', 0.04, 0xff3a2e, 1, { once: 1, ray: [0.15, 0.1] }], ['band', 0.062, 0xff3a2e, 1, { once: 1, ray: [0.45, 0.14] }], ['band', 0.085, 0xff3a2e, 1, { once: 1, ray: [0.75, 0.18] }]]
+    trama: [['mask', 0.005], ['band', 0.016, 0xff2a1f, 1, { once: 1, dot: 0.5 }], ['band', 0.03, 0xff2a1f, 1, { once: 1, dot: 0.36 }], ['band', 0.046, 0xff2a1f, 1, { once: 1, dot: 0.22 }]]
   },
   mats: {}, has: new Set(), on: new Map(), k: 1, seed: { value: 0 }, time: { value: 0 }, box: null
 };
 const LKL_BIT = 2; // (el bit 1 del stencil es la boca del remolino del bosque)
-const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'enfoque';
+const lklStyle = () => LKL.styles[settings.lockStyle] || settings.lockStyle === 'corchetes' ? settings.lockStyle : 'enfoque'; // (enfoque y corchetes: tiras planas)
 // El material de una capa. Los de trama y enfoque llevan el centro del enemigo: uno por enemigo (ctr), los demás se comparten
 function lklMat(style, i, skin, thin, ctr) {
   const key = style + i + (skin ? 's' : 'n') + (thin ? 't' : ''); if (!ctr && LKL.mats[key]) return LKL.mats[key];
@@ -14331,7 +14331,8 @@ function lklPts(e) {
 }
 const _lkc = new V3(), _lkv = new V3(), _lkr = new V3();
 const lklSeen = (o, root) => { for (let x = o; x && x !== root; x = x.parent) if (!x.visible) return false; return true; };
-function lklBracketStep(e, g, dt) {
+// el marco del enemigo visto desde ti (suavizado): coloca g en su centro, de cara a ti, y devuelve medio ancho y medio alto
+function lklFrame(e, g, dt) {
   const U = g.userData, P = lklPts(e), c = e.center(_lkc); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   _lkr.set(head.p.z - c.z, 0, c.x - head.p.x).normalize(); // (la derecha, vista desde ti)
   const add = v => { const x = (v.x - c.x) * _lkr.x + (v.z - c.z) * _lkr.z, y = v.y - c.y; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
@@ -14342,8 +14343,12 @@ function lklBracketStep(e, g, dt) {
   if (U.t < 0) { U.t = 0; U.r = [x0, x1, y0, y1]; } U.t += dt; const t = U.t, R = U.r, a = Math.min(1, dt * 10);
   [x0, x1, y0, y1].forEach((v, i) => { R[i] += (v - R[i]) * a; });
   g.position.copy(c).addScaledVector(_lkr, (R[0] + R[1]) / 2); g.position.y += (R[2] + R[3]) / 2; g.lookAt(head.p.x, g.position.y, head.p.z);
+  return { hw: (R[1] - R[0]) / 2, hh: (R[3] - R[2]) / 2, t };
+}
+function lklBracketStep(e, g, dt) {
+  const { hw, hh, t } = lklFrame(e, g, dt);
   // al empezar a apuntarle se cierran desde lejos con un rebote; luego respiran muy poco
-  const k = (1 + 0.8 * Math.cos(t * 13) * Math.exp(-t * 6.5)) * (1 + 0.02 * Math.sin(t * 4)), hw = (R[1] - R[0]) / 2, hh = (R[3] - R[2]) / 2, s = clamp(Math.min(hw, hh) * 0.6, 0.09, 0.26);
+  const k = (1 + 0.8 * Math.cos(t * 13) * Math.exp(-t * 6.5)) * (1 + 0.02 * Math.sin(t * 4)), s = clamp(Math.min(hw, hh) * 0.6, 0.09, 0.26);
   g.children.forEach((q, i) => { const sx = i === 0 || i === 3 ? -1 : 1, sy = i < 2 ? 1 : -1; q.position.set(sx * (hw * k - s / 2), sy * (hh * k - s / 2), 0); q.scale.set(s, s, 1); });
 }
 function lklBracketTex() {
@@ -14360,6 +14365,29 @@ function lklBrackets(e) {
   for (let i = 0; i < 4; i++) { const q = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); q.rotation.z = -i * Math.PI / 2; q.renderOrder = 45; q.raycast = () => {}; q.userData.isLockLine = true; g.add(q); }
   g.visible = false; g.userData.isLockLine = true; g.userData.t = -1; scene.add(g); return g;
 }
+/* ---------- Líneas de enfoque: rayas cortas alrededor del enemigo que giran y corren hacia fuera ---------- */
+// Cada raya sale del borde de su marco (una elipse algo mayor que su figura), corre hacia fuera mientras crece y mengua, y
+// vuelve a empezar; todas giran despacio. Una tira plana roja de puntas finas, de cara a ti (sin stencil ni copias)
+const LKL_RAYS = 26;
+function lklRayTex() {
+  if (LKL.ray) return LKL.ray;
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d');
+  c.fillStyle = '#ff3a2e'; c.beginPath(); c.moveTo(0, 7); c.lineTo(122, 1); c.quadraticCurveTo(128, 8, 122, 15); c.lineTo(0, 9); c.closePath(); c.fill(); // (en punta por dentro, gruesa por fuera)
+  return (LKL.ray = new THREE.CanvasTexture(cv));
+}
+function lklRays(e) {
+  const g = new THREE.Group(); LKL.rayMat = LKL.rayMat || new THREE.MeshBasicMaterial({ map: lklRayTex(), transparent: true, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide });
+  LKL.rayGeo = LKL.rayGeo || new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0); // (desde su punta de dentro)
+  for (let i = 0; i < LKL_RAYS; i++) { const q = new THREE.Mesh(LKL.rayGeo, LKL.rayMat); q.renderOrder = 45; q.raycast = () => {}; q.userData = { a: (i + Math.random() * 0.5) / LKL_RAYS * TAU, ph: Math.random(), sp: 0.7 + Math.random() * 0.6, isLockLine: true }; g.add(q); }
+  g.visible = false; g.userData.isLockLine = true; g.userData.t = -1; scene.add(g); return g;
+}
+function lklRayStep(e, g, dt) {
+  const { hw, hh, t } = lklFrame(e, g, dt), L = clamp(Math.min(hw, hh) * 0.45, 0.06, 0.22), W = L * 0.3, spin = t * 0.35;
+  for (const q of g.children) {
+    const U = q.userData, k = (t * 0.8 * U.sp + U.ph) % 1, a = U.a + spin, ca = Math.cos(a), sa = Math.sin(a), out = 1.0 + 0.35 * k, len = L * Math.sin(Math.PI * k) + 0.001;
+    q.position.set(ca * hw * out, sa * hh * out, 0); q.rotation.z = Math.atan2(sa * hh, ca * hw); q.scale.set(len, W, 1);
+  }
+}
 // Desde updateAim: este enemigo está apuntado (hot: con el disparo cargado; solo lo usa el neón)
 function lockShow(e, hot) { if (e && e.alive && e.root) LKL.on.set(e, LKL.on.get(e) || !!hot); }
 // Al final de updateAim: enseña la diana de los apuntados (en el estilo elegido) y la quita a los demás
@@ -14370,8 +14398,8 @@ function lockStep(t) {
     if (!e.lks) e.lks = {};
     if (!e.lks[st]) {
       const thin = e.type === 'spider' || isTiny(); // (los de las trampillas, finos)
-      if (st === 'corchetes') e.lks[st] = [lklBrackets(e)];
-      else { const ctr = st === 'trama' || st === 'enfoque' ? (e.lkC = e.lkC || { value: new V3() }) : null; e.lks[st] = lklAttach(e.root, thin, st, ctr); }
+      if (st === 'corchetes') e.lks[st] = [lklBrackets(e)]; else if (st === 'enfoque') e.lks[st] = [lklRays(e)];
+      else { const ctr = st === 'trama' ? (e.lkC = e.lkC || { value: new V3() }) : null; e.lks[st] = lklAttach(e.root, thin, st, ctr); }
     }
     LKL.has.add(e); hot = hot || h;
   }
@@ -14380,11 +14408,11 @@ function lockStep(t) {
     for (const s in e.lks) {
       const show = on && s === st, L = e.lks[s];
       if (L.length && L[0].visible !== show) for (const o of L) o.visible = show;
-      if (s === 'corchetes' && L[0]) { if (show) lklBracketStep(e, L[0], dt); else L[0].userData.t = -1; }
+      if ((s === 'corchetes' || s === 'enfoque') && L[0]) { if (show) (s === 'corchetes' ? lklBracketStep : lklRayStep)(e, L[0], dt); else L[0].userData.t = -1; }
     }
     if (on && e.lkC) e.center(e.lkC.value);
     e.lkl = e.lks[st] || []; // (las piezas del estilo de ahora)
-    if (!on && (!e.alive || !e.root.parent)) { if (e.lks.corchetes) { scene.remove(e.lks.corchetes[0]); delete e.lks.corchetes; } LKL.has.delete(e); }
+    if (!on && (!e.alive || !e.root.parent)) { for (const s of ['corchetes', 'enfoque']) if (e.lks[s]) { scene.remove(e.lks[s][0]); delete e.lks[s]; } LKL.has.delete(e); }
   }
   // neón: brillo que sube y baja despacio (un pulso cada 1,4 s; con carga, cada 0,9 s y algo más vivo)
   const want = (hot ? 0.6 : 0.4) + (hot ? 0.4 : 0.6) * (0.5 + 0.5 * Math.sin(t * TAU / (hot ? 0.9 : 1.4)));
