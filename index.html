@@ -9034,7 +9034,7 @@ function xferApply(p, reload = true, merged = false) {
 // otro aparato tiene datos más recientes, pregunta si importarlos. Firebase solo guarda algo ilegible en un hueco cuyo
 // nombre sale del código (y sus reglas no dejan listar nada). Al subir se juntan las partidas de los dos: el historial no
 // pierde nada aunque se diga «Ahora no»; lo demás (ajustes, perfiles, rangos, carrera) es el del que cambió lo último
-const SYNC_DB = ''; // (la dirección de la Realtime Database; vacía: sin sincronización)
+const SYNC_DB = 'https://reparena-62309-default-rtdb.europe-west1.firebasedatabase.app'; // (la Realtime Database del proyecto «reparena»; vacía: sin sincronización)
 const SYNC = { db: SYNC_DB, t: null, busy: false, applying: false, ready: false, salt: 'reparena-sync-v1', key: 'reparena3-sync' };
 const syncSt = () => store(SYNC.key) || {}; // (lo de este aparato, que no viaja: el código, quién es y cuándo cambió o subió algo)
 const syncSet = o => store(SYNC.key, Object.assign(syncSt(), o));
