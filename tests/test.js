@@ -236,7 +236,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // número de la carga, la capa de rayos creciendo, el destello al llegar a ×4 y el estallido al disparar (de ella salen los
   // rayos); con pistolas o espadas, ni en Arcos, no sale
   { const B = { vis: 0, d: [9, 0], below: true, nums: new Set(), sh: [9, 0], max: 0, burst: 0 };
-    await runConfig('Bola de energía (sentadillas, puntería automática)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const S = RA.SORB;
+    await runConfig('Bola de energía (sentadillas, puntería automática)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 9) < 7.4; const S = RA.SORB;
       if (S.g.visible && S.on) { B.vis++; const c = RA.head.p.clone(); const d = Math.hypot(S.pos.x - c.x, S.pos.z - c.z); B.d = [Math.min(B.d[0], d), Math.max(B.d[1], d)]; if (S.pos.y > RA.head.p.y - 0.15) B.below = false; if (S.num.visible) B.nums.add(S.pow); B.sh = [Math.min(B.sh[0], S.shell2.scale.x), Math.max(B.sh[1], S.shell2.scale.x)]; }
       if (S.mx >= 0) B.max++; if (S.burst > 0) B.burst++; }, 200, s => '', true);
     const none = {};
@@ -246,15 +246,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`energy ball: visible ${B.vis} frames · ${B.d[0].toFixed(2)}–${B.d[1].toFixed(2)} m in front · below the eyes ${B.below} · numbers ${[...B.nums].join(',')} · second layer ${B.sh[0].toFixed(3)}→${B.sh[1].toFixed(3)} · max flash ${B.max} frames · burst on firing ${B.burst} · with pistols / in arcs: ${JSON.stringify(none)}`);
     if (!B.vis || B.d[0] < 0.8 || B.d[1] > 1.2 || !B.below || !B.nums.has(4) || B.sh[1] < B.sh[0] * 1.5 || !B.max || !B.burst) errors.push('bola de energía: debería flotar a un metro, por debajo de los ojos, con su número, la capa creciendo, el destello al máximo y el estallido al disparar');
     if (none.pistolas || none.arcos) errors.push('bola de energía: con pistolas o sin disparos no debería salir'); }
+  // cada nivel pide aguantar más que el anterior (de serie: ×2 a 1,5 s, ×3 2 s después y ×4 2,5 s después)
+  const powT = [];
   for (const aim of ['auto', 'hands']) { let maxPow = 1; const F = { seen: new Set(), y: 9, gone: null };
-    await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) maxPow = Math.max(maxPow, +m[1]);
+    await runConfig(`Combate sentadilla aguantada (${aim})`, { ...base, mode: 'combat', foes: 'robots', aim, exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 9) < 7.4; const m = /CARGA ×(\d)|×(4) · ¡ARRIBA/.exec(RA.CHG.p.mesh.visible ? RA.CHG.text : ''); if (m) maxPow = Math.max(maxPow, +(m[1] || m[2]));
+      if (aim === 'auto' && m) { const c = Math.floor(t / 9), n = +(m[1] || m[2]); powT[c] = powT[c] || {}; if (powT[c][n] === undefined) powT[c][n] = t; }
       // la carga, también en el suelo (agachado es lo que ves): ×2, ×3 y, a ×4, «¡ARRIBA!»; se va al disparar
-      const cm = RA.CHG.p.mesh; if (cm.visible) { F.seen.add(RA.CHG.text); F.y = Math.min(F.y, cm.position.y); } if (F.seen.size && !RA.PV.crouch && t % 5 > 4 && F.gone === null) F.gone = !cm.visible; }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
+      const cm = RA.CHG.p.mesh; if (cm.visible) { F.seen.add(RA.CHG.text); F.y = Math.min(F.y, cm.position.y); } if (F.seen.size && !RA.PV.crouch && t % 9 > 8 && F.gone === null) F.gone = !cm.visible; }, 200, s => maxPow < 4 ? `aguantar abajo en la sentadilla no carga el disparo (×${maxPow})` : '', true);
     log(`  squat held low (${aim}): charge up to ×${maxPow} · on the floor: ${[...F.seen].join(' → ')} (y ${F.y.toFixed(2)}) · gone after standing up ${F.gone}`);
     if (!F.seen.has('CARGA ×2') || !F.seen.has('×4 · ¡ARRIBA!') || F.y > 0.1 || !F.gone) errors.push('carga: debería verse en el suelo (×2… y a ×4 «¡ARRIBA!») e irse al disparar'); }
+  { const full = powT.filter(c => c && c[2] !== undefined && c[3] !== undefined && c[4] !== undefined), g = full.map(c => [c[3] - c[2], c[4] - c[3]]);
+    log(`  charge levels while holding: ${g.map(([a, b]) => `×2→×3 ${a.toFixed(2)} s, ×3→×4 ${b.toFixed(2)} s`).join(' · ') || 'none reached ×4'}`);
+    if (!g.length || g.some(([a, b]) => a < 1.85 || a > 2.2 || b < 2.35 || b > 2.7)) errors.push('carga: cada nivel debería pedir aguantar más que el anterior (×2→×3 en 2 s, ×3→×4 en 2,5 s, de serie)'); }
   // zancadas: también cargan aguantando abajo; y bajando mucho más de lo pedido, la recarga profunda (×4 al instante)
   { let lunge = 1, deep = 0, deepOff = 0, quick = 1;
-    await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 5) < 3.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
+    await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 9) < 7.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
     await runConfig('Combate sentadilla con recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 6 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; const tx = RA.msg.text || ''; if (/PROFUNDA/.test(tx)) deep++; const m = /DISPARO ×(\d)/.exec(tx); if (m) quick = Math.max(quick, +m[1]); }, 200, s => '', true);
     await runConfig('Combate sentadilla sin llegar a la recarga profunda', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 2.6) < 1.0; if (/PROFUNDA/.test(RA.msg.text || '')) deepOff++; }, 200, s => '', true);
     log(`  lunge held low: charge up to ×${lunge} · deep squat (6 cm extra): deep reloads seen ${deep}, quick squat shot up to ×${quick} · not deep enough (30 cm): ${deepOff}`);
@@ -392,13 +398,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.setSetting('foesGate', RA.SCHEMA.find(f => f.key === 'foesGate').def); RA.setSetting('foesHatch', 'spider'); RA.setSetting('foesFly', 'drone,hornet'); }
   // un disparo cargado ×3 o ×4 derriba (sale despedido hacia atrás y se levanta); a los jefes, no
   { let downs = 0, moved = 0, bossDown = false; const seen = new Map(), P0 = new THREE.Vector3(0, 1.4, -2);
-    await runConfig('derribo con disparos cargados', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'robot', waves: 2, repsWave: 12, walkTime: 6, maxAlive: 3 }, t => {
+    await runConfig('derribo con disparos cargados', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', foesGate: 'robot', waves: 2, repsWave: 12, walkTime: 6, maxAlive: 3, powHold: 0.5, powHoldInc: 0 }, t => { // (cargas cortas: aquí se prueba el derribo)
       RA.PV.crouch = (t % 4.6) < 1.2;
       for (const e of RA.enemies) if (e.type === 'robot' && e.alive && e.out && e.state !== 'down' && Math.random() < 0.01) { e.hp += 2; e.onHit(1, false, P0, 4); } // como un disparo ×4 que no lo mata
       for (const e of RA.enemies) { if (e.type !== 'robot') continue; if (e.state === 'down') { if (e.K.boss) bossDown = true; if (!seen.has(e)) { seen.set(e, { x: e.pos.x, z: e.pos.z }); downs++; } else { const a = seen.get(e); moved = Math.max(moved, Math.hypot(e.pos.x - a.x, e.pos.z - a.z)); } } else seen.delete(e); }
     }, 420, s => '');
     log(`knockdown: ${downs} robots knocked down, pushed back up to ${moved.toFixed(2)} m · a boss knocked down ${bossDown}`);
-    if (downs < 1 || moved < 0.8 || bossDown) errors.push('derribo: un disparo cargado ×3 o ×4 debería derribar y echar atrás (a los jefes, no)'); }
+    if (downs < 1 || moved < 0.8 || bossDown) errors.push('derribo: un disparo cargado ×3 o ×4 debería derribar y echar atrás (a los jefes, no)');
+    RA.setSetting('powHold', 1.5); RA.setSetting('powHoldInc', 0.5); }
   // Defensa 1: cada impacto aparta un poco al enemigo y le retrasa el golpe que preparaba (a los jefes, mucho menos)
   { const P0 = new THREE.Vector3(0, 1.4, -2), probes = [], pushes = [], delays = []; let off = null;
     await runConfig('defensa: retroceso con cada impacto', { ...base, mode: 'combat', exercise: 'squat', foeKind: 'ground', foesGate: 'robot', waves: 1, repsWave: 40, walkTime: 6, maxAlive: 2 }, t => {
@@ -1155,6 +1162,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('mode', 'walkers'); RA.setSetting('exercise', 'squat');
   RA.startPreview(); frame(2);
   RA.settingsMenu(() => RA.lobbyMenu()); frame(2);
+  const powSv = { powHold: RA.settings.powHold, powHoldInc: RA.settings.powHoldInc }; // (los deslizadores quedan al mínimo: la carga se devuelve, las pruebas de detrás cuentan con ella)
   for (const tab of ['Partida', 'Tu cuerpo', 'Enemigos', 'Armas', 'Menú', 'Tu meta']) {
     press(tab); frame(1);
     const ws = RA.activeWidgets();
@@ -1163,6 +1171,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     ws.filter(w => w.label === '−').forEach(w => w.onPress());
     frame(1);
   }
+  for (const k in powSv) RA.setSetting(k, powSv[k]);
   press('Partida'); frame(1);
   const val = RA.activeWidgets().find(w => w.style === 'value'); val.onPress(); frame(1);
   ['1', '2', ',', '⌫', '5'].forEach(k => findW(k).onPress()); findW('OK').onPress(); frame(1);
@@ -1206,7 +1215,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     RA.setSetting('rank', 'soldado'); storage.delete('reparena3-rankfit'); RA.rankFitAdd(false, 40); const down2 = RA.rankFitAdd(false, 40);
     if (down2 !== 'recluta') errors.push('rangos: tras 2 derrotas seguidas debería proponer bajar'); log(`   demotion from soldado after 2 defeats → ${down2}`);
     { // en el resumen, el botón para subir (y al pulsarlo, sube ese ejercicio y desaparece la propuesta)
-      const S = { win: true, manual: false, hang: false, got: 12, unit: 'repeticiones', ex: 'x', sub: 'y', pct: 90, stars: 3, tiles: [[1, 'a'], [2, 'b'], [3, 'c'], [4, 'd'], [5, 'e'], [6, 'f']], chips: [], today: '', rankTo: 'cabo' };
+      const S = { win: true, manual: false, hang: false, got: 12, unit: 'repeticiones', where: 'x', sub: 'y', pct: 90, stars: 3, tiles: [[1, 'a'], [2, 'b'], [3, 'c']], chips: [], rankTo: 'cabo' };
       RA.endMenu('¡VICTORIA!', S); frame(1); const b = RA.activeWidgets().find(w => w.label === 'Subir a Cabo'); if (b) b.onPress(); frame(1);
       const gone = !RA.activeWidgets().some(w => /^Subir a/.test(w.label)); log(`   summary offers “Subir a Cabo” ${!!b} → rank ${RA.settings.rank}, offer gone ${gone}`);
       if (!b || RA.settings.rank !== 'cabo' || !gone) errors.push('rangos: el resumen debería ofrecer subir de rango con un botón'); }
@@ -2366,9 +2375,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (uneven < 4 || msgs) errors.push('curl con barra: con las dos manos subiendo (una vista algo más baja o más tarde) debería contar sin avisar'); }
   // aguantando la barra a la altura de los hombros, el disparo se carga (como abajo en la sentadilla) y sale al bajarla
   { const r0 = RA.stats.reps; let pow = 0, early = false;
-    for (let i = 0; i < 240; i++) { const up = i >= 10 && i < 180; for (const sd of ['left', 'right']) XRS.hands[sd].y = up ? 1.42 : 0.95; frame(1, 16, xrFrame);
+    for (let i = 0; i < 380; i++) { const up = i >= 10 && i < 310; for (const sd of ['left', 'right']) XRS.hands[sd].y = up ? 1.42 : 0.95; frame(1, 16, xrFrame); // (4,8 s arriba: ×3 llega a los 3,5 s)
       if (up && RA.stats.reps > r0) early = true; const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); }
-    log(`curl con barra XR aguantando 2,7 s arriba: disparo ×${pow} · ${RA.stats.reps - r0} rep · salió antes de bajar ${early}`);
+    log(`curl con barra XR aguantando 4,8 s arriba: disparo ×${pow} · ${RA.stats.reps - r0} rep · salió antes de bajar ${early}`);
     if (pow < 3 || early || RA.stats.reps - r0 !== 1) errors.push('curl: aguantar la pesa a la altura de los hombros debería cargar el disparo (×3 o más) y dispararlo al bajarla'); }
   // la kettlebell agarrada por el asa con las dos manos (los puños juntos): las gafas confunden las manos pegadas. Un salto
   // suelto de una mano no dispara; con una sola a la vista, o perdiéndose por turnos, cuenta cada subida una vez; perdidas

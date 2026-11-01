@@ -87,7 +87,10 @@ No las cambies sin preguntarle.
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 - Para animar a volver (`src/73_career.js`): experiencia y nivel con título y colores desbloqueables (solo se ven),
   misiones del día con su cofre, campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
-  estrellas) y, en el resumen, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
+  estrellas) y, en Progreso, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
+- El resumen de la ronda, lo esencial (opción A elegida): dónde acabó y el ejercicio, el número grande, la medalla y las
+  perfectas, tres casillas (puntos, tiempo y kcal), un solo logro (el más importante) y dos botones, «Otra ronda» y «Menú
+  principal». Nada de nivel, semana, mejor ronda, derribados, precisión ni combo.
 - Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**.
 - Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
   mientras se ve, no sale nada (ni enemigos ni orbes).
