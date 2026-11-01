@@ -94,7 +94,7 @@ function drawFoeCard(b, c, W, H, it, tc) {
 }
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card;
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card; this.paint = o.paint; // (paint: lo impreso en la tecla, dibujado a mano: las fichas del menú principal)
     this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -106,6 +106,7 @@ class Btn {
       if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
       if (this.card) { drawFoeCard(this, c, W, H, this.card, tc); this.p.tex.needsUpdate = true; return; }
+      if (this.paint) { this.paint(c, W, H, tc); this.p.tex.needsUpdate = true; return; }
       if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, tc); // (sin texto: el galón solo, en medio)
       const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
       fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
@@ -121,6 +122,7 @@ class Btn {
     c.fillStyle = this.hover ? '#1a0716' : s[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; } // botones con icono (los de la música)
     if (this.card) { drawFoeCard(this, c, W, H, this.card, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; }
+    if (this.paint) { this.paint(c, W, H, this.hover ? '#1a0716' : s[1]); this.p.tex.needsUpdate = true; return; }
     if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, this.hover ? '#1a0716' : s[1]); // galones a la izquierda
     const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.18 : 0; // (el texto se aparta de la raya de color o de los galones)
     fitFont(c, this.label, W - H * 0.4 - ax * 2, Math.round(H * (this.font || 0.44)), (this.style === 'value' ? '700 %px ' : '700 %px ') + FB);
@@ -479,6 +481,7 @@ function openMenu(rows, opts = {}) {
     if (r.t === 'title') {
       const side = Math.max(closable && !i ? CLOSE_W : 0, r.lead ? LEAD_W : 0); // (el botón de la izquierda, EMPEZAR, y el de cerrar, a los lados)
       c.fillStyle = r.color || opts.accent || '#ffd166'; c.textAlign = 'center'; c.textBaseline = 'middle'; fitFont(c, r.text, (CW - 0.02 - side * 2) * sc, 60, '%px ' + FD); c.fillText(r.text, (X0 + CW / 2 + MW / 2) * sc, (H / 2 - cy) * sc + 4);
+      if (r.big) { const bw = CW - 2 * (CLOSE_W + GAP); addW(new Btn(r.big.label, bw, h, r.big.onPress, { style: 'primary', font: 0.5 }), X0 + CW / 2, cy); } // (en vez del título, el botón grande: EMPEZAR)
       if (r.lead) addW(new Btn(r.lead.label, LEAD_W, Math.min(h, 0.056), r.lead.onPress, { style: r.lead.style || 'primary', font: 0.42 }), X0 + LEAD_W / 2, cy);
       if (closable && !i) addW(new Btn('✕ Cerrar', CLOSE_W, Math.min(h, 0.052), menuClose, { style: 'ghost', font: 0.42 }), X0 + CW - CLOSE_W / 2, cy);
     }
@@ -490,7 +493,9 @@ function openMenu(rows, opts = {}) {
     else if (r.t === 'canvas') { r.draw(c, (X0 + MW / 2) * sc, (H / 2 - cy - h / 2) * sc, CW * sc, h * sc); if (r.mount) r.mount(group, X0, cy, CW, h); } // dibujo libre (el resumen de la ronda)
     else if (r.t === 'btns' || r.t === 'tabs') {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
-      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal'); addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint }), x + w / 2, cy); x += w + GAP; });
+      r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal');
+        if (it.sep) { if (!it.blank) c.fillStyle = 'rgba(255,255,255,0.25)'; if (!it.blank) c.fillRect((x + w / 2 + MW / 2) * sc - 2, (H / 2 - cy - h * 0.4) * sc, 4, h * 0.8 * sc); x += w + GAP; return; } // un separador (raya vertical), sin tecla
+        addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint, paint: it.paint }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'cards') { // fichas que se marcan y desmarcan (los enemigos: foeCardRows), sin etiqueta, a todo el ancho
       const cols = r.cols, w = (CW - GAP * (cols - 1)) / cols, sel = () => foeList(r.key), btns = [];
       r.items.forEach((it, k) => { const x = X0 + (k % cols) * (w + GAP) + w / 2, yy = cy + h / 2 - CARD_H / 2 - Math.floor(k / cols) * (CARD_H + GAP);

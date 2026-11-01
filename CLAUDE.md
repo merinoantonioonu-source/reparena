@@ -43,6 +43,8 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
 - Cuidado con poner `//` en mitad de una línea de una sola línea: comenta todo lo que sigue.
 - Ajustes: todos en `SCHEMA` (`src/00_core.js`), con grupo (`g`), condición (`cond`), explicación (`hint`) y `relayout`
   si cambia qué otros campos se ven. El formulario de la página y los menús del juego salen de ahí.
+- En las gafas, no cambies la capa de imagen (`XRWebGLLayer`) a menudo: cada una ocupa otra memoria de vídeo y, con
+  muchos cambios, las gafas pintan planos de basura blancos y azules. La foveación se cambia en la capa de ahora.
 - Los modelos 3D están en `models/` (Quaternius, cada pack con su licencia). Los sonidos se pueden sustituir con
   archivos en `sounds/` (lista en `sounds/LEEME.md`, que el build copia a la página).
 - Los simulacros de las pruebas son limitados:
@@ -108,6 +110,7 @@ No las cambies sin preguntarle.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
+- La diana de serie (líneas de enfoque): rayas cortas que se mueven (giran despacio y por ellas corren tramos hacia fuera).
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
   - Por defecto (VR), a un lado (izquierda o derecha, configurable), el doble de grande y siempre a la vista, por fuera de
     las compuertas.
@@ -140,13 +143,12 @@ No las cambies sin preguntarle.
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:
   - lo poco usado va en submenús (Sonido, Entorno, Ajustes…);
-  - el menú principal: arriba, el **modo** (Combate, Arcos, Barras, Toques) en pestañas con su color, y debajo lo elegido
-    (modo · ejercicio · rango); a la izquierda, sus partes con su color: Ronda (el ejercicio), Dificultad (rango, «Al
-    fallo», lo del ojo), Rivales y armas (en Combate), Sesiones (si hay) y Opciones (Sonido, Entorno y Ajustes, en
-    pestañas), el reproductor de Spotify (pequeño, en un cuadrado, con rótulo móvil) y Salir; a la derecha, lo de la parte
-    elegida, con su color; EMPEZAR, pequeño, arriba a la izquierda del título; Progreso (nivel, misiones, campaña y
-    semana) entre Sesiones y Opciones; en Ajustes, las pestañas de los modos se
-    llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
+  - el menú principal, simple (el usuario lo complica si quiere, en Opciones): arriba, **EMPEZAR** grande (en lugar del
+    título; con Sesiones, EMPEZAR SESIÓN); debajo, las cifras en fichas (nivel, hoy, racha y misiones; al tocarlas,
+    Progreso); luego el **modo** (Combate, Arcos, Barras, Toques) con su color y, tras un separador, **Sesiones**; con un
+    modo, sus ejercicios y la dificultad (galones, «Al fallo», la ronda en una ficha y lo del ojo); con Sesiones, la
+    sesión bloque a bloque, legible; Spotify; y **Opciones ▸** (Rivales y armas, Progreso, Sonido, Entorno y Ajustes, en
+    pestañas) y Salir; en Ajustes, las pestañas de los modos se llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;
   - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla);
