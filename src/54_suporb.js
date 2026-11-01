@@ -145,7 +145,7 @@ function sorbStep(dt, k = sorbCharge()) {
 function sorbMax() {
   if (!SORB.g.visible) return;
   SORB.mx = 0; SORB.flash.visible = SORB.wave.visible = true;
-  const p = SORB.pos.clone(); fx.sparks(p, 70, [1, 0.3, 0.45], 3.6, 0.035); fx.electric(p, 24); fx.glow(p, [1, 0.6, 0.7], 1.3, 0.25); fx.glow(p, [1, 1, 1], 0.5, 0.1);
+  const p = SORB.pos.clone(); fx.sparks(p, 70, [1, 0.3, 0.45], 3.6, 0.035); fx.electric(p, 24); sorbAway(94); fx.glow(p, [1, 0.6, 0.7], 1.3, 0.25); fx.glow(p, [1, 1, 1], 0.5, 0.1);
   SND.zap(p); hapticBoth(0.8, 120);
 }
 function sorbMaxStep(dt) {
@@ -159,9 +159,13 @@ function sorbMaxStep(dt) {
 function sorbFire() {
   if (!SORB.g.visible || SORB.vis <= 0) return null;
   const p = SORB.pos.clone(); SORB.burst = 0.18; SORB.on = false;
-  fx.glow(p, [1, 0.2, 0.3], 0.35 + 0.25 * SORB.k, 0.18); fx.sparks(p, 18 + Math.round(16 * SORB.k), [1, 0.35, 0.5], 2.4, 0.03);
+  fx.glow(p, [1, 0.2, 0.3], 0.35 + 0.25 * SORB.k, 0.18); { const n = 18 + Math.round(16 * SORB.k); fx.sparks(p, n, [1, 0.35, 0.5], 2.4, 0.03); sorbAway(n); }
   return p;
 }
 // Si se pierde la carga: se deshace en chispas
-function sorbFizzle() { SORB.fizz = 0.3; fx.sparks(SORB.pos.clone(), 10, [1, 0.25, 0.35], 1.2, 0.02); }
+function sorbFizzle() { SORB.fizz = 0.3; fx.sparks(SORB.pos.clone(), 10, [1, 0.25, 0.35], 1.2, 0.02); sorbAway(10); }
+// Las chispas de la bola salen hacia fuera, nunca hacia la cara: la bola está a un metro y, pegadas a los ojos, se veían
+// como cuadrados enormes (blancos, morados y azules) que tapaban media vista. Las últimas n chispas: la parte de su
+// velocidad que iba hacia ti, rebotada
+function sorbAway(n) { const d = _sorbB.copy(head.p).sub(SORB.pos).normalize(); for (const o of PADD.p.slice(-n)) { if (!o.v) continue; const k = o.v.dot(d); if (k > 0) o.v.addScaledVector(d, -2 * k); } }
 function sorbReset() { SORB.on = false; SORB.k = 0; SORB.vis = 0; SORB.burst = 0; SORB.fizz = 0; SORB.init = false; SORB.mx = -1; SORB.pow = 0; SORB.g.visible = SORB.num.visible = SORB.flash.visible = SORB.wave.visible = false; }
