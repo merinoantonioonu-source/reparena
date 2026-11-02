@@ -193,6 +193,9 @@ No las cambies sin preguntarle.
 **Página web**
 - Lo primero que se ve son los botones de entrar (realidad mixta, VR, ordenador).
 - Luego el modo y el ejercicio en fichas compactas, y después las opciones.
+- El panel de la izquierda es un índice: cada apartado (`<section>` de `.main` con `id` y `data-toc`) y, debajo del que se
+  ve, sus subapartados (los `h3` a la vista); a la derecha, solo ese apartado (`pageNav`, `src/68_prefs.js`). En el móvil,
+  una barra fija arriba que se despliega. Un apartado nuevo: con su `id` y su `data-toc`.
 - Las estadísticas del día, con color, animación y la racha, son un incentivo para volver.
 
 Cuando una petición sea ambigua o haya varias formas razonables de hacerla, **dale al usuario propuestas** (o modelos

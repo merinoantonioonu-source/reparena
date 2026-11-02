@@ -40,7 +40,7 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);
   .wrap{display:flex;flex-direction:column;gap:24px;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
   .side,.main{display:contents}
   .main>*{order:10}
-  .brand{order:1}.side .status{order:2}.todayMini{order:3}.secMode{order:4}.secEx{order:5}.pick{order:6}.side .demo{order:7}.side .estimate{order:8}
+  .brand{order:1}.side .status{order:2}.todayMini{order:4}.pick{order:11}.side .demo{order:12}.side .estimate{order:13}
   .pick{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px}
   .todayMini a{border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:var(--panel)}
   .go{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;padding:10px max(12px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));background:rgba(16,13,26,.94);border-top:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -242,11 +242,33 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .status.sp{margin:8px 0 0}
 .session p{margin:0 0 12px;max-width:70ch;color:var(--muted)}
 .seslist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
-.main > section > h2,.main > section > .exHead > h2,.main > section > .todayHead > h2{cursor:pointer;user-select:none}
-.main > section > h2::after,.main > section > .exHead > h2::after,.main > section > .todayHead > h2::after{content:'▾';display:inline-block;margin-left:.5em;font-size:.7em;opacity:.6;transition:transform .15s}
-.main > section.collapsed > h2::after,.main > section.collapsed > .exHead > h2::after,.main > section.collapsed > .todayHead > h2::after{transform:rotate(-90deg)}
-.main > section.collapsed > :not(h2):not(.exHead):not(.todayHead){display:none !important}
-.main > section.collapsed > .exHead > :not(h2){display:none !important}
+/* El índice (panel de la izquierda): cada apartado y, debajo del que se ve, sus subapartados; a la derecha, solo ese apartado */
+.main > section:not(.on){display:none !important}
+.main section,.main h3{scroll-margin-top:16px}
+.toc{border-top:1px solid var(--line);padding-top:10px}
+.toc ol{list-style:none;margin:0;padding:0}
+.tocBar{display:none}
+.tocList>li>a{display:block;padding:7px 10px;border-radius:10px;color:var(--fg);text-decoration:none;font-weight:600;font-size:.92rem;line-height:1.25}
+.tocList a:hover{background:var(--panel2)}
+.tocList>li.on>a{background:rgba(60,240,198,.14);color:var(--teal)}
+.tocList ol{margin:2px 0 6px 14px;border-left:2px solid var(--line);padding-left:6px}
+.tocList ol a{display:block;padding:4px 8px;font-size:.84rem;color:var(--muted);text-decoration:none;border-radius:8px;line-height:1.25}
+.tocList ol a.on{color:var(--fg);background:var(--panel2)}
+.main h3.flash{animation:tocFlash 1.4s ease-out}
+@keyframes tocFlash{0%{background:rgba(60,240,198,.35)}100%{background:transparent}}
+.secPager{display:flex;gap:10px;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px}
+.secPager .btn{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.secPager .next{margin-left:auto}
+@media (max-width:899px){
+  .toc{order:3;position:sticky;top:0;z-index:15;align-self:stretch;width:auto;border:0;padding:0;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0 calc(-1 * max(16px,env(safe-area-inset-right,0px)));max-width:none !important;background:rgba(16,13,26,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .tocBar{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:0;background:none;color:var(--fg);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+  .tocIco{font-size:1.2rem;color:var(--teal)}.tocNow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tocHint{font-size:.78rem;color:var(--muted);font-weight:500}
+  .toc .tocList{display:none}
+  .toc.open .tocList{display:block;position:absolute;left:0;right:0;top:100%;max-height:72vh;overflow-y:auto;padding:8px 12px 14px;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .main section,.main h3{scroll-margin-top:60px}
+  .secPager{order:30}
+  body:not([data-sec="secMode"]):not([data-sec="secEx"]) .pick,body:not([data-sec="secMode"]):not([data-sec="secEx"]) .side .demo,body:not([data-sec="secMode"]):not([data-sec="secEx"]) .side .estimate{display:none}
+  body[data-sec="todayBox"] .todayMini{display:none}
+}
 .sesrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .sesrow .expick{flex:1 1 8em;max-width:11.5em;min-height:38px;padding:3px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:inherit;font-size:.8rem;line-height:1.2;text-align:left;cursor:pointer;display:flex;align-items:center;gap:6px}
 .sesrow .expick span{flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -337,6 +359,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <button class="btn" id="btnPreview"><span class="lg">Probar en el ordenador</span><span class="sm">Probar</span></button>
     </div>
     <p class="status" id="xrStatus"></p>
+    <!-- El índice: cada apartado (y debajo, los subapartados del que se ve) enseña a la derecha solo lo suyo. En el móvil,
+         una barra fija arriba que se despliega -->
+    <nav class="toc" id="toc" aria-label="Apartados de la página"></nav>
     <div class="pick" id="pickBox" aria-live="polite"></div>
     <div class="demo"><canvas id="demoCv" width="720" height="420" aria-label="Animación del ejercicio elegido: cómo se hace y qué pasa al hacerlo"></canvas></div>
     <p class="estimate" id="estimate"></p>
@@ -344,8 +369,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   </aside>
 
   <div class="main">
-  <section class="today" id="todayBox" aria-live="polite"></section>
-  <section class="hist">
+  <section class="today" id="todayBox" data-toc="Hoy" aria-live="polite"></section>
+  <section class="hist" id="secHist" data-toc="Progreso e historial">
     <h2>Tu progreso e historial en este dispositivo</h2>
     <div class="stats" id="progBox"></div>
     <div class="tablebox"><table>
@@ -354,7 +379,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     </table></div>
   </section>
 
-  <section class="secMode">
+  <section class="secMode" id="secMode" data-toc="1 · Modo de juego">
     <h2>1 · Modo de juego</h2>
     <div class="cards modes">
       <label class="card"><input type="radio" name="mode" id="mode-combat" value="combat">
@@ -373,7 +398,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="modeInfo" id="modeInfo"></p>
   </section>
 
-  <section class="secEx">
+  <section class="secEx" id="secEx" data-toc="2 · Ejercicio">
     <div class="exHead"><h2>2 · Ejercicio <span class="count" id="exCount"></span></h2><div id="exSortBox"></div></div>
     <div class="cards exs">
       <label class="card"><input type="radio" name="exercise" id="ex-squat" value="squat">
@@ -452,13 +477,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="note" id="exNote" hidden>El modo Arcos es solo para sentadillas.</p>
   </section>
 
-  <section class="secCommon">
+  <section class="secCommon" id="secCommon" data-toc="3 · Opciones comunes">
     <h2>3 · Opciones comunes</h2>
     <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
   </section>
 
-  <section class="music">
+  <section class="music" id="secMusic" data-toc="Sonido y música">
     <h2>Sonido y música</h2>
     <p class="note">Común a todos los modos y ejercicios. En el juego, todo esto está en «Sonido ▸».</p>
     <div class="groups" id="soundGroups"></div>
@@ -490,7 +515,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p>No hace falta abrir la app de Spotify: basta con pulsar Play en el juego. Si el navegador no puede reproducir Spotify, el menú lo dice y la música sonará en otro dispositivo tuyo (el mando funciona igual). Si la música ya suena en otro dispositivo, el menú ofrece «Que suene en las gafas». Al acabar la partida, la música se apaga poco a poco en vez de cortarse. En una sesión, entre bloques sigue sonando la canción del que acaba y, al empezar el siguiente, se funde con la suya.</p>
   </section>
 
-  <section class="secSpec">
+  <section class="secSpec" id="secSpec" data-toc="4 · Opciones del modo y el ejercicio">
     <h2 id="specTitle">4 · Opciones del modo y el ejercicio</h2>
     <p class="note">Solo las que sirven para lo que has elegido arriba.</p>
     <p class="levelnote" id="levelNote"></p>
@@ -514,13 +539,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 
 
 
-  <section class="secDev" id="devSection" hidden>
+  <section class="secDev" id="devSection" data-toc="Tabla del desarrollador" hidden>
     <h2>Tabla de dificultad (desarrollador)</h2>
     <p class="note">Solo se ve en modo desarrollador. Para cada modo y ejercicio, los valores de cada rango y lo que ve el jugador en su menú (el ojo). Cuando la tengas, pulsa <b>Exportar</b> y pégamela: la dejo de serie en el juego para todos.</p>
     <div id="devTable"></div>
   </section>
 
-  <section class="session">
+  <section class="session" id="secSession" data-toc="Sesión de entrenamiento">
     <h2>Sesión de entrenamiento</h2>
     <p>Encadena bloques: cada uno es un modo, un ejercicio y cuántas repeticiones (en colgado, segundos). En el juego pulsa <b>EMPEZAR SESIÓN</b> en el menú: los bloques se juegan seguidos, con un descanso entre ellos y un resumen al final. Cada bloque se reparte en oleadas de unas 10 repeticiones y la última trae jefe. Tus ajustes no cambian. Para cambiar un bloque de sitio, arrástralo por su asa (los puntos de la izquierda, junto al número) y suéltalo donde quieras. Cada bloque juega con el rango de su ejercicio (cada ejercicio guarda el suyo); con los galones le pones otro solo para ese bloque.</p>
     <div class="seslist" id="sesList"></div>
@@ -544,7 +569,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   </section>
 
 
-  <section class="how">
+  <section class="how" id="secHow" data-toc="Dentro del juego">
     <h2>Dentro del juego</h2>
     <p class="lede">Cada repetición bien hecha es un disparo. Baja hasta abajo para cargar y vuelve arriba para soltarlo. Las repeticiones a medias no cuentan.</p>
     <ul>
@@ -579,7 +604,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
   </section>
 
 
-  <section class="sounds" id="soundsBox">
+  <section class="sounds" id="soundsBox" data-toc="Sonidos que puedes cambiar">
 <h2>Sonidos que puedes cambiar</h2>
 <p class="note">Sube a la carpeta <code>sounds/</code> del repositorio un archivo <code>.mp3</code>, <code>.ogg</code> o <code>.wav</code> con el nombre exacto (por ejemplo <code>rayo.mp3</code>) y el juego lo usará en lugar del sonido sintetizado. En GitHub: carpeta <code>sounds</code> → <b>Add file → Upload files</b> → <b>Commit changes</b>.</p>
 <p class="note">Pulsa cualquier sonido de la lista para <b>escucharlo como suena ahora en el juego</b>: si es tu archivo, pone «tu archivo»; si no, «sintetizado». Así sabes si te merece la pena cambiarlo.</p>
@@ -681,6 +706,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 <button type="button" class="snd" data-snd="arco-zumbido" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>arco-zumbido</code><span>Zumbido de los arcos de energía en Arcos.<em class="sndsrc" aria-live="polite"></em></span></button>
 </div>
 </section>
+  <div class="secPager" id="secPager"></div>
   </div>
 </main>
 
@@ -9001,20 +9027,67 @@ function uiSave(k, v) { store(UI_KEY, Object.assign(uiPrefs(), { [k]: v })); }
 
 const escHTML = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// En la página: cada sección se pliega y despliega pulsando su título (y se acuerda de cómo la dejaste)
-function pageSections() {
-  const main = $('.main'); if (!main || !main.addEventListener) return;
-  const ui = store(UI_KEY) || {}, shut = new Set(ui.shut || ['how', 'soundsBox']); // (al principio, plegadas solo las largas: cómo se juega y los sonidos)
-  const keyOf = sec => sec.id || (sec.className || '').split(' ').filter(c => c && c !== 'collapsed')[0] || '';
-  const all = () => { try { return [...main.querySelectorAll(':scope > section')]; } catch (e) { return []; } };
-  for (const sec of all()) if (shut.has(keyOf(sec))) sec.classList.add('collapsed');
-  main.addEventListener('click', ev => {
-    const h = ev.target.closest && ev.target.closest('h2'); if (!h) return;
-    const sec = h.closest('section'); if (!sec || sec.parentElement !== main) return;
-    if (h.parentElement !== sec && !/exHead|todayHead/.test(h.parentElement.className)) return;
-    sec.classList.toggle('collapsed');
-    const u = store(UI_KEY) || {}; u.shut = all().filter(x => x.classList.contains('collapsed')).map(keyOf).filter(Boolean); store(UI_KEY, u);
+/* ---------- El índice de la página ---------- */
+// A la izquierda, los apartados de la página y, debajo del que se ve, sus subapartados (los títulos h3 a la vista, como los
+// grupos de ajustes que valen para lo elegido); a la derecha, solo ese apartado. En el móvil, una barra fija arriba que se
+// despliega. Se acuerda del último apartado visto
+const NAV = { cur: '', open: false, sig: '', t: 0 };
+const navSecs = () => { const m = $('.main'); if (!m || !m.querySelectorAll) return []; try { return [...m.querySelectorAll(':scope > section')].filter(s => s.id && !s.hidden); } catch (e) { return []; } };
+const navText = el => { let t = ''; for (const n of el.childNodes || []) { if (n.nodeType === 3) t += n.textContent; else if (n.nodeType === 1 && n.tagName !== 'BUTTON' && !(n.classList && (n.classList.contains('count') || n.classList.contains('qm')))) t += n.textContent; } return t.replace(/\s+/g, ' ').trim(); };
+const navName = s => s.dataset.toc || navText(s.querySelector('h2') || s);
+function navSubs(sec) {
+  const out = [];
+  sec.querySelectorAll('h3').forEach((h, i) => {
+    for (let e = h; e && e !== sec; e = e.parentElement) if (e.hidden) return;
+    const t = navText(h); if (!t) return; if (!h.id) h.id = sec.id + '-' + i; out.push({ id: h.id, t });
   });
+  return out;
+}
+function tocRender(force) {
+  const nav = $('#toc'), secs = navSecs(); if (!nav || !secs.length) return;
+  if (!secs.some(s => s.id === NAV.cur)) { const last = uiPrefs().pageSec; NAV.cur = secs.some(s => s.id === last) ? last : secs[0].id; }
+  const cur = secs.find(s => s.id === NAV.cur), subs = navSubs(cur), i = secs.indexOf(cur);
+  const sig = secs.map(navName).join('|') + '#' + cur.id + '#' + subs.map(x => x.id + x.t).join('|') + NAV.open;
+  secs.forEach(s => s.classList.toggle('on', s === cur)); document.body.dataset.sec = cur.id;
+  if (sig === NAV.sig && !force) return; NAV.sig = sig;
+  nav.innerHTML = `<button type="button" class="tocBar" data-nav="toggle" aria-expanded="${NAV.open}" aria-controls="tocList"><span class="tocIco" aria-hidden="true">☰</span><span class="tocNow">${escHTML(navName(cur))}</span><span class="tocHint">Apartados ${NAV.open ? '▴' : '▾'}</span></button>
+    <ol class="tocList" id="tocList">${secs.map(s => `<li class="${s === cur ? 'on' : ''}"><a href="#${s.id}" data-nav="${s.id}"${s === cur ? ' aria-current="true"' : ''}>${escHTML(navName(s))}</a>${s === cur && subs.length ? `<ol>${subs.map(x => `<li><a href="#${x.id}" data-nav="${s.id}" data-sub="${x.id}">${escHTML(x.t)}</a></li>`).join('')}</ol>` : ''}</li>`).join('')}</ol>`;
+  nav.classList.toggle('open', NAV.open);
+  const pg = $('#secPager'), prev = secs[i - 1], next = secs[i + 1]; // (abajo, el anterior y el siguiente: para seguir sin volver al índice)
+  if (pg) pg.innerHTML = `${prev ? `<button type="button" class="btn small" data-nav="${prev.id}">◂ ${escHTML(navName(prev))}</button>` : ''}${next ? `<button type="button" class="btn small alt next" data-nav="${next.id}">${escHTML(navName(next))} ▸</button>` : ''}`;
+}
+function navGo(id, sub) {
+  NAV.cur = id; NAV.open = false; uiSave('pageSec', id); tocRender(true); if (typeof document.getElementById !== 'function') return;
+  const el = sub && document.getElementById(sub), sec = document.getElementById(id), go = el || sec;
+  if (go && go.scrollIntoView) go.scrollIntoView({ block: 'start' });
+  if (el && el.classList) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  if (sub && typeof document.querySelectorAll === 'function') document.querySelectorAll('.tocList ol a').forEach(a => a.classList.toggle('on', a.dataset.sub === sub));
+}
+// un enlace a algo de la página (#…): abre su apartado y va allí
+function navToHash(hash) {
+  const el = hash && hash.length > 1 && document.getElementById(decodeURIComponent(hash.slice(1))); if (!el) return false;
+  let sec = el; while (sec && !(sec.tagName === 'SECTION' && sec.parentElement && sec.parentElement.classList.contains('main'))) sec = sec.parentElement;
+  if (!sec || !sec.id) return false; navGo(sec.id, el !== sec ? el.id : null); return true;
+}
+function pageNav() {
+  const nav = $('#toc'); if (!nav || !nav.addEventListener) return;
+  const onNav = ev => {
+    const a = ev.target && ev.target.closest ? ev.target.closest('[data-nav]') : null; if (!a) return; ev.preventDefault();
+    if (a.dataset.nav === 'toggle') { NAV.open = !NAV.open; tocRender(true); return; }
+    navGo(a.dataset.nav, a.dataset.sub || null);
+  };
+  nav.addEventListener('click', onNav); const pg = $('#secPager'); if (pg && pg.addEventListener) pg.addEventListener('click', onNav);
+  if (typeof document.addEventListener === 'function') document.addEventListener('click', ev => { // los demás enlaces #… de la página (p. ej. el resumen de hoy)
+    const a = ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null; if (!a || nav.contains(a)) return;
+    if (navToHash(a.getAttribute('href'))) ev.preventDefault();
+  });
+  if (typeof document.addEventListener === 'function') document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && NAV.open) { NAV.open = false; tocRender(true); } });
+  if (typeof addEventListener === 'function') addEventListener('hashchange', () => navToHash(location.hash));
+  // lo que cambia (los grupos de ajustes que valen, la tabla del desarrollador…): el índice, al día
+  const later = () => { clearTimeout(NAV.t); NAV.t = setTimeout(() => tocRender(), 120); };
+  if (typeof MutationObserver === 'function' && $('.main')) new MutationObserver(later).observe($('.main'), { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+  settingHooks.push(later);
+  tocRender(true); if (typeof location !== 'undefined' && location.hash) navToHash(location.hash);
 }
 
 /* =================== PASAR TUS DATOS A OTRO DISPOSITIVO (POR CÓDIGO) =================== */
@@ -15286,7 +15359,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); pageSections(); pageHelp(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); pageNav(); pageHelp(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();
