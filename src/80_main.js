@@ -70,8 +70,8 @@ function handSmooth(h, t) {
 // la tapan el puño, la otra mano o la pesa) y cuánto tardan las gafas en volver a verla. Sale en el resumen (modo
 // desarrollador), para ver en la partida de verdad de dónde vienen los cortes
 const TRK_MIN = 0.1, mkTrk = () => ({ obs: 0, seen: 0, n: 0, low: 0, high: 0, front: 0, sum: 0, max: 0, cur: 0, where: '', lastY: 0 });
-const TRK = { left: mkTrk(), right: mkTrk() };
-function trkReset() { TRK.left = mkTrk(); TRK.right = mkTrk(); }
+const TRK = { left: mkTrk(), right: mkTrk(), bar: null };
+function trkReset() { TRK.left = mkTrk(); TRK.right = mkTrk(); TRK.bar = { n: 0, none: 0, clasp: 0, dis: 0, max: 0, reps: 0 }; }
 function trkStep(dt) {
   if (!xrActive || preview || !['ready', 'play', 'rest'].includes(state)) return;
   for (const s of ['left', 'right']) {
@@ -87,7 +87,11 @@ function trkStep(dt) {
 function trkLine() {
   const f = s => { const T = TRK[s]; if (T.obs < 5) return null; const pct = Math.round(100 * T.seen / T.obs), avg = T.n ? T.sum / T.n : 0, n1 = v => v.toFixed(1).replace('.', ',');
     return `${s === 'left' ? 'izq.' : 'der.'} vista ${pct} %${T.n ? ` · ${T.n} ${T.n === 1 ? 'corte' : 'cortes'} (${T.low} abajo, ${T.front} delante, ${T.high} arriba) · vuelve en ${n1(avg)} s (máx. ${n1(T.max)})` : ' · sin cortes'}`; };
-  const L = f('left'), R = f('right'); return L || R ? 'Manos: ' + [L, R].filter(Boolean).join(' | ') : '';
+  const L = f('left'), R = f('right'), B = TRK.bar, pc = v => Math.round(100 * v / Math.max(1, B.n)) + ' %';
+  // con barra o kettlebell: cuánto se usaron las dos juntas, en cuánto no hubo ninguna que valiera o no coincidían, y el
+  // recorrido más alto que se vio (lo que pide, al lado)
+  const bar = B && B.n > 30 && (settings.exercise === 'curl2' || settings.exercise === 'press2') ? `Barra: juntas ${pc(B.clasp)} · sin mano válida ${pc(B.none)} · no coinciden ${pc(B.dis)} · recorrido máx. ${Math.round(B.max * 100)} cm (pide ${settings.exercise === 'curl2' ? settings.curlRange : settings.pressRange})` : '';
+  return [L || R ? 'Manos: ' + [L, R].filter(Boolean).join(' | ') : '', bar].filter(Boolean).join(' · ');
 }
 
 /* =================== PRUEBA EN EL ORDENADOR =================== */
@@ -98,17 +102,18 @@ const pvPitch = () => settings.exercise === 'superman' ? -0.35 : settings.exerci
 function pvPose() { PV.baseY = PV.y = pvBaseY(); camera.position.y = PV.y; camera.rotation.set(pvPitch(), 0, 0); camera.updateMatrixWorld(); head.p.copy(camera.position); head.q.copy(camera.quaternion); head.prev.copy(head.p); }
 const _pvw = new V3();
 // Flexión inchworm simulada: mientras Espacio está pulsado (o PV.iwAuto) avanza una repetición: te doblas, caminas con las
-// manos hasta la línea, vuelves igual al revés y te pones de pie. PV.iwSkip: solo llega a la mitad
+// manos hasta la línea, vuelves igual al revés y te pones de pie. PV.iwSkip: solo llega a la mitad; PV.iwPush: cuántas
+// flexiones hace en la plancha, al final del recorrido (cada una da más fuerza a la onda)
 function iwSim(dt) {
-  // la cabeza: de pie; se dobla; avanza bajando hasta la línea (PV.iwSkip: solo hasta la mitad); un momento en la plancha;
-  // vuelve andando con las manos y se pone de pie. Las manos, bajo la cabeza en el suelo
-  const T = [0.9, 2.4, 3.2, 4.7, 5.7, 6.4];
+  // la cabeza: de pie; se dobla; avanza bajando hasta la línea (PV.iwSkip: solo hasta la mitad); un momento en la plancha
+  // (con sus flexiones); vuelve andando con las manos y se pone de pie. Las manos, bajo la cabeza en el suelo
+  const np = PV.iwPush || 0, pl = 0.8 + 0.9 * np, T = [0.9, 2.4, 2.4 + pl, 3.9 + pl, 4.9 + pl, 5.6 + pl];
   if (PV.crouch || PV.iwAuto) { PV.iwT = (PV.iwT || 0) + dt; if (PV.iwT >= T[5]) PV.iwT = 0; }
   const u = PV.iwT || 0, S = IW_OFF(), z1 = S - 0.25, zEnd = PV.iwSkip ? lerp(z1, 0, 0.5) : 0.02, k = (a, b) => smooth(clamp((u - a) / (b - a), 0, 1));
   let y, z;
   if (u < T[0]) { y = lerp(1.6, 0.95, k(0, T[0])); z = lerp(S, z1, k(0, T[0])); }
   else if (u < T[1]) { y = lerp(0.95, 0.5, k(T[0], T[1])); z = lerp(z1, zEnd, k(T[0], T[1])); }
-  else if (u < T[2]) { y = 0.5; z = zEnd; }
+  else if (u < T[2]) { const w = u - T[1] - 0.4, ph = w > 0 && w < 0.9 * np ? (w % 0.9) / 0.9 : 0; y = 0.5 - 0.2 * Math.sin(ph * Math.PI); z = zEnd; } // (cada flexión: la cabeza baja 20 cm y sube)
   else if (u < T[3]) { y = lerp(0.5, 0.95, k(T[2], T[3])); z = lerp(zEnd, z1, k(T[2], T[3])); }
   else { y = lerp(0.95, 1.6, k(T[3], T[4])); z = lerp(z1, S, k(T[3], T[4])); }
   camera.position.copy(arena.localToWorld(_pvw.set(0, y, z))); PV.y = camera.position.y;

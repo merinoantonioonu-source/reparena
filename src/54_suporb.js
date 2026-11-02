@@ -82,7 +82,9 @@ function sorbAt(out, dt) {
   const cy = low ? Math.max(0.22, head.p.y - 0.12) : head.p.y - 0.32; // (el pecho)
   return out.set(head.p.x + Math.sin(SORB.yaw) * 1.0, cy + 0.012 * Math.sin(SORB.t * 1.7), head.p.z + Math.cos(SORB.yaw) * 1.0);
 }
-const _sorbU = new V3(), _sorbA = new V3(), _sorbB = new V3();
+const _sorbU = new V3(), _sorbA = new V3(), _sorbB = new V3(), _sorbL = new V3();
+// La bola es un obstáculo: los que andan la rodean y nadie la atraviesa (va con los sólidos del escenario, en la arena)
+function sorbSolid() { if (!SORB.g.visible || !SORB.on) return []; const l = arena.worldToLocal(_sorbL.copy(SORB.pos)); return [{ x: l.x, z: l.z, r: 0.26, ball: true }]; }
 // ¿Se ve la bola? Cuando lo que se carga son rayos: en Combate, sin pistolas que se lleven la carga y sin espadas
 const sorbFor = () => isCombat() && !swordActive() && !pistolOn();
 // La carga de ahora, de 0 a 1 (o -1: nada cargado): en el superman, el tiempo aguantado arriba; en el resto, el nivel
