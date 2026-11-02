@@ -1,10 +1,11 @@
 /* =================== PASAR TUS DATOS A OTRO DISPOSITIVO (POR CÓDIGO) =================== */
 // Sin servidor propio: en un dispositivo pulsas «Enviar» y sale un código de 8 cifras; en el otro lo escribes y se cargan
-// tus ajustes, perfiles, bloques de sesión, favoritos, rangos, historial y la música elegida. Del código salen a la vez
+// tus ajustes, bloques de sesión, favoritos, rangos, historial y la música elegida. Del código salen a la vez
 // la clave (AES-GCM, derivada con PBKDF2) y el canal de un servicio público de mensajes (ntfy.sh) donde se dejan los datos
 // cifrados unas horas: el servicio no puede leerlos y, sin el código, nadie sabe en qué canal están. Lo que depende de
 // cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
+// ('reparena3-profiles': los perfiles de antes, que ya no se usan; va para que una sesión guardada con ellos los encuentre)
 const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-rankfit', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify', 'reparena3-exsongs',
   'reparena3-career', 'reparena3-ghosts', 'reparena3-dev', 'reparena3-devon']; // (tu carrera, tus mejores rondas y la tabla y el modo del desarrollador, también)
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
@@ -49,9 +50,9 @@ function xferPack() {
   return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
 }
 function xferSummary(p) {
-  const d = p.d || {}, prof = (d['reparena3-profiles'] || []).length, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
+  const d = p.d || {}, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
   const sv = (d['reparena3-sessions'] || []).length;
-  return `${prof} ${prof === 1 ? 'perfil' : 'perfiles'} · ${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${sv} ${sv === 1 ? 'sesión guardada' : 'sesiones guardadas'} · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
+  return `${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${sv} ${sv === 1 ? 'sesión guardada' : 'sesiones guardadas'} · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
 }
 // Enviar: devuelve el código
 async function xferSend() {
@@ -102,7 +103,7 @@ function xferApply(p, reload = true, merged = false) {
 // cambiar algo (acabar una ronda, tocar un ajuste…). Al abrir la página, al volver a ella y al entrar en las gafas, si el
 // otro aparato tiene datos más recientes, pregunta si importarlos. Firebase solo guarda algo ilegible en un hueco cuyo
 // nombre sale del código (y sus reglas no dejan listar nada). Al subir se juntan las partidas de los dos: el historial no
-// pierde nada aunque se diga «Ahora no»; lo demás (ajustes, perfiles, rangos, carrera) es el del que cambió lo último
+// pierde nada aunque se diga «Ahora no»; lo demás (ajustes, rangos, carrera) es el del que cambió lo último
 const SYNC_DB = 'https://reparena-62309-default-rtdb.europe-west1.firebasedatabase.app'; // (la Realtime Database del proyecto «reparena»; vacía: sin sincronización)
 const SYNC = { db: SYNC_DB, t: null, busy: false, applying: false, ready: false, salt: 'reparena-sync-v1', key: 'reparena3-sync' };
 const syncSt = () => store(SYNC.key) || {}; // (lo de este aparato, que no viaja: el código, quién es y cuándo cambió o subió algo)
@@ -119,7 +120,7 @@ function syncWhen(at) {
 async function syncUrl(sub = '') { return `${SYNC.db.replace(/\/+$/, '')}/sync/${xferHex(await crypto.subtle.digest('SHA-256', _xEnc.encode('reparena-sync:' + syncSt().code)))}${sub}.json`; }
 async function syncGet(sub) { const r = await fetch(await syncUrl(sub)); if (!r.ok) throw new Error('Firebase respondió ' + r.status); return r.json(); }
 // Cada ajuste lleva su hora: al guardar algo que viaja, se apunta la de cada campo que cambió (en los ajustes, cada ajuste;
-// en lo que no es una ficha de campos, como los perfiles o el historial, la clave entera) y, con un código, sube a los 4 s.
+// en lo que no es una ficha de campos, como las sesiones o el historial, la clave entera) y, con un código, sube a los 4 s.
 // Así, al juntar lo de los dos aparatos, de cada ajuste gana el que se cambió más tarde, venga de donde venga: un ajuste
 // tocado en el PC no se pierde porque luego juegues en las gafas sin importar. Lo que la página guarda sola al cargarse
 // (las misiones del día, los ajustes recolocados…) no cuenta: si no, al abrirla siempre parecería lo más nuevo (SYNC.ready)
@@ -218,7 +219,7 @@ async function syncLink(code) {
   return syncCheck();
 }
 function syncUnlink() { clearTimeout(SYNC.t); syncSet({ code: null }); }
-const syncAskText = m => { const n = m.news || {}, parts = [n.sets ? `${n.sets} ${n.sets === 1 ? 'ajuste' : 'ajustes'}` : '', n.other ? `${n.other} ${n.other === 1 ? 'cambio' : 'cambios'} más (perfiles, rangos, sesiones…)` : '', n.games ? `${n.games} ${n.games === 1 ? 'partida' : 'partidas'}` : ''].filter(Boolean);
+const syncAskText = m => { const n = m.news || {}, parts = [n.sets ? `${n.sets} ${n.sets === 1 ? 'ajuste' : 'ajustes'}` : '', n.other ? `${n.other} ${n.other === 1 ? 'cambio' : 'cambios'} más (rangos, sesiones…)` : '', n.games ? `${n.games} ${n.games === 1 ? 'partida' : 'partidas'}` : ''].filter(Boolean);
   return `${m.from ? m.from[0].toUpperCase() + m.from.slice(1) : 'El otro aparato'} tiene cambios más recientes (${syncWhen(m.at)}${parts.length ? ': ' + parts.join(', ') : ''}). ¿Importarlos? Se queda lo más nuevo de cada ajuste (lo que hayas cambiado aquí después no se toca) y se juntan las partidas.`; };
 
 /* ---------- En el juego ---------- */
@@ -227,9 +228,9 @@ function xferMenu(back, view = {}) {
     fn().then(r => { XFER.busy = false; again(next(r)); }).catch(e => { XFER.busy = false; again({ err: (e && e.message) || String(e) }); }); };
   const rows = [{ t: 'title', text: 'A OTRO DISPOSITIVO' }];
   if (view.wait) rows.push({ t: 'text', text: 'Un momento…', color: '#ffd166' });
-  else if (view.code) rows.push({ t: 'text', text: 'Escribe este código en el otro dispositivo (en el juego: Ajustes ▸ → Perfiles ▸ → A otro dispositivo; o en la página):', color: '#a49fc8' }, { t: 'title', text: xferFmt(view.code), color: '#3cf0c6' }, { t: 'text', text: `Vale durante ${XFER_HOURS} h · los datos van cifrados`, color: '#a49fc8' });
-  else if (view.got) rows.push({ t: 'text', text: `Recibido (desde ${view.got.from || 'otro dispositivo'}): ${xferSummary(view.got)}`, color: '#3cf0c6' }, { t: 'text', text: 'Al cargarlo se sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta) y RepArena vuelve a empezar: tendrás que volver a entrar.', color: '#ffd166' });
-  else rows.push({ t: 'text', text: view.err ? '✕ ' + view.err : 'Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida de un dispositivo a otro (p. ej. del PC a las gafas) con un código de 8 cifras.', color: view.err ? '#ff6a6a' : '#a49fc8' });
+  else if (view.code) rows.push({ t: 'text', text: 'Escribe este código en el otro dispositivo (en el juego: Opciones ▸ → Ajustes → A otro aparato; o en la página):', color: '#a49fc8' }, { t: 'title', text: xferFmt(view.code), color: '#3cf0c6' }, { t: 'text', text: `Vale durante ${XFER_HOURS} h · los datos van cifrados`, color: '#a49fc8' });
+  else if (view.got) rows.push({ t: 'text', text: `Recibido (desde ${view.got.from || 'otro dispositivo'}): ${xferSummary(view.got)}`, color: '#3cf0c6' }, { t: 'text', text: 'Al cargarlo se sustituyen los ajustes y bloques de aquí (el historial se junta) y RepArena vuelve a empezar: tendrás que volver a entrar.', color: '#ffd166' });
+  else rows.push({ t: 'text', text: view.err ? '✕ ' + view.err : 'Lleva tus ajustes, bloques de sesión, historial y música elegida de un dispositivo a otro (p. ej. del PC a las gafas) con un código de 8 cifras.', color: view.err ? '#ff6a6a' : '#a49fc8' });
   if (view.got) rows.push({ t: 'btns', items: [{ label: 'Cargar y reiniciar', style: 'primary', flex: 2, onPress: () => { xferApply(view.got); say('Datos cargados: reiniciando…', '#3cf0c6', 2); } }, { label: 'Cancelar', onPress: () => again({}) }] });
   else if (!view.wait) rows.push({ t: 'btns', items: [
     { label: 'Enviar desde aquí', style: 'primary', onPress: () => run(xferSend, code => ({ code })) },
@@ -238,7 +239,7 @@ function xferMenu(back, view = {}) {
   const m = openMenu(rows, { accent: MC.prof }); m.rebuild = () => again(view);
 }
 
-// La sincronización, en el juego (Ajustes ▸ → Perfiles ▸ → Sincronización ▸)
+// La sincronización, en el juego (Opciones ▸ → Ajustes → Sincronización ▸)
 function syncMenu(back, view = {}) {
   const again = v => syncMenu(back, v), run = (fn, next) => { if (SYNC.busy && !view.ask) return; again({ wait: true });
     fn().then(r => again(next(r))).catch(e => again({ err: (e && e.message) || String(e) })); };
@@ -250,14 +251,14 @@ function syncMenu(back, view = {}) {
   else if (view.done) rows.push({ t: 'text', text: 'Importado: RepArena vuelve a empezar (tendrás que volver a entrar en las gafas).', color: '#3cf0c6' });
   else {
     if (view.err) rows.push({ t: 'text', text: '✕ ' + view.err, color: '#ff6a6a' });
-    if (view.code) rows.push({ t: 'text', text: 'Tu código fijo. Escríbelo una vez en el otro aparato (en el juego: Ajustes ▸ → Perfiles ▸ → Sincronización ▸ → Vincular; o en la página):', color: '#a49fc8' }, { t: 'title', text: syncFmt(view.code), color: '#3cf0c6' });
+    if (view.code) rows.push({ t: 'text', text: 'Tu código fijo. Escríbelo una vez en el otro aparato (en el juego: Opciones ▸ → Ajustes → Sincronización ▸ → Vincular; o en la página):', color: '#a49fc8' }, { t: 'title', text: syncFmt(view.code), color: '#3cf0c6' });
     if (s.code) {
       if (!view.code) rows.push({ t: 'text', text: `Vinculado con el código ${syncFmt(s.code)}. ${s.up ? `Última subida: ${syncWhen(s.up)}.` : 'Aún no ha subido nada.'}${view.ok ? ' ' + view.ok : ''}`, color: '#3cf0c6' });
       rows.push({ t: 'btns', items: [
         { label: 'Sincronizar ahora', style: 'primary', onPress: () => run(async () => { const m = await syncCheck(); if (m) return { ask: m }; await syncPush(); return { ok: 'Todo al día.' }; }, r => r) },
         { label: 'Desvincular', style: 'danger', onPress: () => { syncUnlink(); again({}); } }] });
     } else {
-      rows.push({ t: 'text', text: 'Con un código fijo, tus ajustes, perfiles, sesiones, historial y carrera se guardan cifrados y pasan solos de un aparato a otro: al entrar, si el otro tiene algo más reciente, te pregunta si lo importas.', color: '#a49fc8' });
+      rows.push({ t: 'text', text: 'Con un código fijo, tus ajustes, sesiones, historial y carrera se guardan cifrados y pasan solos de un aparato a otro: al entrar, si el otro tiene algo más reciente, te pregunta si lo importas.', color: '#a49fc8' });
       rows.push({ t: 'btns', items: [
         { label: 'Crear código', style: 'primary', onPress: () => run(syncCreate, code => ({ code })) },
         { label: 'Vincular (escribir código)', onPress: () => openKeypad({ label: 'Código de 16 cifras', short: 'Código fijo del otro aparato', unit: '' }, null, { code: true, maxLen: 16, onOK: str => run(() => syncLink(str), m => m ? { ask: m } : { ok: 'Vinculado.' }) }) }] });
@@ -283,7 +284,7 @@ function xferInitPage() {
     recv.disabled = true; say2('Buscando…');
     try {
       const p = await xferFetch(inp.value);
-      if (confirm(`Recibido: ${xferSummary(p)}.\n\nSe sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta). ¿Cargar?`)) { say2('Cargado: recargando la página…'); xferApply(p); } else say2('No se ha cargado nada.');
+      if (confirm(`Recibido: ${xferSummary(p)}.\n\nSe sustituyen los ajustes y bloques de aquí (el historial se junta). ¿Cargar?`)) { say2('Cargado: recargando la página…'); xferApply(p); } else say2('No se ha cargado nada.');
     } catch (e) { say2('No se pudo recibir: ' + e.message, true); }
     recv.disabled = false;
   });
@@ -298,7 +299,7 @@ function syncInitPage() {
   $('#btnSyncYes').addEventListener('click', async () => { const m = pending; ask.hidden = true; if (!m) return; say2('Importando…'); try { await syncImport(m); say2('Importado: recargando la página…'); } catch (e) { say2('No se pudo importar: ' + e.message, true); } });
   $('#btnSyncNo').addEventListener('click', () => { if (pending) syncDecline(pending); pending = null; ask.hidden = true; });
   const busy = async (btn, fn) => { btn.disabled = true; try { await fn(); } catch (e) { say2('No se pudo: ' + e.message, true); } btn.disabled = false; show(); };
-  $('#btnSyncNew').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Creando…'); const c = await syncCreate(); say2(`Tu código fijo: ${syncFmt(c)}. Escríbelo una vez en el otro aparato (en el juego: Ajustes ▸ → Perfiles ▸ → Sincronización ▸ → Vincular).`); }));
+  $('#btnSyncNew').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Creando…'); const c = await syncCreate(); say2(`Tu código fijo: ${syncFmt(c)}. Escríbelo una vez en el otro aparato (en el juego: Opciones ▸ → Ajustes → Sincronización ▸ → Vincular).`); }));
   $('#btnSyncLink').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Vinculando…'); const m = await syncLink(inp.value); inp.value = ''; say2(m ? 'Vinculado: el otro aparato tiene datos.' : 'Vinculado.'); offer(m); }));
   $('#btnSyncNow').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Sincronizando…'); const m = await syncCheck(); if (m) { say2(''); offer(m); } else { await syncPush(); say2(`Todo al día (${syncWhen(Date.now())}).`); } }));
   $('#btnSyncOff').addEventListener('click', () => { syncUnlink(); say2('Desvinculado: este aparato ya no sincroniza.'); show(); });

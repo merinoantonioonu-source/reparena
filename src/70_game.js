@@ -2531,10 +2531,11 @@ function settingsRows(go, tab = settingsTab, back = null) {
     rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); go(tab); } }] }); }
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) go(tab); } }] }); // (cinco toques: modo desarrollador)
-  // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
+  // llevar tus cosas a otro aparato (fuera de la partida: al cargarlas cambia todo) y restablecer esta pestaña (pulsando dos veces)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
+  if (!inGame) rows.push({ t: 'btns', items: [{ label: 'A otro aparato (código)  ▸', accent: MC.prof, onPress: () => xferMenu(() => go(tab)) },
+    ...(SYNC.db ? [{ label: 'Sincronización  ▸', accent: MC.prof, onPress: () => syncMenu(() => go(tab)) }] : [])] });
   rows.push({ t: 'btns', items: [
-    ...(inGame ? [] : [{ label: 'Perfiles  ▸', accent: MC.prof, onPress: () => profilesMenu(() => go(tab)) }]),
     { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; go(tab); } },
     ...(back ? [{ label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] : [])] });
   return rows;

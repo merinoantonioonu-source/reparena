@@ -7,7 +7,7 @@
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, rounds: 1, round: 0, rankOpen: -1, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, exOpen: -1, mList: '', mErr: '', name: '' };
 const MUSIC_MAX = 50, ROUNDS_MAX = 20; // (canciones por bloque y vueltas a la sesión, como mucho)
-// Ajustes que puede tener cada bloque (su perfil o los suyos propios, con el engranaje): los del juego, sin el modo, el
+// Ajustes que puede tener cada bloque (los suyos propios, con el engranaje): los del juego, sin el modo, el
 // ejercicio ni las oleadas, que los pone el bloque. El sonido, el entorno y el menú no cambian de un bloque a otro
 const BLOCK_GROUPS = ['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras'];
 const blockKeyOk = k => FIELD[k] && BLOCK_GROUPS.includes(FIELD[k].g) && !['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'rest', 'rank'].includes(k); // (el rango va aparte: cambia muchos a la vez)
@@ -16,21 +16,23 @@ const SESS_KEY = 'reparena3-sessions', SESS_MAX = 12; // sesiones guardadas con 
 const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
-// Un bloque como se guarda: lo suyo y, si los tiene, su música, su perfil y sus ajustes propios
+// Un bloque como se guarda: lo suyo y, si los tiene, su música y sus ajustes propios
 function sesClean(list) { return (list || []).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b), ...blockMusic(b), ...blockOwn(b) })); }
 function blockOwn(b) {
-  const o = {}; if (b && typeof b.prof === 'string' && b.prof.trim()) o.prof = b.prof.trim().slice(0, 40);
+  const o = {}, set = { ...oldProfPatch(b), ...(b && b.set && typeof b.set === 'object' ? b.set : {}) };
   if (b && rankOk(b.rank)) o.rank = b.rank; // (su rango: puedes ser bueno en un ejercicio y no en otro)
-  if (b && b.set && typeof b.set === 'object') { const st = {}; for (const k in b.set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], b.set[k]); if (Object.keys(st).length) o.set = st; }
+  { const st = {}; for (const k in set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], set[k]); if (Object.keys(st).length) o.set = st; }
   return o;
 }
 // El rango de su ejercicio en su modo (como lo dejaste allí, con sus retoques); si aún no lo has jugado, el de ahora
 const blockExRank = b => comboDiff(b.mode + '|' + b.ex) || {};
 const blockRankOf = b => b.rank || blockExRank(b).rank || settings.rank;
-// Lo que pone el perfil del bloque (sus ajustes del juego; el modo y el ejercicio, los del bloque)
-function blockProfPatch(b) {
-  const p = b.prof && profiles().find(x => x.name === b.prof), o = {}; if (!p) return o;
-  for (const k in p.s) if (blockKeyOk(k)) o[k] = clampSetting(FIELD[k], p.s[k]);
+// Los perfiles se quitaron: un bloque de antes con perfil se queda con sus ajustes como ajustes propios (lo que ya tenía
+// propio, por encima)
+function oldProfPatch(b) {
+  if (!b || typeof b.prof !== 'string') return {};
+  const p = (store('reparena3-profiles') || []).find(x => x && x.s && x.name === b.prof), o = {}; if (!p) return o;
+  for (const k in p.s) if (blockKeyOk(k)) o[k] = p.s[k];
   return o;
 }
 // La música del bloque: canciones de Spotify (de una o varias listas) que suenan en orden y en bucle mientras dura
@@ -51,7 +53,7 @@ const roundsOf = v => clamp(Math.round(+v) || 1, 1, ROUNDS_MAX);
 function sesNext() { return SES.idx + 1 < SES.blocks.length ? { i: SES.idx + 1, r: SES.round } : SES.round + 1 < SES.rounds ? { i: 0, r: SES.round + 1 } : null; }
 const roundTxt = (r = SES.round) => SES.rounds > 1 ? ` · vuelta ${r + 1}/${SES.rounds}` : '';
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.rank ? ` · ${rankName(b.rank).toLowerCase()}` : ''}${b.prof ? ` · perfil «${b.prof}»` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
+function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.rank ? ` · ${rankName(b.rank).toLowerCase()}` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
@@ -74,11 +76,11 @@ function sessionMinutes() {
 /* ---------- Durante el juego ---------- */
 function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
-  if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su perfil, sus ajustes—, como estaba)
+  if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su rango, sus ajustes—, como estaba)
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  // el rango de su ejercicio (con sus retoques), su perfil, el rango elegido para el bloque, luego lo del bloque y, por
+  // el rango de su ejercicio (con sus retoques), el rango elegido para el bloque, luego lo del bloque y, por
   // encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
-  const patch = Object.assign(blockExRank(b), blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
+  const patch = Object.assign(blockExRank(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
   if (SES.orig) for (const k in patch) if (!(k in SES.orig)) SES.orig[k] = settings[k];
   Object.assign(settings, patch);
   onSettingChanged('mode'); onSettingChanged('exercise');
@@ -169,20 +171,19 @@ function sessionRows() {
 
 /* ---------- Editor de la página ---------- */
 // Ajustes propios del bloque (⚙): los del juego que valen para su modo y su ejercicio. Cada uno enseña el valor con que
-// se jugará (el suyo propio, si no el de su perfil, si no el de tus ajustes); los propios llevan un punto y ↺ para quitarlos
+// se jugará (el suyo propio, si no el de su rango, si no el de tus ajustes); los propios llevan un punto y ↺ para quitarlos
 function blockFields(b) {
   const keep = { mode: settings.mode, exercise: settings.exercise }; settings.mode = b.mode; settings.exercise = b.ex;
   try { return SCHEMA.filter(f => blockKeyOk(f.key) && fieldVisible(f) && f.type !== 'text'); } finally { Object.assign(settings, keep); }
 }
 function blockValue(b, k) {
   if (b.set && b.set[k] !== undefined) return b.set[k];
-  if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango, por encima de su perfil)
-  const pp = blockProfPatch(b); if (pp[k] !== undefined) return pp[k];
+  if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango)
   const er = blockExRank(b); return er[k] !== undefined ? er[k] : settings[k]; // (y debajo, el de su ejercicio)
 }
 function sesSetHTML(b, i) {
   const F = blockFields(b), groups = BLOCK_GROUPS.filter(g => F.some(f => f.g === g));
-  let h = `<div class="sesset" data-i="${i}"><p class="note">Ajustes de este bloque (${escS(EX_NAMES[b.ex])} · ${escS(MODE_NAMES[b.mode])}): lo que cambies aquí vale solo para él, por encima de ${b.prof ? `su perfil «${escS(b.prof)}»` : 'tus ajustes'}. • = propio de este bloque.</p>`;
+  let h = `<div class="sesset" data-i="${i}"><p class="note">Ajustes de este bloque (${escS(EX_NAMES[b.ex])} · ${escS(MODE_NAMES[b.mode])}): lo que cambies aquí vale solo para él, por encima de tus ajustes. • = propio de este bloque.</p>`;
   for (const g of groups) {
     h += `<details class="bgroup"${g === 'partida' || g === 'ejercicio' ? ' open' : ''}><summary>${escS(GROUP_NAMES[g])}</summary><div class="bfields">`;
     for (const f of F.filter(x => x.g === g)) {
@@ -289,7 +290,7 @@ function rankSvg(i) {
 }
 const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<button type="button" class="ib${on ? ' on' : ''}" data-a="${a}" aria-label="${label} ${i + 1}" title="${label}"${extra}>${icon}${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
 // Cada bloque, en una sola fila: modo, ejercicio (un botón que abre la lista debajo; nombres de hasta dos líneas), enemigos,
-// cantidad, perfil y los iconos: rango, ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
+// cantidad y los iconos: rango, ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
 // de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
@@ -298,7 +299,6 @@ function renderSession() {
     <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
-    <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
     <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   htmlKeep(host, html, `${SES.musicOpen},${SES.exOpen},${SES.rankOpen},${SES.setOpen}`); // (sus listas, sin volver arriba al redibujar)
@@ -371,7 +371,6 @@ function sesInitPage() {
     else if (f === 'foes') b.foes = foeCat(ev.target.value) || 'robots';
     else if (f === 'ex') sesSetEx(b, ev.target.value);
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
-    else if (f === 'prof') { if (ev.target.value) b.prof = ev.target.value; else delete b.prof; }
     saveSession(); renderSession();
   });
   host.addEventListener('click', ev => {
