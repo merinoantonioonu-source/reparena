@@ -250,7 +250,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .expick::after{content:'▾';opacity:.6;font-size:.8em}
 .sesrow .expick.on{border-color:var(--teal)}
 .sesrow .sesn2{display:inline-flex;align-items:center;gap:4px}
-.sesrow select.prof{width:7.6em}
 .sesrow .ibs{display:inline-flex;gap:4px;margin-left:auto}
 .sesrow .ib{position:relative;width:32px;height:32px;padding:6px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer;display:inline-grid;place-items:center}
 .sesrow .ib svg{width:100%;height:100%}
@@ -495,20 +494,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <div class="groups" id="settingsGroups"></div>
     <div class="actions"><button class="btn small" id="btnReset">Restablecer todos los ajustes</button></div>
     <div class="profiles">
-      <h3>Perfiles</h3>
-      <p class="note">Guarda todos tus ajustes (con el modo y el ejercicio) con un nombre, como «Mañana suave» o «Piernas a tope», y cárgalos de un toque, aquí o en el juego (Ajustes ▸ → Perfiles ▸). Hasta 8; si repites un nombre, se sustituye.</p>
-      <div class="profsave"><input id="profName" type="text" maxlength="40" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button class="btn small alt" id="btnProfSave">Guardar ajustes actuales</button></div>
-      <p class="status" id="profStatus" aria-live="polite"></p>
-      <div class="proflist" id="profList"></div>
-    </div>
-    <div class="profiles">
       <h3>Pasar a otro dispositivo</h3>
-      <p class="note">Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Ajustes ▸ → Perfiles ▸ → A otro dispositivo → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
+      <p class="note">Lleva tus ajustes, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Opciones ▸ → Ajustes → A otro aparato → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
       <div class="profsave"><button class="btn small alt" id="btnXferSend">Enviar desde aquí</button><input id="xferCode" type="text" inputmode="numeric" maxlength="9" placeholder="Código de 8 cifras" aria-label="Código del otro dispositivo"><button class="btn small" id="btnXferRecv">Recibir</button></div>
       <p class="status" id="xferStatus" aria-live="polite"></p>
       <div id="syncBox" hidden>
         <h3>Sincronización automática</h3>
-        <p class="note">Con un <b>código fijo</b> de 16 cifras, tus ajustes, perfiles, sesiones, historial y carrera pasan solos de un aparato a otro: <b>Crear código</b> en uno y escribirlo en el otro con <b>Vincular</b> (en el juego, Ajustes ▸ → Perfiles ▸ → Sincronización); los dos lo recuerdan. Cada aparato guarda lo suyo, cifrado con el código, en Firebase al poco de cambiar algo, y al abrir RepArena, si el otro tiene ajustes o partidas más recientes, te pregunta si los importas. Cada ajuste lleva su hora: de cada uno se queda el que cambiaste más tarde, en cualquiera de los dos aparatos, y las partidas de los dos se juntan siempre.</p>
+        <p class="note">Con un <b>código fijo</b> de 16 cifras, tus ajustes, sesiones, historial y carrera pasan solos de un aparato a otro: <b>Crear código</b> en uno y escribirlo en el otro con <b>Vincular</b> (en el juego, Opciones ▸ → Ajustes → Sincronización); los dos lo recuerdan. Cada aparato guarda lo suyo, cifrado con el código, en Firebase al poco de cambiar algo, y al abrir RepArena, si el otro tiene ajustes o partidas más recientes, te pregunta si los importas. Cada ajuste lleva su hora: de cada uno se queda el que cambiaste más tarde, en cualquiera de los dos aparatos, y las partidas de los dos se juntan siempre.</p>
         <div class="profsave" id="syncNew"><button class="btn small alt" id="btnSyncNew">Crear código</button><input id="syncCode" type="text" inputmode="numeric" maxlength="19" placeholder="16 cifras" aria-label="Código fijo del otro aparato (16 cifras)"><button class="btn small" id="btnSyncLink">Vincular</button></div>
         <div class="profsave" id="syncLinked" hidden><button class="btn small alt" id="btnSyncNow">Sincronizar ahora</button><button class="btn small" id="btnSyncOff">Desvincular</button></div>
         <p class="status" id="syncStatus" aria-live="polite"></p>
@@ -541,7 +533,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="estimate" id="sesSummary"></p>
     <div class="profiles">
       <h3>Sesiones guardadas</h3>
-      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, su perfil, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
+      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
       <div class="profsave"><input id="sessName" type="text" maxlength="40" placeholder="Nombre de la sesión" aria-label="Nombre de la sesión"><button class="btn small alt" id="btnSessSave">Guardar sesión</button></div>
       <p class="status" id="sessStatus" aria-live="polite"></p>
       <div class="proflist" id="sessSaved"></div>
@@ -8313,7 +8305,7 @@ function spListsPage() {
 const SES_KEY = 'reparena3-session';
 const SES = { blocks: [], rest: 60, rounds: 1, round: 0, rankOpen: -1, active: false, idx: 0, orig: null, waves: null, results: [], wait: 0, stop: false, musicOpen: -1, setOpen: -1, exOpen: -1, mList: '', mErr: '', name: '' };
 const MUSIC_MAX = 50, ROUNDS_MAX = 20; // (canciones por bloque y vueltas a la sesión, como mucho)
-// Ajustes que puede tener cada bloque (su perfil o los suyos propios, con el engranaje): los del juego, sin el modo, el
+// Ajustes que puede tener cada bloque (los suyos propios, con el engranaje): los del juego, sin el modo, el
 // ejercicio ni las oleadas, que los pone el bloque. El sonido, el entorno y el menú no cambian de un bloque a otro
 const BLOCK_GROUPS = ['partida', 'ejercicio', 'enemigos', 'armas', 'cada', 'arcos', 'toques', 'barras'];
 const blockKeyOk = k => FIELD[k] && BLOCK_GROUPS.includes(FIELD[k].g) && !['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'rest', 'rank'].includes(k); // (el rango va aparte: cambia muchos a la vez)
@@ -8322,21 +8314,23 @@ const SESS_KEY = 'reparena3-sessions', SESS_MAX = 12; // sesiones guardadas con 
 const SES_KEYS = ['mode', 'exercise', 'waves', 'repsWave', 'repsInc', 'hangTime', 'hangInc', 'foesGate', 'foesHatch', 'foesFly', 'aim'];
 const blockOk = exOk;
 const validBlock = b => b && MODE_NAMES[b.mode] && EX_NAMES[b.ex] && blockOk(b.mode, b.ex) && isFinite(b.n) && b.n >= 1;
-// Un bloque como se guarda: lo suyo y, si los tiene, su música, su perfil y sus ajustes propios
+// Un bloque como se guarda: lo suyo y, si los tiene, su música y sus ajustes propios
 function sesClean(list) { return (list || []).filter(validBlock).slice(0, 20).map(b => ({ mode: b.mode, ex: b.ex, n: clamp(Math.round(b.n), 1, 500), ...blockExtra(b), ...blockMusic(b), ...blockOwn(b) })); }
 function blockOwn(b) {
-  const o = {}; if (b && typeof b.prof === 'string' && b.prof.trim()) o.prof = b.prof.trim().slice(0, 40);
+  const o = {}, set = { ...oldProfPatch(b), ...(b && b.set && typeof b.set === 'object' ? b.set : {}) };
   if (b && rankOk(b.rank)) o.rank = b.rank; // (su rango: puedes ser bueno en un ejercicio y no en otro)
-  if (b && b.set && typeof b.set === 'object') { const st = {}; for (const k in b.set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], b.set[k]); if (Object.keys(st).length) o.set = st; }
+  { const st = {}; for (const k in set) if (blockKeyOk(k)) st[k] = clampSetting(FIELD[k], set[k]); if (Object.keys(st).length) o.set = st; }
   return o;
 }
 // El rango de su ejercicio en su modo (como lo dejaste allí, con sus retoques); si aún no lo has jugado, el de ahora
 const blockExRank = b => comboDiff(b.mode + '|' + b.ex) || {};
 const blockRankOf = b => b.rank || blockExRank(b).rank || settings.rank;
-// Lo que pone el perfil del bloque (sus ajustes del juego; el modo y el ejercicio, los del bloque)
-function blockProfPatch(b) {
-  const p = b.prof && profiles().find(x => x.name === b.prof), o = {}; if (!p) return o;
-  for (const k in p.s) if (blockKeyOk(k)) o[k] = clampSetting(FIELD[k], p.s[k]);
+// Los perfiles se quitaron: un bloque de antes con perfil se queda con sus ajustes como ajustes propios (lo que ya tenía
+// propio, por encima)
+function oldProfPatch(b) {
+  if (!b || typeof b.prof !== 'string') return {};
+  const p = (store('reparena3-profiles') || []).find(x => x && x.s && x.name === b.prof), o = {}; if (!p) return o;
+  for (const k in p.s) if (blockKeyOk(k)) o[k] = p.s[k];
   return o;
 }
 // La música del bloque: canciones de Spotify (de una o varias listas) que suenan en orden y en bucle mientras dura
@@ -8357,7 +8351,7 @@ const roundsOf = v => clamp(Math.round(+v) || 1, 1, ROUNDS_MAX);
 function sesNext() { return SES.idx + 1 < SES.blocks.length ? { i: SES.idx + 1, r: SES.round } : SES.round + 1 < SES.rounds ? { i: 0, r: SES.round + 1 } : null; }
 const roundTxt = (r = SES.round) => SES.rounds > 1 ? ` · vuelta ${r + 1}/${SES.rounds}` : '';
 const blockUnit = b => b.ex === 'hang' ? 's' : 'reps';
-function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.rank ? ` · ${rankName(b.rank).toLowerCase()}` : ''}${b.prof ? ` · perfil «${b.prof}»` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
+function blockLabel(b) { const c = b.foes && FOE_CATS.find(o => o[0] === b.foes), n = b.set ? Object.keys(b.set).length : 0; return `${b.n} ${b.ex === 'hang' ? 's de colgado' : EX_NAMES[b.ex].toLowerCase()} · ${MODE_NAMES[b.mode]}${c ? ` (${c[1].toLowerCase()})` : ''}${b.rank ? ` · ${rankName(b.rank).toLowerCase()}` : ''}${n ? ` · ${n} ${n === 1 ? 'ajuste propio' : 'ajustes propios'}` : ''}`; }
 // Reparte n en oleadas de unas `per` repeticiones, con el total exacto
 function splitWaves(n, per) { const w = Math.max(1, Math.round(n / per)), base = Math.floor(n / w), out = []; for (let i = 0; i < w; i++) out.push(base + (i < n - base * w ? 1 : 0)); return out; }
 function sessionMinutes() {
@@ -8380,11 +8374,11 @@ function sessionMinutes() {
 /* ---------- Durante el juego ---------- */
 function applyBlock(i) {
   const b = SES.blocks[i]; SES.idx = i;
-  if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su perfil, sus ajustes—, como estaba)
+  if (SES.orig) Object.assign(settings, SES.orig); // (lo que cambió el bloque anterior —su rango, sus ajustes—, como estaba)
   SES.waves = splitWaves(b.n, b.ex === 'hang' ? 25 : 10);
-  // el rango de su ejercicio (con sus retoques), su perfil, el rango elegido para el bloque, luego lo del bloque y, por
+  // el rango de su ejercicio (con sus retoques), el rango elegido para el bloque, luego lo del bloque y, por
   // encima, sus ajustes propios; lo que se toca se apunta para devolverlo al acabar
-  const patch = Object.assign(blockExRank(b), blockProfPatch(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
+  const patch = Object.assign(blockExRank(b), b.rank ? { ...rankVals(b.rank), rank: b.rank } : {}, { mode: b.mode, exercise: b.ex, waves: SES.waves.length, repsWave: clamp(SES.waves[0], 3, 150), repsInc: 0, hangTime: clamp(SES.waves[0], 5, 300), hangInc: 0 }, blockSettings(b), b.set || {});
   if (SES.orig) for (const k in patch) if (!(k in SES.orig)) SES.orig[k] = settings[k];
   Object.assign(settings, patch);
   onSettingChanged('mode'); onSettingChanged('exercise');
@@ -8475,20 +8469,19 @@ function sessionRows() {
 
 /* ---------- Editor de la página ---------- */
 // Ajustes propios del bloque (⚙): los del juego que valen para su modo y su ejercicio. Cada uno enseña el valor con que
-// se jugará (el suyo propio, si no el de su perfil, si no el de tus ajustes); los propios llevan un punto y ↺ para quitarlos
+// se jugará (el suyo propio, si no el de su rango, si no el de tus ajustes); los propios llevan un punto y ↺ para quitarlos
 function blockFields(b) {
   const keep = { mode: settings.mode, exercise: settings.exercise }; settings.mode = b.mode; settings.exercise = b.ex;
   try { return SCHEMA.filter(f => blockKeyOk(f.key) && fieldVisible(f) && f.type !== 'text'); } finally { Object.assign(settings, keep); }
 }
 function blockValue(b, k) {
   if (b.set && b.set[k] !== undefined) return b.set[k];
-  if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango, por encima de su perfil)
-  const pp = blockProfPatch(b); if (pp[k] !== undefined) return pp[k];
+  if (b.rank) { const rv = rankVals(b.rank); if (rv[k] !== undefined) return rv[k]; } // (su rango)
   const er = blockExRank(b); return er[k] !== undefined ? er[k] : settings[k]; // (y debajo, el de su ejercicio)
 }
 function sesSetHTML(b, i) {
   const F = blockFields(b), groups = BLOCK_GROUPS.filter(g => F.some(f => f.g === g));
-  let h = `<div class="sesset" data-i="${i}"><p class="note">Ajustes de este bloque (${escS(EX_NAMES[b.ex])} · ${escS(MODE_NAMES[b.mode])}): lo que cambies aquí vale solo para él, por encima de ${b.prof ? `su perfil «${escS(b.prof)}»` : 'tus ajustes'}. • = propio de este bloque.</p>`;
+  let h = `<div class="sesset" data-i="${i}"><p class="note">Ajustes de este bloque (${escS(EX_NAMES[b.ex])} · ${escS(MODE_NAMES[b.mode])}): lo que cambies aquí vale solo para él, por encima de tus ajustes. • = propio de este bloque.</p>`;
   for (const g of groups) {
     h += `<details class="bgroup"${g === 'partida' || g === 'ejercicio' ? ' open' : ''}><summary>${escS(GROUP_NAMES[g])}</summary><div class="bfields">`;
     for (const f of F.filter(x => x.g === g)) {
@@ -8595,7 +8588,7 @@ function rankSvg(i) {
 }
 const sesIB = (a, i, label, icon, extra = '', on = false, badge = '') => `<button type="button" class="ib${on ? ' on' : ''}" data-a="${a}" aria-label="${label} ${i + 1}" title="${label}"${extra}>${icon}${badge ? `<span class="badge">${badge}</span>` : ''}</button>`;
 // Cada bloque, en una sola fila: modo, ejercicio (un botón que abre la lista debajo; nombres de hasta dos líneas), enemigos,
-// cantidad, perfil y los iconos: rango, ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
+// cantidad y los iconos: rango, ajustes propios, música, duplicar y quitar. Se cambian de sitio arrastrándolos por el asa
 // de la izquierda (con el número)
 function renderSession() {
   const host = $('#sesList'); if (!host) return;
@@ -8604,7 +8597,6 @@ function renderSession() {
     <button type="button" class="expick${SES.exOpen === i ? ' on' : ''}" data-a="ex" aria-label="Ejercicio del bloque ${i + 1}" aria-expanded="${SES.exOpen === i}" title="${escS(EX_NAMES[b.ex])}"><span>${escS(EX_NAMES[b.ex])}</span></button>
     ${b.mode === 'combat' ? `<select data-f="foes" aria-label="Enemigos del bloque ${i + 1}">${sesOpts(FOE_CATS, b.foes)}</select>` : ''}
     <span class="sesn2"><input type="number" data-f="n" min="1" max="500" step="1" value="${b.n}" aria-label="Cantidad del bloque ${i + 1}"><span class="unit">${blockUnit(b)}</span></span>
-    <select data-f="prof" class="prof" aria-label="Perfil del bloque ${i + 1}" title="Perfil del bloque"><option value="">Sin perfil</option>${profiles().map(p => `<option value="${escS(p.name)}"${p.name === b.prof ? ' selected' : ''}>${escS(p.name)}</option>`).join('')}${b.prof && !profiles().some(p => p.name === b.prof) ? `<option value="${escS(b.prof)}" selected>${escS(b.prof)} (no está)</option>` : ''}</select>
     <span class="ibs">${sesIB('rank', i, b.rank ? `Rango ${rankName(b.rank)} en el bloque` : `Rango del bloque: el de su ejercicio (${rankName(blockRankOf(b))})`, b.rank ? rankSvg(rankIdx(b.rank)) : SES_ICON.rank, '', !!b.rank || SES.rankOpen === i)}${sesIB('set', i, 'Ajustes propios del bloque', SES_ICON.set, '', !!b.set || SES.setOpen === i, b.set ? Object.keys(b.set).length : '')}${sesIB('music', i, 'Música del bloque', SES_ICON.music, '', !!(b.music || []).length || SES.musicOpen === i, (b.music || []).length || '')}${sesIB('dup', i, 'Duplicar el bloque', SES_ICON.dup, SES.blocks.length >= 20 ? ' disabled' : '')}${sesIB('del', i, 'Quitar el bloque', SES_ICON.del)}</span></div>${SES.exOpen === i ? sesExHTML(b, i) : ''}${SES.rankOpen === i ? sesRankHTML(b, i) : ''}${SES.setOpen === i ? sesSetHTML(b, i) : ''}${SES.musicOpen === i ? sesMusicHTML(b, i) : ''}`).join('')
     : '<p class="hint">Todavía no hay bloques. Añade uno o carga el ejemplo.</p>';
   htmlKeep(host, html, `${SES.musicOpen},${SES.exOpen},${SES.rankOpen},${SES.setOpen}`); // (sus listas, sin volver arriba al redibujar)
@@ -8677,7 +8669,6 @@ function sesInitPage() {
     else if (f === 'foes') b.foes = foeCat(ev.target.value) || 'robots';
     else if (f === 'ex') sesSetEx(b, ev.target.value);
     else if (f === 'n') b.n = clamp(Math.round(+ev.target.value) || 1, 1, 500);
-    else if (f === 'prof') { if (ev.target.value) b.prof = ev.target.value; else delete b.prof; }
     saveSession(); renderSession();
   });
   host.addEventListener('click', ev => {
@@ -8942,12 +8933,12 @@ function devInitPage() {
 }
 
 
-/* =================== PERFILES Y RESTABLECER =================== */
-// Los perfiles guardan todos los ajustes (modo y ejercicio incluidos) con un nombre y se cargan de un toque; y cada
-// pestaña (o grupo de la página) se puede devolver a como venía sin tocar el resto. (Las ★ de antes ya no están: lo que
-// ve el jugador lo decide el desarrollador con el ojo de su tabla, 67_dev)
-const PROF_KEY = 'reparena3-profiles', UI_KEY = 'reparena3-ui', PROF_MAX = 8;
-const PREFS = { resetArm: '', delArm: -1 };
+/* =================== RESTABLECER Y PREFERENCIAS DE LA PÁGINA =================== */
+// Cada pestaña (o grupo de la página) se puede devolver a como venía sin tocar el resto. (Los perfiles —todos los ajustes
+// guardados con un nombre— se quitaron: el rango y lo que recuerda cada modo y ejercicio ya hacen ese papel. Las ★ de
+// antes tampoco están: lo que ve el jugador lo decide el desarrollador con el ojo de su tabla, 67_dev)
+const UI_KEY = 'reparena3-ui';
+const PREFS = { resetArm: '' };
 // Restablecer un grupo de ajustes (una pestaña de las gafas o un grupo de la página)
 function resetGroup(g) {
   SCHEMA.filter(f => f.g === g).forEach(f => settings[f.key] = f.def);
@@ -8957,65 +8948,7 @@ function resetGroup(g) {
 const uiPrefs = () => store(UI_KEY) || {};
 function uiSave(k, v) { store(UI_KEY, Object.assign(uiPrefs(), { [k]: v })); }
 
-/* ---------- Perfiles ---------- */
-const profiles = () => (store(PROF_KEY) || []).filter(p => p && p.name && p.s);
-function profSnapshot() { const s = { mode: settings.mode, exercise: settings.exercise }; SCHEMA.forEach(f => s[f.key] = settings[f.key]); return s; }
-const profAuto = () => `${MODE_NAMES[settings.mode]} · ${EX_SHORT[settings.exercise]}`;
-function profSave(name) {
-  name = String(name || '').trim().slice(0, 40) || profAuto();
-  const L = profiles(), i = L.findIndex(p => p.name.toLowerCase() === name.toLowerCase()), p = { name, date: Date.now(), s: profSnapshot() };
-  if (i >= 0) L[i] = p; else { if (L.length >= PROF_MAX) return ''; L.push(p); }
-  store(PROF_KEY, L); renderProfiles(); return name;
-}
-function profLoad(i) {
-  const p = profiles()[i]; if (!p) return false;
-  for (const f of SCHEMA) if (p.s[f.key] !== undefined) settings[f.key] = clampSetting(f, p.s[f.key]);
-  if (p.s.foesGate === undefined && p.s.foes) Object.assign(settings, foeCatPatch(p.s.foes)); // perfiles de antes: robots, voladores o mezcla
-  if (MODE_NAMES[p.s.mode]) settings.mode = p.s.mode;
-  if (EX_NAMES[p.s.exercise]) settings.exercise = p.s.exercise;
-  settings.exercise = exFor(settings.mode, settings.exercise);
-  saveSettings(); onSettingChanged('*'); syncForm(); return true;
-}
-function profDelete(i) { const L = profiles(); L.splice(i, 1); store(PROF_KEY, L); renderProfiles(); }
-const profLine = p => `${MODE_NAMES[p.s.mode] || ''} · ${EX_NAMES[p.s.exercise] || ''}`;
-
-// En las gafas (desde Ajustes): cargar, borrar (pulsando dos veces) y guardar lo actual con un nombre automático; en la
-// página se les pone el nombre que quieras
-function profilesMenu(back) {
-  const again = () => profilesMenu(back), L = profiles();
-  const rows = [{ t: 'title', text: 'PERFILES' }, { t: 'text', text: L.length ? 'Carga uno y se ponen todos sus ajustes, con su modo y su ejercicio' : 'Aún no tienes perfiles: guarda tus ajustes de ahora (en la página puedes ponerles nombre)', color: '#a49fc8' }];
-  L.forEach((p, i) => rows.push({ t: 'btns', items: [
-    { label: `${p.name}`, flex: 3, onPress: () => { if (profLoad(i)) { say(`Perfil «${p.name}» cargado`, '#3cf0c6', 1.8); SND.click(); back(); } } },
-    { label: PREFS.delArm === i ? '¿Borrar?' : 'Borrar', flex: 1, style: 'danger', onPress: () => { if (PREFS.delArm === i) { PREFS.delArm = -1; profDelete(i); } else PREFS.delArm = i; again(); } }] }));
-  rows.push({ t: 'btns', items: [
-    ...(L.length < PROF_MAX ? [{ label: `Guardar: ${profAuto()}`, flex: 2, style: 'primary', onPress: () => { const n = profSave(); say(`Guardado como «${n}»`, '#3cf0c6', 1.8); again(); } }] : []),
-    { label: 'Volver', onPress: () => { PREFS.delArm = -1; back(); } }] });
-  rows.splice(rows.length - 1, 0, { t: 'btns', items: [{ label: 'A otro dispositivo (código)  ▸', accent: MC.prof, onPress: () => { PREFS.delArm = -1; xferMenu(again); } },
-    ...(SYNC.db ? [{ label: 'Sincronización  ▸', accent: MC.prof, onPress: () => { PREFS.delArm = -1; syncMenu(again); } }] : [])] });
-  const m = openMenu(rows, { accent: MC.prof }); m.rebuild = again;
-}
-
-// En la página
-function renderProfiles() {
-  const host = $('#profList'); if (!host) return;
-  const L = profiles();
-  host.innerHTML = L.length ? L.map((p, i) => `<div class="profrow"><div><b>${escHTML(p.name)}</b><span>${profLine(p)}</span></div>
-    <button class="btn small alt" data-p="load" data-i="${i}">Cargar</button><button class="btn small" data-p="del" data-i="${i}">Borrar</button></div>`).join('')
-    : '<p class="note">Aún no hay perfiles guardados.</p>';
-  if (typeof renderSession === 'function') renderSession(); // (los bloques pueden elegir perfil: su lista, al día)
-}
 const escHTML = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-function profInitPage() {
-  const host = $('#profList'), btn = $('#btnProfSave'), inp = $('#profName'); if (!host) return;
-  btn.addEventListener('click', () => { const n = profSave(inp.value); const st = $('#profStatus'); if (st) st.textContent = n ? `Guardado como «${n}».` : `Como mucho ${PROF_MAX} perfiles: borra alguno.`; inp.value = ''; });
-  host.addEventListener('click', ev => {
-    const b = ev.target.closest && ev.target.closest('button[data-p]'); if (!b) return;
-    const i = +b.dataset.i, st = $('#profStatus');
-    if (b.dataset.p === 'load') { const p = profiles()[i]; if (profLoad(i) && st) st.textContent = `Perfil «${p.name}» cargado: ${profLine(p)}.`; }
-    else if (typeof confirm !== 'function' || confirm('¿Borrar este perfil?')) profDelete(i);
-  });
-  renderProfiles();
-}
 
 // En la página: cada sección se pliega y despliega pulsando su título (y se acuerda de cómo la dejaste)
 function pageSections() {
@@ -9035,11 +8968,12 @@ function pageSections() {
 
 /* =================== PASAR TUS DATOS A OTRO DISPOSITIVO (POR CÓDIGO) =================== */
 // Sin servidor propio: en un dispositivo pulsas «Enviar» y sale un código de 8 cifras; en el otro lo escribes y se cargan
-// tus ajustes, perfiles, bloques de sesión, favoritos, rangos, historial y la música elegida. Del código salen a la vez
+// tus ajustes, bloques de sesión, favoritos, rangos, historial y la música elegida. Del código salen a la vez
 // la clave (AES-GCM, derivada con PBKDF2) y el canal de un servicio público de mensajes (ntfy.sh) donde se dejan los datos
 // cifrados unas horas: el servicio no puede leerlos y, sin el código, nadie sabe en qué canal están. Lo que depende de
 // cada aparato (la habitación escaneada, los aparatos colocados, la sesión de Spotify) no se manda.
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
+// ('reparena3-profiles': los perfiles de antes, que ya no se usan; va para que una sesión guardada con ellos los encuentre)
 const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-rankfit', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify', 'reparena3-exsongs',
   'reparena3-career', 'reparena3-ghosts', 'reparena3-dev', 'reparena3-devon']; // (tu carrera, tus mejores rondas y la tabla y el modo del desarrollador, también)
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
@@ -9084,9 +9018,9 @@ function xferPack() {
   return { v: 1, at: Date.now(), from: xrActive ? 'gafas' : 'navegador', d };
 }
 function xferSummary(p) {
-  const d = p.d || {}, prof = (d['reparena3-profiles'] || []).length, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
+  const d = p.d || {}, ses = ((d['reparena3-session'] || {}).blocks || []).length, hist = (d['reparena3-history'] || []).length;
   const sv = (d['reparena3-sessions'] || []).length;
-  return `${prof} ${prof === 1 ? 'perfil' : 'perfiles'} · ${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${sv} ${sv === 1 ? 'sesión guardada' : 'sesiones guardadas'} · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
+  return `${ses} ${ses === 1 ? 'bloque' : 'bloques'} de sesión · ${sv} ${sv === 1 ? 'sesión guardada' : 'sesiones guardadas'} · ${hist} ${hist === 1 ? 'partida' : 'partidas'} en el historial · ajustes`;
 }
 // Enviar: devuelve el código
 async function xferSend() {
@@ -9137,7 +9071,7 @@ function xferApply(p, reload = true, merged = false) {
 // cambiar algo (acabar una ronda, tocar un ajuste…). Al abrir la página, al volver a ella y al entrar en las gafas, si el
 // otro aparato tiene datos más recientes, pregunta si importarlos. Firebase solo guarda algo ilegible en un hueco cuyo
 // nombre sale del código (y sus reglas no dejan listar nada). Al subir se juntan las partidas de los dos: el historial no
-// pierde nada aunque se diga «Ahora no»; lo demás (ajustes, perfiles, rangos, carrera) es el del que cambió lo último
+// pierde nada aunque se diga «Ahora no»; lo demás (ajustes, rangos, carrera) es el del que cambió lo último
 const SYNC_DB = 'https://reparena-62309-default-rtdb.europe-west1.firebasedatabase.app'; // (la Realtime Database del proyecto «reparena»; vacía: sin sincronización)
 const SYNC = { db: SYNC_DB, t: null, busy: false, applying: false, ready: false, salt: 'reparena-sync-v1', key: 'reparena3-sync' };
 const syncSt = () => store(SYNC.key) || {}; // (lo de este aparato, que no viaja: el código, quién es y cuándo cambió o subió algo)
@@ -9154,7 +9088,7 @@ function syncWhen(at) {
 async function syncUrl(sub = '') { return `${SYNC.db.replace(/\/+$/, '')}/sync/${xferHex(await crypto.subtle.digest('SHA-256', _xEnc.encode('reparena-sync:' + syncSt().code)))}${sub}.json`; }
 async function syncGet(sub) { const r = await fetch(await syncUrl(sub)); if (!r.ok) throw new Error('Firebase respondió ' + r.status); return r.json(); }
 // Cada ajuste lleva su hora: al guardar algo que viaja, se apunta la de cada campo que cambió (en los ajustes, cada ajuste;
-// en lo que no es una ficha de campos, como los perfiles o el historial, la clave entera) y, con un código, sube a los 4 s.
+// en lo que no es una ficha de campos, como las sesiones o el historial, la clave entera) y, con un código, sube a los 4 s.
 // Así, al juntar lo de los dos aparatos, de cada ajuste gana el que se cambió más tarde, venga de donde venga: un ajuste
 // tocado en el PC no se pierde porque luego juegues en las gafas sin importar. Lo que la página guarda sola al cargarse
 // (las misiones del día, los ajustes recolocados…) no cuenta: si no, al abrirla siempre parecería lo más nuevo (SYNC.ready)
@@ -9253,7 +9187,7 @@ async function syncLink(code) {
   return syncCheck();
 }
 function syncUnlink() { clearTimeout(SYNC.t); syncSet({ code: null }); }
-const syncAskText = m => { const n = m.news || {}, parts = [n.sets ? `${n.sets} ${n.sets === 1 ? 'ajuste' : 'ajustes'}` : '', n.other ? `${n.other} ${n.other === 1 ? 'cambio' : 'cambios'} más (perfiles, rangos, sesiones…)` : '', n.games ? `${n.games} ${n.games === 1 ? 'partida' : 'partidas'}` : ''].filter(Boolean);
+const syncAskText = m => { const n = m.news || {}, parts = [n.sets ? `${n.sets} ${n.sets === 1 ? 'ajuste' : 'ajustes'}` : '', n.other ? `${n.other} ${n.other === 1 ? 'cambio' : 'cambios'} más (rangos, sesiones…)` : '', n.games ? `${n.games} ${n.games === 1 ? 'partida' : 'partidas'}` : ''].filter(Boolean);
   return `${m.from ? m.from[0].toUpperCase() + m.from.slice(1) : 'El otro aparato'} tiene cambios más recientes (${syncWhen(m.at)}${parts.length ? ': ' + parts.join(', ') : ''}). ¿Importarlos? Se queda lo más nuevo de cada ajuste (lo que hayas cambiado aquí después no se toca) y se juntan las partidas.`; };
 
 /* ---------- En el juego ---------- */
@@ -9262,9 +9196,9 @@ function xferMenu(back, view = {}) {
     fn().then(r => { XFER.busy = false; again(next(r)); }).catch(e => { XFER.busy = false; again({ err: (e && e.message) || String(e) }); }); };
   const rows = [{ t: 'title', text: 'A OTRO DISPOSITIVO' }];
   if (view.wait) rows.push({ t: 'text', text: 'Un momento…', color: '#ffd166' });
-  else if (view.code) rows.push({ t: 'text', text: 'Escribe este código en el otro dispositivo (en el juego: Ajustes ▸ → Perfiles ▸ → A otro dispositivo; o en la página):', color: '#a49fc8' }, { t: 'title', text: xferFmt(view.code), color: '#3cf0c6' }, { t: 'text', text: `Vale durante ${XFER_HOURS} h · los datos van cifrados`, color: '#a49fc8' });
-  else if (view.got) rows.push({ t: 'text', text: `Recibido (desde ${view.got.from || 'otro dispositivo'}): ${xferSummary(view.got)}`, color: '#3cf0c6' }, { t: 'text', text: 'Al cargarlo se sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta) y RepArena vuelve a empezar: tendrás que volver a entrar.', color: '#ffd166' });
-  else rows.push({ t: 'text', text: view.err ? '✕ ' + view.err : 'Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida de un dispositivo a otro (p. ej. del PC a las gafas) con un código de 8 cifras.', color: view.err ? '#ff6a6a' : '#a49fc8' });
+  else if (view.code) rows.push({ t: 'text', text: 'Escribe este código en el otro dispositivo (en el juego: Opciones ▸ → Ajustes → A otro aparato; o en la página):', color: '#a49fc8' }, { t: 'title', text: xferFmt(view.code), color: '#3cf0c6' }, { t: 'text', text: `Vale durante ${XFER_HOURS} h · los datos van cifrados`, color: '#a49fc8' });
+  else if (view.got) rows.push({ t: 'text', text: `Recibido (desde ${view.got.from || 'otro dispositivo'}): ${xferSummary(view.got)}`, color: '#3cf0c6' }, { t: 'text', text: 'Al cargarlo se sustituyen los ajustes y bloques de aquí (el historial se junta) y RepArena vuelve a empezar: tendrás que volver a entrar.', color: '#ffd166' });
+  else rows.push({ t: 'text', text: view.err ? '✕ ' + view.err : 'Lleva tus ajustes, bloques de sesión, historial y música elegida de un dispositivo a otro (p. ej. del PC a las gafas) con un código de 8 cifras.', color: view.err ? '#ff6a6a' : '#a49fc8' });
   if (view.got) rows.push({ t: 'btns', items: [{ label: 'Cargar y reiniciar', style: 'primary', flex: 2, onPress: () => { xferApply(view.got); say('Datos cargados: reiniciando…', '#3cf0c6', 2); } }, { label: 'Cancelar', onPress: () => again({}) }] });
   else if (!view.wait) rows.push({ t: 'btns', items: [
     { label: 'Enviar desde aquí', style: 'primary', onPress: () => run(xferSend, code => ({ code })) },
@@ -9273,7 +9207,7 @@ function xferMenu(back, view = {}) {
   const m = openMenu(rows, { accent: MC.prof }); m.rebuild = () => again(view);
 }
 
-// La sincronización, en el juego (Ajustes ▸ → Perfiles ▸ → Sincronización ▸)
+// La sincronización, en el juego (Opciones ▸ → Ajustes → Sincronización ▸)
 function syncMenu(back, view = {}) {
   const again = v => syncMenu(back, v), run = (fn, next) => { if (SYNC.busy && !view.ask) return; again({ wait: true });
     fn().then(r => again(next(r))).catch(e => again({ err: (e && e.message) || String(e) })); };
@@ -9285,14 +9219,14 @@ function syncMenu(back, view = {}) {
   else if (view.done) rows.push({ t: 'text', text: 'Importado: RepArena vuelve a empezar (tendrás que volver a entrar en las gafas).', color: '#3cf0c6' });
   else {
     if (view.err) rows.push({ t: 'text', text: '✕ ' + view.err, color: '#ff6a6a' });
-    if (view.code) rows.push({ t: 'text', text: 'Tu código fijo. Escríbelo una vez en el otro aparato (en el juego: Ajustes ▸ → Perfiles ▸ → Sincronización ▸ → Vincular; o en la página):', color: '#a49fc8' }, { t: 'title', text: syncFmt(view.code), color: '#3cf0c6' });
+    if (view.code) rows.push({ t: 'text', text: 'Tu código fijo. Escríbelo una vez en el otro aparato (en el juego: Opciones ▸ → Ajustes → Sincronización ▸ → Vincular; o en la página):', color: '#a49fc8' }, { t: 'title', text: syncFmt(view.code), color: '#3cf0c6' });
     if (s.code) {
       if (!view.code) rows.push({ t: 'text', text: `Vinculado con el código ${syncFmt(s.code)}. ${s.up ? `Última subida: ${syncWhen(s.up)}.` : 'Aún no ha subido nada.'}${view.ok ? ' ' + view.ok : ''}`, color: '#3cf0c6' });
       rows.push({ t: 'btns', items: [
         { label: 'Sincronizar ahora', style: 'primary', onPress: () => run(async () => { const m = await syncCheck(); if (m) return { ask: m }; await syncPush(); return { ok: 'Todo al día.' }; }, r => r) },
         { label: 'Desvincular', style: 'danger', onPress: () => { syncUnlink(); again({}); } }] });
     } else {
-      rows.push({ t: 'text', text: 'Con un código fijo, tus ajustes, perfiles, sesiones, historial y carrera se guardan cifrados y pasan solos de un aparato a otro: al entrar, si el otro tiene algo más reciente, te pregunta si lo importas.', color: '#a49fc8' });
+      rows.push({ t: 'text', text: 'Con un código fijo, tus ajustes, sesiones, historial y carrera se guardan cifrados y pasan solos de un aparato a otro: al entrar, si el otro tiene algo más reciente, te pregunta si lo importas.', color: '#a49fc8' });
       rows.push({ t: 'btns', items: [
         { label: 'Crear código', style: 'primary', onPress: () => run(syncCreate, code => ({ code })) },
         { label: 'Vincular (escribir código)', onPress: () => openKeypad({ label: 'Código de 16 cifras', short: 'Código fijo del otro aparato', unit: '' }, null, { code: true, maxLen: 16, onOK: str => run(() => syncLink(str), m => m ? { ask: m } : { ok: 'Vinculado.' }) }) }] });
@@ -9318,7 +9252,7 @@ function xferInitPage() {
     recv.disabled = true; say2('Buscando…');
     try {
       const p = await xferFetch(inp.value);
-      if (confirm(`Recibido: ${xferSummary(p)}.\n\nSe sustituyen los ajustes, perfiles y bloques de aquí (el historial se junta). ¿Cargar?`)) { say2('Cargado: recargando la página…'); xferApply(p); } else say2('No se ha cargado nada.');
+      if (confirm(`Recibido: ${xferSummary(p)}.\n\nSe sustituyen los ajustes y bloques de aquí (el historial se junta). ¿Cargar?`)) { say2('Cargado: recargando la página…'); xferApply(p); } else say2('No se ha cargado nada.');
     } catch (e) { say2('No se pudo recibir: ' + e.message, true); }
     recv.disabled = false;
   });
@@ -9333,7 +9267,7 @@ function syncInitPage() {
   $('#btnSyncYes').addEventListener('click', async () => { const m = pending; ask.hidden = true; if (!m) return; say2('Importando…'); try { await syncImport(m); say2('Importado: recargando la página…'); } catch (e) { say2('No se pudo importar: ' + e.message, true); } });
   $('#btnSyncNo').addEventListener('click', () => { if (pending) syncDecline(pending); pending = null; ask.hidden = true; });
   const busy = async (btn, fn) => { btn.disabled = true; try { await fn(); } catch (e) { say2('No se pudo: ' + e.message, true); } btn.disabled = false; show(); };
-  $('#btnSyncNew').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Creando…'); const c = await syncCreate(); say2(`Tu código fijo: ${syncFmt(c)}. Escríbelo una vez en el otro aparato (en el juego: Ajustes ▸ → Perfiles ▸ → Sincronización ▸ → Vincular).`); }));
+  $('#btnSyncNew').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Creando…'); const c = await syncCreate(); say2(`Tu código fijo: ${syncFmt(c)}. Escríbelo una vez en el otro aparato (en el juego: Opciones ▸ → Ajustes → Sincronización ▸ → Vincular).`); }));
   $('#btnSyncLink').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Vinculando…'); const m = await syncLink(inp.value); inp.value = ''; say2(m ? 'Vinculado: el otro aparato tiene datos.' : 'Vinculado.'); offer(m); }));
   $('#btnSyncNow').addEventListener('click', e => busy(e.currentTarget, async () => { say2('Sincronizando…'); const m = await syncCheck(); if (m) { say2(''); offer(m); } else { await syncPush(); say2(`Todo al día (${syncWhen(Date.now())}).`); } }));
   $('#btnSyncOff').addEventListener('click', () => { syncUnlink(); say2('Desvinculado: este aparato ya no sincroniza.'); show(); });
@@ -11876,10 +11810,11 @@ function settingsRows(go, tab = settingsTab, back = null) {
     rows.push({ t: 'btns', items: [{ label: simple ? 'Ver todos los ajustes (menú completo)' : 'Ver solo lo del jugador', onPress: () => { setSetting('menuLevel', simple ? 'full' : 'simple'); go(tab); } }] }); }
   rows.push({ t: 'text', text: 'Toca el número para escribirlo · desliza o usa − y +', color: '#a49fc8' });
   if (tab === 'sistema') rows.push({ t: 'btns', items: [{ label: DEV.on ? 'Acerca de RepArena · desarrollador' : 'Acerca de RepArena', style: 'ghost', onPress: () => { if (devTap()) go(tab); } }] }); // (cinco toques: modo desarrollador)
-  // restablecer esta pestaña (pulsando dos veces) y los perfiles (fuera de la partida: cambian el modo y el ejercicio)
+  // llevar tus cosas a otro aparato (fuera de la partida: al cargarlas cambia todo) y restablecer esta pestaña (pulsando dos veces)
   const armed = PREFS.resetArm === tab, tn = GROUP_TAB[tab] || GROUP_NAMES[tab], inGame = GAME_STATES.concat('paused').includes(state);
+  if (!inGame) rows.push({ t: 'btns', items: [{ label: 'A otro aparato (código)  ▸', accent: MC.prof, onPress: () => xferMenu(() => go(tab)) },
+    ...(SYNC.db ? [{ label: 'Sincronización  ▸', accent: MC.prof, onPress: () => syncMenu(() => go(tab)) }] : [])] });
   rows.push({ t: 'btns', items: [
-    ...(inGame ? [] : [{ label: 'Perfiles  ▸', accent: MC.prof, onPress: () => profilesMenu(() => go(tab)) }]),
     { label: armed ? `¿Restablecer ${tn}? Otra vez` : `Restablecer ${tn}`, style: armed ? 'danger' : undefined, onPress: () => { if (armed) { PREFS.resetArm = ''; resetGroup(tab); say(`${GROUP_NAMES[tab]}: como venía`, '#3cf0c6', 1.6); } else PREFS.resetArm = tab; go(tab); } },
     ...(back ? [{ label: 'Volver', style: 'primary', onPress: () => { PREFS.resetArm = ''; back(); } }] : [])] });
   return rows;
@@ -15300,7 +15235,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); profInitPage(); xferInitPage(); devInitPage(); exSongsInitPage(); pageSections(); pageHelp(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); xferInitPage(); devInitPage(); exSongsInitPage(); pageSections(); pageHelp(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

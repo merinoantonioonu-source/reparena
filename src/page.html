@@ -250,7 +250,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .sesrow .expick::after{content:'▾';opacity:.6;font-size:.8em}
 .sesrow .expick.on{border-color:var(--teal)}
 .sesrow .sesn2{display:inline-flex;align-items:center;gap:4px}
-.sesrow select.prof{width:7.6em}
 .sesrow .ibs{display:inline-flex;gap:4px;margin-left:auto}
 .sesrow .ib{position:relative;width:32px;height:32px;padding:6px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer;display:inline-grid;place-items:center}
 .sesrow .ib svg{width:100%;height:100%}
@@ -495,20 +494,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <div class="groups" id="settingsGroups"></div>
     <div class="actions"><button class="btn small" id="btnReset">Restablecer todos los ajustes</button></div>
     <div class="profiles">
-      <h3>Perfiles</h3>
-      <p class="note">Guarda todos tus ajustes (con el modo y el ejercicio) con un nombre, como «Mañana suave» o «Piernas a tope», y cárgalos de un toque, aquí o en el juego (Ajustes ▸ → Perfiles ▸). Hasta 8; si repites un nombre, se sustituye.</p>
-      <div class="profsave"><input id="profName" type="text" maxlength="40" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button class="btn small alt" id="btnProfSave">Guardar ajustes actuales</button></div>
-      <p class="status" id="profStatus" aria-live="polite"></p>
-      <div class="proflist" id="profList"></div>
-    </div>
-    <div class="profiles">
       <h3>Pasar a otro dispositivo</h3>
-      <p class="note">Lleva tus ajustes, perfiles, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Ajustes ▸ → Perfiles ▸ → A otro dispositivo → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
+      <p class="note">Lleva tus ajustes, bloques de sesión, historial y música elegida a otro dispositivo (por ejemplo, del PC a las gafas) con un código de 8 cifras. Pulsa <b>Enviar</b> aquí y escribe el código en el otro: en el juego, Opciones ▸ → Ajustes → A otro aparato → Recibir. Los datos van cifrados con el código y se guardan unas horas en un servicio público de mensajes (ntfy.sh), que no puede leerlos. La habitación escaneada, los aparatos colocados y el inicio de sesión de Spotify son de cada dispositivo y no se mandan.</p>
       <div class="profsave"><button class="btn small alt" id="btnXferSend">Enviar desde aquí</button><input id="xferCode" type="text" inputmode="numeric" maxlength="9" placeholder="Código de 8 cifras" aria-label="Código del otro dispositivo"><button class="btn small" id="btnXferRecv">Recibir</button></div>
       <p class="status" id="xferStatus" aria-live="polite"></p>
       <div id="syncBox" hidden>
         <h3>Sincronización automática</h3>
-        <p class="note">Con un <b>código fijo</b> de 16 cifras, tus ajustes, perfiles, sesiones, historial y carrera pasan solos de un aparato a otro: <b>Crear código</b> en uno y escribirlo en el otro con <b>Vincular</b> (en el juego, Ajustes ▸ → Perfiles ▸ → Sincronización); los dos lo recuerdan. Cada aparato guarda lo suyo, cifrado con el código, en Firebase al poco de cambiar algo, y al abrir RepArena, si el otro tiene ajustes o partidas más recientes, te pregunta si los importas. Cada ajuste lleva su hora: de cada uno se queda el que cambiaste más tarde, en cualquiera de los dos aparatos, y las partidas de los dos se juntan siempre.</p>
+        <p class="note">Con un <b>código fijo</b> de 16 cifras, tus ajustes, sesiones, historial y carrera pasan solos de un aparato a otro: <b>Crear código</b> en uno y escribirlo en el otro con <b>Vincular</b> (en el juego, Opciones ▸ → Ajustes → Sincronización); los dos lo recuerdan. Cada aparato guarda lo suyo, cifrado con el código, en Firebase al poco de cambiar algo, y al abrir RepArena, si el otro tiene ajustes o partidas más recientes, te pregunta si los importas. Cada ajuste lleva su hora: de cada uno se queda el que cambiaste más tarde, en cualquiera de los dos aparatos, y las partidas de los dos se juntan siempre.</p>
         <div class="profsave" id="syncNew"><button class="btn small alt" id="btnSyncNew">Crear código</button><input id="syncCode" type="text" inputmode="numeric" maxlength="19" placeholder="16 cifras" aria-label="Código fijo del otro aparato (16 cifras)"><button class="btn small" id="btnSyncLink">Vincular</button></div>
         <div class="profsave" id="syncLinked" hidden><button class="btn small alt" id="btnSyncNow">Sincronizar ahora</button><button class="btn small" id="btnSyncOff">Desvincular</button></div>
         <p class="status" id="syncStatus" aria-live="polite"></p>
@@ -541,7 +533,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="estimate" id="sesSummary"></p>
     <div class="profiles">
       <h3>Sesiones guardadas</h3>
-      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, su perfil, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
+      <p class="note">Guarda la sesión de ahora (sus bloques con su rango, sus ajustes propios y su música, el descanso y las vueltas) con un nombre y cárgala cuando quieras, aquí o en el juego (Sesiones guardadas ▸, en el menú principal). También pasan a otro dispositivo con el código. Hasta 12; si repites un nombre, se sustituye.</p>
       <div class="profsave"><input id="sessName" type="text" maxlength="40" placeholder="Nombre de la sesión" aria-label="Nombre de la sesión"><button class="btn small alt" id="btnSessSave">Guardar sesión</button></div>
       <p class="status" id="sessStatus" aria-live="polite"></p>
       <div class="proflist" id="sessSaved"></div>
