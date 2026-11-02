@@ -914,6 +914,7 @@ const SCHEMA = [
   { key: 'arcFever', g: 'arcos', label: 'Modo fiebre (10 seguidos sin fallo)', short: 'Fiebre', type: 'toggle', def: 1, modes: ['arcs'], relayout: true, hint: 'Tras 10 obstáculos seguidos sin que te den, todo va más deprisa, las luces se vuelven de neón rosa y los puntos valen el doble, hasta que te dan.' },
   { key: 'arcFeverUp', g: 'arcos', label: 'Fiebre: cuánto más deprisa en cada una', short: 'Fiebre +', type: 'num', min: 0, max: 40, step: 5, def: 10, unit: '%', modes: ['arcs'], cond: () => !!settings.arcFever, hint: 'La primera fiebre de la ronda va un 20 % más deprisa; cada una de las siguientes, este tanto más (con 10 %: 20, 30, 40… hasta el doble de rápido).' },
   { key: 'arcMove', g: 'arcos', label: 'Sensación de avance', short: 'Avance', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Rayas en la pista y farolas a los lados que pasan junto a ti a la velocidad de los arcos.' },
+  { key: 'arcCombo', g: 'arcos', label: 'Combinaciones (dos a la vez o muy seguidos)', short: 'Combinaciones', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], hint: 'A veces llegan dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez, agáchate) o tres muy seguidos (con música, a un pulso uno de otro). Más esfuerzo y más coordinación.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
@@ -6857,7 +6858,7 @@ function drawBoard() {
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump || nextArcPlank || nextArcMace)) say1(nextArcMace ? '¡MAZA!' : nextArcPlank ? '¡PLANCHA!' : nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && live && state !== 'rest') {
-    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
@@ -11335,6 +11336,7 @@ function buildWave(i) {
     if (settings.arcPatterns) return arxPatterns(total);
     const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100;
     for (let n = 0; n < total; n++) {
+      if (Math.random() * 100 < (settings.arcCombo || 0)) { list.push({ kind: 'combo', with: Math.random() < 0.5 ? 'laser' : 'walls', drop: rand(lo, (lo + hi) / 2), tilt: 0, hp: 1 }); continue; } // dos a la vez
       if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
@@ -11397,7 +11399,8 @@ function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
     ARX.minNext = 0;
-    if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
+    if (spec.kind === 'combo') { arcs.push(new ArcObs(spec.with)); arcs.push(new Arc(spec.drop, 0, true, 0)); } // a la vez: apártate (o métete en el hueco) y agáchate
+    else if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
     else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
       const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 2.5;
       bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
@@ -12193,7 +12196,11 @@ function arxPatterns(total) {
     [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
     [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
     [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]], // al suelo, en plancha (y tiempo para levantarte)
-    [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]] // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
+    [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]], // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
+    // combinaciones: dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez,
+    // agáchate) o tres muy seguidos (con ritmo, a un pulso uno de otro)
+    [(settings.arcCombo || 0) / 20, () => [{ kind: 'combo', with: Math.random() < 0.5 ? 'laser' : 'walls', drop: rand(lo, mid), tilt: 0, hp: 1, gap: 1.4 }]],
+    [(settings.arcCombo || 0) / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.3), S(rand(lo, hi), 0.3, { tilt: s * tiltA() }), S(hi, 1.4)]; }]
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
   while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
   const out = arxPlankRoom(list.slice(0, total));
@@ -12357,8 +12364,9 @@ const _ao = new V3(), _ao2 = new V3();
 /* ---------- Sensación de avance: una rejilla de neón en la pista y arcos de luz a los lados que pasan junto a ti ---------- */
 // La pista: líneas de luz (de lado a lado cada metro y tres a lo largo) que corren hacia ti a la velocidad de los arcos y se
 // apagan a lo lejos. A los lados, en vez de farolas, arcos de luz finos que suben desde el suelo y se inclinan un poco hacia
-// dentro (sin entrar en la pista). Todo con el color de la racha: turquesa, dorado (5 seguidos) y rosa en fiebre; la arena
-// también se tiñe un poco (una luz de ambiente de ese color)
+// dentro (sin entrar en la pista). Todo con el color de la racha: turquesa, dorado (5 seguidos) y rojo en fiebre; la arena
+// también se tiñe (una luz de ambiente de ese color; en fiebre, roja y más fuerte). Al compás de la música, la pista y los
+// arcos de luz destellan en cada pulso: así se ve que todo va con la canción
 const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
 const gridMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
@@ -12390,13 +12398,14 @@ function arxFeverLook(on) { orbFeverLook(on); }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
   // el color de la racha, con suavidad
-  _tintT.setHex(ARX.fever ? 0xff4fa3 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
-  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) : 0) - ARX_TINT.intensity) * Math.min(1, dt * 3);
+  _tintT.setHex(ARX.fever ? 0xff2414 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
+  const bp = arxBeatP() ? arxBeatGlow() - 0.7 : 0; // (0 a 0,6, en cada pulso)
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 1.7 : 1) * (1 + bp * 0.5) : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp ? 12 : 3));
   if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
-  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8;
+  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = (ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8) + bp;
   ARX_GRID.scale.y = len; ARX_GRID.position.z = -D + len / 2 + 0.4; Object.assign(gridMat.uniforms.uLen, { value: len }); gridMat.uniforms.uScroll.value = -arxScroll; gridMat.uniforms.uCol.value.copy(_tintC); gridMat.uniforms.uK.value = pulse;
-  archMat.color.copy(_tintC); archMat.opacity = 0.35 + 0.25 * pulse;
+  archMat.color.copy(_tintC); archMat.opacity = Math.min(1, (0.35 + 0.25 * pulse) * (ARX.fever ? 0.8 : 1)); // (en fiebre, algo menos: sobre la arena roja, si no, se ven blancas)
   ARX_POST.forEach((g, i) => { g.position.z = z0 + ((Math.floor(i / 2) * POST_GAP + arxScroll) % span); g.userData.tip.material.color.copy(_tintC); });
 }
 

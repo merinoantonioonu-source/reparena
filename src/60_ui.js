@@ -1110,7 +1110,7 @@ function drawBoard() {
   else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump || nextArcPlank || nextArcMace)) say1(nextArcMace ? '¡MAZA!' : nextArcPlank ? '¡PLANCHA!' : nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && live && state !== 'rest') {
-    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
+    const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
