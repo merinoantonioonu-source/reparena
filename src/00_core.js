@@ -36,13 +36,15 @@ const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'pike', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  // (el press de hombro, el press con barra y la flexión en pica se quitaron: en las gafas no se detectaban bien; su
+  // código sigue, por si vuelven, y su historial se sigue viendo)
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
-  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'press', 'press2', 'fraise', 'dips', 'pike']],
+  ['Brazos y hombros', ['curl', 'curl2', 'twist', 'fraise', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
   ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
@@ -236,7 +238,6 @@ const SCHEMA = [
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['left', 'A la izquierda'], ['right', 'A la derecha'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'A un lado: grande (el doble que sobre las compuertas) y siempre a la vista, por delante y a un lado, fuera del camino de lo que viene. Auto: a la izquierda en VR y en una columna (o en tu pared) en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
   { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['real', 'Realista'], ['comic', 'Cómic (prueba)']], def: 'real', hint: 'Cómic (prueba): aspecto de dibujo animado, como Retronika o Broken Edge: contornos negros, sombreado plano con un corte duro y sombras de color, rayado a lápiz en la sombra y colores claros; sin sombras en tiempo real (más ligero). En la fortaleza, cielo con nubes de dibujo y suelo con grietas a tinta.' },
-  { key: 'lockStyle', g: 'entorno', label: 'Diana (el enemigo al que apuntas)', short: 'Diana', type: 'choice', opts: [['enfoque', 'Líneas de enfoque'], ['tinta', 'Tinta'], ['trama', 'Trama de puntos'], ['corchetes', 'Corchetes'], ['neon', 'Neón']], def: 'enfoque', hint: 'Cómo se marca el enemigo al que apuntas. Líneas de enfoque: rayas de manga alrededor que apuntan a él. Tinta: línea negra de rotulador que tiembla, con un halo amarillo desplazado. Trama de puntos: la trama roja de los cómics, puntos gordos pegados a él y más pequeños hacia fuera. Corchetes: cuatro esquinas de pincel que se cierran sobre él. Neón: contorno rojo que late. La carga se ve en la bola de energía, no en la diana.' },
   { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'Automática: si el juego no llega a la frecuencia de las gafas (72 imágenes por segundo), baja la resolución por pasos y recalcula las sombras menos a menudo, y la vuelve a subir si sobra. Con menos de 72, lo cercano (manos y paneles) se ve a saltos.' },
   { key: 'xrHz', g: 'entorno', label: 'Fotogramas por segundo en las gafas', short: 'Fotogramas', type: 'choice', opts: [['72', '72 (estable)'], ['90', '90'], ['120', '120']], def: '72', hint: 'A 72 la imagen va siempre fluida (como en muchos juegos de las Quest); a 90 o 120 es más suave si las gafas llegan, pero si no llegan da tirones.' },
   { key: 'perfHud', g: 'sistema', label: 'Medidor de fotogramas', short: 'Medidor', type: 'toggle', def: 0, hint: 'Muestra abajo a la izquierda de la vista los fotogramas por segundo y los que se pierden: si ves pérdidas, baja la frecuencia o quita las sombras.' },
@@ -357,7 +358,7 @@ function setSetting(key, v) {
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'lockStyle', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
+  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
 const isBasic = f => devRowOk(f) ? devEye().includes(f.key) : f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);

@@ -248,7 +248,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await runConfig('Enjambre+zancadas', { ...base, mode: 'flyers', exercise: 'lunge', flySpeed: 8 }, squatSim(2.8));
   await runConfig('Asalto+fondos en silla', { ...base, mode: 'walkers', exercise: 'dips' }, squatSim(2.6), 420, s => s.partial > 1 ? 'fondos completos cuentan como medios' : '');
   await runConfig('Enjambre+fondos en silla', { ...base, mode: 'flyers', exercise: 'dips', flySpeed: 8 }, squatSim(2.6));
-  await runConfig('Asalto+press de hombro', { ...base, mode: 'walkers', exercise: 'press' }, squatSim(1.8), 420, s => s.reps < 10 ? 'el press no cuenta las repeticiones' : '');
   // ---- Antebrazos con la barra flexible: un giro carga y el siguiente (al revés) dispara ----
   await runConfig('Combate+antebrazos (barra flexible)', { ...base, mode: 'combat', foes: 'robots', exercise: 'twist', twistDeg: 70, walkTime: 14 }, squatSim(1.6), 420, s => s.reps < 9 ? `pocos disparos girando la barra (${s.reps})` : s.partial ? 'giros completos cuentan como cortos' : s.kills < 4 ? 'no mata robots' : '');
   RA.PV.twistScale = 0.55;
@@ -300,10 +299,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     let plain = 1; await runConfig('Combate sentadilla honda sin recarga profunda (de serie)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4, deepDrop: RA.FIELD.deepDrop.def }, t => { RA.PV.crouch = (t % 2.6) < 1.0; const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m) plain = Math.max(plain, +m[1]); }, 200, s => '', true);
     log(`  deep quick squats with the default settings (deep reload ${RA.FIELD.deepDrop.def} cm): shot up to ×${plain}`);
     if (RA.FIELD.deepDrop.def !== 0 || plain > 1) errors.push('recarga profunda: de serie debería estar apagada (una sentadilla honda y rápida, ×1)'); }
-  // press de hombro: las cámaras pierden la mano en cuanto pasa por encima de los ojos (subiendo deprisa): cuenta igual
-  await runConfig('Combate press de hombro, la mano se pierde arriba', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press', waves: 2, repsWave: 6 }, t => { squatSim(1.8)(t); RA.PV.lostAbove = 0; }, 200, s => s.reps < 10 ? `el press no cuenta si la mano se pierde arriba (${s.reps} reps)` : s.partial > 1 ? 'el press da medias de más al perder la mano arriba' : '');
-  RA.PV.lostAbove = null;
-  await runConfig('Enjambre+press de hombro', { ...base, mode: 'flyers', exercise: 'press', flySpeed: 8 }, squatSim(1.8));
   await runConfig('Asalto+plancha lateral', { ...base, mode: 'walkers', exercise: 'splank', splHold: 2, walkTime: 14 }, () => { RA.PV.crouch = false; }, 420, s => s.partial ? 'aguantando quieto no debería cortarse' : '');
   await runConfig('Enjambre+plancha lateral', { ...base, mode: 'flyers', exercise: 'splank', splHold: 2, flySpeed: 8 }, () => { RA.PV.crouch = false; }, 420);
   await runConfig('Plancha lateral con la cadera cayendo', { ...base, mode: 'walkers', exercise: 'splank', splHold: 3, waves: 1, walkTime: 30 }, t => { RA.PV.crouch = RA.state === 'play' && (t % 2.4) > 1.6; }, 30, s => s.reps ? 'con la cadera cayendo antes de tiempo no debería disparar' : !s.partial ? 'debería avisar de que sube la cadera' : '', true);
@@ -312,8 +307,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // apuntando con la mirada, el jugador mira al bicho más cercano (si no, desde trampillas a 2 m casi nunca cruzan delante)
   const lookNearest = sim => t => { sim(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3())); };
   await runConfig('Enjambre+flexiones', { ...base, mode: 'flyers', exercise: 'pushup' }, lookNearest(squatSim()));
-  // flexión en pica (solo en Combate): la cabeza baja entre las manos, con más recorrido que la flexión; salen los bichos de las trampillas
-  await runConfig('Combate flexiones en pica', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'pike', walkTime: 8 }, squatSim(2.8), 420, s => s.reps < 9 ? 'la flexión en pica no cuenta las repeticiones' : s.partial > 2 ? 'la flexión en pica da medias de más' : !RA.MODE_EX.combat.includes('pike') || RA.MODE_EX.arcs.includes('pike') || RA.MODE_EX.touch.includes('pike') ? 'la flexión en pica debería estar solo en Combate' : '');
   RA.camera.rotation.set(0, 0, 0);
   // con barra o kettlebell: las dos manos a la vez; sentadilla con press: hay que subir las pesas para disparar
   await runConfig('Combate curl con barra', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2' }, squatSim(2.0), 420, s => s.reps < 9 ? 'el curl con barra no cuenta las repeticiones' : s.partial > 2 ? 'el curl con barra da medias de más' : '');
@@ -322,7 +315,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const pf = RA.settings.perfectTime; RA.setSetting('fraiseRange', 70); // (con un recorrido mayor del que se hace, no cuenta: a medias)
     await runConfig('Combate elevaciones frontales cortas', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'fraise', waves: 1, repsWave: 3, fraiseRange: 70 }, squatSim(2.4), 25, s => s.reps ? `con 70 cm de recorrido no deberían contar subidas de 62 (${s.reps})` : !s.partial ? 'debería avisar de que sube poco' : '', true);
     RA.setSetting('fraiseRange', 45); RA.setSetting('perfectTime', pf); }
-  await runConfig('Combate press con barra', { ...base, mode: 'combat', foes: 'flyers', aim: 'auto', exercise: 'press2' }, squatSim(1.8), 420, s => s.reps < 9 ? 'el press con barra no cuenta las repeticiones' : '');
   await runConfig('Combate sentadilla con press', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster' }, squatSim(3.0), 420, s => s.reps < 9 ? 'la sentadilla con press no dispara' : s.partial > 2 ? 'la sentadilla con press da medias de más' : '');
   await runConfig('Sentadilla con press sin subir las pesas', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'thruster', waves: 1 }, t => { squatSim(3.0)(t); RA.PV.noArms = true; }, 30, s => s.reps ? 'sin subir las pesas no debería disparar' : s.partial < 3 ? 'no avisa de que hay que subir las pesas' : '', true);
   RA.PV.noArms = false;
@@ -661,29 +653,18 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if ((spawnBeats.length || !process.env.ONLY) && (!spawnBeats.length || worst > 0.15)) errors.push('con ritmo, los enemigos no salen en el pulso');
     RA.setSetting('bpm', 0); }
   // Combate: cualquier enemigo con cualquier puntería
-  // la diana es un contorno de neón rojo en el robot al que apuntas: sale en él (solo en él), parpadea y nunca el aro antiguo
-  { const LK = { on: 0, n: 0, other: 0, ring: 0, kLo: 1, kHi: 0, dead: 0 };
-    await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10, lockStyle: 'neon' }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
-      const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl.length && x.lkl[0].visible);
-      if (g && RA.state === 'play') { LK.n++; if (vis(g)) LK.on++; LK.kLo = Math.min(LK.kLo, RA.LKL.k); LK.kHi = Math.max(LK.kHi, RA.LKL.k); if (LK.prev !== undefined) LK.jump = Math.max(LK.jump || 0, Math.abs(RA.LKL.k - LK.prev)); LK.prev = RA.LKL.k; } else LK.prev = undefined;
+  // la diana (líneas de enfoque): rayas planas alrededor del robot al que apuntas, solo en él (nunca en otros ni en los
+  // muertos, nunca el aro antiguo), que se mueven (giran y corren hacia fuera)
+  { const LK = { on: 0, n: 0, other: 0, ring: 0, dead: 0, moved: 0, frames: 0 }; let prev = null;
+    await runConfig('Combate robots apuntando con la mirada', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
+      const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl[0] && x.lkl[0].visible);
+      if (g && RA.state === 'play') { LK.n++; if (vis(g)) { LK.on++; const q = g.lkl[0].children[0], now = q.position.x + ',' + q.position.y + ',' + q.scale.x; if (prev !== null) { LK.frames++; if (now !== prev) LK.moved++; } prev = now; } }
       for (const x of RA.enemies) { if (x !== g && x.alive && vis(x)) LK.other++; if (!x.alive && vis(x)) LK.dead++; }
       if (Object.values(RA.locks).some(r => r.visible)) LK.ring++;
     }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : s.hits < s.shots * 0.5 ? 'mirando al robot se falla demasiado' : '');
-    log(`lock outline: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · glow ${LK.kLo.toFixed(2)}–${LK.kHi.toFixed(2)}, biggest step per frame ${(LK.jump || 0).toFixed(3)}`);
-    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring || LK.kHi - LK.kLo < 0.3 || LK.jump > 0.12) errors.push('diana: el robot apuntado debería llevar el contorno de neón con un brillo que sube y baja despacio (solo él, nunca el aro antiguo)');
-    RA.setSetting('lockStyle', 'enfoque'); }
-  // las dianas de cómic (tinta, trama, enfoque y corchetes): cada una sale solo en el apuntado y, al cambiar de estilo, la de antes se quita
-  { const ST = ['tinta', 'trama', 'enfoque', 'corchetes'], LC = Object.fromEntries(ST.map(k => [k, { on: 0, n: 0 }])); let other = 0, stale = 0, cur = '';
-    await runConfig('Combate robots: dianas de cómic', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t);
-      const st = ST[Math.floor(t / 2) % ST.length], sw = st !== cur; if (sw) { cur = st; RA.setSetting('lockStyle', st); } // (el cambio se ve en el fotograma siguiente)
-      const e = RA.enemies.find(x => x.alive); if (e) RA.camera.lookAt(e.center(new THREE.Vector3()));
-      const g = RA.gazeLock(), vis = x => !!(x.lkl && x.lkl.length && x.lkl[0].visible);
-      if (g && RA.state === 'play' && g.lks && g.lks[st]) { LC[st].n++; if (vis(g)) LC[st].on++; }
-      for (const x of RA.enemies) { if (x !== g && vis(x)) other++; if (x.lks && !sw) for (const k in x.lks) if (k !== st && x.lks[k].some(o => o.visible)) stale++; }
-    }, 420, s => s.kills < 3 ? 'apuntando tú no se derriban robots' : '');
-    RA.setSetting('lockStyle', 'enfoque');
-    log(`comic lock styles: ${ST.map(k => `${k} ${LC[k].on}/${LC[k].n}`).join(' · ')} · on others ${other} · old style left visible ${stale}`);
-    if (ST.some(k => !LC[k].n || LC[k].on < LC[k].n * 0.9) || other || stale) errors.push('diana de cómic: cada estilo (tinta, trama, enfoque, corchetes) debería salir solo en el apuntado y quitarse al cambiar de estilo'); }
+    log(`lock rays: on the aimed robot ${LK.on}/${LK.n} · on others ${LK.other} · on dead ones ${LK.dead} · old ring ${LK.ring} · rays moving in ${LK.moved}/${LK.frames} frames · flat (no silhouette copies) ${!RA.enemies.some(x => x.root && (() => { let c = 0; x.root.traverse(o => { if (o.userData.isLockLine) c++; }); return c; })())}`);
+    if (LK.on < LK.n * 0.9 || LK.other || LK.dead || LK.ring) errors.push('diana: el robot apuntado debería llevar sus líneas de enfoque (solo él, nunca el aro antiguo)');
+    if (LK.moved < LK.frames * 0.8) errors.push('diana: las rayas deberían moverse (girar y correr hacia fuera)'); }
   // la mirada baja al agacharse y aún no ha vuelto al subir (cuando se dispara): el rayo va igual al robot que mirabas
   { let crT = -9; await runConfig('Combate mirada que se mueve en la sentadilla', { ...base, mode: 'combat', foes: 'robots', aim: 'gaze', exercise: 'squat', walkTime: 10 }, t => { squatSim()(t); if (RA.PV.crouch) crT = t; const e = RA.enemies.find(x => x.alive); if (e) { RA.camera.lookAt(e.center(new THREE.Vector3())); if (t - crT < 0.5) RA.camera.rotateX(-0.42); } }, 420, s => s.kills < 3 ? 'con la mirada moviéndose no se derriban robots' : s.shots > s.hits * 2.5 || s.taken > 4 ? `con la mirada moviéndose en la sentadilla se falla demasiado (${s.hits}/${s.shots}, golpes recibidos ${s.taken})` : ''); } // los fallos que quedan: disparos sin ningún robot a la vista
   RA.camera.rotation.set(0, 0, 0);
@@ -1800,6 +1781,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const r1 = RA.stats.reps; XRS.lift = 'both'; frame(60, 16, xrFrame); XRS.lift = null; frame(30, 16, xrFrame);
   log('lift both: reps +' + (RA.stats.reps - r1));
   if (RA.stats.reps !== r1) errors.push('plancha: levantar los dos brazos no debería disparar');
+  // las gafas ven un instante la mano de apoyo por debajo del suelo: la otra tiene que seguir disparando (antes, la de apoyo
+  // parecía levantada para siempre y la derecha dejaba de disparar)
+  { XRS.hands = { left: { x: -0.2, y: -0.4, z: -0.3 }, right: { x: 0.2, y: 0.1, z: -0.3 } }; frame(3, 16, xrFrame); XRS.hands = null; frame(30, 16, xrFrame);
+    const r2 = RA.stats.reps; for (let k = 0; k < 4; k++) { XRS.lift = 'right'; frame(40, 16, xrFrame); XRS.lift = null; frame(40, 16, xrFrame); }
+    log(`plank1 after the support hand was seen under the floor: right lifts → ${RA.stats.reps - r2}/4`);
+    if (RA.stats.reps - r2 !== 4) errors.push('plancha: tras ver un instante la mano de apoyo bajo el suelo, la otra debería seguir disparando'); }
   RA.exitAll(); frame(2, 16, xrFrame);
 
   // ---- Una sola paralela: las manos van a lo largo de la barra ----
@@ -2301,21 +2288,10 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   if (RA.stats.reps < 5 || RA.stats.taken) errors.push(`abdominales XR: ${RA.stats.reps} tocados, ${RA.stats.taken} fallos`);
   XRS.headX = XRS.headZ = 0; XRS.headQ = null; RA.exitAll(); frame(2, 16, xrFrame);
 
-  // ---- Press de hombro en XR: por encima de la cabeza las manos se pierden y la repetición cuenta igual ----
-  applyCfg({ mode: 'walkers', exercise: 'press', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20, pressRange: 32 });
-  XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
-  const sh = y => ({ left: new THREE.Vector3(-0.22, y, -0.1), right: new THREE.Vector3(0.22, y, -0.1) });
-  RA.beginRun(); XRS.hands = sh(1.55); frame(250, 16, xrFrame); log('press XR calib', RA.state, 'bottom', RA.DET.pr.left.bottom.toFixed(2));
-  let prR = RA.stats.reps;
-  for (let i = 0; i < 3; i++) { for (let k = 0; k <= 20; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } for (let k = 20; k >= 0; k--) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } }
-  log('press XR visible: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: 3 subidas con las dos manos deberían ser 6 (${RA.stats.reps - prR})`);
-  prR = RA.stats.reps;
-  for (let i = 0; i < 3; i++) { for (let k = 0; k <= 14; k++) { XRS.hands = sh(1.55 + 0.4 * k / 20); frame(2, 16, xrFrame); } XRS.noHands = true; frame(30, 16, xrFrame); XRS.noHands = false; XRS.hands = sh(1.55); frame(30, 16, xrFrame); }
-  log('press XR lost overhead: reps', RA.stats.reps - prR); if (RA.stats.reps - prR !== 6) errors.push(`press XR: con las manos perdidas arriba deberían ser 6 (${RA.stats.reps - prR})`);
   // ---- Curl en XR con kettlebell: la pesa tapa los dedos al subir y las gafas pierden la mano; si ya iba por casi la
   // mitad, la repetición cuenta aunque vuelva a verse ya abajo (y si apenas había empezado, no) ----
   { XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame); applyCfg({ mode: 'walkers', exercise: 'curl', lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 20, curlRange: 27 });
-    await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); const ch = y => ({ left: new THREE.Vector3(-0.22, y, -0.2), right: new THREE.Vector3(0.22, y, -0.2) });
+    XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); const ch = y => ({ left: new THREE.Vector3(-0.22, y, -0.2), right: new THREE.Vector3(0.22, y, -0.2) });
     RA.beginRun(); XRS.hands = ch(0.95); frame(250, 16, xrFrame); let c0 = RA.stats.reps;
     const lift = (top, n) => { for (let i = 0; i < n; i++) { for (let k = 0; k <= 10; k++) { XRS.hands = ch(0.95 + top * k / 10); frame(2, 16, xrFrame); } XRS.noHands = true; frame(40, 16, xrFrame); XRS.noHands = false; XRS.hands = ch(0.95); frame(40, 16, xrFrame); } };
     lift(0.15, 3); const mid = RA.stats.reps - c0; c0 = RA.stats.reps; lift(0.05, 2); const tiny = RA.stats.reps - c0;
@@ -2543,27 +2519,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (glitch || glitchMsg) errors.push('curl con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
     if (one !== 4 || swap !== 4) errors.push(`curl con kettlebell: con una sola mano a la vista, o perdiéndose por turnos, debería contar cada subida una vez (${one}, ${swap} de 4)`);
     if (dark !== 3 || reapp !== 3) errors.push(`curl con kettlebell: perdidas las dos al subir, o reapareciendo ya arriba, debería contar una vez (${dark}, ${reapp} de 3)`); }
-  // lo mismo en el press con barra o kettlebell (las dos manos juntas; por encima de la cabeza las cámaras las pierden)
-  { RA.exitAll(); frame(2, 16, xrFrame); applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'press2', lives: 0, waves: 1, repsWave: 40, walkTime: 20, pressRange: 35 });
-    XRS.headY = 1.7; XRS.hands = { left: { x: -0.1, y: 1.5, z: -0.25 }, right: { x: 0.1, y: 1.5, z: -0.25 } }; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
-    const both = y => { XRS.hands.left.y = XRS.hands.right.y = y; }, press = (n, each) => { for (let c = 0; c < n; c++) for (let i = 0; i < 90; i++) { const k = i < 15 ? 0 : i < 35 ? (i - 15) / 20 : i < 50 ? 1 : i < 70 ? 1 - (i - 50) / 20 : 0; both(1.5 + 0.45 * k); if (each) each(i); frame(1, 16, xrFrame); } XRS.noLeft = XRS.noRight = XRS.noHands = false; };
-    both(1.5); frame(30, 16, xrFrame); let r0 = RA.stats.reps, p0 = RA.stats.partial;
-    for (let g = 0; g < 6; g++) { const sd = g % 2 ? 'right' : 'left'; XRS.hands[sd].y = 1.98; frame(g < 3 ? 1 : 2, 16, xrFrame); XRS.hands[sd].y = 1.5; frame(25, 16, xrFrame); }
-    const glitch = RA.stats.reps - r0, glitchMsg = RA.stats.partial - p0;
-    r0 = RA.stats.reps; press(4); const two = RA.stats.reps - r0;
-    r0 = RA.stats.reps; press(4, () => { XRS.noRight = true; }); const one = RA.stats.reps - r0;
-    r0 = RA.stats.reps; press(4, i => { const a = Math.floor(i / 6) % 3; XRS.noLeft = a === 1; XRS.noRight = a === 2; }); const swap = RA.stats.reps - r0;
-    r0 = RA.stats.reps; press(3, i => { XRS.noHands = i >= 27 && i < 75; }); const dark = RA.stats.reps - r0;
-    log(`kettlebell press (both hands together): one-hand glitches → ${glitch} reps, ${glitchMsg} warnings · both seen ${two}/4 · only one hand ${one}/4 · lost by turns ${swap}/4 · both lost overhead ${dark}/3`);
-    if (glitch || glitchMsg) errors.push('press con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
-    if (two !== 4 || one !== 4 || swap !== 4 || dark !== 3) errors.push(`press con kettlebell: cada subida debería contar una vez (las dos ${two}, una ${one}, por turnos ${swap} de 4; perdidas arriba ${dark} de 3)`); }
-  // press despacio: las manos se pierden pronto (aún subiendo poco a poco) y reaparecen ya bajando, a media altura: cuenta una vez
-  { const r0 = RA.stats.reps; XRS.noHands = false; for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.5; frame(40, 16, xrFrame);
-    for (let c = 0; c < 3; c++) { for (let i = 0; i < 60; i++) { for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.5 + 0.08 * i / 60; frame(1, 16, xrFrame); }
-      XRS.noHands = true; frame(60, 16, xrFrame); XRS.noHands = false;
-      for (let i = 0; i < 30; i++) { for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.7 - 0.2 * i / 30; frame(1, 16, xrFrame); } frame(25, 16, xrFrame); }
-    const slow = RA.stats.reps - r0; log(`kettlebell press, slow and lost early, back halfway down: ${slow}/3`);
-    if (slow !== 3) errors.push(`press con kettlebell: perdidas pronto al subir despacio y vistas otra vez bajando a media altura, cada subida debería contar una vez (${slow} de 3)`); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
   // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la

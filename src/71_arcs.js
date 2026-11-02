@@ -93,7 +93,15 @@ function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' |
 // Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,
 // cerca del centro (apártate al lado libre); las paredes, con el hueco a un lado (métete en él)
 const LASER_MAT = new THREE.MeshBasicMaterial({ color: 0xffd0d0, toneMapped: false });
-const wallMat = () => new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2a40, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+// Las paredes, bien visibles (antes, unas rayas rojas tenues que apenas se distinguían del hueco): rojas casi opacas, con
+// franjas de peligro en diagonal y el canto que da al hueco en verde, para no dudar de hacia dónde volcar el cuerpo
+const WALL_TEX = (() => {
+  const c = mkCanvas(128), x = c.getContext('2d'); x.fillStyle = 'rgba(200,20,44,0.82)'; x.fillRect(0, 0, 128, 128);
+  x.fillStyle = 'rgba(25,4,10,0.85)'; for (let k = -128; k < 256; k += 64) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + 32, 0); x.lineTo(k + 160, 128); x.lineTo(k + 128, 128); x.closePath(); x.fill(); }
+  const t = texFrom(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.4 / 0.45, 2.3 / 0.45); return t;
+})();
+const WALL_EDGE = new THREE.MeshBasicMaterial({ color: 0x3cf0c6, toneMapped: false });
+const wallMat = () => new THREE.MeshBasicMaterial({ map: WALL_TEX, transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
 class ArcObs {
   constructor(kind) {
     const D = arenaDepth(); Object.assign(this, { kind, alive: true, judged: false, second: false, checked: false, hit: false, jump: false, t: 0, warnT: 0, z: -D + 0.9, speed: arxSpeed() });
@@ -129,7 +137,7 @@ class ArcObs {
       this.ang = Math.random() * 100 < settings.arcWallTilt ? -Math.sign(this.gx) * rand(0.1, 0.22) : 0; // (inclinadas hacia su lado: más hueco abajo de ese lado)
       this.leanX = this.gapX(calibRef); this.tilt = Math.sign(this.leanX) * 0.01;
       this.walls = [-1, 1].map(s => { const g = new THREE.Group(), m = wallMat(), pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), m); pl.position.set(s * 0.7, 1.15, 0); g.add(pl);
-        const edge = new THREE.Mesh(G.box(0.05, 2.3, 0.05), LASER_MAT); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; g.rotation.z = this.ang; this.grp.add(g); return g; });
+        const edge = new THREE.Mesh(G.box(0.07, 2.3, 0.07), WALL_EDGE); edge.position.set(0, 1.15, 0); g.add(edge); g.userData.m = m; g.rotation.z = this.ang; this.grp.add(g); return g; });
     }
     this.hum = humLoop(arena.localToWorld(new V3(0, 1.2, this.z)));
   }
@@ -146,7 +154,7 @@ class ArcObs {
     const bad = this.kind === 'laser' ? Math.abs(HL.x - this.beam.position.x) < 0.28 : this.kind === 'mace' ? this.maceHits() : Math.abs(HL.x - this.gapX(HL.y)) > this.gap / 2 - 0.06;
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && bad;
     if (this.kind === 'mace') this.glow.material.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.25;
-    else if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.75 + 0.2 * Math.sin(t * 30) : 0.45; });
+    else if (this.mat) this.mat.opacity = danger ? 1 : 0.7; else this.walls.forEach(w => { w.userData.m.opacity = danger ? 0.8 + 0.2 * Math.sin(t * 30) : 0.9; });
     if (danger && inLane) { this.warnT -= dt; if (this.warnT <= 0) { const d = hz - this.z; this.warnT = clamp(d * 0.18, 0.08, 0.4); SND.beep(1 + (2.4 - d) * 0.25); } }
     if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(this.kind === 'laser' ? this.beam.position.x : this.kind === 'mace' ? this.bx : this.gapX(1.2), 1.2, this.z)));
     const reach = this.reach || 0; // (la maza que gira pasa por delante y por detrás de su viga)

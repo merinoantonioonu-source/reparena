@@ -662,8 +662,11 @@ function updateWatch(dt) {
   // (con el menú de muñeca abierto y a la vista, X/Y lo recogen: no lo vuelven a colocar)
   if (h.btnMenu && !watch.btnPrev) { if (menu && menu.wrist && WM.on && !wristFar() && !menu.perks && !GAME_STATES.includes(state)) menuClose(); else onWatch(); } watch.btnPrev = h.btnMenu;
   const guns = pistolOn() && GAME_STATES.includes(state) && !h.isHand; // con las pistolas en la mano el botón estorbaría
-  const wristUp = menu && menu.wrist && WM.on && !wristFar(); // con el panel abierto delante, el botón sobra
-  if (wristLook(h) && !wristUp && !guns) {
+  // con el panel abierto delante, el botón sobra; pero si miras la muñeca más de un segundo, sale igual (si el juego creía
+  // que el panel estaba a la vista y no lo estaba —agachado, tumbado…—, el botón no volvía y no había forma de traerlo)
+  const look = wristLook(h); watch.lookT = look ? (watch.lookT || 0) + dt : 0;
+  const wristUp = menu && menu.wrist && WM.on && !wristFar() && watch.lookT < 1;
+  if (look && !wristUp && !guns) {
     show = true;
     if (h.isHand) { _wu.set(0, 1, 0).applyQuaternion(h.wristQ); watch.mesh.position.copy(h.wrist).addScaledVector(_wu, Math.sign(_wu.dot(_wh)) * 0.045).add(_wo.set(0, 0, 0.035).applyQuaternion(h.wristQ)); }
     else watch.mesh.position.copy(h.wrist).add(_wo.set(0, 0.08, 0));

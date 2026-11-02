@@ -1105,11 +1105,11 @@ class Arc {
     if (this.sideMin) {
       const sg = Math.sign(tilt), xa = -sg * hw, xe = sg * Math.max(0.02, this.sideMin - 0.1), g = new THREE.PlaneGeometry(1, 1), p = g.attributes.position;
       [[xa, this.barAt(xa) - 0.04], [xe, this.barAt(xe) - 0.04], [xa, 0.01], [xe, 0.01]].forEach(([x, y], i) => p.setXYZ(i, x, Math.max(0.05, y), 0)); p.needsUpdate = true;
-      this.sideMat = new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2010, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.sideMat = wallMat(); // (roja con franjas, como las paredes: bien distinta del hueco por el que pasar)
       this.sideWall = new THREE.Mesh(g, this.sideMat); this.o.grp.add(this.sideWall);
-      // el borde, al rojo como la barra y con su resplandor: hasta ahí llega la pared
+      // el borde, en verde como el de las paredes: ahí empieza el hueco por el que pasar
       const eh = Math.max(0.05, this.barAt(xe) - 0.03); this.sideEdge = new THREE.Group(); this.sideEdge.position.set(xe, eh / 2, 0); this.o.grp.add(this.sideEdge);
-      this.sideEdge.add(new THREE.Mesh(G.cylRaw(0.02, 0.02, eh, 6), this.o.coreMat)); for (let i = 0; i < 2; i++) { const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.2, eh), this.o.glowMat); p2.rotation.y = i * Math.PI / 2; this.sideEdge.add(p2); }
+      this.sideEdge.add(new THREE.Mesh(G.cylRaw(0.035, 0.035, eh, 8), WALL_EDGE));
     }
     Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : low ? arxSpeed() * 0.75 : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
@@ -1132,7 +1132,7 @@ class Arc {
     const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
     const sideBad = this.sideMin && Math.sign(this.tilt) * HL.x < this.sideMin; // (en la pared del lado bajo)
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : sideBad || HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
-    if (this.sideMat) this.sideMat.opacity = danger && sideBad ? 0.65 + 0.2 * Math.sin(t * 30) : 0.45;
+    if (this.sideMat) this.sideMat.opacity = danger && sideBad ? 0.8 + 0.2 * Math.sin(t * 30) : 0.9;
     const flick = (0.75 + Math.random() * 0.25) * arxBeatGlow();
     this.o.glowMat.opacity = Math.min(1, (danger ? 1 : 0.7) * flick); this.o.curtainMat.opacity = danger ? 0.32 + 0.15 * Math.sin(t * 30) : 0.18;
     this.o.coreMat.color.setHex(danger ? 0xffffff : 0xffb0a0);
@@ -1714,6 +1714,7 @@ function iwVisual(t) {
   IW.line.scale.set(1 + 0.25 * IW.flash, 1 + 2 * IW.flash, 1);
 }
 const _iwWhite = new THREE.Color(1, 1, 1);
+const PL_FLOOR = [0.02, 0.3]; // (la muñeca de una mano apoyada en el suelo, en la plancha con un brazo: entre 2 y 30 cm)
 function runDetectors(t, dt) {
   if (isBars()) { barDetect(t, dt); return; }
   handFilter(dt); // (las manos que valen, sin los errores del seguimiento: HF)
@@ -1812,19 +1813,25 @@ function runDetectors(t, dt) {
     const P = DET.pl, y = head.p.y, LIFT = 0.18;
     if (y > P.ref + 0.35) { P.awayT += dt; if (P.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la plancha', '#ff8a3d', 1.2); return; }
     P.awayT = 0; if (Math.abs(y - P.ref) < 0.1) P.ref += (y - P.ref) * Math.min(1, dt * 0.15);
-    // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara)
-    const lifted = s => hands[s].ok && hands[s].wrist.y > P[s].floor + LIFT;
+    // ¿está esa mano levantada del suelo? (con las dos arriba no hay plancha y no se dispara). La altura de la mano apoyada
+    // se queda entre PL_FLOOR (el suelo de las gafas es y = 0): si las gafas veían un instante la mano de apoyo por debajo
+    // del suelo, esa altura se quedaba tan baja que la mano parecía levantada para siempre, y la otra ya no disparaba
+    const floorOf = d => clamp(d.floor, PL_FLOOR[0], PL_FLOOR[1]), lifted = s => hands[s].ok && hands[s].wrist.y > floorOf(P[s]) + LIFT;
     for (const side of ['left', 'right']) {
       const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
       if (!h.ok) { d.lost += dt; if (d.lost > 0.6) { d.state = 'down'; d.fired = false; } continue; }
       d.lost = 0;
       const r = h.wrist.y;
+      if (r < d.floor || d.state === 'down') d.floor = clamp(d.floor + (r - d.floor) * Math.min(1, r < d.floor ? 0.5 : dt * 0.3), PL_FLOOR[0], PL_FLOOR[1]); // altura de la muñeca apoyada
+      const fl = floorOf(d);
       if (d.state === 'down') {
-        d.floor += (r - d.floor) * Math.min(1, r < d.floor ? 0.5 : dt * 0.3); // altura de la muñeca apoyada
-        if (r > d.floor + LIFT && !lifted(other)) { d.state = 'up'; d.t0 = t; d.fired = false; d.dev = 0; }
+        if (r > fl + LIFT && !lifted(other)) { d.state = 'up'; d.t0 = t; d.fired = false; d.dev = 0; d.lowT = 0; }
+        else if (r > fl + LIFT && lifted(other)) { if (state === 'play' && SAYT.t <= 0) say('Apoya bien la otra mano en el suelo', '#ff8a3d', 1.4); }
+        else if (r > fl + LIFT * 0.5) { d.lowT = (d.lowT || 0) + dt; if (d.lowT > 0.7 && !d.warned) { d.warned = true; onPartial('Levanta más el brazo, a la altura del hombro'); } } // (se queda a medias)
+        else { d.lowT = 0; d.warned = false; }
       } else {
         d.dev = Math.max(d.dev, Math.abs(y - P.ref));
-        if (r < d.floor + LIFT * 0.5) d.state = 'down';
+        if (r < fl + LIFT * 0.5) d.state = 'down';
         else if (lifted(other)) d.fired = true; // las dos manos arriba: esta subida ya no dispara
         else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
       }
@@ -1942,7 +1949,7 @@ function throwStep(dt, t) {
     // agarre: los dos a la vez son el puño, no un disparo). Sin sacudida
     if (h.virt) {
       if (h.trig && !T.trigPrev) T.trigT = 0.09; T.trigPrev = h.trig; T.have = false; T.burst = false;
-      const tg = T.c && h.rayOk ? throwTarget(h.rayO, h.rayD) : null; if (tg) lockShow(tg, true); // (a quién va: su contorno de neón)
+      const tg = T.c && h.rayOk ? throwTarget(h.rayO, h.rayD) : null; if (tg) lockShow(tg); // (a quién va: su diana)
       if (T.trigT > 0) { if (h.grip) T.trigT = 0; else if ((T.trigT -= dt) <= 0) { T.trigT = 0; if (!T.c) { if (state === 'play') { say('Sin carga: ¡haz una sentadilla!', '#ff8a3d', 1.1); haptic(s, 0.2, 30); } } else if (tg) throwFire(s, h.rayO.clone(), h.rayD.clone(), tg); else haptic(s, 0.15, 25); } }
       continue;
     }
@@ -1984,7 +1991,7 @@ function throwStep(dt, t) {
   // al que miras: se sigue a quién miras y su contorno de neón lo marca (parpadea más deprisa si tienes carga)
   if (on && throwByGaze() && !padVirt() && !(swordActive() && !pistolOn())) { // (con espada no hay diana; con mandos como manos, la marca es la de la mano que apunta)
     const e = gazeLockStep(t, head.p, fwd()), ring = locks.gaze;
-    ring.visible = false; lockShow(e, throwCount() > 0); // (la diana: el contorno de neón, 78_lockline)
+    ring.visible = false; lockShow(e); // (la diana, 78_lockline)
   }
   // cargado y sin lanzar: cada pocos segundos, recuérdalo
   if (on && throwCount() && state === 'play') { HTH.idle += dt; if (HTH.idle > 4) { HTH.idle = 0; say(padVirt() ? '¡Lanza el rayo! Apunta y gatillo' : '¡Lanza el rayo! Mano atrás y adelante', '#ffd166', 1.4); } } else HTH.idle = 0;
@@ -2025,7 +2032,7 @@ function updateAim(t) {
       const l = lasers[s.key]; l.visible = true; l.position.copy(s.o); l.quaternion.copy(hands[s.key].rayQ);
       l.scale.z = e ? e.center(tmpA).distanceTo(s.o) : 6; l.material.opacity = hot ? 0.6 : 0.3; l.material.color.setHex(pistolOn() && !hot ? 0xff6a3d : hot ? 0x3cf0c6 : 0x5ff5ff);
     } else { gazeDot.visible = true; gazeDot.position.copy(head.p).addScaledVector(GZL.d, 3); }
-    ring.visible = false; lockShow(e, hot); // la diana: el contorno de neón del apuntado (78_lockline)
+    ring.visible = false; lockShow(e); // la diana del apuntado (78_lockline)
   }
 }
 
@@ -2557,7 +2564,6 @@ function warmQueue() {
   for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
   for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
   if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
-  if (RIGS.scout) add('lockline', () => { const o = RIGS.scout.instance(MAT_ROBOT); for (const m of lklAttach(o.root)) m.visible = true; return o; }); // (el contorno de la diana)
   add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
 }
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
@@ -2884,7 +2890,8 @@ function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   if (SAYT.t > 0) SAYT.t -= dt;
   stateT += dt;
-  if (GAME_STATES.includes(state) && !holdsWeights() && !isBars() && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; openPause(); } } else pinchT = 0;
+  // los dos pellizcos un segundo: en la partida, la pausa; fuera de ella, lo mismo que el botón MENÚ (por si no lo ves)
+  if ((GAME_STATES.includes(state) ? !holdsWeights() && !isBars() : (state === 'lobby' || state === 'end') && xrActive) && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; if (GAME_STATES.includes(state)) openPause(); else onWatch(); } } else pinchT = 0;
   arenaGlide(dt);
   if (state === 'calib') {
     arenaFollow(dt);
