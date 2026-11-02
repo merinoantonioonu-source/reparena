@@ -71,10 +71,14 @@ No las cambies sin preguntarle.
 - El curl con kettlebell del usuario es con la pesa agarrada por el asa con las dos manos (los puños juntos, la bola
   colgando debajo): es el «Curl con barra o kettlebell». Las gafas confunden las manos pegadas: el curl y el press con
   barra siguen las dos manos como una sola pesa, y todo lo que se hace con las dos manos juntas en una pesa (elevación
-  frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`). En el
+  frontal, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`). En el
   curl y el press con barra, dos manos juntas se confirman entre sí, y si se ven separadas vale la que se mueve (las gafas
   dejan quieta la que pierden).
-- El press de hombro, el press con barra y la flexión en pica se quitaron (no se detectaban bien en las gafas).
+- El press de hombro, el press con barra y la flexión en pica se quitaron (no se detectaban bien en las gafas); el leñador,
+  porque no aportaba nada.
+- Cargas ×2/×3/×4 aguantando la postura más dura, como en la sentadilla: fondos (abajo, codos a 90°), elevación frontal
+  (arriba), antebrazos (la barra escurrida), dominadas y remo (arriba; al bajar, onda que con ×4 revienta también a los
+  cercanos). La plancha con un brazo, no: una flexión entera (bajada y tiempo de Flexiones) deja el brazo siguiente a ×4.
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
@@ -95,7 +99,8 @@ No las cambies sin preguntarle.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 - Para animar a volver (`src/73_career.js`): experiencia y nivel con título y colores desbloqueables (solo se ven),
-  misiones del día con su cofre, campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
+  misiones del día con su cofre (+100 XP, un escudo de racha —como mucho dos: un día sin entrenar se gasta solo y la racha
+  sigue— y un color), campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
   estrellas) y, en Progreso, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
 - El resumen de la ronda, lo esencial (opción A elegida): dónde acabó y el ejercicio, el número grande, la medalla y las
   perfectas, tres casillas (puntos, tiempo y kcal), un solo logro (el más importante) y dos botones, «Otra ronda» y «Menú

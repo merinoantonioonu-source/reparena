@@ -1316,7 +1316,8 @@ const DET = {
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   iw: { i: 0, b: 3, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
-  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0 },
+  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0, o: null, holdT: 0, pow: 1 },
+  plp: { state: 'up', ref: 0.5, min: 0, t0: 0, charged: false, stillT: 0 }, // (la flexión que carga la plancha con un brazo)
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -1535,7 +1536,8 @@ function fraiseStep(t, dt) {
   for (const s of ['left', 'right']) if (HF[s].ok) { _frm.add(hands[s].wrist); n++; }
   if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
     d.lost += dt;
-    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
+    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; d.o = null; }
+    else if (d.o && d.lost > 0.6) frFire(d); // se perdieron arriba: dispara con la carga que llevara
     else if (d.lost > 0.6 && d.state !== 'top') d.state = 'down';
     return;
   }
@@ -1547,11 +1549,18 @@ function fraiseStep(t, dt) {
     d.max = Math.max(d.max, r); d.fwd = Math.max(d.fwd, fwd);
     if (r - d.bottom >= range) {
       if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
-      const dur = t - d.t0, pt = settings.perfectTime;
-      onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); d.state = 'top';
+      const dur = t - d.t0, pt = settings.perfectTime, o = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
+      d.state = 'top'; d.holdT = 0; d.pow = 1;
+      if (pistolOn() || swordActive()) onRep(o); else d.o = o; // (dispara al empezar a bajarla: aguantar arriba la carga)
     } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
-  } else if (r < d.bottom + Math.min(0.12, range * 0.3)) d.state = 'down'; // hay que bajarla para la siguiente
+  } else {
+    // arriba, con los brazos estirados al frente: aguantar sube la carga (×2, ×3, ×4); al empezar a bajar, dispara
+    if (d.o && r - d.bottom >= range - 0.04 && fwd >= 0.33) { d.holdT += dt; const p = powLevel(d.holdT); if (p > d.pow) { d.pow = p; onPower(p); } }
+    else if (d.o && r - d.bottom < range * 0.8) frFire(d);
+    if (r < d.bottom + Math.min(0.12, range * 0.3)) { if (d.o) frFire(d); d.state = 'down'; } // hay que bajarla para la siguiente
+  }
 }
+function frFire(d) { const o = d.o; d.o = null; o.pow = d.pow || 1; onRep(o); }
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
   for (const s of ['left', 'right']) if (HF[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
@@ -1599,10 +1608,13 @@ function twistStep(t, dt) {
   if (done) {
     const span = done > 0 ? T.acc - T.lo : T.hi - T.acc, dur = t - T.t0;
     T.dir = done; T.lo = T.hi = T.acc; T.t0 = t; T.n++;
-    if (T.n % 2) { onCharge(); say('¡Cargado! Ahora al revés', '#3cf0c6', 0.8, false); SND.charge(); }
-    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2 });
+    if (T.n % 2) { onCharge(); say('¡Cargado! Aguanta escurrida o gira al revés', '#3cf0c6', 0.8, false); SND.charge(); T.holdT = 0; T.pow = 1; }
+    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2, pow: T.pow || 1 });
+    if (!(T.n % 2)) T.pow = 1;
     return;
   }
+  // cargado: aguantar la barra escurrida al máximo (sin volver más de ~10° desde el extremo) sube la carga, ×2, ×3, ×4
+  if (T.n % 2 && charged && !pistolOn() && !swordActive() && (T.dir > 0 ? T.hi - T.acc : T.acc - T.lo) < 0.18) { T.holdT += dt; const p = powLevel(T.holdT); if (p > T.pow) { T.pow = p; onPower(p); } }
   // se dio la vuelta antes de completar el giro que tocaba: avisa si se quedó corto
   const sweep = T.hi - T.lo, back = T.ext > 0 ? T.hi - T.acc : T.acc - T.lo; // cuánto ha vuelto desde el último extremo
   // (el primer medio giro, desde las manos rectas hasta un extremo, no cuenta como corto)
@@ -1740,7 +1752,7 @@ function runDetectors(t, dt) {
     const d = DET.di, req = dv('dipDepth') / 100;
     if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
-    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!', power: !pistolOn() && !swordActive() }); // (aguantar abajo, con los codos a 90°, carga)
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
     // cada brazo por su cuenta: dispara al llegar arriba (press) o al hombro (curl)
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
@@ -1823,6 +1835,14 @@ function runDetectors(t, dt) {
     // se queda entre PL_FLOOR (el suelo de las gafas es y = 0): si las gafas veían un instante la mano de apoyo por debajo
     // del suelo, esa altura se quedaba tan baja que la mano parecía levantada para siempre, y la otra ya no disparaba
     const floorOf = d => clamp(d.floor, PL_FLOOR[0], PL_FLOOR[1]), lifted = s => hands[s].ok && hands[s].wrist.y > floorOf(P[s]) + LIFT;
+    // una flexión entera (como en Flexiones: bajar la cabeza «Bajada en la flexión» sin prisa, al menos «Duración mínima de
+    // una PERFECTA») deja el próximo brazo cargado al máximo (×4). Con un brazo levantado no se mide
+    const Q = DET.plp, req = dv('pushDepth') / 100;
+    if (P.left.state === 'up' || P.right.state === 'up') { Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
+    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', defer: () => {
+      if (t - Q.t0 >= pt) { P.boost = 4; onPower(4); say('¡Cargado al máximo! Levanta un brazo', '#ff3cf0', 1.4); }
+      else say('Más despacio: así la flexión no carga', '#ff8a3d', 1.4);
+    } });
     for (const side of ['left', 'right']) {
       const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
       if (!h.ok) { d.lost += dt; if (d.lost > 0.6) { d.state = 'down'; d.fired = false; } continue; }
@@ -1839,7 +1859,7 @@ function runDetectors(t, dt) {
         d.dev = Math.max(d.dev, Math.abs(y - P.ref));
         if (r < fl + LIFT * 0.5) d.state = 'down';
         else if (lifted(other)) d.fired = true; // las dos manos arriba: esta subida ya no dispara
-        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
+        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false, pow: P.boost || 1 }, side); P.boost = 0; }
       }
     }
   } else if (settings.exercise === 'inchworm') {
@@ -2594,10 +2614,10 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0, holdT: 0, pow: 1 }); DET.fr.o = null; Object.assign(DET.plp, { state: 'up', charged: false }); DET.pl.boost = 0;
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.plp.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
@@ -2643,7 +2663,7 @@ function calibrate() {
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = DET.barp.bottom = Math.min(...v); }
   DET.sp.ref = y;
-  DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
+  DET.pl.ref = DET.plp.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 // Dificultad creciente: sube un nivel por cada oleada superada con soltura (pocos golpes, fallos o caídas en ella); si te
@@ -2837,7 +2857,8 @@ function updateWaveIntro(dt) {
 const SUM_H = 0.3, SUM_CHIP = 0.05; // (alto de la ficha, en metros, y lo que añade el logro)
 // Los logros por orden de importancia: un nivel nuevo, luego el primero de la ronda (un récord), lo ganado en la carrera
 // (estrellas, cofre, misiones) y el resto; el resumen enseña solo el primero
-const sumChips = (chips, G) => { if (!G) return chips; const lv = G.notes.find(([t]) => /^¡Nivel/.test(t)); return [...(lv ? [lv] : []), ...chips.slice(0, 1), ...G.notes.filter(n => n !== lv && !/^Desbloqueado/.test(n[0])), ...chips.slice(1)]; };
+// (el cofre del día, lo primero: es lo que da algo; luego el nivel nuevo)
+const sumChips = (chips, G) => { if (!G) return chips; const ch = G.notes.find(([t]) => /^¡Cofre/.test(t)), lv = G.notes.find(([t]) => /^¡Nivel/.test(t)), top = [ch, lv].filter(Boolean); return [...top, ...chips.slice(0, 1), ...G.notes.filter(n => !top.includes(n) && !/^Desbloqueado/.test(n[0])), ...chips.slice(1)]; };
 function summaryDraw(S, c, x, y, w, h) {
   const gold = '#ffd166', teal = '#3cf0c6', ink = '#eeeaff', dim = '#a49fc8', chip = S.chips[0], H = h - (chip ? h * SUM_CHIP / (SUM_H + SUM_CHIP) : 0);
   c.textBaseline = 'middle';
