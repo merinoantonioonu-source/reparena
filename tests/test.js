@@ -258,15 +258,21 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // la bola de energía (con rayos, en todos los ejercicios): delante, a un metro del pecho y por debajo de los ojos, con el
   // número de la carga, la capa de rayos creciendo, el destello al llegar a ×4 y el estallido al disparar (de ella salen los
   // rayos); con pistolas o espadas, ni en Arcos, no sale
-  { const B = { vis: 0, d: [9, 0], below: true, nums: new Set(), sh: [9, 0], max: 0, burst: 0, face: 0 };
+  { const B = { vis: 0, d: [9, 0], below: true, nums: new Set(), sh: [9, 0], max: 0, burst: 0, face: 0, inBall: 0, nearBall: 0 };
     await runConfig('Bola de energía (sentadillas, puntería automática)', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 4 }, t => { RA.PV.crouch = (t % 9) < 7.4; const S = RA.SORB;
       if (S.g.visible && S.on) { B.vis++; const c = RA.head.p.clone(); const d = Math.hypot(S.pos.x - c.x, S.pos.z - c.z); B.d = [Math.min(B.d[0], d), Math.max(B.d[1], d)]; if (S.pos.y > RA.head.p.y - 0.15) B.below = false; if (S.num.visible) B.nums.add(S.pow); B.sh = [Math.min(B.sh[0], S.shell2.scale.x), Math.max(B.sh[1], S.shell2.scale.x)]; }
-      if (S.mx >= 0) B.max++; if (S.burst > 0) B.burst++; for (const o of RA.PADD.p) if (o.pos.distanceTo(RA.head.p) < 0.3) B.face++; }, 200, s => '', true);
+      if (S.mx >= 0) B.max++; if (S.burst > 0) B.burst++; for (const o of RA.PADD.p) if (o.pos.distanceTo(RA.head.p) < 0.3) B.face++;
+      if (S.g.visible && S.on) { const L = RA.arena.worldToLocal(S.pos.clone()); for (const e of RA.enemies) if (e.alive && e.type !== 'flyer' && e.out !== false) { const d = Math.hypot(e.pos.x - L.x, e.pos.z - L.z); if (d < 0.26 + (e.radius || 0.1) * 0.8) B.inBall++; else if (d < 0.26 + (e.radius || 0.1) + 0.3) B.nearBall++; } } }, 200, s => '', true);
+    // la bola es un obstáculo: con la carga sin lanzar (la bola delante) los robots llegan hasta ti y la rodean, sin atravesarla
+    await runConfig('Bola de energía: los enemigos la rodean', { ...base, mode: 'combat', foes: 'robots', foesGate: 'robot,zombie', aim: 'hands', exercise: 'squat', waves: 1, repsWave: 30, lives: 0, walkTime: 3, maxAlive: 3 }, t => { RA.PV.crouch = true; const S = RA.SORB; // (agachado: la carga sigue en la bola)
+      if (S.g.visible && S.on) { const L = RA.arena.worldToLocal(S.pos.clone()); for (const e of RA.enemies) if (e.alive && e.type !== 'flyer' && e.out !== false) { const d = Math.hypot(e.pos.x - L.x, e.pos.z - L.z); if (d < 0.26 + (e.radius || 0.1) * 0.8) B.inBall++; else if (d < 0.26 + (e.radius || 0.1) + 0.3) B.nearBall++; } } }, 30, s => '', true);
+    log(`   walkers next to the energy ball ${B.nearBall} frames · inside it ${B.inBall}`);
+    if (!B.nearBall || B.inBall) errors.push('bola de energía: los enemigos no deberían atravesarla, sino rodearla');
     const none = {};
     for (const [n, c] of [['pistolas', { pistol: 1 }], ['arcos', { mode: 'arcs' }]]) { let seen = 0; // (con espadas en el ordenador no hay mandos: la espada no está activa y salen rayos)
       await runConfig(`Sin bola de energía (${n})`, { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'squat', waves: 1, repsWave: 3, ...c }, t => { RA.PV.crouch = (t % 5) < 3.4; if (RA.SORB.g.visible) seen++; }, 25, s => '', true); none[n] = seen; }
     RA.setSetting('pistol', 0);
-    log(`energy ball: visible ${B.vis} frames · ${B.d[0].toFixed(2)}–${B.d[1].toFixed(2)} m in front · below the eyes ${B.below} · numbers ${[...B.nums].join(',')} · second layer ${B.sh[0].toFixed(3)}→${B.sh[1].toFixed(3)} · max flash ${B.max} frames · burst on firing ${B.burst} · sparks within 30 cm of the eyes ${B.face} · with pistols / in arcs: ${JSON.stringify(none)}`);
+    log(`energy ball: visible ${B.vis} frames · ${B.d[0].toFixed(2)}–${B.d[1].toFixed(2)} m in front · below the eyes ${B.below} · numbers ${[...B.nums].join(',')} · second layer ${B.sh[0].toFixed(3)}→${B.sh[1].toFixed(3)} · max flash ${B.max} frames · burst on firing ${B.burst} · sparks within 30 cm of the eyes ${B.face} · walkers inside the ball ${B.inBall} frames (beside it ${B.nearBall}) · with pistols / in arcs: ${JSON.stringify(none)}`);
     if (B.face) errors.push('bola de energía: sus chispas no deberían pasar pegadas a los ojos (en las gafas se ven como cuadrados enormes)');
     if (!B.vis || B.d[0] < 0.8 || B.d[1] > 1.2 || !B.below || !B.nums.has(4) || B.sh[1] < B.sh[0] * 1.5 || !B.max || !B.burst) errors.push('bola de energía: debería flotar a un metro, por debajo de los ojos, con su número, la capa creciendo, el destello al máximo y el estallido al disparar');
     if (none.pistolas || none.arcos) errors.push('bola de energía: con pistolas o sin disparos no debería salir'); }
@@ -571,6 +577,25 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`  board in the way: spider frames past the board ${B.near} (closest z ${B.max.toFixed(2)}) · inside it ${B.in}`);
     if (B.max > -9 && (!B.near || B.in)) errors.push(`inchworm: los bichos deberían rodear el marcador tumbado, no pisarlo (${B.in} fotogramas dentro)`); }
   RA.PV.iwT = 0;
+  // inchworm con flexiones al final del recorrido: cada una da más fuerza a la onda (×2, ×3, ×4: más lejos y con daño)
+  { const P = { pow: 1, wave: 0, msg: 0, kills: 0 }; RA.PV.iwT = 0; RA.PV.iwPush = 3;
+    await runConfig('inchworm con flexiones al final', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
+      RA.PV.iwAuto = true; if (RA.IWW.g && RA.IWW.g.visible) { P.pow = Math.max(P.pow, RA.IWW.pow); P.wave = Math.max(P.wave, RA.IWW.r1.scale.x); }
+      if (/CARGA ×4|×4 · ¡ARRIBA/.test(RA.CHG.text || '') && RA.CHG.p.mesh.visible) P.msg++;
+    }, 420, s => { P.kills = s.kills; return ''; }, true);
+    RA.PV.iwPush = 0; RA.PV.iwAuto = false;
+    log(`  inchworm with push-ups at the end: wave power up to ×${P.pow} · reached ${P.wave.toFixed(2)} m · «×4» on the floor ${P.msg} frames · kills ${P.kills}`);
+    if (P.pow < 4 || P.wave < 4 || !P.msg || !P.kills) errors.push('inchworm: las flexiones al final del recorrido deberían cargar la onda (×2, ×3, ×4), hacerla llegar más lejos y que derribe'); }
+  // los bichos que mueren en el aire (lanzados por la onda) caen al suelo: no se quedan colgados
+  { const P = { air: 0, dyingAir: 0, hang: 0 }; RA.PV.iwT = 0;
+    await runConfig('inchworm: los derribados en el aire caen', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
+      RA.PV.iwAuto = true;
+      for (const e of RA.enemies) if (e.type === 'spider' && e.alive && e.flung && e.pos.y > 0.2) { P.air++; e.onHit(e.hp + 1, false, e.center(new THREE.Vector3()), 1); } // (un rayo que lo mata en pleno vuelo)
+      for (const e of RA.enemies) if (e.type === 'spider' && !e.alive && e.mode === 'dying') { if (e.pos.y > 0.05) P.dyingAir++; if (e.st > 0.8 && e.pos.y > 0.02) P.hang++; }
+    }, 420, s => '', true);
+    RA.PV.iwAuto = false;
+    log(`  inchworm, killed in mid-air: ${P.air} · falling ${P.dyingAir} frames · still hanging after 0,8 s ${P.hang}`);
+    if (!P.air || !P.dyingAir || P.hang) errors.push('inchworm: los bichos que mueren en el aire deberían caer al suelo, no quedarse colgados'); }
   await runConfig('inchworm sin llegar a la línea', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', waves: 1 }, t => { RA.PV.iwAuto = RA.PV.iwSkip = true; }, 40,
     s => s.reps ? 'inchworm: sin llegar con la cabeza a la línea del suelo no debería disparar' : s.partial < 2 ? 'inchworm: no avisa de que falta llegar a la línea' : '', true);
   RA.PV.iwSkip = false;
@@ -2474,16 +2499,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   log('view switch: VR', vr0, '→ MR', mr, '→ VR', vr1, '· forest in MR while hanging', forestMR, '· gone for pull-ups', noForest);
   if (!(vr0 && mr && vr1)) errors.push('no se puede pasar de VR a realidad mixta y al revés dentro del juego');
   if (!forestMR || !noForest) errors.push('colgado en realidad mixta no aparece el bosque');
-  // ---- Curl con barra en XR: solo cuenta si suben las dos manos juntas ----
+  // ---- Curl con barra en XR: las dos manos van en la pesa; si las gafas dejan una quieta donde la perdieron, vale la que se mueve ----
   applyCfg({ mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'curl2', lives: 0, waves: 1, repsWave: 60, walkTime: 20 }); // (de sobra: con los disparos cargados la oleada podía acabarse antes de las últimas pruebas)
   XRS.headY = 1.7; XRS.headQ = null; XRS.hands = { left: { x: -0.2, y: 0.95, z: -0.2 }, right: { x: 0.2, y: 0.95, z: -0.2 } };
   await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
   const curlCycle = (sides, n) => { for (let c = 0; c < n; c++) for (let i = 0; i < 80; i++) { const up = i >= 20 && i < 50; for (const sd of ['left', 'right']) XRS.hands[sd].y = up && sides.includes(sd) ? 1.42 : 0.95; frame(1, 16, xrFrame); } };
   const c0 = RA.stats.reps, cp0 = RA.stats.partial; curlCycle(['left'], 4); const oneArm = RA.stats.reps - c0, oneMsg = RA.stats.partial - cp0;
   const c1 = RA.stats.reps; curlCycle(['left', 'right'], 4); const twoArms = RA.stats.reps - c1;
-  log('curl con barra XR: solo la izquierda', oneArm, 'reps', oneMsg, 'avisos · las dos', twoArms, 'reps');
-  if (oneArm || !oneMsg) errors.push('curl con barra: subiendo un solo brazo no debería contar (y debería avisar)');
+  log('curl con barra XR: una mano quieta donde se perdió y la otra sube', oneArm, 'reps', oneMsg, 'avisos · las dos', twoArms, 'reps');
+  if (oneArm < 4 || oneMsg) errors.push('curl con barra: con una mano quieta donde la perdieron las gafas, la que sube con la pesa debería contar (sin avisos)');
   if (twoArms < 4) errors.push('curl con barra: subiendo las dos manos juntas no cuenta');
+  // los puños pegados en el asa: el seguimiento tiembla (cada mano salta unos centímetros cada fotograma, más de lo que el
+  // filtro de manos admite), pero las dos van juntas y se confirman entre sí: cuenta cada subida y sale la bola
+  { const r0 = RA.stats.reps; let ball = 0;
+    for (let c = 0; c < 4; c++) for (let i = 0; i < 80; i++) { const y = i >= 20 && i < 50 ? 1.42 : 0.95; for (const sd of ['left', 'right']) { XRS.hands[sd].y = y + (Math.random() - 0.5) * 0.12; XRS.hands[sd].x = (sd === 'left' ? -0.05 : 0.05) + (Math.random() - 0.5) * 0.08; } frame(1, 16, xrFrame); if (RA.SORB.g.visible) ball++; }
+    for (const sd of ['left', 'right']) XRS.hands[sd].x = sd === 'left' ? -0.2 : 0.2;
+    const jit = RA.stats.reps - r0; log(`curl con barra XR, puños juntos temblando: ${jit} reps · bola ${ball} fotogramas`);
+    if (jit < 4 || !ball) errors.push('curl con barra: con los puños juntos y el seguimiento temblando debería contar cada subida (y salir la bola)'); }
   // con la barra, el seguimiento puede ver una mano más baja (aquí, al 75 % del recorrido) y un instante después: cuenta igual
   { const r0 = RA.stats.reps, p0 = RA.stats.partial;
     for (let c = 0; c < 4; c++) for (let i = 0; i < 80; i++) { XRS.hands.left.y = i >= 20 && i < 50 ? 1.42 : 0.95; XRS.hands.right.y = i >= 26 && i < 52 ? 1.15 : 0.95; frame(1, 16, xrFrame); }
@@ -2525,6 +2557,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`kettlebell press (both hands together): one-hand glitches → ${glitch} reps, ${glitchMsg} warnings · both seen ${two}/4 · only one hand ${one}/4 · lost by turns ${swap}/4 · both lost overhead ${dark}/3`);
     if (glitch || glitchMsg) errors.push('press con kettlebell: un salto suelto de una mano (error del seguimiento) no debería disparar ni avisar');
     if (two !== 4 || one !== 4 || swap !== 4 || dark !== 3) errors.push(`press con kettlebell: cada subida debería contar una vez (las dos ${two}, una ${one}, por turnos ${swap} de 4; perdidas arriba ${dark} de 3)`); }
+  // press despacio: las manos se pierden pronto (aún subiendo poco a poco) y reaparecen ya bajando, a media altura: cuenta una vez
+  { const r0 = RA.stats.reps; XRS.noHands = false; for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.5; frame(40, 16, xrFrame);
+    for (let c = 0; c < 3; c++) { for (let i = 0; i < 60; i++) { for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.5 + 0.08 * i / 60; frame(1, 16, xrFrame); }
+      XRS.noHands = true; frame(60, 16, xrFrame); XRS.noHands = false;
+      for (let i = 0; i < 30; i++) { for (const sd of ['left', 'right']) XRS.hands[sd].y = 1.7 - 0.2 * i / 30; frame(1, 16, xrFrame); } frame(25, 16, xrFrame); }
+    const slow = RA.stats.reps - r0; log(`kettlebell press, slow and lost early, back halfway down: ${slow}/3`);
+    if (slow !== 3) errors.push(`press con kettlebell: perdidas pronto al subir despacio y vistas otra vez bajando a media altura, cada subida debería contar una vez (${slow} de 3)`); }
   XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame);
   // ---- Realidad mixta en una habitación escaneada: compuertas en las paredes, con el camino libre de muebles ----
   // 4 × 5 m, techo a 2,5 m; tú en el centro mirando a -Z con la pared de delante a 2,6 m; un sofá delante a la

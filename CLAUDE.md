@@ -71,7 +71,9 @@ No las cambies sin preguntarle.
 - El curl con kettlebell del usuario es con la pesa agarrada por el asa con las dos manos (los puños juntos, la bola
   colgando debajo): es el «Curl con barra o kettlebell». Las gafas confunden las manos pegadas: el curl y el press con
   barra siguen las dos manos como una sola pesa, y todo lo que se hace con las dos manos juntas en una pesa (elevación
-  frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`).
+  frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`). En el
+  curl y el press con barra, dos manos juntas se confirman entre sí, y si se ven separadas vale la que se mueve (las gafas
+  dejan quieta la que pierden).
 - La flexión en pica, solo en Combate (no en Arcos).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
@@ -79,6 +81,8 @@ No las cambies sin preguntarle.
 - Inchworm: se sigue la **cabeza**, no las manos. Llegar con la cabeza a la línea luminosa del suelo (donde queda en la
   plancha, según la altura) carga el rayo; volver andando con las manos hasta la salida y ponerse de pie dispara y saca la
   onda, que se ve y se oye bien y lanza a los bichos por el aire. Una barra en el suelo enseña lo que avanza la cabeza.
+  Cada flexión en la plancha, al final del recorrido, da más fuerza a la onda (×2, ×3, ×4: más lejos, más fuerte y con
+  daño); la onda, de colores vivos y levantando polvo a su paso. Los bichos que mueren en el aire caen al suelo.
 - Arcos de semipuente (`arcLow`): inclinados tan bajos que hay que apartarse al lado alto y bajar hasta apoyar una mano en
   el suelo; llegan más despacio, con aviso grande y la huella de la mano en el suelo.
 - El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
@@ -109,7 +113,8 @@ No las cambies sin preguntarle.
 - Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos).
 
 **Enemigos y física**
-- Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.
+- Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos. La bola de energía también es un
+  obstáculo: la rodean.
 - Se mueven con naturalidad y agresividad, sin chocar entre ellos.
 - Al abrirse una compuerta, su interior es oscuro.
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.

@@ -93,7 +93,7 @@ function gateSolids(doors) {
 // y, en el bosque, los troncos, las rocas y los arbustos. Cada uno sabe de qué compuerta es: dentro de su túnel, el que
 // sale no choca con los de la suya
 const SOLIDS = { list: [], t: -1 };
-function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : []); }
+function envSolids() { return gateSolids(true).concat(natureOn() ? NAT.solids : [], islandOn() ? ISL.solids : [], sorbSolid()); } // (también la bola de energía)
 const solidsNow = () => { if (SOLIDS.t !== GAMEF.n) { SOLIDS.t = GAMEF.n; SOLIDS.list = envSolids(); } return SOLIDS.list; };
 const GAMEF = { n: 0 };
 // Nunca detrás de ti (ni a tu altura): en la arena, delante es −z; su centro, al menos FRONT_MIN por delante de tus ojos (de lado sí pueden ponerse)
@@ -731,6 +731,9 @@ class Spider {
         break;
       }
       case 'dying':
+        // muerta en el aire (lanzada por la onda del inchworm, o saltando): cae al suelo y se queda panza arriba, no colgada
+        if (this.pos.y > 0) { this.fallV = (this.fallV || 0) + 9.8 * dt; this.pos.y = Math.max(0, this.pos.y - this.fallV * dt); }
+        if (this.root.rotation.x) { const want = Math.round(this.root.rotation.x / Math.PI) * Math.PI; this.root.rotation.x += (want - this.root.rotation.x) * Math.min(1, dt * 8); }
         this.fade = this.st < 1.4 ? 1 : Math.max(0, 1 - (this.st - 1.4) / 0.5);
         this.root.scale.setScalar(s * Math.max(0.001, this.fade));
         if (this.st > 1.9) { this.dispose(); this.gone = true; return; }
@@ -1300,7 +1303,7 @@ const DET = {
   lu: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, leg: 0 },
   di: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0, awayT: 0 },
   pr: { left: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false }, right: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, lostUp: false } },
-  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, uneven: false, vy: 0, prev: 0 }, barp: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, uneven: false, vy: 0, prev: 0 },
+  bar: { state: 'down', bottom: -0.78, max: 0, t0: 0, lost: 0, holdT: 0, pow: 1, ev: null, vy: 0, prev: 0 }, barp: { state: 'down', bottom: -0.15, max: 0, t0: 0, lost: 0, vy: 0, prev: 0 },
   tw: { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: 0, lostT: 0, warnT: 0, ext: 0 },
   th: { pending: null, hold: null, t0: 0, armed: false, ref: 0, quiet: 0, seen: { left: false, right: false }, last: { left: -1, right: -1 }, low: { left: 9, right: 9 }, lostT: { left: 0, right: 0 } },
   ch: { state: 'idle', side: 0, t0: 0, top: 0 },
@@ -1420,18 +1423,26 @@ function handFilter(dt) {
 // Curl y press con barra o con la kettlebell (en el curl, agarrada por el asa con los puños juntos y la bola colgando; en
 // el press, por el asa o por los cuernos): las dos manos se siguen como una sola pesa, con la altura de las muñecas
 // respecto a los ojos:
-//  · con una a la vista basta; con las dos, si coinciden, la media; si no, la más baja (una sola que sube no cuenta:
-//    avisa), salvo que la más baja ya vaya por el 60 % del recorrido (con la pesa suben juntas aunque se vea una algo más baja)
+//  · con las dos a la vista y juntas (a menos de 25 cm: en la pesa), se confirman entre sí y vale su media, aunque el filtro
+//    dude de alguna (con los puños pegados el seguimiento tiembla); con una a la vista basta; con las dos separadas (no
+//    puede ser: van en la misma pesa), las gafas confunden una: vale la que se mueve (la otra suele quedarse quieta donde
+//    se perdió)
 //  · curl: arriba, aguantando, carga el disparo, que sale al empezar a bajar; press: dispara al llegar arriba
 //  · si se pierden las dos subiendo (ya por casi la mitad en el curl; en el press, a un 30 % o deprisa junto a la cara, que
 //    por encima de la cabeza las cámaras no las ven) o arriba aguantando, cuenta; y si reaparecen ya arriba, también
 function barStep(kind, t, dt) {
   const press = kind === 'press', B = press ? DET.barp : DET.bar, range = (press ? settings.pressRange : settings.curlRange) / 100, pt = settings.perfectTime;
-  const L = ['left', 'right'].filter(s => HF[s].ok).map(s => hands[s].wrist.y - head.p.y);
+  const hl = hands.left, hr = hands.right, Tb = TRK.bar || {}; Tb.n = (Tb.n || 0) + 1;
+  const inReach = h => { const d = h.wrist.y - head.p.y; return d < (press ? 0.6 : 0.05) && d > -1.15 && Math.hypot(h.wrist.x - head.p.x, h.wrist.z - head.p.z) < 0.9; };
+  const clasp = hl.ok && hr.ok && hl.wrist.distanceTo(hr.wrist) < 0.25 && inReach(hl) && inReach(hr); if (clasp) Tb.clasp = (Tb.clasp || 0) + 1;
+  const sides = clasp ? [] : ['left', 'right'].filter(s => HF[s].ok), L = clasp ? [(hl.wrist.y + hr.wrist.y) / 2 - head.p.y] : sides.map(s => hands[s].wrist.y - head.p.y);
+  // cuánto se ha movido cada mano (para saber, si no coinciden, cuál es la de verdad)
+  B.hv = B.hv || { left: 0, right: 0 }; B.hy = B.hy || {}; for (const s of ['left', 'right']) { if (hands[s].ok) { const y0 = B.hy[s]; B.hy[s] = hands[s].wrist.y; if (y0 !== undefined) B.hv[s] += (Math.abs(B.hy[s] - y0) / Math.max(dt, 1e-3) - B.hv[s]) * Math.min(1, dt * 6); } else B.hy[s] = undefined; }
   if (!L.length) {
+    Tb.none = (Tb.none || 0) + 1;
     B.lost += dt;
     if (press) {
-      if (B.state === 'down' && B.lost > 0.2 && B.vy > 0.3 && B.prev > B.bottom + 0.04) { Object.assign(B, { state: 'rising', max: B.prev, t0: t }); onCharge(); }
+      if (B.state === 'down' && B.lost > 0.2 && B.vy > 0.15 && B.prev > B.bottom + 0.04) { /* (subiendo, aunque sea despacio) */ Object.assign(B, { state: 'rising', max: B.prev, t0: t }); onCharge(); }
       if (B.state === 'rising' && B.lost > 0.12 && (B.max - B.bottom >= range * 0.3 || (B.vy > 0.25 && B.max > -0.15))) { B.state = 'top'; onRep({ perfect: false, fast: false }); }
     } else if (B.state === 'hold' && B.lost > 0.25) { B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); }
     else if (B.state === 'rising' && B.lost > 0.25 && B.max - B.bottom >= range * 0.4) { B.state = 'top'; onCharge(); onRep({ perfect: false, fast: false }); }
@@ -1439,15 +1450,16 @@ function barStep(kind, t, dt) {
   }
   let y; const hi = Math.max(...L), lo = Math.min(...L);
   if (L.length === 1 || hi - lo <= 0.15) y = (hi + lo) / 2;
-  else y = lo - B.bottom >= range * 0.6 ? hi : lo;
-  if (L.length === 2 && hi - B.bottom >= range && lo - B.bottom < range * 0.6) B.uneven = true; // una sola mano arriba
+  else { Tb.dis = (Tb.dis || 0) + 1; const mv = B.hv.left >= B.hv.right ? 'left' : 'right'; y = L[sides.indexOf(mv)]; } // (no coinciden: la que se mueve)
+  Tb.max = Math.max(Tb.max || 0, y - B.bottom);
   const back = B.lost; B.lost = 0;
   if (back > 0) B.vy = 0; else if (dt > 0) B.vy += ((y - B.prev) / dt - B.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
   B.prev = y;
   B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
   const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); } };
   // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
-  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? 0.8 : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
+  // (en el press, si estuvieron perdidas un buen rato, por encima de la cabeza, basta con reaparecer bajando a media altura)
+  if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? (back > 0.3 ? 0.5 : 0.8) : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
   if (B.state === 'hold') { // aguantando arriba carga el disparo (×2, ×3, ×4); sale al empezar a bajar
     if (y >= B.bottom + range * 0.75) { B.holdT += dt; const p = powLevel(B.holdT); if (p > B.pow) { B.pow = p; onPower(p); } return; }
     B.state = 'top'; onRep({ ...B.ev, pow: B.pow }); return;
@@ -1455,11 +1467,9 @@ function barStep(kind, t, dt) {
   if (B.state === 'down') { if (y > B.bottom + Math.min(press ? 0.1 : 0.12, range * (press ? 0.35 : 0.45))) { Object.assign(B, { state: 'rising', max: y, t0: t }); if (press) onCharge(); } }
   else if (B.state === 'rising') {
     B.max = Math.max(B.max, y);
-    if (y - B.bottom >= range) { const dur = t - B.t0; B.uneven = false; top({ perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); return; }
-    if (y < B.bottom + (press ? 0.06 : 0.07)) { B.state = 'down'; if (!B.uneven && B.max - B.bottom > range * 0.55) onPartial(press ? 'Estira los brazos del todo arriba' : 'Sube hasta el hombro'); }
+    if (y - B.bottom >= range) { const dur = t - B.t0; top({ perfect: dur >= pt * 0.5 && dur < 5 && y - B.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); return; }
+    if (y < B.bottom + (press ? 0.06 : 0.07)) { B.state = 'down'; if (B.max - B.bottom > range * 0.55) onPartial(press ? 'Estira los brazos del todo arriba' : 'Sube hasta el hombro'); }
   } else if (y < B.bottom + 0.08) B.state = 'down';
-  // una mano subió sola y ya han bajado las dos: avisa (una vez)
-  if (B.uneven && hi < B.bottom + 0.08) { onPartial('Sube las dos manos a la vez'); B.uneven = false; }
 }
 // Ejercicios en dos tiempos: la bajada (sentadilla, cadera atrás en el swing o peso muerto) carga como siempre y, al volver
 // arriba, un gesto de los brazos (o un salto) dispara en CH_WIN segundos. El gesto se va mirando desde que carga (en el
@@ -1612,36 +1622,57 @@ IW.group.visible = false; arena.add(IW.group);
   IW.line = strip(0.9, 0.06, 0x3cf0c6, 0.9); IW.lineGlow = strip(1.1, 0.28, 0x3cf0c6, 0.25); IW.track = strip(0.09, 1, 0x2f2853, 0.75); IW.fill = strip(0.09, 1, 0x3cf0c6, 0.9); IW.start = strip(0.5, 0.03, 0xeeeaff, 0.55);
   IW.fill.geometry.translate(0, 0.5, 0); } // (la barra crece desde la salida hacia la línea)
 // Al despegar las manos del suelo tras la vuelta: una onda expansiva en el suelo que lanza a los bichos por el aire hasta su
-// trampilla. Un destello en el suelo, dos frentes de choque que se abren (el segundo, más tarde y más lento), una pared de
-// luz que se levanta con el primero y se va apagando, y polvo que levanta al pasar; con su golpe grave (SND.shock)
-const IWW = { t: -1, g: null, dust: 0 };
+// trampilla. Un destello en el suelo, dos frentes de choque de colores vivos (cian eléctrico y magenta) que se abren, una
+// pared de luz que se levanta con el primero y se va apagando, y una nube de polvo que el frente levanta a su paso (y que
+// queda flotando); con su golpe grave (SND.shock). Su fuerza (pow: las flexiones al final del recorrido, ×1 a ×4) la hace
+// llegar más lejos, lanzar más fuerte, levantar más polvo y, desde ×2, hacer daño (como un disparo de esa carga)
+const IWW = { t: -1, g: null, dust: 0, pow: 1, m: 1 };
 function iwWaveMake() {
   const g = new THREE.Group(), add = (geo, col, op, tex) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, map: tex || null, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); m.renderOrder = 20; g.add(m); return m; };
   const grad = (inner, outer) => { const c = mkCanvas(64), x = c.getContext('2d'), r = x.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, inner); r.addColorStop(1, outer); x.fillStyle = r; x.fillRect(0, 0, 64, 64); return texFrom(c); };
   const wall = () => { const c = mkCanvas(64), x = c.getContext('2d'), l = x.createLinearGradient(0, 64, 0, 0); l.addColorStop(0, 'rgba(255,255,255,1)'); l.addColorStop(0.35, 'rgba(255,255,255,0.45)'); l.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = l; x.fillRect(0, 0, 64, 64); return texFrom(c); };
-  IWW.flash = add(new THREE.CircleGeometry(1, 48), 0xbff8ff, 0.9, grad('rgba(255,255,255,1)', 'rgba(255,255,255,0)')); IWW.flash.rotation.x = -Math.PI / 2;
-  IWW.r1 = add(new THREE.RingGeometry(0.86, 1, 96), 0x8af6ff, 1); IWW.r1.rotation.x = -Math.PI / 2;
-  IWW.r2 = add(new THREE.RingGeometry(0.93, 1, 96), 0xffffff, 0.8); IWW.r2.rotation.x = -Math.PI / 2;
-  IWW.wall = add(new THREE.CylinderGeometry(1, 1, 1, 64, 1, true), 0x7af0ff, 0.7, wall()); IWW.wall.position.y = 0.5;
+  IWW.flash = add(new THREE.CircleGeometry(1, 48), 0x40fff0, 1, grad('rgba(255,255,255,1)', 'rgba(255,255,255,0)')); IWW.flash.rotation.x = -Math.PI / 2;
+  IWW.r1 = add(new THREE.RingGeometry(0.84, 1, 96), 0x00f0ff, 1); IWW.r1.rotation.x = -Math.PI / 2;
+  IWW.r2 = add(new THREE.RingGeometry(0.9, 1, 96), 0xff2bd6, 1); IWW.r2.rotation.x = -Math.PI / 2;
+  IWW.wall = add(new THREE.CylinderGeometry(1, 1, 1, 64, 1, true), 0x10e8ff, 0.85, wall()); IWW.wall.position.y = 0.5;
+  IWW.wall2 = add(new THREE.CylinderGeometry(1, 1, 1, 64, 1, true), 0xff3ad8, 0.6, wall()); IWW.wall2.position.y = 0.5;
   g.visible = false; scene.add(g); IWW.g = g;
 }
-function iwWave() {
+function iwWave(pow = 1) {
   if (!IWW.g) iwWaveMake();
+  IWW.pow = pow; IWW.m = 0.85 + 0.2 * (pow - 1); // (alcance: ×1, 85 %; ×4, 145 %)
   IWW.t = 0; IWW.dust = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
-  fx.glow(IWW.g.position.clone().add(_iww.set(0, 0.15, 0)), [0.6, 0.95, 1], 1.1, 0.3); SND.shock(IWW.g.position); hapticBoth(1, 160);
-  let n = 0; for (const e of enemies) { if (!e.alive) continue; n++; if (e.type === 'spider' && e.sendHome) e.sendHome(); else if (e.shove) e.shove(1.2); }
-  stats.waves = (stats.waves || 0) + 1; say(n ? '¡ONDA EXPANSIVA! Vuelven a su trampilla' : '¡Onda expansiva!', '#7af7ff', 1.4, false);
+  const c = IWW.g.position.clone().add(_iww.set(0, 0.15, 0)); fx.glow(c, [0.2, 1, 0.95], 1.2 + 0.3 * pow, 0.3); fx.glow(c, [1, 0.25, 0.85], 0.7 + 0.2 * pow, 0.22); fx.dust(IWW.g.position, 8 + 4 * pow, 0.3);
+  SND.shock(IWW.g.position); hapticBoth(1, 160 + 40 * pow);
+  const dmg = POW_DMG[pow - 1] || 0, reach = 3.2 * IWW.m + 0.3; let n = 0;
+  for (const e of enemies) {
+    if (!e.alive) continue; const w = e.center(tmpA); if (Math.hypot(w.x - IWW.g.position.x, w.z - IWW.g.position.z) > reach) continue; n++;
+    if (dmg && e.onHit) { e.onHit(dmg, false, w.clone(), pow); if (!e.alive) { onKilled(e); continue; } } // (desde ×2, la onda también hace daño)
+    if (e.type === 'spider' && e.sendHome) e.sendHome(); else if (e.shove) e.shove(1.2 * IWW.m);
+  }
+  stats.waves = (stats.waves || 0) + 1; say(n ? `¡ONDA EXPANSIVA${pow > 1 ? ' ×' + pow : ''}! Vuelven a su trampilla` : `¡Onda expansiva${pow > 1 ? ' ×' + pow : ''}!`, pow > 1 ? '#ff6ae0' : '#40fff0', 1.4, false);
 }
 function iwWaveStep(dt) {
   if (!IWW.g || IWW.t < 0) return;
-  IWW.t += dt; const T = 1.1, k = IWW.t / T, e1 = 1 - Math.pow(1 - Math.min(1, k), 3), k2 = clamp((IWW.t - 0.12) / T, 0, 1), e2 = 1 - Math.pow(1 - k2, 2);
-  const R1 = 0.15 + e1 * 3.2, R2 = 0.1 + e2 * 2.4;
+  IWW.t += dt; const T = 1.1 + 0.15 * (IWW.pow - 1), k = IWW.t / T, e1 = 1 - Math.pow(1 - Math.min(1, k), 3), k2 = clamp((IWW.t - 0.12) / T, 0, 1), e2 = 1 - Math.pow(1 - k2, 2);
+  const R1 = 0.15 + e1 * 3.2 * IWW.m, R2 = 0.1 + e2 * 2.4 * IWW.m;
   IWW.r1.scale.setScalar(R1); IWW.r1.material.opacity = 1 - k;
-  IWW.r2.scale.setScalar(R2); IWW.r2.material.opacity = 0.8 * (1 - k2) * (k2 > 0 ? 1 : 0);
-  IWW.wall.scale.set(R1 * 0.97, 0.32 * (1 - k * 0.7), R1 * 0.97); IWW.wall.position.y = IWW.wall.scale.y / 2; IWW.wall.material.opacity = 0.75 * Math.pow(1 - Math.min(1, k), 1.5);
-  const f = Math.min(1, IWW.t / 0.3); IWW.flash.scale.setScalar(0.3 + f * 1.4); IWW.flash.material.opacity = 0.9 * (1 - f);
-  // polvo que levanta el frente al pasar (en tres tandas, alrededor)
-  if (IWW.dust < 3 && IWW.t > IWW.dust * 0.18) { const n = 18, c = IWW.g.position; for (let i = 0; i < n; i++) { const a = (i + Math.random() * 0.5) / n * TAU; fx.sparks(_iww.set(c.x + Math.sin(a) * R1, 0.04, c.z + Math.cos(a) * R1), 2, [0.75, 0.9, 1], 0.9, 0.03); if (i % 3 === 0) fx.dust(_iww, 1, 0.14); } IWW.dust++; }
+  IWW.r2.scale.setScalar(R2); IWW.r2.material.opacity = (1 - k2) * (k2 > 0 ? 1 : 0);
+  const hW = (0.32 + 0.08 * IWW.pow) * (1 - k * 0.7);
+  IWW.wall.scale.set(R1 * 0.97, hW, R1 * 0.97); IWW.wall.position.y = hW / 2; IWW.wall.material.opacity = 0.85 * Math.pow(1 - Math.min(1, k), 1.5);
+  IWW.wall2.scale.set(R2 * 0.98, hW * 0.7, R2 * 0.98); IWW.wall2.position.y = hW * 0.35; IWW.wall2.material.opacity = 0.6 * Math.pow(1 - k2, 1.5) * (k2 > 0 ? 1 : 0);
+  const f = Math.min(1, IWW.t / 0.3); IWW.flash.scale.setScalar(0.3 + f * 1.6 * IWW.m); IWW.flash.material.opacity = 1 - f;
+  // el polvo que levanta el frente a su paso: una tanda cada 0,07 s mientras avanza, alrededor del frente (polvo gris que
+  // queda flotando, chispas de color y alguna piedrecita)
+  const step = 0.07; if (k < 0.85 && IWW.t >= IWW.dust * step) {
+    const n = 14 + 4 * IWW.pow, c = IWW.g.position, off = Math.random();
+    for (let i = 0; i < n; i++) {
+      const a = (i + off) / n * TAU, x = c.x + Math.sin(a) * R1, z = c.z + Math.cos(a) * R1;
+      if (i % 2 === 0) fx.dust(_iww.set(x, 0.03, z), 1, 0.18 + 0.05 * IWW.pow);
+      fx.sparks(_iww.set(x, 0.04, z), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03);
+    }
+    IWW.dust++;
+  }
   if (k >= 1) { IWW.t = -1; IWW.g.visible = false; }
 }
 // La línea (donde queda tu cabeza en la plancha) y la barra desde la salida, en la arena, según tu altura
@@ -1659,10 +1690,16 @@ function iwStep(t, dt) {
   if (W.phase === 'stand' && !standing) { W.phase = 'out'; W.max = 0; W.t0 = t; }
   if (W.phase === 'out') {
     W.max = Math.max(W.max, H.g);
-    if (H.z <= IW_LINE && head.p.y < calibRef * 0.6) { W.phase = 'back'; IW.flash = 1; onCharge(); SND.tick(); hapticBoth(0.5, 50); const w = arena.localToWorld(_iww.set(0, 0.03, 0)); fx.sparks(w, 18, [0.24, 0.94, 0.78], 1.3, 0.02); fx.glow(w, [0.24, 0.94, 0.78], 0.35, 0.3); } // en la plancha: el rayo, cargado
+    if (H.z <= IW_LINE && head.p.y < calibRef * 0.6) { W.phase = 'back'; Object.assign(W, { pu: 0, pow: 1, pst: 'up', ref: head.p.y }); IW.flash = 1; onCharge(); SND.tick(); hapticBoth(0.5, 50); const w = arena.localToWorld(_iww.set(0, 0.03, 0)); fx.sparks(w, 18, [0.24, 0.94, 0.78], 1.3, 0.02); fx.glow(w, [0.24, 0.94, 0.78], 0.35, 0.3); } // en la plancha: el rayo, cargado
     else if (standing) { if (W.max > 0.35) onPartial('Camina con las manos hasta la línea del suelo'); W.phase = 'stand'; }
-  } else if (W.phase === 'back' && standing) { // de pie otra vez: si has vuelto hasta la salida, dispara y sale la onda
-    if (H.g < 0.45) { const dur = t - W.t0, pt = settings.perfectTime; onRep({ perfect: dur >= Math.max(2, pt * 2), fast: dur < 1.6 }); iwWave(); }
+  } else if (W.phase === 'back' && !standing && H.z <= IW_LINE + 0.3) {
+    // en la plancha, al final del recorrido: cada flexión (bajar la cabeza «Bajada en la flexión» y volver a subirla) da
+    // más fuerza a la onda: ×2, ×3, ×4 (más lejos, más fuerte y, desde ×2, también hace daño)
+    const y = head.p.y, pd = Math.max(0.05, settings.pushDepth / 100 * 0.8);
+    if (W.pst === 'up') { W.ref = Math.max(W.ref - dt * 0.02, y); if (y < W.ref - pd) W.pst = 'down'; } // (la referencia, lo más alto de la plancha, baja muy despacio)
+    else if (y > W.ref - pd * 0.4) { W.pst = 'up'; W.pu++; const p = Math.min(4, 1 + W.pu); if (p > W.pow) { W.pow = p; onPower(p); } else SND.tick(); }
+  } else if (W.phase === 'back' && standing) { // de pie otra vez: si has vuelto hasta la salida, dispara y sale la onda (con su fuerza)
+    if (H.g < 0.45) { const dur = t - W.t0, pt = settings.perfectTime; onRep({ perfect: dur >= Math.max(2, pt * 2), fast: dur < 1.6, pow: W.pow || 1 }); iwWave(W.pow || 1); }
     else onPartial('Vuelve andando con las manos hasta la salida');
     W.phase = 'stand';
   }
@@ -2545,7 +2582,7 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0, uneven: false }); Object.assign(DET.barp, { state: 'down', lost: 0, uneven: false }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
   else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
@@ -2673,13 +2710,13 @@ function endRun(win, manual) {
   const AX = settings.mode === 'arcs' ? arxEnd() : null; // (medalla, metros, orbes y fantasma)
   // el resumen, lo esencial (opción A): el número grande, la medalla y las perfectas; puntos, tiempo y kcal; un solo logro
   const S = { win, manual, hang, got, unit: hang ? 's colgado' : 'repeticiones', where: EX_NAMES[settings.exercise],
-    sub: !win && !manual ? `Oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada',
+    sub: settings.toFail && got ? `Al fallo: oleada ${waveIdx + 1}${failBest ? ` · tu récord, ${failBest}` : ''}` : !win && !manual ? `Oleada ${waveIdx + 1}${nWaves() ? ` de ${nWaves()}` : ''}` : win ? 'Zona despejada' : 'Ronda terminada', // (al fallo, a qué oleada llegaste siempre se ve)
     pct: hang ? null : Math.round(pr * 100), stars: got ? 1 + (pr >= 0.5 || (hang && stats.falls === 0) ? 1 : 0) + (win && (hang ? stats.falls === 0 : pr >= 0.75) ? 1 : 0) : 0,
     tiles: [[score, 'puntos'], [`${mm}:${ss}`, 'tiempo'], [`≈ ${Math.round(runStatsKcal())}`, 'kcal']],
     // los logros, del más importante al menos; se enseña el primero
     chips: [got > prevBest && prevBest > 0 ? ['¡Nuevo récord!', '#ffd166'] : null, settings.toFail && got && waveIdx + 1 > failBest && failBest ? [`¡Récord al fallo: oleada ${waveIdx + 1}!`, '#ffd166'] : null,
       AX && AX.farther ? ['¡Más lejos que nunca!', '#3cf0c6'] : null, streakUp ? [`${P.streak} días seguidos${P.streak >= P.best ? ' · tu mejor racha' : ''}`, '#3cf0c6'] : null,
-      settings.toFail && got ? [`Al fallo: oleada ${waveIdx + 1}${failBest ? ` · tu récord, ${failBest}` : ''}`, '#a68bff'] : null, AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null].filter(Boolean) };
+      AX && AX.orbs ? [`${AX.orbs} orbes`, '#ffd166'] : null].filter(Boolean) };
   S.medal = AX ? (AX.medal ? AX.medal[0] : null) : ['', 'bronce', 'plata', 'oro'][S.stars] || null; // (en el resumen se ve como medalla, no como texto)
   if (DEV.on) { const l = trkLine(); if (l) S.lines = [...(S.lines || []), l]; } // (cómo te han visto las gafas las manos: para el desarrollador)
   // ¿subir o bajar de rango? (fuera de las sesiones y de las rondas que terminas tú)
