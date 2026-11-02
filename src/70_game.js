@@ -131,6 +131,11 @@ function solidPush(e) {
 }
 // Ritmo (BPM) en Combate: periodo del pulso y si acaba de sonar uno (cuenta desde el pulso marcado al compás o por Spotify)
 const beatP = () => isCombat() && settings.bpm > 0 ? 60 / settings.bpm : 0;
+// el pulso para bailar: el del ritmo marcado o, si no, el de la canción de Spotify que suena (si se sabe su compás)
+function danceP() { const b = beatP(); if (b || !isCombat() || !spPlaying()) return b; const it = SP.st && SP.st.item, k = it && it.uri ? spTrackBpm(it.uri) : null; return k && k.b ? 60 / k.b : 0; }
+// lo que se nota la dificultad en el lanzador, poco a poco: el rango (de recluta a general, hasta un 24 %) y la mitad de lo
+// que haya subido en la ronda; como mucho, un 40 % más deprisa
+const throwK = () => Math.min(1.4, 1 + 0.04 * rankIdx() + 0.5 * rampK());
 // El pulso va con el reloj del juego, enganchado al reloj real al empezar y al volver de la pausa (el compás marcado lo da el reloj real)
 const BEAT = { last: -1, hit: false, t: 0, off: null };
 // En Arcos, con «Arcos al compás», el mismo pulso decide cuándo llega cada arco (ver arxBeatTick)
@@ -284,7 +289,8 @@ class Robot {
     else if (st === 'taunt') want = 'Spell_Simple_Shoot';
     else if (st !== 'emerge' && (st !== 'knock' || this.backing)) { const v = Math.abs(spd) / this.sc, back = spd < 0;
       if (Math.abs(spd) > V_STEP * 0.9) { want = back || v < 2.2 ? 'Walk_Loop' : v < 4 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; ts = isR ? 0 : clamp(v / (want === 'Walk_Loop' ? 1.4 : want === 'Jog_Fwd_Loop' ? 3.2 : 5.1), 0.5, 1.8) * (back ? -1 : 1); }
-      else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; } // parado esperando: en guardia, no en reposo
+      else if (danceP() && this.clips.Dance_Loop) { want = 'Dance_Loop'; ts = 1 / (2 * danceP()); } // parado esperando, con música: baila al compás
+      else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; } // (sin música, en guardia, no en reposo)
     mxPlay(this, want, fade, once, ts, this.restart); this.restart = false;
     const a = this.acts[want], loco = !!a && want !== 'Idle_Loop' && /_Loop$/.test(want);
     if (a && atkT >= 0) a.time = atkT;
@@ -397,7 +403,7 @@ class Robot {
         faceTo = faceP;
         if (K.thrower) { // el lanzador no se acerca: suelta la piedra y espera a la siguiente
           if (!this.thrownNow) { this.thrownNow = true; throwRock(this); }
-          if (this.st > 0.35) { this.state = 'walk'; this.st = 0; this.thrownNow = false; this.throwCD = rand(3.5, 5.5) / Math.sqrt(Math.max(0.7, this.pace)); } // una cada 3–5 s
+          if (this.st > 0.35) { this.state = 'walk'; this.st = 0; this.thrownNow = false; this.throwCD = rand(3.5, 5.5) / Math.sqrt(Math.max(0.7, this.pace)) / throwK(); } // una cada 3–5 s (más a menudo cuanto más difícil)
           break;
         } this.arm = -Math.min(1, this.st / 0.15); this.twist = lerp(this.twist, -0.45, Math.min(1, gd * 18)); this.lunge = Math.min(1, this.st / 0.15);
         const back = tmpA.subVectors(this.pos, HL); back.y = 0; back.normalize(); // (golpea desde su sitio: inclinándose, sin deslizarse hacia ti)
@@ -602,7 +608,7 @@ class Beast extends Robot {
       const h = this.cur, m1 = (D.walk + D.jog) / 2 * (h === 'Jog_Fwd_Loop' || h === 'Sprint_Loop' ? 0.88 : 1.12), m2 = (D.jog + D.run) / 2 * (h === 'Sprint_Loop' ? 0.88 : 1.12);
       want = back || v < m1 ? 'Walk_Loop' : v < m2 ? 'Jog_Fwd_Loop' : 'Sprint_Loop'; fade = 0.3;
       ts = clamp(v / (want === 'Walk_Loop' ? D.walk : want === 'Jog_Fwd_Loop' ? D.jog : D.run), D.minTs || 0.5, D.maxTs || 1.8) * (back ? -1 : 1); // los pies no patinan
-    } else if (beatP()) { want = 'Dance_Loop'; ts = 1 / (2 * beatP()); } // esperando su turno: baila, un paso cada dos pulsos
+    } else if (danceP()) { want = 'Dance_Loop'; ts = 1 / (2 * danceP()); } // esperando su turno: baila al compás, un paso cada dos pulsos
     else if (st === 'walk' && this.clips.Sword_Idle) want = 'Sword_Idle'; // o, sin música, en guardia
     this.play(want, fade, once, ts, this.restart); this.restart = false;
     if (punchT >= 0) this.acts[this.atk].time = punchT;
@@ -836,7 +842,7 @@ const ROCKS = [], ROCK_HIT = 0.28, ROCK_PARRY = 0.17;
 const rockGeo = new THREE.DodecahedronGeometry(0.085, 0), rockMat = std({ color: 0x8c7b66, roughness: 0.92, metalness: 0, flatShading: true });
 const _rk = new V3(), _rk2 = new V3(), _rkw = new V3();
 function throwRock(e) {
-  const from = arena.worldToLocal((e.B.handR || e.B.head || e.root).getWorldPosition(new V3())), to = HL.clone(), d = from.distanceTo(to), T = clamp(d / 4.5, 0.85, 1.4);
+  const from = arena.worldToLocal((e.B.handR || e.B.head || e.root).getWorldPosition(new V3())), to = HL.clone(), d = from.distanceTo(to), T = clamp(d / 4.5, 0.85, 1.4) / throwK(); // (más difícil, la piedra vuela algo más deprisa)
   const m = new THREE.Mesh(rockGeo, rockMat); m.castShadow = true; m.position.copy(from); arena.add(m);
   ROCKS.push({ m, from, to, T, t: 0, h: 0.6 * T * T, mode: 'fly', vel: new V3(), spin: new V3(rand(-9, 9), rand(-9, 9), rand(-9, 9)), src: e });
   SND.whoosh(arena.localToWorld(from.clone()), 'throw');
@@ -2890,8 +2896,9 @@ function gameStep(dt, t) {
   if (msg.t > 0) { msg.t -= dt; if (msg.t <= 0) boardDirty = true; }
   if (SAYT.t > 0) SAYT.t -= dt;
   stateT += dt;
-  // los dos pellizcos un segundo: en la partida, la pausa; fuera de ella, lo mismo que el botón MENÚ (por si no lo ves)
-  if ((GAME_STATES.includes(state) ? !holdsWeights() && !isBars() : (state === 'lobby' || state === 'end') && xrActive) && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; if (GAME_STATES.includes(state)) openPause(); else onWatch(); } } else pinchT = 0;
+  // los dos pellizcos un segundo: en la partida, la pausa; fuera de ella, lo mismo que el botón MENÚ (por si no lo ves),
+  // salvo mientras colocas algo (al agarrar la barra, las manos se cierran)
+  if ((GAME_STATES.includes(state) ? !holdsWeights() && !isBars() : (state === 'lobby' || state === 'end') && xrActive && !!menu && !PLACE.on && !PLACE.wait && !RPL.on) && hands.left.pinch && hands.right.pinch) { pinchT += dt; if (pinchT > 1) { pinchT = 0; if (GAME_STATES.includes(state)) openPause(); else onWatch(); } } else pinchT = 0;
   arenaGlide(dt);
   if (state === 'calib') {
     arenaFollow(dt);

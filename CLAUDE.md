@@ -74,7 +74,7 @@ No las cambies sin preguntarle.
   frontal, leñador, swing, sentadilla con press y con elevación) descarta los saltos imposibles de una mano (`HF`). En el
   curl y el press con barra, dos manos juntas se confirman entre sí, y si se ven separadas vale la que se mueve (las gafas
   dejan quieta la que pierden).
-- La flexión en pica, solo en Combate (no en Arcos).
+- El press de hombro, el press con barra y la flexión en pica se quitaron (no se detectaban bien en las gafas).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
@@ -111,11 +111,15 @@ No las cambies sin preguntarle.
 - Arcos inclinados: agacharse en el centro no vale; hay que apartarse hacia el lado alto (pared de energía bajo el lado
   bajo hasta pasado el centro) y bajar sobre esa pierna.
 - Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos).
+- Arcos: las paredes (obstáculos con hueco y la del lado bajo de los inclinados), rojas casi opacas con franjas, y el
+  canto del hueco en verde: que no haya duda de hacia dónde volcar el cuerpo.
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos. La bola de energía también es un
   obstáculo: la rodean.
 - Se mueven con naturalidad y agresividad, sin chocar entre ellos.
+- Parados esperando su turno, bailan al compás (el marcado o el de la canción de Spotify), también los robots.
+- El lanzador tira algo más deprisa (y más a menudo) cuanto más difícil, poco a poco (como mucho un 40 %).
 - Al abrirse una compuerta, su interior es oscuro.
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
 - Los voladores baten las alas siempre rápido, a su ritmo, sin depender de lo deprisa que avancen.
@@ -125,7 +129,9 @@ No las cambies sin preguntarle.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
-- La diana de serie (líneas de enfoque): rayas cortas que se mueven (giran despacio y por ellas corren tramos hacia fuera).
+- La diana (la única, líneas de enfoque): rayas cortas que se mueven (giran despacio y corren hacia fuera). Las demás se
+  quitaron.
+- Cada ajuste con explicación lleva una tecla «?» que enseña su explicación al lado del menú.
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
   - Por defecto (VR), a un lado (izquierda o derecha, configurable), el doble de grande y siempre a la vista, por fuera de
     las compuertas.

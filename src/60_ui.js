@@ -508,8 +508,9 @@ function openMenu(rows, opts = {}) {
       label(r.label, cy, undefined, 0, X0, LW); const n = r.opts.length, avail = CW - LW - GAP * (n - 1); let x = X0 + LW; const w = avail / n;
       r.opts.forEach(([v, lab, dis]) => { addW(new Btn(lab, w, h, () => { if (!dis) r.onPick(v); }, { style: dis ? 'ghost' : (v === r.value ? 'selected' : 'normal'), font: 0.38, tint }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'field') {
-      const f = FIELD[r.key], so = 0;
-      label(f.short || f.label, f.grid ? cy + h / 2 - GRID_H / 2 : cy, undefined, so, X0, LW);
+      const f = FIELD[r.key], so = 0, ly = f.grid ? cy + h / 2 - GRID_H / 2 : cy, qw = f.hint ? HINT_Q : 0;
+      label(f.short || f.label, ly, undefined, so, X0, LW - (qw ? qw + 0.008 : 0));
+      if (qw) addW(new Btn('?', qw, Math.min(h, 0.04), () => hintShow(f, group, ly), { style: 'ghost', font: 0.62 }), X0 + LW - qw / 2 - 0.008, ly); // (qué hace: su explicación, al lado)
       if (f.type === 'num') {
         // en una columna (estrecha) no cabe el deslizador: − valor +
         const narrow = CW < 0.5, bw = narrow ? 0.052 : 0.054, vw = narrow ? CW - LW - bw * 2 - GAP * 2 : 0.13, sw = CW - LW - bw * 2 - vw - GAP * 3; let x = X0 + LW;
@@ -717,7 +718,26 @@ function wristFar() {
   menu.group.getWorldPosition(_wml); const d = _wml.sub(head.p), len = d.length(); d.y = 0; const yw = bodyYaw();
   return len > 1.3 || (d.lengthSq() > 1e-4 && d.angleTo(_wmd.set(-Math.sin(yw), 0, -Math.cos(yw))) > 55 * Math.PI / 180);
 }
+/* ---------- Qué hace cada opción ---------- */
+// Junto al nombre de cada ajuste, una tecla «?»: al pulsarla sale, a la izquierda del menú y a la altura de esa fila, un
+// cartel con lo que hace (su explicación, la misma que en la página). Se va solo a los HINT_T s, al pulsar otra «?» o la
+// misma otra vez
+const HINT_Q = 0.032, HINT_T = 9, HINT_W = 0.46, HINT = { p: null, key: '', t: 0 };
+function hintClear() { if (HINT.p) { if (HINT.p.mesh.parent) HINT.p.mesh.parent.remove(HINT.p.mesh); HINT.p.tex.dispose(); HINT.p.mesh.material.dispose(); HINT.p.mesh.geometry.dispose(); } HINT.p = null; HINT.key = ''; }
+function hintShow(f, group, cy) {
+  const again = HINT.key === f.key && HINT.p && HINT.p.mesh.parent === group; hintClear(); if (again) return;
+  const px = 1024, sc = px / HINT_W, c0 = mkCanvas(8).getContext('2d'); c0.font = '500 32px ' + FB;
+  const lines = []; let cur = ''; for (const w of String(f.hint).split(' ')) { const t = cur ? cur + ' ' + w : w; if (cur && c0.measureText(t).width > px - 70) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur);
+  const Hpx = 96 + lines.length * 42 + 24, P = makePanel(HINT_W, Hpx / sc, px, { depthTest: false }), c = P.ctx;
+  rr(c, 4, 4, P.W - 8, P.H - 8, 26); c.fillStyle = 'rgba(16,12,32,0.96)'; c.fill(); c.lineWidth = 5; c.strokeStyle = '#ffd166'; c.stroke();
+  c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = '#ffd166'; fitFont(c, f.label, P.W - 70, 40, '700 %px ' + FB); c.fillText(f.label, 35, 56);
+  c.fillStyle = '#eeeaff'; c.font = '500 32px ' + FB; lines.forEach((l, i) => c.fillText(l, 35, 112 + i * 42)); P.tex.needsUpdate = true;
+  P.mesh.renderOrder = RO.key + 2; P.mesh.position.set(-MW / 2 - HINT_W / 2 - 0.02, cy, 0.02); group.add(P.mesh);
+  Object.assign(HINT, { p: P, key: f.key, t: HINT_T }); SND.tick();
+}
+function hintStep(dt) { if (!HINT.p) return; HINT.t -= dt; if (HINT.t <= 0 || !HINT.p.mesh.parent || !menu || HINT.p.mesh.parent !== menu.group) hintClear(); }
 function updateWristMenu(dt) {
+  hintStep(dt);
   if (!menu || !menu.wrist) { WM.e = 0; WM.init = false; wristHint.visible = false; return; }
   WM.e = clamp(WM.e + (WM.on ? dt / 0.22 : -dt / 0.22), 0, 1);
   wristPose(menu.group, menu.H, dt);
