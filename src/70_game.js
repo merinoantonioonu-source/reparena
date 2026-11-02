@@ -1096,6 +1096,18 @@ class Arc {
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.low = low; this.maxUp = -1; this.fast = false;
     this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump, hw); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
+    // inclinados: por el lado bajo, del suelo a la barra, una pared de energía que pasa un poco del centro. Agacharse en el
+    // centro no vale: hay que apartarse al menos «Apartarse en los inclinados» hacia el lado alto (y bajar sobre esa pierna)
+    this.sideMin = tl && !low && settings.arcSideMin > 0 ? Math.min(settings.arcSideMin / 100, shift - 0.05) : 0;
+    if (this.sideMin) {
+      const sg = Math.sign(tilt), xa = -sg * hw, xe = sg * Math.max(0.02, this.sideMin - 0.1), g = new THREE.PlaneGeometry(1, 1), p = g.attributes.position;
+      [[xa, this.barAt(xa) - 0.04], [xe, this.barAt(xe) - 0.04], [xa, 0.01], [xe, 0.01]].forEach(([x, y], i) => p.setXYZ(i, x, Math.max(0.05, y), 0)); p.needsUpdate = true;
+      this.sideMat = new THREE.MeshBasicMaterial({ map: TX.scan, color: 0xff2010, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.sideWall = new THREE.Mesh(g, this.sideMat); this.o.grp.add(this.sideWall);
+      // el borde, al rojo como la barra y con su resplandor: hasta ahí llega la pared
+      const eh = Math.max(0.05, this.barAt(xe) - 0.03); this.sideEdge = new THREE.Group(); this.sideEdge.position.set(xe, eh / 2, 0); this.o.grp.add(this.sideEdge);
+      this.sideEdge.add(new THREE.Mesh(G.cylRaw(0.02, 0.02, eh, 6), this.o.coreMat)); for (let i = 0; i < 2; i++) { const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.2, eh), this.o.glowMat); p2.rotation.y = i * Math.PI / 2; this.sideEdge.add(p2); }
+    }
     Object.assign(this, { speed: plank ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : low ? arxSpeed() * 0.75 : arxSpeed(), judged: false, hit: false, checked: false, minClear: 1, second, alive: true, t: 0, zapT: 0, warnT: 0 });
     // la rueda: la barra gira mientras llega y se para inclinada (tilt) justo al pasar por ti; la cortina no la sigue
     if (spin) { Object.assign(this, { spin, tiltEnd: tilt, tReach: Math.max(0.5, (HL.z - this.z) / this.speed), leanX: Math.sign(tilt) * settings.arcShift / 100 }); this.o.curtain.visible = false; const hub = glowSprite(0xff2a14, 0.35, 0.9); this.o.bar.add(hub); }
@@ -1115,7 +1127,9 @@ class Arc {
     // de semipuente: la huella de la mano en el suelo, en el lado alto, más allá de donde va la cabeza (late mientras llega)
     if (this.print) { const d = HL.z - this.z, a = this.judged ? Math.max(0, this.print.material.opacity - dt * 2) : d < 9 ? Math.min(1, (9 - d) / 2) * (0.65 + 0.35 * Math.sin(t * 9)) : 0; this.print.material.opacity = a; this.print.visible = a > 0.01; this.print.position.set(this.leanX + Math.sign(this.leanX) * 0.3, 0.008, HL.z - 0.1); }
     const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
-    const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
+    const sideBad = this.sideMin && Math.sign(this.tilt) * HL.x < this.sideMin; // (en la pared del lado bajo)
+    const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : sideBad || HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
+    if (this.sideMat) this.sideMat.opacity = danger && sideBad ? 0.65 + 0.2 * Math.sin(t * 30) : 0.45;
     const flick = (0.75 + Math.random() * 0.25) * arxBeatGlow();
     this.o.glowMat.opacity = Math.min(1, (danger ? 1 : 0.7) * flick); this.o.curtainMat.opacity = danger ? 0.32 + 0.15 * Math.sin(t * 30) : 0.18;
     this.o.coreMat.color.setHex(danger ? 0xffffff : 0xffb0a0);
@@ -1123,7 +1137,7 @@ class Arc {
     if (this.hum) this.hum.set(arena.localToWorld(tmpA.set(clamp(HL.x, 0.05 - this.hw, this.hw - 0.05), this.barAt(HL.x), this.z)));
     // valla: mientras pasa por debajo de ti (con algo de margen, el salto dura poco) cuenta lo más alto que llegaste
     if (this.jump) { if (!this.judged && Math.abs(this.z - hz) < 0.4 && inLane) { this.checked = true; this.maxUp = Math.max(this.maxUp, up); if (JUMP.fastT < 0.6) this.fast = true; } }
-    else if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; const top = HL.y + HEAD_TOP, b = this.barAt(HL.x); if (top > b) this.hit = true; this.minClear = Math.min(this.minClear, b - top); }
+    else if (!this.judged && Math.abs(this.z - hz) < 0.15 && inLane) { this.checked = true; const top = HL.y + HEAD_TOP, b = this.barAt(HL.x); if (top > b) this.hit = true; if (sideBad) this.hit = this.sideHit = true; this.minClear = Math.min(this.minClear, b - top); }
     if (!this.judged && this.z > hz + 0.15) { this.judged = true; this.resolve(); }
     if (this.z > hz + 3.5) { this.dispose(); this.alive = false; }
   }
@@ -1138,7 +1152,7 @@ class Arc {
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
       return;
     }
-    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.low ? `¡Más abajo, con la mano en el suelo, a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.plank ? '¡Al suelo, en plancha!' : this.low ? `¡Más abajo, con la mano en el suelo, a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : this.sideHit ? `¡Por el lado alto: apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'} y baja sobre esa pierna!` : this.tilt ? `¡Apártate a la ${this.tilt > 0 ? 'derecha' : 'izquierda'}!` : '¡Agáchate más!', '#ff3b5c', 1.3); return; }
     const perfect = this.minClear >= 0.06;
     SND.whoosh(hp, 'arc');
     if (this.second) { score += 150 * (1 + combo * 0.1) | 0; cheer('¡Aguantado!', '#3cf0c6', 1.0); boardDirty = true; return; }
@@ -1146,7 +1160,7 @@ class Arc {
     say(perfect ? '¡PERFECTA!' : '¡Esquivado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false);
     if (perfect) SND.perfect();
   }
-  dispose() { if (this.print) { arena.remove(this.print); this.print.geometry.dispose(); this.print.material.dispose(); } arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); if (this.o.ends) this.o.ends.forEach(e => e.material.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
+  dispose() { if (this.sideWall) { this.sideWall.geometry.dispose(); this.sideMat.dispose(); this.sideEdge.children.forEach(m => m.geometry.dispose()); } if (this.print) { arena.remove(this.print); this.print.geometry.dispose(); this.print.material.dispose(); } arena.remove(this.o.grp); [this.o.coreMat, this.o.glowMat, this.o.curtainMat].forEach(m => m.dispose()); if (this.o.ends) this.o.ends.forEach(e => e.material.dispose()); this.o.curtain.geometry.dispose(); this.o.lines.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
 }
 
 /* =================== DISPAROS =================== */
@@ -1158,6 +1172,9 @@ function pickNearest(side) {
   let best = null, bd = 1e9;
   for (const e of enemies) if (e.alive && e.hp - e.pending > 0 && ok(e)) { const d = e.root.position.distanceToSquared(HL); if (d < bd) { bd = d; best = e; } }
   if (!best) for (const e of enemies) if (e.alive && ok(e)) { best = e; break; }
+  // (en la plancha con un brazo, si en tu lado no queda nadie —el jefe de la última oleada sale por un solo lado—, el
+  // rayo va al más cercano del otro: si no, esa mano «dejaba de disparar»)
+  if (!best && side) return pickNearest();
   return best;
 }
 function findLock(o, d) {
@@ -2254,6 +2271,13 @@ settingHooks.push(k => {
   const all = store(COMBO_KEY) || {}; for (const id in all) if (all[id] && all[id].rank === undefined) all[id].rank = settings.rank;
   store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
 })();
+// Arcos pasa a ir «Al fallo» de serie: también en los ejercicios de Arcos ya guardados (una vez)
+(function arcFailMigrate() {
+  if (settings.arcFailV) return;
+  const all = store(COMBO_KEY) || {}; for (const id in all) if (id.startsWith('arcs|') && all[id]) all[id].toFail = 1;
+  if (settings.mode === 'arcs') settings.toFail = 1;
+  store(COMBO_KEY, all); settings.arcFailV = 1; store(STORE_KEY, settings);
+})();
 // Subir o bajar de rango: tras 3 rondas ganadas seguidas con un 70 % de perfectas o más, el resumen propone subir; tras 2
 // derrotas seguidas, bajar. Nunca cambia solo: lo decides tú con un botón. Se cuenta por modo y ejercicio
 const RANKFIT_KEY = 'reparena3-rankfit';
@@ -2287,16 +2311,16 @@ function armsMenu(back) {
 //    con Sesiones: la sesión preparada, bloque a bloque, y las guardadas
 //  · Spotify (si está conectado) y, abajo, Opciones (rivales y armas, progreso, sonido, entorno y ajustes) y Salir
 // Se recuerdan la vista (modo o sesiones) y la pestaña de Opciones
-const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff';
+const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff', EX_COL = '#e4e8f2', MODE_BOX = '#8c86b4';
 const LOBBY = { view: uiPrefs().lobbyView === 'ses' ? 'ses' : 'mode', opt: uiPrefs().lobbyOpt || 'foes', foe: '' };
 // Los ejercicios del modo, en rejilla (6 por fila si son muchos), y lo que le toca: la barra o las paralelas en Barras,
 // las combinaciones en Toques
 function lobbyExRows(again) {
-  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k), col = MODE_COL[settings.mode];
+  const bars = isBars(), k = eqKind(), placed = eqPose(k).set, n = eqName(k);
   let list = MODE_EX[settings.mode].slice(); if (settings.exSort === 'body') { const z = x => { const i = BODY_ZONES.findIndex(b => b[1].includes(x)); return i < 0 ? 99 : i; }; list.sort((a, b) => z(a) - z(b)); }
   const per = list.length > 15 ? 6 : list.length > 4 ? 5 : 4, rows = [];
   for (let i = 0; i < list.length; i += per) {
-    const items = list.slice(i, i + per).map(x => ({ label: EX_SHORT[x] || EX_NAMES[x], style: x === settings.exercise ? 'selected' : 'normal', tint: col, font: 0.42, onPress: () => { setSetting('exercise', x); again(); } }));
+    const items = list.slice(i, i + per).map(x => ({ label: EX_SHORT[x] || EX_NAMES[x], style: x === settings.exercise ? 'selected' : 'normal', tint: EX_COL, font: 0.42, onPress: () => { setSetting('exercise', x); again(); } }));
     while (items.length < per && list.length > per) items.push({ sep: true, blank: true }); // (la última fila, con las teclas del mismo ancho)
     rows.push({ t: 'btns', h: 0.05, items });
   }
@@ -2361,14 +2385,18 @@ function lobbyMenu() {
   const ses = LOBBY.view === 'ses', view = v => { LOBBY.view = v; uiSave('lobbyView', v); PREFS.resetArm = ''; lobbyMenu(); };
   const start = ses ? () => { if (SES.blocks.length) startSession(); else say('Prepara una sesión en la página o elige una guardada', '#ffd166', 2); }
     : () => { if (bars && !placed) startPlace(lobbyMenu, `Antes de empezar, coloca ${n.the}`); else beginRun(); };
-  const modes = [...Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: !ses && v === settings.mode ? 'selected' : 'normal', accent: MODE_COL[v], tint: MODE_COL[v], font: 0.46, onPress: () => { setSetting('mode', v); view('mode'); } })),
-    { sep: true, flex: 0.2 }, { label: 'Sesiones', style: ses ? 'selected' : 'normal', accent: SES_COL, tint: SES_COL, font: 0.46, onPress: () => view('ses') }];
+  // el modo, en su caja: cada uno, la tecla entera de su color (más oscura si no es el elegido); los ejercicios, en otra
+  // caja, en blanco: que no se confundan
+  const modes = [...Object.entries(MODE_NAMES).map(([v, l]) => ({ label: l, style: !ses && v === settings.mode ? 'selected' : 'normal', fill: MODE_COL[v], font: 0.48, onPress: () => { setSetting('mode', v); view('mode'); } })),
+    { sep: true, flex: 0.2 }, { label: 'Sesiones', style: ses ? 'selected' : 'normal', fill: SES_COL, font: 0.48, onPress: () => view('ses') }];
+  const box = (title, color, rows) => rows.length ? [{ t: 'cols', titles: [title], colors: [color], cols: [rows] }] : [];
+  const exR = ses ? [] : lobbyExRows(again).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key]));
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const rows = [
     { t: 'title', text: '', big: { label: ses ? (SES.blocks.length ? 'EMPEZAR SESIÓN' : 'SESIONES') : 'EMPEZAR', onPress: start } },
     { t: 'btns', h: 0.085, items: statTiles() },
-    { t: 'btns', h: 0.056, items: modes },
-    ...(ses ? sesPreviewRows() : [...lobbyExRows(again), ...lobbyDiffRows(again)]).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])),
+    ...box('Modo', MODE_BOX, [{ t: 'btns', h: 0.06, items: modes }]),
+    ...(ses ? sesPreviewRows() : [...box(`Ejercicio · ${MODE_NAMES[settings.mode]}`, EX_COL, exR), ...box('Dificultad', DIFF_COL, lobbyDiffRows(again).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])))]),
     ...(roomBad ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
     ...spWideRows(),
     { t: 'btns', h: 0.052, items: [{ label: 'Opciones  ▸', flex: 3, accent: MC.set, onPress: () => optionsMenu() }, { label: 'Salir', style: 'danger', onPress: exitAll }] }];
@@ -2800,7 +2828,7 @@ function endMenu(title, S) {
     ...(S.lines || []).map(l => ({ t: 'text', text: l, color: '#a49fc8' })),
     ...(S.rankTo ? (() => { const up = rankIdx(S.rankTo) > rankIdx(), nm = rankName(S.rankTo); return [
       { t: 'text', text: up ? `Vas sobrado en ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: tres rondas ganadas con muchas perfectas` : `${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]} se te está atragantando: dos derrotas seguidas`, color: up ? '#3cf0c6' : '#ff8a3d' },
-      { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }, { label: `Seguir de ${rankName().toLowerCase()}`, onPress: () => { S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
+      { t: 'btns', items: [{ label: `${up ? 'Subir' : 'Bajar'} a ${nm}`, badge: rankIdx(S.rankTo), style: up ? 'primary' : 'normal', onPress: () => { setSetting('rank', S.rankTo); say(`${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}: ${nm}`, '#ffd166', 1.6); S.rankTo = null; endMenu(title, S); } }] }]; })() : []),
     ...(S.camp ? [{ t: 'btns', items: [...(S.camp.next ? [{ label: `Nivel ${S.camp.next}`, style: 'primary', onPress: () => campStart(S.camp.next) }] : []), { label: 'Repetir nivel', style: S.camp.next ? 'normal' : 'primary', onPress: () => campStart(S.camp.lv) }, { label: 'Mapa', onPress: () => { PROG.lv = 0; PROG.reg = -1; progressOpen('camp'); } }] },
       { t: 'btns', items: [{ label: 'Menú principal', onPress: () => lobbyMenu() }] }] // (salir del juego, desde el menú principal)
     : [{ t: 'btns', items: [{ label: 'Otra ronda', style: 'primary', onPress: () => beginRun() }, { label: 'Menú principal', onPress: () => lobbyMenu() }] }])];

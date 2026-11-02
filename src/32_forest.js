@@ -34,7 +34,7 @@ const C_BARK = col(0.7, 0.64, 0.6), C_DEAD = col(0.5, 0.48, 0.46), C_LEAF = [col
 
 const forest = new THREE.Group(); forest.visible = false; scene.add(forest);
 // Cielo nocturno: verde oscuro abajo, azul casi negro arriba, una luna con halo entre jirones de nubes y alguna estrella
-const forestSkyMat = new THREE.ShaderMaterial({
+const forestSkyMat = stormSky(new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; varying vec3 vP;
@@ -53,7 +53,7 @@ const forestSkyMat = new THREE.ShaderMaterial({
       c += vec3(0.6,0.65,0.8) * st * (0.5 + 0.5 * sin(time * 2.0 + hash(floor(d.zx * 90.0)) * 20.0));
       gl_FragColor = vec4(c, 1.0);
     }`
-});
+}));
 const forestSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), forestSkyMat); forestSky.renderOrder = -10; forest.add(forestSky);
 const forestGround = new THREE.Mesh(new THREE.CircleGeometry(60, 64), std({ map: SURF.moss.map, normalMap: SURF.moss.normal, roughnessMap: SURF.moss.orm, metalness: 0, roughness: 1 }));
 forestGround.rotation.x = -Math.PI / 2; forestGround.position.y = -0.005; forestGround.receiveShadow = true; forest.add(forestGround);

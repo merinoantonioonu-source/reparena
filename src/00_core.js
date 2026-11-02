@@ -62,7 +62,7 @@ const modeFor = ex => Object.keys(MODE_EX).find(m => exOk(m, ex));
 const RANKS = [['recluta', 'Recluta'], ['soldado', 'Soldado'], ['cabo', 'Cabo'], ['sargento', 'Sargento'], ['teniente', 'Teniente'], ['capitan', 'Capitán'], ['general', 'General']];
 const RANK_VALS = {
   lives: [0, 5, 3, 3, 2, 2, 1], walkTime: [22, 17, 14, 11, 9, 7, 5], maxAlive: [2, 3, 5, 6, 7, 8, 10], flySpeed: [2, 3, 3.5, 4.5, 5.5, 7, 9], erratic: [50, 70, 100, 110, 130, 150, 180],
-  ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3],
+  ramp: [0, 2, 4, 5, 6, 8, 10], arcSpeed: [4, 5.5, 7, 8.5, 10, 12, 14], arcRate: [8, 10, 12, 15, 18, 22, 26], arcMaxGap: [9, 7, 6, 5, 4, 3.5, 3], arcLaser: [0, 15, 30, 45, 60, 80, 100],
   tchArrive: [4.5, 4, 3, 2.5, 2, 1.5, 1], tchWindow: [2, 1.6, 1.2, 1, 0.9, 0.7, 0.6], tchGap: [3.4, 2.9, 2.4, 2.1, 1.8, 1.5, 1.2], barArrive: [6, 5, 4, 3.5, 3, 2.5, 2], barWait: [0, 16, 12, 10, 8, 6, 4],
   guardDiff: ['easy', 'easy', 'normal', 'normal', 'normal', 'hard', 'hard']
 };
@@ -184,14 +184,18 @@ const SCHEMA = [
   { key: 'arcTiltMax', g: 'arcos', label: 'Inclinación máxima de la barra', short: 'Inclinación', type: 'num', min: 5, max: 35, step: 1, def: 18, unit: '°', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Cuanto más inclinada, más hay que apartarse hacia el lado alto.' },
   { key: 'arcRight', g: 'arcos', label: 'Inclinados: hacia la derecha', short: 'A la derecha', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcTilt > 0 || settings.arcLow > 0, hint: 'De los arcos inclinados, cuántos hay que esquivar apartándose a la derecha (el resto, a la izquierda). Con el 50 %, los dos lados por igual en cada oleada.' },
   { key: 'arcShift', g: 'arcos', label: 'Desplazamiento lateral en los inclinados', short: 'Desplazamiento', type: 'num', min: 15, max: 140, step: 5, def: 40, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Hasta dónde hay que llevar la cabeza hacia el lado alto para pasar con la bajada normal; en el centro hay que bajar más. Como mucho, hasta 15 cm antes del extremo (ver «Separación»).' },
+  { key: 'arcSideMin', g: 'arcos', label: 'Inclinados: apartarse al menos', short: 'Apartarse', type: 'num', min: 0, max: 60, step: 5, def: 20, unit: 'cm', zero: 'No se exige', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Bajo el lado bajo de la barra hay una pared de energía que pasa un poco del centro: agacharse en el centro no vale. Hay que llevar la cabeza al menos esto hacia el lado alto y bajar cargando esa pierna.' },
   { key: 'arcTiltDrop', g: 'arcos', label: 'Bajada en los inclinados', short: 'Bajada inclinados', type: 'num', min: 0, max: 60, step: 1, def: 0, unit: 'cm', zero: 'Como los rectos', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'Cuánto hay que bajar la cabeza en el lado alto. 0 = lo mismo que los arcos rectos. Poca bajada y el lado alto lejos: zancada lateral, con el peso sobre una pierna; mucha bajada: sentadilla lateral profunda.' },
   { key: 'arcLow', g: 'arcos', label: 'Arcos de semipuente (mano al suelo)', short: 'Semipuente', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'Inclinados tan bajos que hay que apartarse hacia el lado alto y bajar hasta apoyar una mano en el suelo (un semipuente lateral): trabajan las piernas, el costado y el brazo de apoyo. Llegan algo más despacio, con un aviso y la huella de la mano en el suelo; el lado, como los inclinados («Inclinados: hacia la derecha»).' },
   { key: 'arcLowH', g: 'arcos', label: 'Altura de la cabeza en el semipuente', short: 'Altura semipuente', type: 'num', min: 40, max: 110, step: 5, def: 75, unit: 'cm', modes: ['arcs'], cond: () => settings.arcLow > 0, hint: 'A qué altura del suelo tienen que quedar tus ojos en el lado alto para pasar por debajo. Menos = más abajo (con la mano bien apoyada).' },
   { key: 'arcTiltW', g: 'arcos', label: 'Separación entre los extremos (inclinados)', short: 'Separación', type: 'num', min: 140, max: 320, step: 10, def: 200, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'El ancho del arco inclinado. Más ancho deja ir más lejos hacia el lado alto (sube el desplazamiento lateral posible) y la barra baja más por el otro lado. Necesita sitio libre a los lados.' },
   { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
   { key: 'arcBeat', g: 'arcos', label: 'Arcos al compás de la música', short: 'Al compás', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Con ritmo (el de cada canción de Spotify o uno marcado en Sonido): cada arco llega a ti justo en un pulso, los huecos entre arcos se cuentan en pulsos y las barras laten al compás. Sin ritmo, como siempre.' },
+  { key: 'arcBpmSpeed', g: 'arcos', label: 'Velocidad según la canción', short: 'Velocidad canción', type: 'toggle', def: 1, modes: ['arcs'], cond: () => !!settings.arcBeat, hint: 'Con ritmo, los arcos vienen algo más deprisa con canciones rápidas y algo más despacio con las lentas (del 80 % al 125 % de la velocidad del rango; 120 BPM, igual).' },
+  { key: 'arcPhrases', g: 'arcos', label: 'Frases intensas y respiros', short: 'Frases', type: 'toggle', def: 1, modes: ['arcs'], cond: () => !!settings.arcBeat, hint: 'Con ritmo, cada 32 pulsos se alternan una frase intensa (los obstáculos, más seguidos; se anuncia «¡Sube la música!») y otra de respiro.' },
   { key: 'arcPatterns', g: 'arcos', label: 'Coreografías (en vez de al azar)', short: 'Coreografías', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Llegan en pequeñas secuencias con su ritmo: escalera (cada vez más abajo), ráfaga de tres, zigzag de inclinados, valla y arco bajo… Se aprenden y cogen ritmo.' },
   { key: 'arcNew', g: 'arcos', label: 'Obstáculos nuevos (láser, paredes, rueda)', short: 'Obst. nuevos', type: 'num', min: 0, max: 100, step: 5, def: 25, unit: '%', modes: ['arcs'], hint: 'Un láser que barre la pista y se para cerca del centro (apártate al lado libre), dos paredes que se cierran dejando un hueco a un lado (métete en él) y una barra que gira como una rueda y se para inclinada al llegar.' },
+  { key: 'arcLaser', g: 'arcos', label: 'Láser: amenaza', short: 'Láser', type: 'num', min: 0, max: 100, step: 10, def: 30, unit: '%', modes: ['arcs'], cond: () => settings.arcNew > 0, hint: 'Lo pone el rango. Cuanto más, el láser barre más pista, más deprisa, con amagos (cambia de sentido) y sigue moviéndose hasta más cerca de ti. Siempre se para antes de llegar, con un lado libre.' },
   { key: 'arcWallTilt', g: 'arcos', label: 'Paredes inclinadas', short: 'Paredes incl.', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcNew > 0, hint: 'De las dos paredes que se cierran, cuántas llegan algo inclinadas: el hueco va en diagonal y hay que meterse ladeando el cuerpo.' },
   { key: 'arcMace', g: 'arcos', label: 'Maza con pinchos (péndulo)', short: 'Maza', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'], relayout: true, hint: 'Una bola de pinchos colgada de una cadena que se balancea de lado a lado a la altura de tu cara mientras llega: apártate al lado por el que no pasa o agáchate a tiempo.' },
   { key: 'arcMaceDrop', g: 'arcos', label: 'Bajada de la maza', short: 'Bajada maza', type: 'num', min: 0, max: 50, step: 5, def: 20, unit: 'cm', modes: ['arcs'], cond: () => settings.arcMace > 0, hint: 'Cuánto por debajo de lo alto de tu cabeza pasa la bola en lo más bajo. Con 20 cm, para pasar por debajo hay que agacharse unos 50 cm (una sentadilla de verdad); si no, apártate a un lado.' },
@@ -206,6 +210,7 @@ const SCHEMA = [
   { key: 'arcFever', g: 'arcos', label: 'Modo fiebre (10 seguidos sin fallo)', short: 'Fiebre', type: 'toggle', def: 1, modes: ['arcs'], relayout: true, hint: 'Tras 10 obstáculos seguidos sin que te den, todo va más deprisa, las luces se vuelven de neón rosa y los puntos valen el doble, hasta que te dan.' },
   { key: 'arcFeverUp', g: 'arcos', label: 'Fiebre: cuánto más deprisa en cada una', short: 'Fiebre +', type: 'num', min: 0, max: 40, step: 5, def: 10, unit: '%', modes: ['arcs'], cond: () => !!settings.arcFever, hint: 'La primera fiebre de la ronda va un 20 % más deprisa; cada una de las siguientes, este tanto más (con 10 %: 20, 30, 40… hasta el doble de rápido).' },
   { key: 'arcMove', g: 'arcos', label: 'Sensación de avance', short: 'Avance', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Rayas en la pista y farolas a los lados que pasan junto a ti a la velocidad de los arcos.' },
+  { key: 'arcTunnel', g: 'arcos', label: 'Túneles (aguantar abajo)', short: 'Túneles', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], hint: 'Cuatro arcos bajos muy seguidos (con música, a un pulso uno de otro): hay que quedarse abajo y aguantar la sentadilla.' },
   { key: 'arcCombo', g: 'arcos', label: 'Combinaciones (dos a la vez o muy seguidos)', short: 'Combinaciones', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], hint: 'A veces llegan dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez, agáchate) o tres muy seguidos (con música, a un pulso uno de otro). Más esfuerzo y más coordinación.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
@@ -324,8 +329,12 @@ const comboKeys = () => _comboKeys || (_comboKeys = SCHEMA.filter(f => COMBO_G.h
 const comboId = () => settings.mode + '|' + settings.exercise;
 function comboSave(id = comboId()) { const all = store(COMBO_KEY) || {}; all[id] = Object.fromEntries(comboKeys().map(k => [k, settings[k]])); store(COMBO_KEY, all); }
 // Carga los de este modo y ejercicio; devuelve los ajustes que cambian
+// Lo de serie de cada modo cuando aún no lo has tocado (y, en los demás, lo de serie del ajuste): Arcos va «Al fallo», a
+// ver cuánto aguantas esquivando
+const MODE_DEF = { arcs: { toFail: 1 } }, MODE_DEF_KEYS = ['toFail'];
 function comboLoad(id = comboId()) {
-  const o = (store(COMBO_KEY) || {})[id], ch = []; if (!o) return ch;
+  const o = (store(COMBO_KEY) || {})[id], ch = [];
+  if (!o) { const d = MODE_DEF[id.split('|')[0]] || {}; for (const k of MODE_DEF_KEYS) { const v = k in d ? d[k] : FIELD[k].def; if (v !== settings[k]) { settings[k] = v; ch.push(k); } } return ch; }
   for (const k of comboKeys()) if (o[k] !== undefined) { const v = clampSetting(FIELD[k], o[k]); if (v !== settings[k]) { settings[k] = v; ch.push(k); } }
   return ch;
 }
@@ -422,6 +431,26 @@ const settingHooks = [];
 settingHooks.push(k => { if (k === 'goalMin') renderToday(); });
 function onSettingChanged(key) { settingHooks.forEach(h => { try { h(key); } catch (e) { console.warn(e); } }); }
 
+// Las explicaciones de la página, resumidas: su primera frase (para el «?»; el texto entero, al pulsarlo)
+const firstSentence = t => { const x = String(t).replace(/\s+/g, ' ').trim(), m = x.match(/^.*?[.!?](\s|$)/), f = (m ? m[0] : x).trim(); return f.length > 150 ? f.slice(0, 147).replace(/\s+\S*$/, '') + '…' : f; };
+// Junto a cada título de la página, un «?» con su explicación (las notas que lo siguen, recogidas); en las fichas de modo y
+// ejercicio, solo la primera frase (el resto, al pasar por encima)
+function pageHelp() {
+  if (typeof document === 'undefined' || !document.querySelectorAll || !document.createElement) return;
+  try {
+    document.querySelectorAll('.main section h2, .main section h3').forEach(h => {
+      const pops = []; let n = h.nextElementSibling;
+      while (n && n.tagName === 'P' && !n.id && (!n.className || n.classList.contains('note'))) { pops.push(n); n = n.nextElementSibling; }
+      if (!pops.length || h.querySelector('.qm')) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'qm'; b.textContent = '?'; b.title = firstSentence(pops[0].textContent);
+      b.setAttribute('aria-label', 'Qué es esto'); b.setAttribute('aria-expanded', 'false');
+      pops.forEach(p => { p.classList.add('helpPop'); p.hidden = true; });
+      b.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); const open = pops[0].hidden; pops.forEach(p => { p.hidden = !open; }); b.setAttribute('aria-expanded', String(open)); }); // (sin plegar la sección)
+      h.appendChild(b);
+    });
+    document.querySelectorAll('.cards .card small').forEach(sm => { const full = sm.textContent.trim(), f = firstSentence(full); if (f !== full) { sm.textContent = f; sm.title = full; } });
+  } catch (e) { /* (en las pruebas, sin página) */ }
+}
 /* =================== FORMULARIO WEB =================== */
 // La página: las opciones comunes (entorno, menú y tu meta) y el sonido aparte; las del modo y el ejercicio, en su sección; y el orden de los
 // ejercicios (por modo o por zona del cuerpo), junto a los ejercicios
@@ -437,6 +466,7 @@ function buildForm() {
   for (const h of [host, common, sortBox, $('#soundGroups')]) { h.addEventListener('input', onFormInput); h.addEventListener('change', onFormInput); }
   // menú sencillo o completo, y restablecer un grupo
   const ln = $('#levelNote'); if (ln) ln.addEventListener('click', ev => { const v = ev.target.dataset && ev.target.dataset.level; if (v) { setSetting('menuLevel', v); syncForm(); } });
+  for (const h of [host, common, $('#soundGroups')]) h.addEventListener('click', ev => { const q = ev.target.dataset && ev.target.dataset.qm; if (q) { const p = $('#' + q); if (p) { p.hidden = !p.hidden; ev.target.setAttribute('aria-expanded', String(!p.hidden)); } } });
   for (const h of [host, common]) h.addEventListener('click', ev => { const g = ev.target.dataset && ev.target.dataset.reset; if (g && (typeof confirm !== 'function' || confirm(`¿Devolver «${GROUP_NAMES[g]}» a como venía?`))) resetGroup(g); });
   document.querySelectorAll('input[name=mode],input[name=exercise]').forEach(i => i.addEventListener('change', () => {
     if (i.name === 'mode') setSetting('mode', i.value); else setSetting('exercise', i.value);
@@ -457,8 +487,10 @@ function fieldHTML(f) {
     const opts = f.type === 'toggle' ? [[1, 'Sí'], [0, 'No']] : f.opts;
     body = `<div class="seg" role="radiogroup" aria-label="${f.label}">${opts.map((o, i) => `<label><input type="radio" name="${id}" id="${id}-${i}" data-key="${f.key}" value="${o[0]}">${o[1]}</label>`).join('')}</div>`;
   }
-  const lab = f.type === 'num' ? `<label for="${id}">${f.label}</label>` : `<span class="lab">${f.label}</span>`;
-  return `<div class="field" data-field="${f.key}">${lab}${body}${f.zero ? `<span class="zero" id="${id}-z"></span>` : ''}${f.hint ? `<p class="hint">${f.hint}</p>` : ''}</div>`;
+  // la explicación, recogida: un «?» junto al nombre (al pasar por encima, su primera frase; al pulsarlo, entera)
+  const qm = f.hint ? `<button type="button" class="qm" data-qm="${id}-h" title="${firstSentence(f.hint).replace(/"/g, '&quot;')}" aria-label="Qué es ${f.label.replace(/"/g, '&quot;')}" aria-expanded="false">?</button>` : '';
+  const lab = f.type === 'num' ? `<label for="${id}">${f.label}</label>${qm}` : `<span class="lab">${f.label}${qm}</span>`;
+  return `<div class="field" data-field="${f.key}">${f.type === 'num' ? `<span class="labrow">${lab}</span>` : lab}${body}${f.zero ? `<span class="zero" id="${id}-z"></span>` : ''}${f.hint ? `<p class="hint helpPop" id="${id}-h" hidden>${f.hint}</p>` : ''}</div>`;
 }
 function onFormInput(ev) {
   const el = ev.target, key = el.dataset && el.dataset.key; if (!key) return;

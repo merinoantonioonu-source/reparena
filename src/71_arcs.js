@@ -11,9 +11,12 @@ const ARX_NEW = ['laser', 'walls', 'wheel']; let arxNewN = Math.floor(Math.rando
 const arxNewKind = () => ARX_NEW[(arxNewN++) % 3];
 // la fiebre acelera lo que llega: la primera, un 20 %; cada una de las siguientes de la ronda, «Fiebre +» más (hasta el doble)
 const arxMul = () => ARX.fever ? Math.min(2, 1.2 + (settings.arcFeverUp >= 0 ? settings.arcFeverUp : 10) / 100 * (ARX.feverN - 1)) : 1;
-const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul();
+// con música (y «Velocidad según la canción»), la velocidad se ajusta a su ritmo: del 80 % al 125 % de la del rango (una
+// canción de 120 BPM, igual; las muy lentas o muy rápidas cuentan a doble o a mitad de tiempo)
+function arxBpmK() { if (!settings.arcBpmSpeed || !arxBeatP()) return 1; let b = settings.bpm; while (b < 90) b *= 2; while (b > 180) b /= 2; return clamp(b / 120, 0.8, 1.25); }
+const arxSpeed = () => dv('arcSpeed') / 3.6 * arxMul() * arxBpmK();
 function arxReset() {
-  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
+  ARX.orbs.forEach(o => o.dispose()); Object.assign(ARX, { streak: 0, fever: false, feverN: 0, dist: 0, orbs: [], orbT: -1, got: 0, gotBeat: 0, phrase: '', tl: [], tlT: 0, nextGap: 0, best: store(ARX_GHOST) });
   arxFeverLook(false);
 }
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
@@ -32,9 +35,20 @@ function arxBeatTick() {
   const spec = spawnQueue[0], sp = spec && spec.kind === 'plank' ? Math.max(0.3, settings.arcPlankSpeed / 3.6) * arxMul() : arxSpeed();
   const k = Math.floor(beatNow() + (HL.z + arenaDepth() - 0.9) / Math.max(0.3, sp) / P), hit = ARX.bk >= 0 && k !== ARX.bk; ARX.bk = k; return hit;
 }
+// Frases de la canción: cada 32 pulsos se alternan una intensa (los obstáculos, un 35 % más seguidos, y la luz más fuerte)
+// y otra de respiro (un 25 % más espaciados). Se anuncia al empezar la intensa
+const arxPhrase = () => settings.arcPhrases && arxBeatP() ? (Math.floor(beatNow() / 32) % 2 ? 'hot' : 'calm') : '';
+function arxPhraseStep() {
+  const ph = arxPhrase(); if (ph !== ARX.phrase) { if (ph === 'hot' && state === 'play') { cheer('¡SUBE LA MÚSICA!', '#ff4fa3', 1.4); SND.horn(); } ARX.phrase = ph; }
+}
 function arxBeatGap(sec) {
   const P = arxBeatP(); if (!P) return sec;
+  const ph = arxPhrase(); sec *= ph === 'hot' ? 0.65 : ph === 'calm' ? 1.25 : 1;
   let n = Math.max(1, Math.round(sec / P)); if (n >= 4) n = Math.round(n / 2) * 2; return (n - 0.5) * P; // (medio pulso antes: espera al de llegada)
+}
+function arxOrbBeat() {
+  const P = arxBeatP(); if (!P) { ARX.obk = -1; return true; }
+  const k = Math.floor(beatNow() + (HL.z + arenaDepth() - 0.9) / Math.max(0.3, arxSpeed()) / P), hit = ARX.obk >= 0 && k !== ARX.obk; ARX.obk = k; return hit;
 }
 const arxBeatGlow = () => { const P = arxBeatP(); if (!P) return 1; const f = ((beatNow() % 1) + 1) % 1; return 0.7 + 0.6 * Math.pow(1 - f, 3); };
 
@@ -58,6 +72,8 @@ function arxPatterns(total) {
     [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]], // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
     // combinaciones: dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez,
     // agáchate) o tres muy seguidos (con ritmo, a un pulso uno de otro)
+    // túnel: cuatro arcos bajos muy seguidos (a un pulso con música): hay que quedarse abajo y aguantar
+    [(settings.arcTunnel || 0) / 20, () => { const d = rand(mid, hi); return [S(d, 0.12), S(d, 0.12), S(d, 0.12), S(d, 1.6)]; }],
     [(settings.arcCombo || 0) / 20, () => [{ kind: 'combo', with: Math.random() < 0.5 ? 'laser' : 'walls', drop: rand(lo, mid), tilt: 0, hp: 1, gap: 1.4 }]],
     [(settings.arcCombo || 0) / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.3), S(rand(lo, hi), 0.3, { tilt: s * tiltA() }), S(hi, 1.4)]; }]
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
@@ -83,8 +99,12 @@ class ArcObs {
     const D = arenaDepth(); Object.assign(this, { kind, alive: true, judged: false, second: false, checked: false, hit: false, jump: false, t: 0, warnT: 0, z: -D + 0.9, speed: arxSpeed() });
     this.tReach = Math.max(0.5, (HL.z - this.z) / this.speed); this.grp = new THREE.Group(); this.grp.position.z = this.z; arena.add(this.grp);
     if (kind === 'laser') {
-      this.end = rand(-0.2, 0.2); this.amp = rand(0.6, 0.85); this.ph = rand(0, TAU); const safe = this.end > 0 ? -1 : 1;
-      this.leanX = this.end + safe * 0.5; this.tilt = safe * 0.01; this.drop = 0.01; // el lado libre (para el marcador y la vista previa)
+      // cuanto más difícil (Láser: amenaza, del rango), barre más pista, más deprisa, con un amago (otra oscilación más rápida
+      // encima, que le hace cambiar de sentido) y se sigue moviendo hasta más cerca de ti; donde se para, siempre con un lado libre
+      const k = Math.min(1.3, dv('arcLaser') / 100); this.lk = k;
+      Object.assign(this, { end: rand(-0.2, 0.2), amp: rand(0.6, 0.85) + 0.3 * k, ph: rand(0, TAU), fq: 2.2 + 2.4 * k, amp2: 0.3 * k, ph2: rand(0, TAU), win: 1.2 - 0.5 * Math.min(1, k) });
+      this.xf = this.x(0); const safe = this.xf > 0 ? -1 : 1;
+      this.leanX = this.xf + safe * 0.5; this.tilt = safe * 0.01; this.drop = 0.01; // el lado libre (para el marcador y la vista previa)
       this.mat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0xff2a14, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
       this.beam = new THREE.Group(); this.grp.add(this.beam);
       const core = new THREE.Mesh(G.cylRaw(0.012, 0.012, 2.5, 6), LASER_MAT); core.position.y = 1.25; this.beam.add(core);
@@ -114,9 +134,9 @@ class ArcObs {
     this.hum = humLoop(arena.localToWorld(new V3(0, 1.2, this.z)));
   }
   // lo que queda para que llegue: se mueve mucho al principio y se asienta en su sitio al pasar por ti
-  settle() { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / 1.2); }
+  settle(w = 1.2) { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / w); }
   gapX(y) { return this.gx - Math.tan(this.ang || 0) * y; } // (el centro del hueco a esa altura)
-  x() { return this.end + this.amp * Math.sin(this.ph + this.settle() * 2.2); }
+  x(s = this.settle(this.win)) { const x = this.end + this.amp * Math.sin(this.ph + s * this.fq) + this.amp2 * Math.sin(this.ph2 + s * this.fq * 2.6); return Math.max(-0.85, Math.min(0.85, x)); } // (donde se para: x(0))
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.grp.position.z = this.z;
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, s = this.settle();
@@ -147,7 +167,7 @@ class ArcObs {
     if (!(state === 'play' || state === 'rest')) return;
     const hp = arena.localToWorld(tmpA.set(HL.x, HL.y, HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
-    if (this.hit) { fx.electric(hp, 24); if (this.kind === 'mace') SND.metalHit(hp, true); else SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.end ? 'derecha' : 'izquierda'}!` : this.kind === 'mace' ? '¡Esquiva la maza: apártate o agáchate!' : this.ang ? '¡Ladéate para entrar en el hueco!' : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
+    if (this.hit) { fx.electric(hp, 24); if (this.kind === 'mace') SND.metalHit(hp, true); else SND.zap(hp); hurtPlayer({ silent: true }); arxHit(); say(this.kind === 'laser' ? `¡Apártate del láser, a la ${this.leanX > this.xf ? 'derecha' : 'izquierda'}!` : this.kind === 'mace' ? '¡Esquiva la maza: apártate o agáchate!' : this.ang ? '¡Ladéate para entrar en el hueco!' : '¡Métete en el hueco!', '#ff3b5c', 1.3); return; }
     SND.whoosh(hp, 'arc'); registerRep(true, false); arxClean(); say(this.kind === 'laser' ? '¡Esquivado!' : this.kind === 'mace' ? '¡Maza esquivada!' : '¡Por el hueco!', '#3cf0c6', 0.9, false); SND.perfect();
   }
   dispose() {
@@ -206,7 +226,9 @@ class ArcOrb {
     _ao.copy(HL); _ao.y -= 0.05; let got = this.grp.position.distanceTo(_ao) < 0.24;
     for (const s of ['left', 'right']) if (!got && hands[s].ok) { arena.worldToLocal(_ao.copy(hands[s].wrist)); if (_ao.distanceTo(this.grp.position) < 0.17) got = true; }
     if (got && state === 'play') {
-      const c = this.grp.getWorldPosition(new V3()), pts = 100 * (ARX.fever ? 2 : 1); score += pts; ARX.got++; boardDirty = true;
+      // (con música, cogido justo en un pulso: el doble)
+      const onBeat = arxBeatP() && Math.abs(((beatNow() % 1) + 1.5) % 1 - 0.5) < 0.18, c = this.grp.getWorldPosition(new V3()), pts = 100 * (ARX.fever ? 2 : 1) * (onBeat ? 2 : 1); score += pts; ARX.got++; boardDirty = true;
+      if (onBeat) { ARX.gotBeat = (ARX.gotBeat || 0) + 1; cheer('¡EN EL PULSO! ×2', '#ffd166', 0.9); }
       // al cogerlo: destello, un estallido de chispas doradas y turquesa, estrellitas que suben y campanitas de cristal
       SND.orb(c); fx.glow(c, [1, 0.95, 0.75], 1.0, 0.2); fx.glow(c, ARX.fever ? [1, 0.3, 0.7] : [1, 0.75, 0.25], 0.6, 0.4, 0.7);
       fx.sparks(c, 36, ARX.fever ? [1, 0.35, 0.75] : [1, 0.8, 0.3], 2.8, 0.035); fx.sparks(c, 18, [0.45, 1, 0.9], 2.1, 0.03);
@@ -254,12 +276,22 @@ const ARX_TINT = new THREE.HemisphereLight(0x3cf0c6, 0x000000, 0); scene.add(ARX
 const _tintC = new THREE.Color(0x3cf0c6), _tintT = new THREE.Color();
 let arxScroll = 0;
 function arxFeverLook(on) { orbFeverLook(on); }
+// En la fiebre, tormenta: el cielo se pone rojo y oscuro (en todos los entornos), la niebla también, y caen relámpagos rojos
+// cada pocos segundos (el trueno, uno de cada dos, para no tapar la música)
+let stormT = 0, stormN = 0;
+function arxStorm(dt, on) {
+  STORM.k.value += ((on ? 1 : 0) - STORM.k.value) * Math.min(1, dt * (on ? 1.6 : 0.8)); STORM.t.value += dt * (1 + STORM.k.value * 2);
+  if (on) { stormT -= dt; if (stormT <= 0) { stormT = rand(2.2, 4.5); STORM.f.value = 1; if (stormN++ % 2 === 0 && !arMode) setTimeout(() => SND.thunder(rand(0.4, 1.2)), 250); } }
+  STORM.f.value = Math.max(0, STORM.f.value - dt * 3) * (STORM.f.value > 0.5 && Math.random() < 0.2 ? 0.4 : 1); // (con parpadeo)
+  const f = scene.fog; if (f) { if (!f.base) f.base = f.color.clone(); f.color.copy(f.base).lerp(STORM_FOG, STORM.k.value * 0.85); }
+}
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
   // el color de la racha, con suavidad
   _tintT.setHex(ARX.fever ? 0xff2414 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
-  const bp = arxBeatP() ? arxBeatGlow() - 0.7 : 0; // (0 a 0,6, en cada pulso)
-  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 1.7 : 1) * (1 + bp * 0.5) : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp ? 12 : 3));
+  const bp = arxBeatP() ? (arxBeatGlow() - 0.7) * (arxPhrase() === 'hot' ? 1.6 : 1) : 0; // (0 a 0,6, en cada pulso; en la frase intensa, más)
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 2.2 : 1) * (1 + bp * 0.5) + STORM.f.value * 0.9 : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp || STORM.f.value > 0.3 ? 12 : 3));
+  arxStorm(dt, on && ARX.fever);
   if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
   const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = (ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8) + bp;
@@ -272,7 +304,10 @@ function arxDeco(dt, t) {
 function arxStep(dt, t) {
   arxDeco(dt, t);
   if (settings.mode !== 'arcs') return;
-  if (ARX.orbT > 0 && state === 'play' && WIN.t < 0) { ARX.orbT -= dt; /* (con el panel entre oleadas delante, nada) */ if (ARX.orbT <= 0) ARX.orbs.push(new ArcOrb()); }
+  arxPhraseStep();
+  // el orbe sale a medio camino entre dos arcos y, con música, de modo que llegue a ti en un pulso (como los arcos)
+  const ok = arxOrbBeat(); if (ARX.orbT > 0 && state === 'play' && WIN.t < 0) { ARX.orbT -= dt; /* (con el panel entre oleadas delante, nada) */ if (ARX.orbT <= 0) ARX.orbT = 1e-4; }
+  if (ARX.orbT > 0 && ARX.orbT <= 1e-4 && state === 'play' && ok) { ARX.orbT = -1; ARX.orbs.push(new ArcOrb()); }
   for (const o of ARX.orbs) if (o.alive) o.update(dt, t); ARX.orbs = ARX.orbs.filter(o => o.alive);
   if (state !== 'play') return;
   ARX.dist += arxSpeed() * dt; ARX.tlT += dt;

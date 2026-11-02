@@ -70,7 +70,7 @@ function natureLoad() {
   }, undefined, e => { NAT.failed = true; NAT.loading = false; console.log('No se pudo cargar el bosque:', e && e.message); });
 }
 // Cielo de día: azul arriba, claro en el horizonte, nubes blandas que pasan despacio y el resplandor del sol
-const natSkyMat = new THREE.ShaderMaterial({
+const natSkyMat = stormSky(new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; varying vec3 vP;
@@ -87,7 +87,7 @@ const natSkyMat = new THREE.ShaderMaterial({
       c += vec3(1.0,0.92,0.75) * (pow(s, 600.0) * 2.0 + pow(s, 12.0) * 0.18);
       gl_FragColor = vec4(c, 1.0);
     }`
-});
+}));
 const natSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), natSkyMat); natSky.renderOrder = -10; NAT.group.add(natSky);
 // Suelo de hierba: verdes que se mezclan a manchas, con algo de tierra
 const natGround = (() => {
