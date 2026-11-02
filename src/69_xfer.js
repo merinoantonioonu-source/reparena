@@ -7,7 +7,7 @@
 const XFER = { base: 'https://ntfy.sh', last: null, busy: false };
 // ('reparena3-profiles': los perfiles de antes, que ya no se usan; va para que una sesión guardada con ellos los encuentre)
 const XFER_KEYS = ['reparena3-settings', 'reparena3-combos', 'reparena3-profiles', 'reparena3-favs', 'reparena3-ui', 'reparena3-rankfit', 'reparena3-session', 'reparena3-sessions', 'reparena3-history', 'reparena3-arcghost', 'reparena3-spotify', 'reparena3-exsongs',
-  'reparena3-career', 'reparena3-ghosts', 'reparena3-dev', 'reparena3-devon']; // (tu carrera, tus mejores rondas y la tabla y el modo del desarrollador, también)
+  'reparena3-career', 'reparena3-sndoff', 'reparena3-ghosts', 'reparena3-dev', 'reparena3-devon']; // (tu carrera, tus mejores rondas y la tabla y el modo del desarrollador, también)
 const XFER_CHUNK = 3000; // (cada mensaje, por debajo de los 4 KB que admite el servicio sin adjuntos)
 const XFER_HOURS = 12;
 const _xEnc = new TextEncoder(), _xDec = new TextDecoder();
