@@ -56,6 +56,16 @@ async function loadSamplesNow() {
     }
   }));
 }
+// Sonidos apagados (en la página, «Sonidos que puedes cambiar»): por su nombre de archivo, ni el archivo ni el sintetizado
+// suenan. Todos encendidos de serie. Se guardan en SNDOFF_KEY (pasa a otro aparato con el código y la sincronización).
+// Al escucharlos desde la página (PREV.force) suenan igual, para decidir
+const PREV = { stop: null, t: 0, force: false }; // (la vista previa de la página: lo que suena y si se salta el apagado)
+const SNDOFF_KEY = 'reparena3-sndoff', SNDOFF = new Set((() => { try { const v = store(SNDOFF_KEY); return Array.isArray(v) ? v : []; } catch (e) { return []; } })());
+const sndOff = name => !!name && SNDOFF.has(name) && !PREV.force;
+function sndSetOn(name, on) {
+  if (on) SNDOFF.delete(name); else SNDOFF.add(name); store(SNDOFF_KEY, [...SNDOFF]);
+  if (name.startsWith('ambiente-') && AMB.nodes) { ambientStop(); ambientStart(); } // (el ambiente que suena, al momento)
+}
 function playSample(name, pos, { gain = 1, rate = 1, rev = 0.3, ref = 1.5 } = {}) {
   const b = AUD.samples && AUD.samples[name]; if (!b || !sndOK()) return false;
   const s = AUD.C.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * rand(0.94, 1.06);
@@ -204,7 +214,7 @@ const SND = {
   squish(pos) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.6 }); noise(o, { brown: true, f: 1200, to: 200, d: 0.3, gain: 0.7 }); noise(o, { type: 'bandpass', f: 700, to: 300, q: 4, d: 0.25, gain: 0.4 }); SND.hiss(pos, 1.3, 'squish'); }, // (su siseo, siempre el sintetizado)
   // Rayo: chasquido seco, crepitar eléctrico, zumbido de la descarga y, si es fuerte, retumbo de trueno
   bolt(pos, L = 0) {
-    if (!sndOK()) return;
+    if (!sndOK() || sndOff(L >= 2 ? 'rayo-cargado' : 'rayo')) return;
     if (playSample(L >= 2 ? 'rayo-cargado' : 'rayo', pos, { gain: 0.8 + L * 0.12, rate: 1.08 - L * 0.06 }) || (L >= 2 && playSample('rayo', pos, { gain: 1, rate: 0.85 }))) return;
     const o = sout(pos, { rev: 0.35 + L * 0.08, gain: 0.85 + L * 0.1, ref: 2 }), hard = shaper(o, true);
     noise(hard, { type: 'highpass', f: 700, a: 0.0005, d: 0.035, gain: 0.9 });          // chasquido
@@ -216,7 +226,7 @@ const SND = {
   },
   // Al llegar al blanco
   boltHit(pos, L = 0) {
-    if (!sndOK()) return;
+    if (!sndOK() || sndOff('impacto')) return;
     if (playSample('impacto', pos, { gain: 0.7 + L * 0.1 })) return;
     const o = sout(pos, { rev: 0.3, gain: 0.6 + L * 0.12, ref: 2 });
     noise(shaper(o, true), { type: 'highpass', f: 1200, d: 0.03, gain: 0.6 });
@@ -224,7 +234,7 @@ const SND = {
   },
   // Tentáculos: chapoteo viscoso, gruñido gutural y chillido que sube
   tentacle(pos, s = 1) {
-    if (!sndOK()) return;
+    if (!sndOK() || sndOff('tentaculos')) return;
     if (playSample('tentaculos', pos, { gain: 1, rate: rand(0.85, 1.1), ref: 1.2 })) return;
     const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.45, gain: 1, ref: 1.2 });
     const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(380, T); bp.connect(o);
@@ -240,7 +250,7 @@ const SND = {
   // Caer al foso: zambullida y un coro de tentáculos que se excitan
   horror(pos) {
     if (!sndOK()) return;
-    SND.splash(pos);
+    SND.splash(pos); if (sndOff('caida-foso')) return;
     if (playSample('caida-foso', pos, { gain: 1.1, ref: 1.2 })) return;
     for (let i = 0; i < 4; i++) setTimeout(() => SND.tentacle(pos.clone().add(new V3(rand(-0.8, 0.8), 0, rand(-0.8, 0.8))), rand(0.75, 1.25)), 120 + i * rand(150, 320));
     const o = sout(pos, { rev: 0.7, gain: 0.9, ref: 2 });
@@ -258,7 +268,7 @@ const SND = {
     [1568, 2093, 2637, 3136, 4186].forEach((f, i) => { tone(o, { f, d: 1.1 - i * 0.12, gain: 0.07 - i * 0.008, t: i * 0.05 }); tone(o, { f: f * 2.76, d: 0.4, gain: 0.018, t: i * 0.05 }); tone(o, { f: f * 5.4, d: 0.18, gain: 0.006, t: i * 0.05 }); });
     tone(o, { type: 'triangle', f: 1046, to: 3136, a: 0.003, d: 0.22, gain: 0.04 }); noise(o, { type: 'highpass', f: 7000, d: 0.5, gain: 0.04, t: 0.05 });
   },
-  pop(pos, big) { if (!sndOK() || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
+  pop(pos, big) { if (!sndOK() || sndOff('pompa') || playSample('pompa', pos, { gain: big ? 1 : 0.8, rate: big ? 0.8 : 1 })) return; const o = sout(pos, { rev: 0.25, gain: big ? 1 : 0.8, ref: 0.8 }); tone(o, { f: big ? 380 : 650, to: big ? 1300 : 2500, a: 0.002, d: 0.06, gain: 0.35 }); noise(o, { type: 'highpass', f: 2500, d: 0.03, gain: 0.35 }); noise(o, { type: 'bandpass', f: 1200, q: 2, t: 0.02, d: 0.12, gain: 0.15 }); if (big) tone(o, { type: 'triangle', f: 220, to: 90, t: 0.02, d: 0.3, gain: 0.2 }); },
   // ameba de agua que revienta: chapoteo corto, gorgoteo y gotas que caen
   waterPop(pos, big) {
     if (!sndOK()) return; const o = sout(pos, { rev: 0.3, gain: big ? 1 : 0.85, ref: 0.8 });
@@ -360,6 +370,7 @@ for (const [k, [F, pi, li]] of Object.entries(SND_FILES)) {
   const synth = SND[k];
   SND[k] = function (...a) {
     const file = typeof F === 'string' ? F : VOICE_FILES[k][a[F.who] || F.def]; // (quien no está en la lista: el sintetizado)
+    if (sndOff(li != null && a[li] ? file + '-laser' : file)) return; // (apagado en la página)
     const pos = pi != null ? a[pi] || null : null, name = li != null && a[li] && AUD.samples[file + '-laser'] ? file + '-laser' : file;
     if (AUD.samples[name] && playSample(name, pos, { rev: pos ? 0.3 : 0.1 })) return;
     return synth.apply(this, a);
@@ -388,7 +399,7 @@ class Loop {
   }
 }
 function buzzLoop(kind, pos) {
-  if (!sndOK()) return null;
+  if (!sndOK() || sndOff(kind === 'hornet' || kind === 'wasp' || kind === 'queen' ? 'zumbido-avispa' : 'zumbido-dron')) return null;
   const f0 = { drone: rand(120, 150), hornet: rand(190, 240), wasp: rand(160, 200), queen: rand(95, 115), bomber: rand(85, 100), carrier: rand(60, 70) }[kind] || 130;
   const insect = kind === 'hornet' || kind === 'wasp' || kind === 'queen';
   return new Loop(pos, kind === 'carrier' || kind === 'queen' ? 0.35 : kind === 'wasp' ? 0.24 : 0.18, (L, C) => {
@@ -405,7 +416,7 @@ function buzzLoop(kind, pos) {
 // Zumbido de la espada láser: grave y continuo; al moverla sube de tono y de volumen
 function saberLoop(pos) {
   // zumbido sutil: casi todo seno grave, con un poco de sierra muy filtrada; sube algo al mover la hoja deprisa
-  if (!sndOK()) return null;
+  if (!sndOK() || sndOff('espada-laser-zumbido')) return null;
   const L = new Loop(pos, 0.025, (L, C) => {
     if (L.file('espada-laser-zumbido', 1, 0.3)) return;
     const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.connect(L.out);
@@ -419,7 +430,7 @@ function saberLoop(pos) {
 }
 // Succión del remolino: viento grave que gira; k (0-1) es lo abierto que está
 function suctionLoop(pos) {
-  if (!sndOK()) return null;
+  if (!sndOK() || sndOff('remolino')) return null;
   const L = new Loop(pos, 0.3, (L, C) => {
     if (L.file('remolino')) return;
     const n = L.src(true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 260; bp.Q.value = 0.7; n.connect(bp); bp.connect(L.out);
@@ -431,7 +442,7 @@ function suctionLoop(pos) {
   return L;
 }
 function humLoop(pos) {
-  if (!sndOK()) return null;
+  if (!sndOK() || sndOff('arco-zumbido')) return null;
   return new Loop(pos, 0.3, (L, C) => {
     if (L.file('arco-zumbido')) return;
     const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(L.out);
@@ -448,7 +459,8 @@ function ambientStart() {
   const C = AUD.C, nodes = [], T = C.currentTime;
   const out = C.createGain(); out.gain.value = 0.0001; out.gain.setTargetAtTime(1, T, 1.5); out.connect(AUD.amb);
   AMB.kind = ambKind();
-  const own = AUD.samples[{ forest: 'ambiente-bosque', nature: 'ambiente-naturaleza', island: 'ambiente-isla' }[AMB.kind] || 'ambiente-arena'];
+  const ambName = { forest: 'ambiente-bosque', nature: 'ambiente-naturaleza', island: 'ambiente-isla' }[AMB.kind] || 'ambiente-arena', own = AUD.samples[ambName];
+  if (sndOff(ambName)) { AMB.nodes = { nodes: [], out }; return; } // apagado: en silencio (y al cambiar de entorno, el del otro)
   if (own) { const s = C.createBufferSource(); s.buffer = own; s.loop = true; s.connect(out); s.start(); AMB.nodes = { nodes: [s], out }; return; } // ambiente desde archivo
   if (AMB.kind === 'island') { // la playa: olas que rompen y se retiran (ruido grave que crece y baja) y una brisa (las gaviotas las pone la isla)
     const w = C.createBufferSource(); w.buffer = AUD.noise; w.loop = true; const wf = C.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 600;
@@ -509,7 +521,6 @@ function updateListener(pos, q) {
 /* ---------- Escuchar cada sonido desde la página (la lista «Sonidos que puedes cambiar») ---------- */
 // Suena el que usa el juego ahora: tu archivo de sounds/ si lo hay; si no, el sintetizado. Devuelve de cuál se trata
 // ('file' o 'synth'), o por qué no suena ('mute': volumen a 0; 'amb0': el ambiente a 0 %; 'off': sin sonido en el navegador)
-const PREV = { stop: null, t: 0 };
 const PREV_OWN = { rayo: P => SND.bolt(P, 0), 'rayo-cargado': P => SND.bolt(P, 3), impacto: P => SND.boltHit(P, 1), tentaculos: P => SND.tentacle(P), 'caida-foso': P => SND.horror(P), pompa: P => SND.pop(P, false) };
 const PREV_LOOP = { 'zumbido-dron': P => buzzLoop('drone', P), 'zumbido-avispa': P => buzzLoop('wasp', P), 'espada-laser-zumbido': P => saberLoop(P), remolino: P => { const L = suctionLoop(P); if (L) L.set(P, 1); return L; }, 'arco-zumbido': P => humLoop(P) };
 const PREV_ARGS = { power: { 0: 3 }, swordSwish: { 2: 3 } }; // (lo que piden además del sitio: el nivel de la carga, lo deprisa que va la hoja)
@@ -522,6 +533,9 @@ async function sndPreview(name) {
   if (PREV.stop) { PREV.stop(); PREV.stop = null; } clearTimeout(PREV.t);
   updateListener(head.p, head.q); // (en la página no corre el bucle del juego: el oído, donde está tu cabeza; el sonido, a 1,2 m delante)
   const P = head.p.clone().add(fwd(head.q).multiplyScalar(1.2)), file = !!AUD.samples[name], ms = n => { PREV.t = setTimeout(() => { if (PREV.stop) { PREV.stop(); PREV.stop = null; } }, n); };
+  PREV.force = true; try { return sndPreviewNow(name, P, file, ms); } finally { PREV.force = false; }
+}
+function sndPreviewNow(name, P, file, ms) {
   if (PREV_AMB[name]) { // el ambiente: el de ese entorno, unos segundos, y luego vuelve el que sonara
     if (ambMute()) return 'amb0';
     const had = !!AMB.nodes; ambientStop(); AMB.force = PREV_AMB[name]; ambientStart(); AMB.force = '';
@@ -551,4 +565,13 @@ function sndPageInit() {
     b.classList.add('playing'); setTimeout(() => b.classList.remove('playing'), 1500);
     if (out) { out.textContent = PREV_TXT[how] || ''; out.className = 'sndsrc ' + how; }
   });
+  // activar o desactivar cada uno (todos activados de serie)
+  const paint = () => {
+    if (!box.querySelectorAll) return;
+    box.querySelectorAll('input[data-sndon]').forEach(i => { const on = !SNDOFF.has(i.dataset.sndon), row = i.closest && i.closest('.sndrow'); i.checked = on; if (row) row.classList.toggle('off', !on); const t = i.parentElement && i.parentElement.querySelector('.swt'); if (t) t.textContent = on ? 'Activado' : 'Desactivado'; });
+    const c = $('#sndCount'), n = [...SNDOFF].length; if (c) c.textContent = n ? `${n} ${n === 1 ? 'desactivado' : 'desactivados'}` : 'Todos activados';
+  };
+  box.addEventListener('change', ev => { const i = ev.target; if (!i || !i.dataset || !i.dataset.sndon) return; sndSetOn(i.dataset.sndon, i.checked); paint(); });
+  const all = $('#btnSndAllOn'); if (all && all.addEventListener) all.addEventListener('click', () => { [...SNDOFF].forEach(n => sndSetOn(n, true)); paint(); });
+  paint();
 }

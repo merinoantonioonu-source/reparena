@@ -129,7 +129,18 @@ button{font:inherit;cursor:pointer}
 .hist table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .sounds h3{margin:18px 0 8px;font-size:.95rem;color:var(--muted);letter-spacing:.04em}
 .sndlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 18px}
-.snd{display:flex;gap:10px;align-items:baseline;padding:6px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;font-size:.9rem;text-align:left;width:100%;cursor:pointer;border-radius:6px}
+.sndrow{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.snd{flex:1;min-width:0;display:flex;gap:10px;align-items:baseline;padding:6px 4px;border:0;background:none;color:inherit;font:inherit;font-size:.9rem;text-align:left;cursor:pointer;border-radius:6px}
+.sndon{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 2px;font-size:.68rem;color:var(--teal)}
+.sndon input{position:absolute;opacity:0;width:1px;height:1px}
+.sndon .sw{width:34px;height:20px;border-radius:999px;background:var(--teal);position:relative;transition:background .15s}
+.sndon .sw::after{content:'';position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#100d1a;transition:left .15s}
+.sndon input:focus-visible+.sw{outline:2px solid var(--fg);outline-offset:2px}
+.sndrow.off .sndon{color:var(--muted)}.sndrow.off .sw{background:var(--line)}.sndrow.off .sw::after{left:2px;background:var(--muted)}
+.sndrow.off .snd code,.sndrow.off .snd>span{opacity:.5}.sndrow.off .snd code{text-decoration:line-through}
+.sndall{display:flex;align-items:center;gap:12px;margin:6px 0 0}.sndcount{font-size:.85rem;color:var(--muted)}
+.snd>span code{white-space:nowrap}
+@media (max-width:560px){.snd{flex-wrap:wrap;row-gap:2px}.snd code{min-width:0}.snd>span{flex-basis:100%;padding-left:calc(1.1em + 10px)}}
 .snd:hover,.snd:focus-visible{background:rgba(60,240,198,.08)}.snd.playing{background:rgba(60,240,198,.16)}
 .sndplay{flex:0 0 auto;font-style:normal;color:var(--teal,#3cf0c6);font-size:.8rem;width:1.1em}
 .sndsrc{display:block;font-style:normal;font-size:.78rem;color:var(--muted)}.sndsrc:empty{display:none}.sndsrc.file{color:#ffd166}.sndsrc.synth{color:#7fd4ff}

@@ -22,12 +22,16 @@ def sounds_html():
         if m and cur: cur[1].append((m.group(1), m.group(2)))
     out = ['<section class="sounds" id="soundsBox" data-toc="Sonidos que puedes cambiar">', '<h2>Sonidos que puedes cambiar</h2>',
            '<p class="note">Sube a la carpeta <code>sounds/</code> del repositorio un archivo <code>.mp3</code>, <code>.ogg</code> o <code>.wav</code> con el nombre exacto (por ejemplo <code>rayo.mp3</code>) y el juego lo usará en lugar del sonido sintetizado. En GitHub: carpeta <code>sounds</code> → <b>Add file → Upload files</b> → <b>Commit changes</b>.</p>',
-           '<p class="note">Pulsa cualquier sonido de la lista para <b>escucharlo como suena ahora en el juego</b>: si es tu archivo, pone «tu archivo»; si no, «sintetizado». Así sabes si te merece la pena cambiarlo.</p>']
+           '<p class="note">Pulsa cualquier sonido de la lista para <b>escucharlo como suena ahora en el juego</b>: si es tu archivo, pone «tu archivo»; si no, «sintetizado». Así sabes si te merece la pena cambiarlo.</p>',
+           '<p class="note">Con el interruptor de cada uno lo <b>activas o desactivas</b>: desactivado, no suena en el juego (ni tu archivo ni el sintetizado), aunque aquí puedes seguir escuchándolo. De serie, todos activados; pasa a las gafas con el código o la sincronización, como tus ajustes.</p>',
+           '<div class="actions sndall"><button type="button" class="btn small" id="btnSndAllOn">Activar todos</button><span class="sndcount" id="sndCount" aria-live="polite"></span></div>']
     for title, rows in groups:
         if not rows: continue
         out.append('<h3>' + inline(title) + '</h3><div class="sndlist">')
-        # cada fila es un botón: al pulsarlo suena el sonido que usa el juego ahora (tu archivo o el sintetizado)
-        out += ['<button type="button" class="snd" data-snd="' + n + '" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>' + n + '</code><span>' + inline(d) + '<em class="sndsrc" aria-live="polite"></em></span></button>' for n, d in rows]
+        # cada fila: un botón que hace sonar el sonido que usa el juego ahora (tu archivo o el sintetizado) y, a la derecha,
+        # el interruptor que lo apaga en el juego (todos encendidos de serie)
+        out += ['<div class="sndrow" data-row="' + n + '"><button type="button" class="snd" data-snd="' + n + '" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>' + n + '</code><span>' + inline(d) + '<em class="sndsrc" aria-live="polite"></em></span></button>'
+                + '<label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="' + n + '" checked aria-label="' + n + ': suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>' for n, d in rows]
         out.append('</div>')
     out.append('</section>')
     return '\n'.join(out)
