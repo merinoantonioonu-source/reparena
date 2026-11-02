@@ -36,9 +36,9 @@ const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  // (el press de hombro, el press con barra y la flexión en pica se quitaron: en las gafas no se detectaban bien; su
-  // código sigue, por si vuelven, y su historial se sigue viendo)
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  // (se quitaron el press de hombro, el press con barra y la flexión en pica, que en las gafas no se detectaban bien, y el
+  // leñador, que no aportaba nada; su código sigue, por si vuelven, y su historial se sigue viendo)
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
@@ -46,7 +46,7 @@ const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'fraise', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
-  ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
+  ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
 ];
@@ -86,7 +86,7 @@ const SCHEMA = [
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
-  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'plank1', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
   { key: 'pikeDepth', g: 'ejercicio', label: 'Bajada en la flexión en pica', short: 'Bajada pica', type: 'num', min: 8, max: 45, step: 1, def: 22, unit: 'cm', ex: ['pike'], hint: 'Cuánto debe bajar la cabeza desde arriba (los brazos estirados, la cadera alta) hasta casi tocar el suelo entre las manos.' },
   { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
@@ -106,8 +106,8 @@ const SCHEMA = [
   { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
   { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
-  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
-  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
+  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
+  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
   { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 0, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0 (de serie): sin recarga profunda; la carga solo sube aguantando en la postura perfecta.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
@@ -616,12 +616,15 @@ const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75
 const DAY_MS = 864e5;
 const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
-function progress(h = store(HIST_KEY) || [], now = Date.now()) {
-  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now);
-  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer
-  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); days.has(dayKey(d)); d -= DAY_MS) streak++;
+// Los escudos de racha (73_career: el cofre del día da uno, como mucho dos): los días que salvó un escudo, sin entrenar
+const streakSave = () => { const c = store('reparena3-career') || {}; return { n: Math.max(0, +c.shield || 0), frozen: Array.isArray(c.frozen) ? c.frozen : [], saved: c.saved || null }; };
+function progress(h = store(HIST_KEY) || [], now = Date.now(), frozen = streakSave().frozen) {
+  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now), fz = new Set(frozen);
+  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer.
+  // Un día salvado por un escudo no suma, pero no la corta
+  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); ; d -= DAY_MS) { const k = dayKey(d); if (days.has(k)) streak++; else if (!fz.has(k)) break; }
   let best = 0, run = 0, prev = null;
-  for (const k of [...days].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()); run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; }
+  for (const k of [...new Set([...days, ...fz])].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()), n = days.has(k) ? 1 : 0; run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + n : n; best = Math.max(best, run); prev = t; }
   const sum = list => ({ time: list.reduce((a, r) => a + (r.time || 0), 0), kcal: list.reduce((a, r) => a + runKcal(r), 0), runs: list.length, days: new Set(list.map(r => dayKey(r.date))).size });
   const weekFrom = noonOf(now) - 6.5 * DAY_MS; // los últimos 7 días, hoy incluido
   return { streak, best, trainedToday: days.has(today), today: sum(h.filter(r => dayKey(r.date) === today)), week: sum(h.filter(r => r.date >= weekFrom)), total: sum(h) };
@@ -648,7 +651,8 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
   const tile = (cls, val, dec, lab, extra = '') => `<div class="tile ${cls}"><b data-to="${val}" data-dec="${dec}">${numTxt(val, dec)}</b><span>${lab}</span>${extra}</div>`;
   const maxW = Math.max(goal, ...D.week.map(w => w.v.time)) || 1;
   const exs = Object.entries(T.ex).sort((a, b) => b[1] - a[1]).map(([x, n]) => `<span class="chip">${EX_NAMES[x] || x} · ${n}</span>`).join('');
-  const msg = !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
+  const SV = streakSave(), shTxt = SV.n ? ` · 🛡 ${SV.n} ${SV.n === 1 ? 'escudo' : 'escudos'}` : '';
+  const msg = SV.saved && SV.saved.day === dayKey(now) && !T.time ? `🛡 Un escudo ha salvado tu racha de ${daysTxt(P.streak)}: ${SV.saved.n === 1 ? 'ayer no entrenaste' : `llevabas ${SV.saved.n} días sin entrenar`}. ¡Hoy no lo dejes!` : !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
     : k >= 1 ? `¡Meta cumplida! ${D.best.time && T.time > D.best.time ? 'Y es tu mejor día. 🏆' : `Tu mejor día: ${fmtDur(D.best.time)}. ¿Lo superas?`}`
     : `Te ${goal - T.time > 90 ? `faltan ${Math.ceil((goal - T.time) / 60)} min` : 'falta muy poco'} para tu meta de ${settings.goalMin} min.`;
   host.innerHTML = `
@@ -663,7 +667,7 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
         ${tile('t-reps', T.reps, 0, 'repeticiones', cmp(T.reps, D.yest.reps, 'reps'))}
         ${tile('t-kcal', Math.round(T.kcal), 0, '≈ kcal', cmp(T.kcal, D.yest.kcal, 'kcal'))}
         ${tile('t-perf', T.perfect, 0, 'perfectas', T.reps ? `<em>${Math.round(100 * T.perfect / T.reps)} % de las reps</em>` : '')}
-        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
+        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}${shTxt}</em>`)}
       </div>
     </div>
     ${typeof careerHTML === 'function' ? careerHTML() : ''}

@@ -182,6 +182,7 @@ button{font:inherit;cursor:pointer}
 .career .mis li em{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
 .career .mis li.done span{color:var(--teal)}.career .mis li.done em{color:var(--teal);font-weight:700}
 .career .chest{margin:8px 0 0;font-size:.8rem;color:var(--muted)}
+.career .shield{margin:4px 0 0;font-size:.8rem;color:#7fd4ff}.career .shield b{color:#bfeaff}
 @keyframes tileIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (max-width:560px){.todayGrid{grid-template-columns:1fr;justify-items:center}.tiles{width:100%}}
 @media (prefers-reduced-motion:reduce){.tile{animation:none}.ring .fill,.bar i{transition:none}}
@@ -412,9 +413,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="exercise" id="ex-swing" value="swing">
         <span class="tag">Kettlebell · visor y muñecas</span><b>Swing con kettlebell</b>
         <small>Lleva la cadera atrás con la espalda recta (la kettlebell entre las piernas) para cargar y, con el impulso de la cadera, lánzala al frente a la altura del pecho para disparar.</small></label>
-      <label class="card"><input type="radio" name="exercise" id="ex-chop" value="chop">
-        <span class="tag">Kettlebell o disco · muñecas</span><b>Leñador</b>
-        <small>Con las dos manos, baja el peso junto a una cadera (carga) y súbelo en diagonal por encima del hombro contrario (dispara). Cambia de lado cuando quieras.</small></label>
       <label class="card"><input type="radio" name="exercise" id="ex-dlrow" value="dlrow">
         <span class="tag">Barra o mancuernas · visor</span><b>Peso muerto</b>
         <small>Baja el peso hacia el suelo con la cadera atrás y la espalda recta (carga) y ponte de pie para disparar. Si aguantas abajo, el disparo sale más fuerte. No hace falta que se vean las manos.</small></label>
@@ -569,6 +567,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
+      <li><strong>Cargas aguantando:</strong> como abajo en la sentadilla, aguantar la postura más dura carga el disparo (×2, ×3, ×4) en los fondos (abajo, con los codos a 90°), la elevación frontal (arriba, los brazos al frente), los antebrazos (la barra escurrida al máximo) y, en Barras, las dominadas y el remo (arriba): al bajar sale una onda que, con ×4, revienta también a los que esperan cerca. En la plancha con un brazo, una flexión entera y sin prisa deja el brazo siguiente cargado al máximo.</li>
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
@@ -577,7 +576,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, como mucho cada tres oleadas y si te la ganas (3 golpes o menos en ellas), eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma): la oleada siguiente espera a que elijas. En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre en el suelo, a tu derecha, que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li><strong>Tu nivel:</strong> cada repetición te da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título (de Novato a Leyenda) y desbloqueas colores para tus manos y para el rayo normal. Solo se ven: no dan más cargas ni más daño. Se eligen en Progreso → Nivel.</li>
-      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más y un color antes de tiempo. Las ves en «Hoy» y en Progreso → Misiones.</li>
+      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más, un <b>escudo de racha</b> (como mucho dos) y, si queda alguno, un color antes de tiempo. Si un día no entrenas, al volver se gasta un escudo solo y tu racha sigue. Las ves en «Hoy» y en Progreso → Misiones.</li>
       <li><strong>Campaña:</strong> para cada modo y ejercicio, 35 niveles en 7 regiones, una por rango (de recluta a general), cada una en su entorno; el quinto nivel de cada región, con jefe. Ganar abre el siguiente y da de 1 a 3 estrellas (la mitad de perfectas, dos; tres cuartos y sin golpes, tres). Se juega desde Progreso → Campaña; los ajustes del nivel no tocan los tuyos.</li>
       <li><strong>Tu semana:</strong> en el resumen de cada ronda ves la experiencia ganada, los minutos de los últimos 7 días frente a tu meta y tu mejor ronda con ese ejercicio en ese modo, para saber si te has superado.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
@@ -739,9 +738,9 @@ const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
 const MODE_EX = {
-  // (el press de hombro, el press con barra y la flexión en pica se quitaron: en las gafas no se detectaban bien; su
-  // código sigue, por si vuelven, y su historial se sigue viendo)
-  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'chop', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
+  // (se quitaron el press de hombro, el press con barra y la flexión en pica, que en las gafas no se detectaban bien, y el
+  // leñador, que no aportaba nada; su código sigue, por si vuelven, y su historial se sigue viendo)
+  combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
   bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
@@ -749,7 +748,7 @@ const BODY_ZONES = [
   ['Piernas', ['squat', 'lunge', 'jsquat', 'jump', 'slam']],
   ['Brazos y hombros', ['curl', 'curl2', 'twist', 'fraise', 'dips']],
   ['Pecho', ['pushup', 'inchworm']],
-  ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman', 'chop']],
+  ['Abdomen y espalda baja', ['abs', 'plank1', 'splank', 'superman']],
   ['Espalda y agarre', ['row', 'pullup', 'hang']],
   ['Cuerpo entero', ['thruster', 'frontsq', 'swing', 'dlrow', 'combo']]
 ];
@@ -789,7 +788,7 @@ const SCHEMA = [
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
-  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
+  { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'plank1', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
   { key: 'pikeDepth', g: 'ejercicio', label: 'Bajada en la flexión en pica', short: 'Bajada pica', type: 'num', min: 8, max: 45, step: 1, def: 22, unit: 'cm', ex: ['pike'], hint: 'Cuánto debe bajar la cabeza desde arriba (los brazos estirados, la cadera alta) hasta casi tocar el suelo entre las manos.' },
   { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
   { key: 'lungeDepth', g: 'ejercicio', label: 'Bajada en la zancada', short: 'Bajada zancada', type: 'num', min: 10, max: 60, step: 1, def: 28, unit: 'cm', ex: ['lunge', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza al flexionar las dos rodillas (la de atrás casi tocando el suelo).' },
@@ -809,8 +808,8 @@ const SCHEMA = [
   { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
   { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
-  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
-  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
+  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
+  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
   { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 0, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0 (de serie): sin recarga profunda; la carga solo sube aguantando en la postura perfecta.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
@@ -1319,12 +1318,15 @@ const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75
 const DAY_MS = 864e5;
 const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
-function progress(h = store(HIST_KEY) || [], now = Date.now()) {
-  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now);
-  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer
-  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); days.has(dayKey(d)); d -= DAY_MS) streak++;
+// Los escudos de racha (73_career: el cofre del día da uno, como mucho dos): los días que salvó un escudo, sin entrenar
+const streakSave = () => { const c = store('reparena3-career') || {}; return { n: Math.max(0, +c.shield || 0), frozen: Array.isArray(c.frozen) ? c.frozen : [], saved: c.saved || null }; };
+function progress(h = store(HIST_KEY) || [], now = Date.now(), frozen = streakSave().frozen) {
+  const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now), fz = new Set(frozen);
+  // racha: días seguidos entrenando; sigue viva hasta que acaba el día, así que si hoy aún no has entrenado cuenta desde ayer.
+  // Un día salvado por un escudo no suma, pero no la corta
+  let streak = 0; for (let d = noonOf(now) - (days.has(today) ? 0 : DAY_MS); ; d -= DAY_MS) { const k = dayKey(d); if (days.has(k)) streak++; else if (!fz.has(k)) break; }
   let best = 0, run = 0, prev = null;
-  for (const k of [...days].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()); run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; }
+  for (const k of [...new Set([...days, ...fz])].sort()) { const t = noonOf(new Date(k + 'T12:00:00').getTime()), n = days.has(k) ? 1 : 0; run = prev !== null && Math.round((t - prev) / DAY_MS) === 1 ? run + n : n; best = Math.max(best, run); prev = t; }
   const sum = list => ({ time: list.reduce((a, r) => a + (r.time || 0), 0), kcal: list.reduce((a, r) => a + runKcal(r), 0), runs: list.length, days: new Set(list.map(r => dayKey(r.date))).size });
   const weekFrom = noonOf(now) - 6.5 * DAY_MS; // los últimos 7 días, hoy incluido
   return { streak, best, trainedToday: days.has(today), today: sum(h.filter(r => dayKey(r.date) === today)), week: sum(h.filter(r => r.date >= weekFrom)), total: sum(h) };
@@ -1351,7 +1353,8 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
   const tile = (cls, val, dec, lab, extra = '') => `<div class="tile ${cls}"><b data-to="${val}" data-dec="${dec}">${numTxt(val, dec)}</b><span>${lab}</span>${extra}</div>`;
   const maxW = Math.max(goal, ...D.week.map(w => w.v.time)) || 1;
   const exs = Object.entries(T.ex).sort((a, b) => b[1] - a[1]).map(([x, n]) => `<span class="chip">${EX_NAMES[x] || x} · ${n}</span>`).join('');
-  const msg = !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
+  const SV = streakSave(), shTxt = SV.n ? ` · 🛡 ${SV.n} ${SV.n === 1 ? 'escudo' : 'escudos'}` : '';
+  const msg = SV.saved && SV.saved.day === dayKey(now) && !T.time ? `🛡 Un escudo ha salvado tu racha de ${daysTxt(P.streak)}: ${SV.saved.n === 1 ? 'ayer no entrenaste' : `llevabas ${SV.saved.n} días sin entrenar`}. ¡Hoy no lo dejes!` : !T.time ? (P.streak ? `Aún no has entrenado hoy: tu racha de ${daysTxt(P.streak)} te espera. ¡A por ella!` : 'Hoy es un buen día para empezar una racha.')
     : k >= 1 ? `¡Meta cumplida! ${D.best.time && T.time > D.best.time ? 'Y es tu mejor día. 🏆' : `Tu mejor día: ${fmtDur(D.best.time)}. ¿Lo superas?`}`
     : `Te ${goal - T.time > 90 ? `faltan ${Math.ceil((goal - T.time) / 60)} min` : 'falta muy poco'} para tu meta de ${settings.goalMin} min.`;
   host.innerHTML = `
@@ -1366,7 +1369,7 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
         ${tile('t-reps', T.reps, 0, 'repeticiones', cmp(T.reps, D.yest.reps, 'reps'))}
         ${tile('t-kcal', Math.round(T.kcal), 0, '≈ kcal', cmp(T.kcal, D.yest.kcal, 'kcal'))}
         ${tile('t-perf', T.perfect, 0, 'perfectas', T.reps ? `<em>${Math.round(100 * T.perfect / T.reps)} % de las reps</em>` : '')}
-        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}</em>`)}
+        ${tile('t-streak', P.streak, 0, P.streak === 1 ? 'día de racha 🔥' : 'días de racha 🔥', `<em>mejor: ${daysTxt(P.best)}${shTxt}</em>`)}
       </div>
     </div>
     ${typeof careerHTML === 'function' ? careerHTML() : ''}
@@ -10658,7 +10661,8 @@ const DET = {
   dl: { armed: false, t0: 0, o: null, was: false, rowing: false, warnT: -9, low: { left: 9, right: 9 }, up: { left: 0, right: 0 }, lost: { left: 9, right: 9 } },
   sp: { ref: 0.45, state: 'hold', t0: 0, sec: 0, awayT: 0, dev: 0, warnT: 0 },
   iw: { i: 0, b: 3, phase: 'stand' }, iwp: { state: 'up', ref: 0, min: 0, t0: 0, charged: false, stillT: 0 },
-  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0 },
+  fr: { state: 'down', bottom: -0.85, max: 0, t0: 0, lost: 0, fwd: 0, o: null, holdT: 0, pow: 1 },
+  plp: { state: 'up', ref: 0.5, min: 0, t0: 0, charged: false, stillT: 0 }, // (la flexión que carga la plancha con un brazo)
   pl: { ref: 0.5, awayT: 0, left: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 }, right: { state: 'down', floor: 0.1, t0: 0, lost: 0, fired: false, dev: 0 } }
 };
 function vertDetector(d, y, t, dt, cfg) {
@@ -10877,7 +10881,8 @@ function fraiseStep(t, dt) {
   for (const s of ['left', 'right']) if (HF[s].ok) { _frm.add(hands[s].wrist); n++; }
   if (!n) { // la pesa tapa las manos: si se perdieron subiendo, ya por casi la mitad y con los brazos al frente, cuenta
     d.lost += dt;
-    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; }
+    if (d.state === 'rising' && d.lost > 0.25 && d.max - d.bottom >= range * 0.4 && d.fwd >= 0.3) { onRep({ perfect: false, fast: false }); d.state = 'top'; d.o = null; }
+    else if (d.o && d.lost > 0.6) frFire(d); // se perdieron arriba: dispara con la carga que llevara
     else if (d.lost > 0.6 && d.state !== 'top') d.state = 'down';
     return;
   }
@@ -10889,11 +10894,18 @@ function fraiseStep(t, dt) {
     d.max = Math.max(d.max, r); d.fwd = Math.max(d.fwd, fwd);
     if (r - d.bottom >= range) {
       if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
-      const dur = t - d.t0, pt = settings.perfectTime;
-      onRep({ perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 }); d.state = 'top';
+      const dur = t - d.t0, pt = settings.perfectTime, o = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
+      d.state = 'top'; d.holdT = 0; d.pow = 1;
+      if (pistolOn() || swordActive()) onRep(o); else d.o = o; // (dispara al empezar a bajarla: aguantar arriba la carga)
     } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
-  } else if (r < d.bottom + Math.min(0.12, range * 0.3)) d.state = 'down'; // hay que bajarla para la siguiente
+  } else {
+    // arriba, con los brazos estirados al frente: aguantar sube la carga (×2, ×3, ×4); al empezar a bajar, dispara
+    if (d.o && r - d.bottom >= range - 0.04 && fwd >= 0.33) { d.holdT += dt; const p = powLevel(d.holdT); if (p > d.pow) { d.pow = p; onPower(p); } }
+    else if (d.o && r - d.bottom < range * 0.8) frFire(d);
+    if (r < d.bottom + Math.min(0.12, range * 0.3)) { if (d.o) frFire(d); d.state = 'down'; } // hay que bajarla para la siguiente
+  }
 }
+function frFire(d) { const o = d.o; d.o = null; o.pow = d.pow || 1; onRep(o); }
 function chopStep(t, dt) {
   const C = DET.ch; let n = 0; _chp.set(0, 0, 0);
   for (const s of ['left', 'right']) if (HF[s].ok) { _chp.add(arena.worldToLocal(_chw.copy(hands[s].wrist))); n++; }
@@ -10941,10 +10953,13 @@ function twistStep(t, dt) {
   if (done) {
     const span = done > 0 ? T.acc - T.lo : T.hi - T.acc, dur = t - T.t0;
     T.dir = done; T.lo = T.hi = T.acc; T.t0 = t; T.n++;
-    if (T.n % 2) { onCharge(); say('¡Cargado! Ahora al revés', '#3cf0c6', 0.8, false); SND.charge(); }
-    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2 });
+    if (T.n % 2) { onCharge(); say('¡Cargado! Aguanta escurrida o gira al revés', '#3cf0c6', 0.8, false); SND.charge(); T.holdT = 0; T.pow = 1; }
+    else onRep({ perfect: span >= req / 0.85 * 1.05 && dur >= settings.perfectTime * 0.4, fast: settings.perfectTime > 0 && dur < settings.perfectTime * 0.2, pow: T.pow || 1 });
+    if (!(T.n % 2)) T.pow = 1;
     return;
   }
+  // cargado: aguantar la barra escurrida al máximo (sin volver más de ~10° desde el extremo) sube la carga, ×2, ×3, ×4
+  if (T.n % 2 && charged && !pistolOn() && !swordActive() && (T.dir > 0 ? T.hi - T.acc : T.acc - T.lo) < 0.18) { T.holdT += dt; const p = powLevel(T.holdT); if (p > T.pow) { T.pow = p; onPower(p); } }
   // se dio la vuelta antes de completar el giro que tocaba: avisa si se quedó corto
   const sweep = T.hi - T.lo, back = T.ext > 0 ? T.hi - T.acc : T.acc - T.lo; // cuánto ha vuelto desde el último extremo
   // (el primer medio giro, desde las manos rectas hasta un extremo, no cuenta como corto)
@@ -11082,7 +11097,7 @@ function runDetectors(t, dt) {
     const d = DET.di, req = dv('dipDepth') / 100;
     if (head.p.y > d.ref + 0.4) { d.awayT += dt; if (d.awayT > 1.5 && state === 'play' && SAYT.t <= 0) say('Vuelve a la silla', '#ff8a3d', 1.2); d.state = 'up'; return; }
     d.awayT = 0;
-    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!' });
+    vertDetector(d, head.p.y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.5, perfectDur: pt, partialMsg: '¡Baja hasta los 90° de codo!', power: !pistolOn() && !swordActive() }); // (aguantar abajo, con los codos a 90°, carga)
   } else if (settings.exercise === 'press' || settings.exercise === 'curl') {
     // cada brazo por su cuenta: dispara al llegar arriba (press) o al hombro (curl)
     for (const side of ['left', 'right']) { const ev = armStep(settings.exercise, side, t, dt); if (ev && ev.top) onRep(ev, side); else if (ev && ev.msg) onPartial(ev.msg); }
@@ -11165,6 +11180,14 @@ function runDetectors(t, dt) {
     // se queda entre PL_FLOOR (el suelo de las gafas es y = 0): si las gafas veían un instante la mano de apoyo por debajo
     // del suelo, esa altura se quedaba tan baja que la mano parecía levantada para siempre, y la otra ya no disparaba
     const floorOf = d => clamp(d.floor, PL_FLOOR[0], PL_FLOOR[1]), lifted = s => hands[s].ok && hands[s].wrist.y > floorOf(P[s]) + LIFT;
+    // una flexión entera (como en Flexiones: bajar la cabeza «Bajada en la flexión» sin prisa, al menos «Duración mínima de
+    // una PERFECTA») deja el próximo brazo cargado al máximo (×4). Con un brazo levantado no se mide
+    const Q = DET.plp, req = dv('pushDepth') / 100;
+    if (P.left.state === 'up' || P.right.state === 'up') { Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
+    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', defer: () => {
+      if (t - Q.t0 >= pt) { P.boost = 4; onPower(4); say('¡Cargado al máximo! Levanta un brazo', '#ff3cf0', 1.4); }
+      else say('Más despacio: así la flexión no carga', '#ff8a3d', 1.4);
+    } });
     for (const side of ['left', 'right']) {
       const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
       if (!h.ok) { d.lost += dt; if (d.lost > 0.6) { d.state = 'down'; d.fired = false; } continue; }
@@ -11181,7 +11204,7 @@ function runDetectors(t, dt) {
         d.dev = Math.max(d.dev, Math.abs(y - P.ref));
         if (r < fl + LIFT * 0.5) d.state = 'down';
         else if (lifted(other)) d.fired = true; // las dos manos arriba: esta subida ya no dispara
-        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false }, side); }
+        else if (!d.fired && t - d.t0 > 0.35) { d.fired = true; onCharge(); onRep({ perfect: d.dev < 0.05 && pt > 0, fast: false, pow: P.boost || 1 }, side); P.boost = 0; }
       }
     }
   } else if (settings.exercise === 'inchworm') {
@@ -11936,10 +11959,10 @@ function beginRun() {
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
-  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0 });
+  DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0, holdT: 0, pow: 1 }); DET.fr.o = null; Object.assign(DET.plp, { state: 'up', charged: false }); DET.pl.boost = 0;
   stateT = 0; boardDirty = true;
   if (isBars()) { if (preview) previewBarPose(true); barReset(); barToMount(0); }
-  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
+  else if (preview) { pvPose(); arenaFromHead(); PV.home = camera.position.clone(); TCH.ref = head.p.y; DET.sq.ref = DET.pu.ref = DET.pl.ref = DET.plp.ref = DET.su.ref = DET.lu.ref = DET.di.ref = DET.sp.ref = head.p.y; calibRef = settings.exercise === 'pushup' || settings.exercise === 'pike' ? 1.6 : head.p.y; state = 'ready'; }
   else state = 'calib';
   center.mesh.visible = true; drawCenter();
   if (settings.exercise === 'inchworm') { if (preview) arenaFromHead(); iwLayout(); }
@@ -11985,7 +12008,7 @@ function calibrate() {
   for (const s of ['left', 'right']) if (hands[s].ok) { DET.curl[s].bottom = DET.pr[s].bottom = hands[s].wrist.y - y; DET.pl[s].floor = hands[s].wrist.y; }
   { const v = ['left', 'right'].filter(s => hands[s].ok).map(s => hands[s].wrist.y - y); if (v.length) DET.bar.bottom = DET.barp.bottom = Math.min(...v); }
   DET.sp.ref = y;
-  DET.pl.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
+  DET.pl.ref = DET.plp.ref = y; DET.su.ref = DET.su.lo = y; TCH.ref = y;
   state = 'ready'; stateT = 0; SND.charge(); boardDirty = true;
 }
 // Dificultad creciente: sube un nivel por cada oleada superada con soltura (pocos golpes, fallos o caídas en ella); si te
@@ -12179,7 +12202,8 @@ function updateWaveIntro(dt) {
 const SUM_H = 0.3, SUM_CHIP = 0.05; // (alto de la ficha, en metros, y lo que añade el logro)
 // Los logros por orden de importancia: un nivel nuevo, luego el primero de la ronda (un récord), lo ganado en la carrera
 // (estrellas, cofre, misiones) y el resto; el resumen enseña solo el primero
-const sumChips = (chips, G) => { if (!G) return chips; const lv = G.notes.find(([t]) => /^¡Nivel/.test(t)); return [...(lv ? [lv] : []), ...chips.slice(0, 1), ...G.notes.filter(n => n !== lv && !/^Desbloqueado/.test(n[0])), ...chips.slice(1)]; };
+// (el cofre del día, lo primero: es lo que da algo; luego el nivel nuevo)
+const sumChips = (chips, G) => { if (!G) return chips; const ch = G.notes.find(([t]) => /^¡Cofre/.test(t)), lv = G.notes.find(([t]) => /^¡Nivel/.test(t)), top = [ch, lv].filter(Boolean); return [...top, ...chips.slice(0, 1), ...G.notes.filter(n => !top.includes(n) && !/^Desbloqueado/.test(n[0])), ...chips.slice(1)]; };
 function summaryDraw(S, c, x, y, w, h) {
   const gold = '#ffd166', teal = '#3cf0c6', ink = '#eeeaff', dim = '#a49fc8', chip = S.chips[0], H = h - (chip ? h * SUM_CHIP / (SUM_H + SUM_CHIP) : 0);
   c.textBaseline = 'middle';
@@ -12636,7 +12660,7 @@ function arxEnd() {
 const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, contact: false, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { failed: false, phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { failed: false, phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null, pwT: 0, pw: 1 }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -12704,7 +12728,7 @@ function placeRowBoard(fromHead) {
 
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
-  stats.falls++;
+  stats.falls++; BAR.pw = 1; BAR.pwT = 0;
   if (vortexOn()) { vortexEngulf(); return; } // el remolino te engulle: la oleada termina
   const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
@@ -12752,9 +12776,15 @@ function barDetect(t, dt) {
       const dur = t - BAR.t0; BAR.det = 'top';
       // aprende hacia dónde se desplaza la cabeza al subir (en el remo, hacia los pies)
       BAR.drift.lerp(_bl.set(HL.x - BAR.refXZ.x, 0, HL.z - BAR.refXZ.z), BAR.drift.lengthSq() ? 0.5 : 1);
-      barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 });
+      barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 }); BAR.pwT = 0; BAR.pw = 1;
     } else if (y < BAR.ref + 0.05) { if (BAR.max - BAR.ref > req * 0.55) onPartial('¡Más arriba!'); BAR.det = 'down'; }
-  } else if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) BAR.det = 'down'; // rearma al bajar casi todo el recorrido
+  } else {
+    // arriba (la barbilla por encima de la barra; en el remo, el pecho en la barra): aguantar carga ×2, ×3, ×4; al
+    // empezar a bajar, sale la onda con esa carga
+    if (y - BAR.ref >= req - 0.03) { BAR.pwT += dt; const p = powLevel(BAR.pwT); if (p > BAR.pw) { BAR.pw = p; barPower(p); } }
+    else if (BAR.pw > 1 && y - BAR.ref < req - 0.07) barBlast();
+    if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) { if (BAR.pw > 1) barBlast(); BAR.det = 'down'; } // rearma al bajar casi todo el recorrido
+  }
   if (BAR.det === 'down') BAR.contact = false;
 }
 function barRep(opts) {
@@ -12769,6 +12799,25 @@ function barRep(opts) {
   const c = tg.center(new V3()), h = head.p.clone().add(_ba.set(0, 0.08, 0));
   if (c.distanceTo(h) > 0.35) for (let i = 0; i <= 10; i++) fx.trail(h.clone().lerp(c, i / 10), [0.3, 1, 0.85], 0.06, 0.3);
   tg.onHit(opts.perfect ? 2 : 1, opts.perfect); if (!tg.alive) onKilled(tg);
+}
+
+const powRgb = p => { const c = POW_COL[p - 1]; return [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255]; };
+// Un nivel más de carga aguantando arriba
+function barPower(p) {
+  const col = '#' + POW_COL[p - 1].toString(16).padStart(6, '0'); SND.power(p); boardDirty = true;
+  cheer(`CARGA ×${p}`, col, 0.9); fx.glow(head.p.clone().add(_ba.set(0, 0.1, 0)), powRgb(p), 0.25 + p * 0.06, 0.15);
+}
+// Al bajar con carga: una onda desde la cabeza golpea al que viene (×2, ×3: más daño, como el disparo cargado); con ×4
+// revienta también a los demás que esperan cerca
+function barBlast() {
+  const p = BAR.pw; BAR.pw = 1; BAR.pwT = 0; if (state !== 'play' || p < 2) return;
+  const h = head.p.clone().add(_ba.set(0, 0.08, 0)), rgb = powRgb(p);
+  fx.glow(h, rgb, 0.4 + p * 0.1, 0.2); SND.power(p, h); cheer(p >= 4 ? '¡ONDA ×4!' : `¡ONDA ×${p}!`, '#' + POW_COL[p - 1].toString(16).padStart(6, '0'), 1.1);
+  const list = p >= 4 ? enemies.filter(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait')) : [frontTarget()].filter(Boolean);
+  for (const tg of list) {
+    const c = tg.center(new V3()); for (let i = 0; i <= 8; i++) fx.trail(h.clone().lerp(c, i / 8), rgb, 0.07, 0.3);
+    tg.onHit(POW_DMG[p - 1], false); if (!tg.alive) onKilled(tg);
+  }
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
@@ -13133,18 +13182,30 @@ function placeDone() {
 //  · cada repetición da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título
 //    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
 //  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
-//    del día (+100 XP y un color antes de tiempo)
+//    del día (+100 XP, un escudo de racha y un color antes de tiempo)
+//  · los escudos de racha (como mucho dos): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
 //  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
 //    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
 //  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
 // Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
-const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560';
-const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), gain: null }; })();
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 2, SHIELD_COL = '#7fd4ff';
+const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), shield: clamp(+s.shield || 0, 0, SHIELD_MAX), frozen: Array.isArray(s.frozen) ? s.frozen.slice(-120) : [], saved: s.saved && s.saved.day ? s.saved : null, gain: null }; })();
 const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
 function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
 // la experiencia de una ronda guardada; la primera vez, la de todo tu historial (no empiezas de cero)
 const runXP = r => (r.ex === 'hang' ? Math.round((r.reps || 0) / 2) : (r.reps || 0) + (r.perfect || 0)) + (r.win ? 20 : 0);
 (function crSeed() { if (CR.seeded) return; CR.xp += (store(HIST_KEY) || []).reduce((a, r) => a + runXP(r), 0); CR.seeded = true; crSave(); })();
+// Escudos de racha: si entre tu último día entrenado y hoy faltan días (como mucho tantos como escudos tengas), se gastan
+// solos y esos días quedan salvados; si faltan más, la racha se pierde y los escudos se guardan para la siguiente
+function shieldCheck(now = Date.now(), h = store(HIST_KEY) || []) {
+  if (!CR.shield) return;
+  const days = new Set(h.map(r => dayKey(r.date))), fz = new Set(CR.frozen), miss = [];
+  if (!days.size) return;
+  for (let d = noonOf(now) - DAY_MS; !days.has(dayKey(d)) && !fz.has(dayKey(d)) && miss.length <= SHIELD_MAX; d -= DAY_MS) miss.push(dayKey(d));
+  if (!miss.length || miss.length > CR.shield) return;
+  CR.shield -= miss.length; CR.frozen = [...CR.frozen, ...miss].slice(-120); CR.saved = { day: dayKey(now), n: miss.length, told: false }; crSave();
+}
+shieldCheck();
 
 /* ---------- Nivel y título ---------- */
 const lvlNeed = n => 100 + 20 * (n - 1); // de un nivel al siguiente: cada vez un poco más
@@ -13190,6 +13251,7 @@ function misAdd(list, o) {
 }
 function misToday(now = Date.now()) {
   const day = dayKey(now); if (CR.mis && CR.mis.day === day) return CR.mis;
+  shieldCheck(now); // (un día nuevo: ¿hace falta un escudo?)
   const R = seeded('reparena' + day), pickR = a => a[Math.floor(R() * a.length) % a.length], L = lvlOf().n, h = store(HIST_KEY) || [];
   // variedad: el modo que menos has jugado esta semana, o un ejercicio que ya conoces y llevas días sin hacer
   const week = h.filter(r => r.date > now - 7 * DAY_MS), modes = ['combat', 'arcs', 'touch', ...(h.some(r => r.mode === 'bars') ? ['bars'] : [])].sort((a, b) => week.filter(r => r.mode === a).length - week.filter(r => r.mode === b).length);
@@ -13212,9 +13274,12 @@ function careerRun(o) {
   const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
   M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
   if (!M.chest && M.list.every(m => m.done)) {
+    // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
-    G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${p ? ` y ${p.label}` : ''}`, '#ffd166']);
+    const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
+    G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
+  if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
   const l0 = lvlOf().n; CR.xp += xp; G.xp += xp; const l1 = lvlOf().n;
   for (let n = l0 + 1; n <= l1; n++) { G.notes.push([`¡Nivel ${n}!${titleOf(n) !== titleOf(n - 1) ? ` Ahora eres ${titleOf(n)}` : ''}`, '#ffd166']); unlocksAt(n).forEach(u => G.notes.push([`Desbloqueado: ${u}`, '#ff4fa3'])); }
   crSave();
@@ -13293,6 +13358,12 @@ function drawFlame(c, x, y, s) {
   const g = c.createLinearGradient(x, y - s, x, y + s); g.addColorStop(0, '#ffd166'); g.addColorStop(1, '#ff4a2a'); c.fillStyle = g;
   c.beginPath(); c.moveTo(x, y - s); c.bezierCurveTo(x + s * 0.9, y - s * 0.2, x + s * 0.7, y + s, x, y + s); c.bezierCurveTo(x - s * 0.7, y + s, x - s * 0.9, y - s * 0.1, x - s * 0.2, y - s * 0.45); c.bezierCurveTo(x - s * 0.1, y - s * 0.2, x + s * 0.1, y - s * 0.6, x, y - s); c.fill();
 }
+// un escudo de racha (lleno: lo tienes; hueco: te falta)
+function drawShield(c, x, y, s, on) {
+  c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * 0.8, y - s * 0.7); c.lineTo(x + s * 0.72, y + s * 0.15); c.quadraticCurveTo(x + s * 0.5, y + s * 0.7, x, y + s); c.quadraticCurveTo(x - s * 0.5, y + s * 0.7, x - s * 0.72, y + s * 0.15); c.lineTo(x - s * 0.8, y - s * 0.7); c.closePath();
+  if (on) { const g = c.createLinearGradient(x, y - s, x, y + s); g.addColorStop(0, '#bfeaff'); g.addColorStop(1, '#3a8fd8'); c.fillStyle = g; c.fill(); c.lineWidth = Math.max(1.5, s * 0.12); c.strokeStyle = '#eaf8ff'; c.stroke(); }
+  else { c.lineWidth = Math.max(1.5, s * 0.12); c.strokeStyle = 'rgba(128,128,128,0.55)'; c.stroke(); }
+}
 function drawChest(c, x, y, s, open) {
   c.fillStyle = '#7a4318'; rr(c, x - s, y - s * 0.2, s * 2, s * 1.1, s * 0.12); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(x - s * 0.55, y - s * 0.2, s * 0.18, s * 1.1); c.fillRect(x + s * 0.37, y - s * 0.2, s * 0.18, s * 1.1);
   if (open) { c.fillStyle = '#1a0d04'; c.fillRect(x - s * 0.9, y - s * 0.3, s * 1.8, s * 0.2); c.fillStyle = '#ffd166'; c.beginPath(); c.arc(x, y - s * 0.3, s * 0.55, Math.PI, 0); c.fill(); c.fillStyle = '#9a5622'; rr(c, x - s, y - s * 1.25, s * 2, s * 0.45, s * 0.12); c.fill(); }
@@ -13313,8 +13384,9 @@ function drawMissions(c, x, y, w, h) {
   });
   const fy = y + h * 0.84, s = h * 0.075;
   drawChest(c, x + s + 4, fy + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = M.chest ? '#ffd166' : '#a49fc8';
-  const ct = M.chest ? '¡Cofre del día abierto!' : 'Cofre del día: cumple las tres'; fitFont(c, ct, w * 0.44, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(ct, x + s * 2 + 14, fy);
-  drawFlame(c, x + w * 0.6, fy, s * 0.9); c.fillStyle = '#ffb36b'; const st = `Racha: ${daysTxt(P.streak)} · mejor ${daysTxt(P.best)}`; fitFont(c, st, w * 0.36, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(st, x + w * 0.6 + s + 8, fy);
+  const ct = M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP y un escudo`; fitFont(c, ct, w * 0.36, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(ct, x + s * 2 + 14, fy);
+  drawFlame(c, x + w * 0.5, fy, s * 0.9); c.fillStyle = '#ffb36b'; const st = `Racha: ${daysTxt(P.streak)} · mejor ${P.best}`; fitFont(c, st, w * 0.3, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(st, x + w * 0.5 + s + 8, fy);
+  for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, x + w - (SHIELD_MAX - i) * s * 2 + s * 0.8, fy, s * 0.85, i < CR.shield); // (los escudos de racha)
 }
 // el mapa de una región de la campaña: un camino con sus cinco niveles (el del jefe, más grande y con corona), sus
 // estrellas, el siguiente por jugar en turquesa y el elegido rodeado
@@ -13348,7 +13420,8 @@ function progRows(again) {
     rows.push({ t: 'text', text: 'Cada repetición da experiencia (las perfectas, el doble). Los colores solo se ven', color: '#a49fc8' });
   } else if (PROG.tab === 'mis') {
     rows.push({ t: 'canvas', h: 0.24, text: misToday().list.map(m => MIS[m.t].txt(m) + (m.done ? ' ✓' : '')).join(' · '), draw: drawMissions });
-    rows.push({ t: 'text', text: `Tres nuevas cada día: +${MIS_XP} XP cada una; con las tres, el cofre (+${CHEST_XP} XP y un color)`, color: '#a49fc8' });
+    rows.push({ t: 'text', text: `Tres nuevas cada día: +${MIS_XP} XP cada una. Con las tres se abre el cofre: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`, color: '#a49fc8' });
+    rows.push({ t: 'text', text: `Escudos de racha: ${CR.shield} de ${SHIELD_MAX}. Si un día no entrenas, se gasta uno solo y tu racha sigue`, color: SHIELD_COL });
   } else if (PROG.tab === 'camp') {
     const C = campOf(), sel = clamp(PROG.lv || C.at, 1, CAMP_N), reg = PROG.reg >= 0 ? PROG.reg : Math.floor((sel - 1) / 5);
     rows.push({ t: 'canvas', h: 0.2, text: `Campaña de ${EX_NAMES[settings.exercise]} en ${MODE_NAMES[settings.mode]} · ${CAMP_REG[reg][0]}`, draw: (c, x, y, w, h) => drawCampMap(c, x, y, w, h, reg, sel) });
@@ -13368,7 +13441,8 @@ function careerHTML() {
   const L = lvlOf(), M = misToday(), esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   return `<div class="career"><div class="lvl"><b>${L.n}</b><span>Nivel ${L.n} · ${titleOf(L.n)}<i style="--k:${Math.round(100 * L.into / L.need)}%"></i><small>${L.into} / ${L.need} XP</small></span></div>
     <ul class="mis">${M.list.map(m => `<li class="${m.done ? 'done' : ''}"><span>${esc(MIS[m.t].txt(m))}</span><em>${m.done ? '✓' : `${Math.min(m.n, Math.floor(m.got))} / ${m.n}`}</em></li>`).join('')}</ul>
-    <p class="chest">${M.chest ? 'Cofre del día abierto' : 'Cumple las tres misiones y se abre el cofre del día'}</p></div>`;
+    <p class="chest">${M.chest ? 'Cofre del día abierto' : `Cumple las tres misiones y se abre el cofre del día: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`}</p>
+    <p class="shield">🛡 Escudos de racha: <b>${CR.shield} de ${SHIELD_MAX}</b>. Si un día no entrenas, se gasta uno solo y tu racha sigue.</p></div>`;
 }
 // Las fichas de tus cifras en el menú principal (teclas: al tocarlas, Opciones → Progreso): nivel, hoy, racha y misiones.
 // Dibujadas en la cara de la tecla; tc es el color de su letra
@@ -13386,9 +13460,11 @@ function statTiles() {
       if (k > 0) { c.strokeStyle = k >= 1 ? '#3cf0c6' : '#ff4fa3'; c.beginPath(); c.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke(); }
       txt(c, String(mins), cx, cy + 1, R * 1.4, R * 0.95, tc, 800, 'center'); const x = cx + R + H * 0.14;
       txt(c, 'Hoy', x, H * 0.36, W - x - 6, H * 0.24, tc); txt(c, `de ${goal} min`, x, H * 0.66, W - x - 6, H * 0.18, tc, 600); } },
-    { label: `Racha de ${daysTxt(P.streak)}`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
-      drawFlame(c, H * 0.4, H / 2, H * 0.27); const x = H * 0.78;
-      txt(c, daysTxt(P.streak), x, H * 0.36, W - x - 6, H * 0.26, tc); txt(c, `racha · mejor ${P.best}`, x, H * 0.68, W - x - 6, H * 0.17, tc, 600); } },
+    { label: `Racha de ${daysTxt(P.streak)} · ${CR.shield} ${CR.shield === 1 ? 'escudo' : 'escudos'}`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
+      drawFlame(c, H * 0.4, H / 2, H * 0.27); const x = H * 0.78, sv = CR.saved && CR.saved.day === dayKey(Date.now());
+      txt(c, daysTxt(P.streak), x, H * 0.33, W - x - 6, H * 0.26, tc);
+      const sr = H * 0.12; for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, x + sr + i * sr * 2.2, H * 0.7, sr, i < CR.shield); // (los escudos de racha)
+      const tx = x + SHIELD_MAX * sr * 2.2 + 4; txt(c, sv ? 'salvada' : `mejor ${P.best}`, tx, H * 0.7, W - tx - 6, H * 0.17, sv ? SHIELD_COL : tc, 600); } },
     { label: `Misiones: ${done} de 3`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
       const r = H * 0.1; for (let i = 0; i < 3; i++) { const cx = H * 0.2 + r + i * r * 2.6, cy = H * 0.34; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = i < done ? '#3cf0c6' : 'rgba(128,128,128,0.35)'; c.fill(); }
       txt(c, M.chest ? '¡Cofre abierto!' : `Misiones ${done}/3`, H * 0.2, H * 0.7, W - H * 0.3, H * 0.2, M.chest ? '#ffd166' : tc);

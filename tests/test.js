@@ -50,7 +50,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg},
+  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, shieldCheck, crSave,
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, profiles, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, danceP, throwK, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine, ARX_TINT, arxSpeed };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -287,6 +287,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const full = powT.filter(c => c && c[2] !== undefined && c[3] !== undefined && c[4] !== undefined), g = full.map(c => [c[3] - c[2], c[4] - c[3]]);
     log(`  charge levels while holding: ${g.map(([a, b]) => `×2→×3 ${a.toFixed(2)} s, ×3→×4 ${b.toFixed(2)} s`).join(' · ') || 'none reached ×4'}`);
     if (!g.length || g.some(([a, b]) => a < 1.85 || a > 2.2 || b < 2.35 || b > 2.7)) errors.push('carga: cada nivel debería pedir aguantar más que el anterior (×2→×3 en 2 s, ×3→×4 en 2,5 s, de serie)'); }
+  // fondos (abajo, con los codos a 90°) y elevación frontal (arriba, con los brazos al frente): aguantar también carga
+  for (const [ex, foes, sim] of [['dips', 'robots', t => { RA.PV.crouch = (t % 9) < 7.4; }], ['fraise', 'flyers', t => { RA.PV.crouch = (t % 9) > 1.6; }]]) { let maxPow = 1, shot = 0;
+    await runConfig(`Combate ${ex} aguantado`, { ...base, mode: 'combat', foes, aim: 'auto', exercise: ex, waves: 1, repsWave: 3 }, t => { sim(t); const m = /CARGA ×(\d)|×(4) · ¡ARRIBA/.exec(RA.CHG.p.mesh.visible ? RA.CHG.text : ''); if (m) maxPow = Math.max(maxPow, +(m[1] || m[2]));
+      const d = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (d && RA.msg.t > 0) shot = Math.max(shot, +d[1]); }, 120, s => '', true);
+    log(`  ${ex} held: charge up to ×${maxPow} · shot ×${shot}`);
+    if (maxPow < 4 || shot < 4) errors.push(`${ex}: aguantar en la postura más dura debería cargar el disparo hasta ×4 y dispararlo así (×${maxPow}, disparo ×${shot})`); }
   // zancadas: también cargan aguantando abajo; y bajando mucho más de lo pedido, la recarga profunda (×4 al instante)
   { let lunge = 1, deep = 0, deepOff = 0, quick = 1;
     await runConfig('Combate zancada aguantada', { ...base, mode: 'combat', foes: 'robots', aim: 'auto', exercise: 'lunge', waves: 1, repsWave: 4, deepDrop: 30 }, t => { RA.PV.crouch = (t % 9) < 7.4; const m = /CARGA ×(\d)/.exec(RA.msg.text || ''); if (m) lunge = Math.max(lunge, +m[1]); }, 200, s => '', true);
@@ -326,7 +332,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   RA.setSetting('look', 'real');
   // ejercicios en dos tiempos: bajar carga y el gesto al subir dispara; sin el gesto, no
   const chainCfg = { ...base, mode: 'combat', foes: 'robots', aim: 'auto' };
-  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump'], ['chop', 'leñador', 2.6, 'chopSame']]) {
+  for (const [ex, name, per, flag] of [['frontsq', 'sentadilla con elevación frontal', 3.0, 'noArms'], ['swing', 'swing con kettlebell', 2.4, 'noArms'], ['jsquat', 'sentadilla con salto', 3.0, 'noJump']]) {
     await runConfig(`Combate ${name}`, { ...chainCfg, exercise: ex }, squatSim(per), 420, s => s.reps < 7 ? `${name}: no dispara` : s.partial > 2 ? `${name}: da medias de más` : '');
     await runConfig(`${name} sin el gesto`, { ...chainCfg, exercise: ex, waves: 1 }, t => { RA.PV[flag] = true; squatSim(per)(t); }, 30, s => s.reps ? `${name}: sin el gesto no debería disparar` : s.partial < 3 ? `${name}: no avisa de qué falta` : '', true);
     RA.PV[flag] = false;
@@ -1224,7 +1230,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // (los dos brazos por igual); y nunca dos a la vez: espaciados una repetición (±15 %)
   for (const [ex, target, sides] of [['pullup', 'bubbles', 100], ['row', 'bugs', 100], ['pullup', 'bubbles', 0], ['row', 'bubbles', 50]]) {
     const B = { lat: [], from: [], ang: [], arr: [], seen: new Set(), arrived: new Set() };
-    await runConfig(`Barras ${ex} ${target}${sides ? ` por los lados ${sides} %` : ''}`, { ...bars, exercise: ex, barTarget: target, barMix: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10 }, t => {
+    await runConfig(`Barras ${ex} ${target}${sides ? ` por los lados ${sides} %` : ''}`, { ...bars, exercise: ex, barTarget: target, barMix: sides, barOffset: 20, barArrive: 2, waves: 1, repsWave: 10, powHold: 6, powHoldInc: 4 }, t => {
       pullSim(4.2)(t); // (más despacio que el hueco entre objetivos: así llegan todos y esperan)
       const ax = new THREE.Vector3(); { const e = RA.eqPose(); const c = Math.cos(e.yaw), s_ = Math.sin(e.yaw); ax.set(c, 0, -s_).applyAxisAngle(new THREE.Vector3(0, 1, 0), -RA.arena.rotation.y); }
       for (const e of RA.enemies) { if (e.type !== 'target') continue;
@@ -1241,7 +1247,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!sides && B.lat.some(x => Math.abs(x) > 0.05)) errors.push('barras: sin «por los lados» deberían pararse en el centro');
     if (gaps.length < 3 || Math.min(...gaps) < G * 0.7) errors.push(`barras (${ex}): llegan dos casi a la vez (huecos ${gaps.map(x => x.toFixed(1)).join(' ')})`);
   }
-  RA.setSetting('barMix', 0);
+  RA.setSetting('barMix', 0); RA.setSetting('powHold', 1.5); RA.setSetting('powHoldInc', 0.5);
+  // barras: aguantar arriba (la barbilla sobre la barra) carga; al bajar sale la onda, y con ×4 revienta también a los demás
+  { const sv = { ...RA.settings }; let maxPw = 1;
+    await runConfig('Barras dominadas aguantadas', { ...bars, exercise: 'pullup', barTarget: 'bubbles', waves: 1, repsWave: 8, barArrive: 2 }, t => { pullSim(16)(t); maxPw = Math.max(maxPw, RA.BAR.pw); }, 200, s => {
+      log(`  pull-ups held at the top: charge up to ×${maxPw} · ${s.reps} reps, ${s.kills} popped`);
+      return maxPw < 4 ? `aguantar arriba en la dominada debería cargar hasta ×4 (×${maxPw})` : s.kills <= s.reps ? 'la onda ×4 debería reventar también las pompas cercanas' : ''; }, true);
+    for (const k of ['waves', 'repsWave', 'barArrive', 'barTarget']) RA.setSetting(k, sv[k]); }
   await runConfig('Barras+dominadas (bichos)', { ...bars, exercise: 'pullup', barTarget: 'bugs' }, pullSim(3), 420, s => s.kills < 4 ? 'no revienta los bichos' : '');
   await runConfig('Barras+colgado', { ...bars, exercise: 'hang', hangTime: 5, hangInc: 5 }, t => {}, 120, s => s.hold < 14 ? 'no cuenta el tiempo colgado' : '');
   await runConfig('Barras+remo con caída', { ...bars, exercise: 'row', lives: 3 }, fallOnce(9, pullSim()), 420, s => s.falls !== 1 ? 'la caída no se detecta' : s.taken < 1 ? 'la caída no quita vida' : '');
@@ -1663,6 +1675,17 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`missions: ${M.list.map(m => `${RA.MIS[m.t].txt(m)} ${m.done ? '✓' : '·'}`).join(' | ')} · kinds ${kinds} · chest ${M.chest} · +${G2.xp} XP · notes ${G2.notes.map(n => n[0]).join(' / ')}`);
     if (kinds !== 'vol,q,var') errors.push('misiones: deberían ser tres, una de volumen, una de calidad y una de variedad');
     if (!M.chest || !M.list.every(m => m.done) || G2.xp < 3 * 40 + 100) errors.push('misiones: cumplidas, deberían dar su experiencia y abrir el cofre del día');
+    // el cofre da un escudo de racha (como mucho dos); si un día no entrenas, se gasta solo y la racha sigue
+    { const C0 = { shield: RA.CR.shield, frozen: RA.CR.frozen.slice(), saved: RA.CR.saved }, chestShield = G2.notes.some(n => /escudo de racha/.test(n[0])), sh1 = RA.CR.shield;
+      const D = 864e5, now = Date.now(), mk = dd => ({ ex: 'squat', mode: 'combat', reps: 10, perfect: 0, time: 300, date: now - dd * D }), H1 = [mk(2), mk(3), mk(4)], H2 = [mk(3), mk(4), mk(5)];
+      const without = RA.progress(H1, now, []).streak;
+      RA.CR.shield = 1; RA.CR.frozen = []; RA.shieldCheck(now, H1); const one = [RA.CR.shield, RA.progress(H1, now, RA.CR.frozen).streak, RA.progress(H1, now, RA.CR.frozen).best];
+      RA.CR.shield = 1; RA.CR.frozen = []; RA.shieldCheck(now, H2); const short = [RA.CR.shield, RA.progress(H2, now, RA.CR.frozen).streak];
+      RA.CR.shield = 2; RA.CR.frozen = []; RA.shieldCheck(now, H2); const two = [RA.CR.shield, RA.progress(H2, now, RA.CR.frozen).streak];
+      RA.CR.shield = 2; RA.CR.frozen = []; RA.shieldCheck(now, [mk(0), mk(1)]); const none = RA.CR.shield;
+      log(`streak shields: chest gives one ${chestShield} (${sh1}) · one day missed without shields → streak ${without} · with 1 → shields ${one[0]}, streak ${one[1]} (best ${one[2]}) · two days missed with 1 → ${short.join(', ')} · with 2 → ${two.join(', ')} · trained yesterday → shields ${none}`);
+      Object.assign(RA.CR, C0); RA.crSave && RA.crSave();
+      if (!chestShield || sh1 < 1 || without !== 0 || one[0] !== 0 || one[1] !== 3 || short[0] !== 1 || short[1] !== 0 || two[0] !== 0 || two[1] !== 3 || none !== 2) errors.push('escudos de racha: el cofre debería dar uno y, si faltas un día (o dos, con dos), gastarse solo y salvar la racha'); }
     // la campaña: el nivel pone sus ajustes (rango y oleadas) sin tocar los tuyos; ganar da estrellas y abre el siguiente
     const id = 'combat:squat'; delete RA.CR.camp[id]; const before = [RA.settings.rank, RA.settings.waves];
     RA.startPreview(); frame(2); RA.campStart(1); frame(3); const inLv = [RA.settings.rank, RA.settings.waves], stored = JSON.parse(storage.get('reparena3-settings') || '{}');
@@ -1794,6 +1817,14 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const r2 = RA.stats.reps; for (let k = 0; k < 4; k++) { XRS.lift = 'right'; frame(40, 16, xrFrame); XRS.lift = null; frame(40, 16, xrFrame); }
     log(`plank1 after the support hand was seen under the floor: right lifts → ${RA.stats.reps - r2}/4`);
     if (RA.stats.reps - r2 !== 4) errors.push('plancha: tras ver un instante la mano de apoyo bajo el suelo, la otra debería seguir disparando'); }
+  // una flexión entera, sin prisa (como en Flexiones), deja el brazo siguiente cargado al máximo; deprisa, no
+  { const pt0 = RA.settings.perfectTime; RA.setSetting('perfectTime', 1.2);
+    const push = secs => { const n = Math.round(secs / 0.016), d = RA.settings.pushDepth / 100 + 0.03; for (let i = 0; i <= n; i++) { XRS.headY = 0.55 - d * Math.sin(Math.PI * i / n); frame(1, 16, xrFrame); } XRS.headY = 0.55; frame(30, 16, xrFrame); };
+    const lift = () => { let pow = 1; XRS.lift = 'left'; for (let i = 0; i < 40; i++) { frame(1, 16, xrFrame); const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); } XRS.lift = null; frame(40, 16, xrFrame); return pow; };
+    push(2.4); const slow = RA.DET.pl.boost, p1 = lift(); push(0.5); const fast = RA.DET.pl.boost, p2 = lift();
+    log(`plank1 push-up: slow → boost ×${slow}, next lift ×${p1} · fast → boost ×${fast || 1}, next lift ×${p2}`);
+    RA.setSetting('perfectTime', pt0);
+    if (slow !== 4 || p1 !== 4 || fast || p2 !== 1) errors.push('plancha con un brazo: una flexión sin prisa debería cargar el brazo siguiente al máximo (×4), y una deprisa, no'); }
   RA.exitAll(); frame(2, 16, xrFrame);
 
   // ---- Una sola paralela: las manos van a lo largo de la barra ----
@@ -2453,6 +2484,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log('twist XR: 6 twists → shots', RA.stats.reps - r0, 'charges seen', ch); if (RA.stats.reps - r0 !== 3) errors.push(`antebrazos XR: 6 giros deberían ser 3 disparos (${RA.stats.reps - r0})`);
     const r1 = RA.stats.reps; for (let n = 0; n < 6; n++) { const from = n % 2 ? 0.25 : -0.25; for (let k = 0; k <= 30; k++) { XRS.twist = from - 2 * from * k / 30; frame(1, 16, xrFrame); } }
     log('twist XR: wiggling 30° each way → shots', RA.stats.reps - r1); if (RA.stats.reps !== r1) errors.push('antebrazos XR: un meneo pequeño no debería disparar'); }
+  // cargado, aguantar la barra escurrida al máximo sube la carga; el giro al revés la dispara
+  { let pow = 0; const tw = to => { const from = XRS.twist; for (let k = 0; k <= 30; k++) { XRS.twist = from + (to - from) * k / 30; frame(1, 16, xrFrame); const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); } };
+    tw(-Math.PI / 4); tw(Math.PI / 4); if (!(RA.DET.tw.n % 2)) tw(-Math.PI / 4);
+    const charged = RA.DET.tw.n % 2; frame(260, 16, xrFrame); const held = RA.DET.tw.pow, r0 = RA.stats.reps; pow = 0; tw(-XRS.twist);
+    log(`twist XR held twisted 4,2 s: charged ${!!charged} · charge ×${held} · shot ×${pow} · ${RA.stats.reps - r0} rep`);
+    if (!charged || held < 3 || pow < 3 || RA.stats.reps - r0 !== 1) errors.push('antebrazos: aguantar la barra escurrida debería cargar el disparo (×3 en 4 s) y dispararlo con el giro al revés'); }
   XRS.twist = null; RA.exitAll(); frame(2, 16, xrFrame);
 
   // ---- Superman en XR: tumbado mirando al suelo; subir ~10 cm y aguantar dispara, con las manos por delante ----

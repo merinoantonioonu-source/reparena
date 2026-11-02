@@ -3,18 +3,30 @@
 //  · cada repetición da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título
 //    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
 //  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
-//    del día (+100 XP y un color antes de tiempo)
+//    del día (+100 XP, un escudo de racha y un color antes de tiempo)
+//  · los escudos de racha (como mucho dos): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
 //  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
 //    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
 //  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
 // Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
-const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560';
-const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), gain: null }; })();
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 2, SHIELD_COL = '#7fd4ff';
+const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), shield: clamp(+s.shield || 0, 0, SHIELD_MAX), frozen: Array.isArray(s.frozen) ? s.frozen.slice(-120) : [], saved: s.saved && s.saved.day ? s.saved : null, gain: null }; })();
 const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
 function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
 // la experiencia de una ronda guardada; la primera vez, la de todo tu historial (no empiezas de cero)
 const runXP = r => (r.ex === 'hang' ? Math.round((r.reps || 0) / 2) : (r.reps || 0) + (r.perfect || 0)) + (r.win ? 20 : 0);
 (function crSeed() { if (CR.seeded) return; CR.xp += (store(HIST_KEY) || []).reduce((a, r) => a + runXP(r), 0); CR.seeded = true; crSave(); })();
+// Escudos de racha: si entre tu último día entrenado y hoy faltan días (como mucho tantos como escudos tengas), se gastan
+// solos y esos días quedan salvados; si faltan más, la racha se pierde y los escudos se guardan para la siguiente
+function shieldCheck(now = Date.now(), h = store(HIST_KEY) || []) {
+  if (!CR.shield) return;
+  const days = new Set(h.map(r => dayKey(r.date))), fz = new Set(CR.frozen), miss = [];
+  if (!days.size) return;
+  for (let d = noonOf(now) - DAY_MS; !days.has(dayKey(d)) && !fz.has(dayKey(d)) && miss.length <= SHIELD_MAX; d -= DAY_MS) miss.push(dayKey(d));
+  if (!miss.length || miss.length > CR.shield) return;
+  CR.shield -= miss.length; CR.frozen = [...CR.frozen, ...miss].slice(-120); CR.saved = { day: dayKey(now), n: miss.length, told: false }; crSave();
+}
+shieldCheck();
 
 /* ---------- Nivel y título ---------- */
 const lvlNeed = n => 100 + 20 * (n - 1); // de un nivel al siguiente: cada vez un poco más
@@ -60,6 +72,7 @@ function misAdd(list, o) {
 }
 function misToday(now = Date.now()) {
   const day = dayKey(now); if (CR.mis && CR.mis.day === day) return CR.mis;
+  shieldCheck(now); // (un día nuevo: ¿hace falta un escudo?)
   const R = seeded('reparena' + day), pickR = a => a[Math.floor(R() * a.length) % a.length], L = lvlOf().n, h = store(HIST_KEY) || [];
   // variedad: el modo que menos has jugado esta semana, o un ejercicio que ya conoces y llevas días sin hacer
   const week = h.filter(r => r.date > now - 7 * DAY_MS), modes = ['combat', 'arcs', 'touch', ...(h.some(r => r.mode === 'bars') ? ['bars'] : [])].sort((a, b) => week.filter(r => r.mode === a).length - week.filter(r => r.mode === b).length);
@@ -82,9 +95,12 @@ function careerRun(o) {
   const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
   M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
   if (!M.chest && M.list.every(m => m.done)) {
+    // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
-    G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${p ? ` y ${p.label}` : ''}`, '#ffd166']);
+    const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
+    G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
+  if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
   const l0 = lvlOf().n; CR.xp += xp; G.xp += xp; const l1 = lvlOf().n;
   for (let n = l0 + 1; n <= l1; n++) { G.notes.push([`¡Nivel ${n}!${titleOf(n) !== titleOf(n - 1) ? ` Ahora eres ${titleOf(n)}` : ''}`, '#ffd166']); unlocksAt(n).forEach(u => G.notes.push([`Desbloqueado: ${u}`, '#ff4fa3'])); }
   crSave();
@@ -163,6 +179,12 @@ function drawFlame(c, x, y, s) {
   const g = c.createLinearGradient(x, y - s, x, y + s); g.addColorStop(0, '#ffd166'); g.addColorStop(1, '#ff4a2a'); c.fillStyle = g;
   c.beginPath(); c.moveTo(x, y - s); c.bezierCurveTo(x + s * 0.9, y - s * 0.2, x + s * 0.7, y + s, x, y + s); c.bezierCurveTo(x - s * 0.7, y + s, x - s * 0.9, y - s * 0.1, x - s * 0.2, y - s * 0.45); c.bezierCurveTo(x - s * 0.1, y - s * 0.2, x + s * 0.1, y - s * 0.6, x, y - s); c.fill();
 }
+// un escudo de racha (lleno: lo tienes; hueco: te falta)
+function drawShield(c, x, y, s, on) {
+  c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * 0.8, y - s * 0.7); c.lineTo(x + s * 0.72, y + s * 0.15); c.quadraticCurveTo(x + s * 0.5, y + s * 0.7, x, y + s); c.quadraticCurveTo(x - s * 0.5, y + s * 0.7, x - s * 0.72, y + s * 0.15); c.lineTo(x - s * 0.8, y - s * 0.7); c.closePath();
+  if (on) { const g = c.createLinearGradient(x, y - s, x, y + s); g.addColorStop(0, '#bfeaff'); g.addColorStop(1, '#3a8fd8'); c.fillStyle = g; c.fill(); c.lineWidth = Math.max(1.5, s * 0.12); c.strokeStyle = '#eaf8ff'; c.stroke(); }
+  else { c.lineWidth = Math.max(1.5, s * 0.12); c.strokeStyle = 'rgba(128,128,128,0.55)'; c.stroke(); }
+}
 function drawChest(c, x, y, s, open) {
   c.fillStyle = '#7a4318'; rr(c, x - s, y - s * 0.2, s * 2, s * 1.1, s * 0.12); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(x - s * 0.55, y - s * 0.2, s * 0.18, s * 1.1); c.fillRect(x + s * 0.37, y - s * 0.2, s * 0.18, s * 1.1);
   if (open) { c.fillStyle = '#1a0d04'; c.fillRect(x - s * 0.9, y - s * 0.3, s * 1.8, s * 0.2); c.fillStyle = '#ffd166'; c.beginPath(); c.arc(x, y - s * 0.3, s * 0.55, Math.PI, 0); c.fill(); c.fillStyle = '#9a5622'; rr(c, x - s, y - s * 1.25, s * 2, s * 0.45, s * 0.12); c.fill(); }
@@ -183,8 +205,9 @@ function drawMissions(c, x, y, w, h) {
   });
   const fy = y + h * 0.84, s = h * 0.075;
   drawChest(c, x + s + 4, fy + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = M.chest ? '#ffd166' : '#a49fc8';
-  const ct = M.chest ? '¡Cofre del día abierto!' : 'Cofre del día: cumple las tres'; fitFont(c, ct, w * 0.44, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(ct, x + s * 2 + 14, fy);
-  drawFlame(c, x + w * 0.6, fy, s * 0.9); c.fillStyle = '#ffb36b'; const st = `Racha: ${daysTxt(P.streak)} · mejor ${daysTxt(P.best)}`; fitFont(c, st, w * 0.36, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(st, x + w * 0.6 + s + 8, fy);
+  const ct = M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP y un escudo`; fitFont(c, ct, w * 0.36, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(ct, x + s * 2 + 14, fy);
+  drawFlame(c, x + w * 0.5, fy, s * 0.9); c.fillStyle = '#ffb36b'; const st = `Racha: ${daysTxt(P.streak)} · mejor ${P.best}`; fitFont(c, st, w * 0.3, Math.round(h * 0.085), '600 %px ' + FB); c.fillText(st, x + w * 0.5 + s + 8, fy);
+  for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, x + w - (SHIELD_MAX - i) * s * 2 + s * 0.8, fy, s * 0.85, i < CR.shield); // (los escudos de racha)
 }
 // el mapa de una región de la campaña: un camino con sus cinco niveles (el del jefe, más grande y con corona), sus
 // estrellas, el siguiente por jugar en turquesa y el elegido rodeado
@@ -218,7 +241,8 @@ function progRows(again) {
     rows.push({ t: 'text', text: 'Cada repetición da experiencia (las perfectas, el doble). Los colores solo se ven', color: '#a49fc8' });
   } else if (PROG.tab === 'mis') {
     rows.push({ t: 'canvas', h: 0.24, text: misToday().list.map(m => MIS[m.t].txt(m) + (m.done ? ' ✓' : '')).join(' · '), draw: drawMissions });
-    rows.push({ t: 'text', text: `Tres nuevas cada día: +${MIS_XP} XP cada una; con las tres, el cofre (+${CHEST_XP} XP y un color)`, color: '#a49fc8' });
+    rows.push({ t: 'text', text: `Tres nuevas cada día: +${MIS_XP} XP cada una. Con las tres se abre el cofre: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`, color: '#a49fc8' });
+    rows.push({ t: 'text', text: `Escudos de racha: ${CR.shield} de ${SHIELD_MAX}. Si un día no entrenas, se gasta uno solo y tu racha sigue`, color: SHIELD_COL });
   } else if (PROG.tab === 'camp') {
     const C = campOf(), sel = clamp(PROG.lv || C.at, 1, CAMP_N), reg = PROG.reg >= 0 ? PROG.reg : Math.floor((sel - 1) / 5);
     rows.push({ t: 'canvas', h: 0.2, text: `Campaña de ${EX_NAMES[settings.exercise]} en ${MODE_NAMES[settings.mode]} · ${CAMP_REG[reg][0]}`, draw: (c, x, y, w, h) => drawCampMap(c, x, y, w, h, reg, sel) });
@@ -238,7 +262,8 @@ function careerHTML() {
   const L = lvlOf(), M = misToday(), esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   return `<div class="career"><div class="lvl"><b>${L.n}</b><span>Nivel ${L.n} · ${titleOf(L.n)}<i style="--k:${Math.round(100 * L.into / L.need)}%"></i><small>${L.into} / ${L.need} XP</small></span></div>
     <ul class="mis">${M.list.map(m => `<li class="${m.done ? 'done' : ''}"><span>${esc(MIS[m.t].txt(m))}</span><em>${m.done ? '✓' : `${Math.min(m.n, Math.floor(m.got))} / ${m.n}`}</em></li>`).join('')}</ul>
-    <p class="chest">${M.chest ? 'Cofre del día abierto' : 'Cumple las tres misiones y se abre el cofre del día'}</p></div>`;
+    <p class="chest">${M.chest ? 'Cofre del día abierto' : `Cumple las tres misiones y se abre el cofre del día: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`}</p>
+    <p class="shield">🛡 Escudos de racha: <b>${CR.shield} de ${SHIELD_MAX}</b>. Si un día no entrenas, se gasta uno solo y tu racha sigue.</p></div>`;
 }
 // Las fichas de tus cifras en el menú principal (teclas: al tocarlas, Opciones → Progreso): nivel, hoy, racha y misiones.
 // Dibujadas en la cara de la tecla; tc es el color de su letra
@@ -256,9 +281,11 @@ function statTiles() {
       if (k > 0) { c.strokeStyle = k >= 1 ? '#3cf0c6' : '#ff4fa3'; c.beginPath(); c.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke(); }
       txt(c, String(mins), cx, cy + 1, R * 1.4, R * 0.95, tc, 800, 'center'); const x = cx + R + H * 0.14;
       txt(c, 'Hoy', x, H * 0.36, W - x - 6, H * 0.24, tc); txt(c, `de ${goal} min`, x, H * 0.66, W - x - 6, H * 0.18, tc, 600); } },
-    { label: `Racha de ${daysTxt(P.streak)}`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
-      drawFlame(c, H * 0.4, H / 2, H * 0.27); const x = H * 0.78;
-      txt(c, daysTxt(P.streak), x, H * 0.36, W - x - 6, H * 0.26, tc); txt(c, `racha · mejor ${P.best}`, x, H * 0.68, W - x - 6, H * 0.17, tc, 600); } },
+    { label: `Racha de ${daysTxt(P.streak)} · ${CR.shield} ${CR.shield === 1 ? 'escudo' : 'escudos'}`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
+      drawFlame(c, H * 0.4, H / 2, H * 0.27); const x = H * 0.78, sv = CR.saved && CR.saved.day === dayKey(Date.now());
+      txt(c, daysTxt(P.streak), x, H * 0.33, W - x - 6, H * 0.26, tc);
+      const sr = H * 0.12; for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, x + sr + i * sr * 2.2, H * 0.7, sr, i < CR.shield); // (los escudos de racha)
+      const tx = x + SHIELD_MAX * sr * 2.2 + 4; txt(c, sv ? 'salvada' : `mejor ${P.best}`, tx, H * 0.7, W - tx - 6, H * 0.17, sv ? SHIELD_COL : tc, 600); } },
     { label: `Misiones: ${done} de 3`, onPress: () => progressOpen('mis'), paint: (c, W, H, tc) => {
       const r = H * 0.1; for (let i = 0; i < 3; i++) { const cx = H * 0.2 + r + i * r * 2.6, cy = H * 0.34; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = i < done ? '#3cf0c6' : 'rgba(128,128,128,0.35)'; c.fill(); }
       txt(c, M.chest ? '¡Cofre abierto!' : `Misiones ${done}/3`, H * 0.2, H * 0.7, W - H * 0.3, H * 0.2, M.chest ? '#ffd166' : tc);

@@ -5,7 +5,7 @@
 const BAR = { phase: 'place', t: 0, still: 0, ref: 1, hangRef: 1, refXZ: new V3(), drift: new V3(), front: new V3(), det: 'down', max: 0, t0: 0, hold: 0, letGo: 0, contact: false, need: 0, nextWave: 0, resume: false, started: false, mountXZ: new V3(), board: null };
 const barReq = () => (settings.exercise === 'row' ? settings.rowRange : settings.pullRange) / 100;
 const _bl = new V3(), _bq = new V3(), _bw = new V3(), _ba = new V3();
-function barReset() { Object.assign(BAR, { failed: false, phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null }); BAR.drift.set(0, 0, 0); }
+function barReset() { Object.assign(BAR, { failed: false, phase: 'place', t: 0, still: 0, det: 'down', letGo: 0, hold: 0, need: 0, nextWave: 0, resume: false, started: false, board: null, pwT: 0, pw: 1 }); BAR.drift.set(0, 0, 0); }
 // ¿Está la cabeza donde tiene que estar para usar el aparato?
 function barNear() {
   const l = eqLocal(eqPose(), head.p, _bl), y = head.p.y;
@@ -73,7 +73,7 @@ function placeRowBoard(fromHead) {
 
 /* ---------- Detector: cuenta al subir; caída si bajas de tu posición colgado ---------- */
 function barFall() {
-  stats.falls++;
+  stats.falls++; BAR.pw = 1; BAR.pwT = 0;
   if (vortexOn()) { vortexEngulf(); return; } // el remolino te engulle: la oleada termina
   const at = new V3(head.p.x, 0.03, head.p.z), door = eqKind() === 'door';
   if (door) poolGrab(at); else { SND.partial(); fx.glow(at, [1, 0.5, 0.3], 0.5, 0.2); }
@@ -121,9 +121,15 @@ function barDetect(t, dt) {
       const dur = t - BAR.t0; BAR.det = 'top';
       // aprende hacia dónde se desplaza la cabeza al subir (en el remo, hacia los pies)
       BAR.drift.lerp(_bl.set(HL.x - BAR.refXZ.x, 0, HL.z - BAR.refXZ.z), BAR.drift.lengthSq() ? 0.5 : 1);
-      barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 });
+      barRep({ perfect: dur >= pt * 0.5 && dur < 6, fast: pt > 0 && dur < pt * 0.25 }); BAR.pwT = 0; BAR.pw = 1;
     } else if (y < BAR.ref + 0.05) { if (BAR.max - BAR.ref > req * 0.55) onPartial('¡Más arriba!'); BAR.det = 'down'; }
-  } else if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) BAR.det = 'down'; // rearma al bajar casi todo el recorrido
+  } else {
+    // arriba (la barbilla por encima de la barra; en el remo, el pecho en la barra): aguantar carga ×2, ×3, ×4; al
+    // empezar a bajar, sale la onda con esa carga
+    if (y - BAR.ref >= req - 0.03) { BAR.pwT += dt; const p = powLevel(BAR.pwT); if (p > BAR.pw) { BAR.pw = p; barPower(p); } }
+    else if (BAR.pw > 1 && y - BAR.ref < req - 0.07) barBlast();
+    if (y < Math.max(BAR.ref + 0.06, BAR.max - req * 0.7)) { if (BAR.pw > 1) barBlast(); BAR.det = 'down'; } // rearma al bajar casi todo el recorrido
+  }
   if (BAR.det === 'down') BAR.contact = false;
 }
 function barRep(opts) {
@@ -138,6 +144,25 @@ function barRep(opts) {
   const c = tg.center(new V3()), h = head.p.clone().add(_ba.set(0, 0.08, 0));
   if (c.distanceTo(h) > 0.35) for (let i = 0; i <= 10; i++) fx.trail(h.clone().lerp(c, i / 10), [0.3, 1, 0.85], 0.06, 0.3);
   tg.onHit(opts.perfect ? 2 : 1, opts.perfect); if (!tg.alive) onKilled(tg);
+}
+
+const powRgb = p => { const c = POW_COL[p - 1]; return [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255]; };
+// Un nivel más de carga aguantando arriba
+function barPower(p) {
+  const col = '#' + POW_COL[p - 1].toString(16).padStart(6, '0'); SND.power(p); boardDirty = true;
+  cheer(`CARGA ×${p}`, col, 0.9); fx.glow(head.p.clone().add(_ba.set(0, 0.1, 0)), powRgb(p), 0.25 + p * 0.06, 0.15);
+}
+// Al bajar con carga: una onda desde la cabeza golpea al que viene (×2, ×3: más daño, como el disparo cargado); con ×4
+// revienta también a los demás que esperan cerca
+function barBlast() {
+  const p = BAR.pw; BAR.pw = 1; BAR.pwT = 0; if (state !== 'play' || p < 2) return;
+  const h = head.p.clone().add(_ba.set(0, 0.08, 0)), rgb = powRgb(p);
+  fx.glow(h, rgb, 0.4 + p * 0.1, 0.2); SND.power(p, h); cheer(p >= 4 ? '¡ONDA ×4!' : `¡ONDA ×${p}!`, '#' + POW_COL[p - 1].toString(16).padStart(6, '0'), 1.1);
+  const list = p >= 4 ? enemies.filter(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait')) : [frontTarget()].filter(Boolean);
+  for (const tg of list) {
+    const c = tg.center(new V3()); for (let i = 0; i <= 8; i++) fx.trail(h.clone().lerp(c, i / 8), rgb, 0.07, 0.3);
+    tg.onHit(POW_DMG[p - 1], false); if (!tg.alive) onKilled(tg);
+  }
 }
 
 /* ---------- Objetivos que se revientan con la cabeza ---------- */
