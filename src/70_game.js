@@ -2069,6 +2069,7 @@ function buildWave(i) {
     if (settings.arcPatterns) return arxPatterns(total);
     const lo = Math.min(dv('arcMin'), dv('arcMax')) / 100, hi = Math.max(dv('arcMin'), dv('arcMax')) / 100;
     for (let n = 0; n < total; n++) {
+      if (Math.random() * 100 < (settings.arcCombo || 0)) { list.push({ kind: 'combo', with: Math.random() < 0.5 ? 'laser' : 'walls', drop: rand(lo, (lo + hi) / 2), tilt: 0, hp: 1 }); continue; } // dos a la vez
       if (Math.random() * 100 < settings.arcNew) { list.push({ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1 }); continue; } // láser, paredes o rueda (por turnos)
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
@@ -2131,7 +2132,8 @@ function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
     ARX.minNext = 0;
-    if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
+    if (spec.kind === 'combo') { arcs.push(new ArcObs(spec.with)); arcs.push(new Arc(spec.drop, 0, true, 0)); } // a la vez: apártate (o métete en el hueco) y agáchate
+    else if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
     else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
       const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 2.5;
       bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;

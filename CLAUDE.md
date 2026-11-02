@@ -100,6 +100,7 @@ No las cambies sin preguntarle.
 - Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
   mientras se ve, no sale nada (ni enemigos ni orbes).
 - Arcos: el arco de plancha llega más despacio (velocidad propia), con un aviso grande delante y sin que lo adelante nada.
+- Arcos: la fiebre se ve en rojo (columnas de luz, pista y arena); con música, el compás se ve (♪ y destellos en cada pulso).
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.

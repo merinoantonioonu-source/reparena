@@ -55,7 +55,11 @@ function arxPatterns(total) {
     [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
     [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
     [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]], // al suelo, en plancha (y tiempo para levantarte)
-    [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]] // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
+    [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]], // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
+    // combinaciones: dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez,
+    // agáchate) o tres muy seguidos (con ritmo, a un pulso uno de otro)
+    [(settings.arcCombo || 0) / 20, () => [{ kind: 'combo', with: Math.random() < 0.5 ? 'laser' : 'walls', drop: rand(lo, mid), tilt: 0, hp: 1, gap: 1.4 }]],
+    [(settings.arcCombo || 0) / 25, () => { const s = Math.random() < 0.5 ? 1 : -1; return [S(rand(lo, hi), 0.3), S(rand(lo, hi), 0.3, { tilt: s * tiltA() }), S(hi, 1.4)]; }]
   ].filter(p => p[0] > 0), sum = pieces.reduce((a, p) => a + p[0], 0), list = [];
   while (list.length < total) { let r = Math.random() * sum, P = pieces[0]; for (const p of pieces) if ((r -= p[0]) <= 0) { P = p; break; } list.push(...P[1]()); }
   const out = arxPlankRoom(list.slice(0, total));
@@ -219,8 +223,9 @@ const _ao = new V3(), _ao2 = new V3();
 /* ---------- Sensación de avance: una rejilla de neón en la pista y arcos de luz a los lados que pasan junto a ti ---------- */
 // La pista: líneas de luz (de lado a lado cada metro y tres a lo largo) que corren hacia ti a la velocidad de los arcos y se
 // apagan a lo lejos. A los lados, en vez de farolas, arcos de luz finos que suben desde el suelo y se inclinan un poco hacia
-// dentro (sin entrar en la pista). Todo con el color de la racha: turquesa, dorado (5 seguidos) y rosa en fiebre; la arena
-// también se tiñe un poco (una luz de ambiente de ese color)
+// dentro (sin entrar en la pista). Todo con el color de la racha: turquesa, dorado (5 seguidos) y rojo en fiebre; la arena
+// también se tiñe (una luz de ambiente de ese color; en fiebre, roja y más fuerte). Al compás de la música, la pista y los
+// arcos de luz destellan en cada pulso: así se ve que todo va con la canción
 const ARX_DECO = new THREE.Group(); ARX_DECO.visible = false; arena.add(ARX_DECO);
 const gridMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
@@ -252,13 +257,14 @@ function arxFeverLook(on) { orbFeverLook(on); }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
   // el color de la racha, con suavidad
-  _tintT.setHex(ARX.fever ? 0xff4fa3 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
-  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) : 0) - ARX_TINT.intensity) * Math.min(1, dt * 3);
+  _tintT.setHex(ARX.fever ? 0xff2414 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
+  const bp = arxBeatP() ? arxBeatGlow() - 0.7 : 0; // (0 a 0,6, en cada pulso)
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 1.7 : 1) * (1 + bp * 0.5) : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp ? 12 : 3));
   if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
-  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8;
+  const D = arenaDepth(), z0 = -D + 0.5, span = D + 3, len = D + 1.5, pulse = (ARX.fever ? 0.75 + 0.25 * Math.sin(t * 10) : 0.8) + bp;
   ARX_GRID.scale.y = len; ARX_GRID.position.z = -D + len / 2 + 0.4; Object.assign(gridMat.uniforms.uLen, { value: len }); gridMat.uniforms.uScroll.value = -arxScroll; gridMat.uniforms.uCol.value.copy(_tintC); gridMat.uniforms.uK.value = pulse;
-  archMat.color.copy(_tintC); archMat.opacity = 0.35 + 0.25 * pulse;
+  archMat.color.copy(_tintC); archMat.opacity = Math.min(1, (0.35 + 0.25 * pulse) * (ARX.fever ? 0.8 : 1)); // (en fiebre, algo menos: sobre la arena roja, si no, se ven blancas)
   ARX_POST.forEach((g, i) => { g.position.z = z0 + ((Math.floor(i / 2) * POST_GAP + arxScroll) % span); g.userData.tip.material.color.copy(_tintC); });
 }
 
