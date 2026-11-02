@@ -43,8 +43,8 @@ function audioInit() {
 // (SND_FILES, más abajo) y los sonidos continuos (LOOP_FILES) se pueden sustituir; sounds/LEEME.md tiene la lista
 const LOOP_FILES = ['zumbido-dron', 'zumbido-avispa', 'espada-laser-zumbido', 'remolino', 'arco-zumbido', 'ambiente-arena', 'ambiente-bosque', 'ambiente-naturaleza', 'ambiente-isla'];
 AUD.samples = {};
-async function loadSamples() {
-  if (typeof fetch !== 'function' || AUD.loading) return; AUD.loading = true;
+function loadSamples() { if (typeof fetch !== 'function' || AUD.loading) return AUD.loadP; AUD.loading = true; return (AUD.loadP = loadSamplesNow()); }
+async function loadSamplesNow() {
   await Promise.all(sampleNames().map(async n => {
     for (const ext of ['mp3', 'ogg', 'wav']) {
       try {
@@ -490,7 +490,7 @@ function ambientStart() {
   AMB.nodes = { nodes, out };
 }
 // Al entrar o salir del bosque cambia el ambiente
-const ambKind = () => forestOn() ? 'forest' : natureOn() ? 'nature' : islandOn() ? 'island' : 'arena';
+const ambKind = () => AMB.force || (forestOn() ? 'forest' : natureOn() ? 'nature' : islandOn() ? 'island' : 'arena');
 function ambientRefresh() { if (AMB.nodes && AMB.kind !== ambKind()) { ambientStop(); ambientStart(); } }
 function ambientStop() {
   if (!AMB.nodes) return; const T = AUD.C.currentTime;
@@ -504,4 +504,51 @@ function updateListener(pos, q) {
     L.positionX.value = pos.x; L.positionY.value = pos.y; L.positionZ.value = pos.z;
     L.forwardX.value = _lf.x; L.forwardY.value = _lf.y; L.forwardZ.value = _lf.z; L.upX.value = _lu.x; L.upY.value = _lu.y; L.upZ.value = _lu.z;
   } else { L.setPosition(pos.x, pos.y, pos.z); L.setOrientation(_lf.x, _lf.y, _lf.z, _lu.x, _lu.y, _lu.z); }
+}
+
+/* ---------- Escuchar cada sonido desde la página (la lista «Sonidos que puedes cambiar») ---------- */
+// Suena el que usa el juego ahora: tu archivo de sounds/ si lo hay; si no, el sintetizado. Devuelve de cuál se trata
+// ('file' o 'synth'), o por qué no suena ('mute': volumen a 0; 'amb0': el ambiente a 0 %; 'off': sin sonido en el navegador)
+const PREV = { stop: null, t: 0 };
+const PREV_OWN = { rayo: P => SND.bolt(P, 0), 'rayo-cargado': P => SND.bolt(P, 3), impacto: P => SND.boltHit(P, 1), tentaculos: P => SND.tentacle(P), 'caida-foso': P => SND.horror(P), pompa: P => SND.pop(P, false) };
+const PREV_LOOP = { 'zumbido-dron': P => buzzLoop('drone', P), 'zumbido-avispa': P => buzzLoop('wasp', P), 'espada-laser-zumbido': P => saberLoop(P), remolino: P => { const L = suctionLoop(P); if (L) L.set(P, 1); return L; }, 'arco-zumbido': P => humLoop(P) };
+const PREV_ARGS = { power: { 0: 3 }, swordSwish: { 2: 3 } }; // (lo que piden además del sitio: el nivel de la carga, lo deprisa que va la hoja)
+const PREV_AMB = { 'ambiente-arena': 'arena', 'ambiente-bosque': 'forest', 'ambiente-naturaleza': 'nature', 'ambiente-isla': 'island' };
+async function sndPreview(name) {
+  if (!audioInit()) return 'off';
+  try { if (AUD.C.state === 'suspended') await AUD.C.resume(); } catch (e) {}
+  await (loadSamples() || Promise.resolve());
+  if (settings.volume <= 0) return 'mute';
+  if (PREV.stop) { PREV.stop(); PREV.stop = null; } clearTimeout(PREV.t);
+  updateListener(head.p, head.q); // (en la página no corre el bucle del juego: el oído, donde está tu cabeza; el sonido, a 1,2 m delante)
+  const P = head.p.clone().add(fwd(head.q).multiplyScalar(1.2)), file = !!AUD.samples[name], ms = n => { PREV.t = setTimeout(() => { if (PREV.stop) { PREV.stop(); PREV.stop = null; } }, n); };
+  if (PREV_AMB[name]) { // el ambiente: el de ese entorno, unos segundos, y luego vuelve el que sonara
+    if (ambMute()) return 'amb0';
+    const had = !!AMB.nodes; ambientStop(); AMB.force = PREV_AMB[name]; ambientStart(); AMB.force = '';
+    PREV.stop = () => { ambientStop(); if (had) ambientStart(); }; ms(6000); return file ? 'file' : 'synth';
+  }
+  if (PREV_LOOP[name]) { const L = PREV_LOOP[name](P); if (L) { PREV.stop = () => L.stop(); ms(3500); } return file ? 'file' : 'synth'; }
+  if (file) { const b = AUD.samples[name], s = AUD.C.createBufferSource(); s.buffer = b; s.connect(sout(null, { rev: 0.1, gain: 1 })); s.start(); PREV.stop = () => { try { s.stop(); } catch (e) {} }; ms(Math.min(8000, b.duration * 1000 + 200)); return 'file'; }
+  // el sintetizado: el efecto que usa ese archivo (con su enemigo, si es una voz; con la espada láser, si acaba en -laser)
+  if (PREV_OWN[name]) { PREV_OWN[name](P); return 'synth'; }
+  const base = name.replace(/-laser$/, ''), laser = base !== name;
+  for (const [k, [F, pi, li]] of Object.entries(SND_FILES)) {
+    const a = Object.assign([], PREV_ARGS[k]); if (pi != null) a[pi] = P;
+    if (typeof F === 'string') { if (F !== base) continue; if (li != null) a[li] = laser; SND[k](...a); return 'synth'; }
+    const who = Object.keys(VOICE_FILES[k]).find(w => VOICE_FILES[k][w] === name); if (!who) continue;
+    a[F.who] = who; SND[k](...a); return 'synth';
+  }
+  return 'synth';
+}
+// En la página: cada fila de la lista suena al pulsarla y dice de dónde sale ese sonido
+const PREV_TXT = { file: 'Tu archivo (de la carpeta sounds/)', synth: 'Sintetizado (no hay archivo con este nombre)', mute: 'El volumen está a 0 (Ajustes → Sonido)', amb0: 'El sonido ambiente está a 0 % (o suena Spotify)', off: 'Este navegador no tiene sonido' };
+function sndPageInit() {
+  const box = $('#soundsBox'); if (!box || !box.addEventListener) return;
+  box.addEventListener('click', async ev => {
+    const b = ev.target && ev.target.closest ? ev.target.closest('button[data-snd]') : null; if (!b) return;
+    const how = await sndPreview(b.dataset.snd), out = b.querySelector && b.querySelector('.sndsrc');
+    if (box.querySelectorAll) box.querySelectorAll('.snd.playing').forEach(x => x.classList.remove('playing'));
+    b.classList.add('playing'); setTimeout(() => b.classList.remove('playing'), 1500);
+    if (out) { out.textContent = PREV_TXT[how] || ''; out.className = 'sndsrc ' + how; }
+  });
 }
