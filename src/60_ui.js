@@ -94,7 +94,7 @@ function drawFoeCard(b, c, W, H, it, tc) {
 }
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
-    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card; this.paint = o.paint; // (paint: lo impreso en la tecla, dibujado a mano: las fichas del menú principal)
+    this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card; this.paint = o.paint; this.fill = o.fill; // (fill: la tecla entera de ese color, más oscuro si no está elegida: los modos del menú principal) (paint: lo impreso en la tecla, dibujado a mano: las fichas del menú principal)
     this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
     this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
   }
@@ -102,13 +102,13 @@ class Btn {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
     if (this.cap) { // tecla de verdad (buildKeys): el cuerpo es la tecla; aquí solo lo que va impreso encima
-      const tc = keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
-      if (this.accent && this.style === 'normal') { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
+      const tc = this.fill ? (this.style === 'selected' ? '#1a0716' : '#ffffff') : keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
+      if (this.accent && this.style === 'normal' && !this.fill) { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
       if (this.card) { drawFoeCard(this, c, W, H, this.card, tc); this.p.tex.needsUpdate = true; return; }
       if (this.paint) { this.paint(c, W, H, tc); this.p.tex.needsUpdate = true; return; }
       if (this.badge !== undefined) drawRank(c, this.badge, this.label ? H * 0.62 : W / 2, H / 2, this.label ? H * 0.62 : Math.min(W, H) * 0.72, tc); // (sin texto: el galón solo, en medio)
-      const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' ? H * 0.16 : 0;
+      const ax = this.badge !== undefined ? H * 0.42 : this.accent && this.style === 'normal' && !this.fill ? H * 0.16 : 0;
       fitFont(c, this.label, W - H * 0.3 - ax * 2, Math.round(H * (this.font || 0.44)), '700 %px ' + FB); c.fillText(this.label, W / 2 + ax, H / 2 + 2); this.p.tex.needsUpdate = true; return;
     }
     c.clearRect(0, 0, W, H); rr(c, 4, 4, W - 8, H - 8, Math.min(H * 0.28, 28));
@@ -166,7 +166,8 @@ const KEYC_C = { normal: [0x8fc7ff, '#1b1222'], primary: [0xff8a3d, '#1b1222'], 
   danger: [0xff6b7f, '#1b1222'], key: [0x8fc7ff, '#1b1222'], ghost: [0xd9d2e9, '#5a4f73'], slider: [0xfff2d6, ''], tray: [0x3a2d5c, ''] };
 const keyc = style => { const P = comicOn() ? KEYC_C : KEYC; return P[style] || P.normal; };
 // el color del cuerpo de una tecla: el de su estilo o, elegida y con tinte (los del menú principal), el de su parte
-const keyBody = w => w.kind !== 'slider' && w.tint && w.style === 'selected' ? parseInt(w.tint.slice(1), 16) : keyc(w.kind === 'slider' ? 'slider' : w.style)[0];
+const hexDim = (h, k) => { const v = parseInt(h.slice(1), 16); return ((v >> 16 & 255) * k << 16) | ((v >> 8 & 255) * k << 8) | ((v & 255) * k | 0); };
+const keyBody = w => w.fill ? (w.style === 'selected' ? parseInt(w.fill.slice(1), 16) : hexDim(w.fill, 0.42)) : w.kind !== 'slider' && w.tint && w.style === 'selected' ? parseInt(w.tint.slice(1), 16) : keyc(w.kind === 'slider' ? 'slider' : w.style)[0];
 // la luz con la que se pintan las teclas (en el plano del menú: x a la derecha, y arriba, z hacia ti): de arriba a la izquierda
 const KEY_L = new V3(-0.42, 0.62, 0.66).normalize(), KEY_HV = KEY_L.clone().add(new V3(0, 0, 1)).normalize();
 // anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
@@ -495,7 +496,7 @@ function openMenu(rows, opts = {}) {
       const n = r.items.length, tot = r.items.reduce((a, it) => a + (it.flex || 1), 0), avail = CW - GAP * (n - 1); let x = X0;
       r.items.forEach(it => { const w = avail * (it.flex || 1) / tot, st = it.style || (r.t === 'tabs' ? (it.on ? 'selected' : 'tab') : 'normal');
         if (it.sep) { if (!it.blank) c.fillStyle = 'rgba(255,255,255,0.25)'; if (!it.blank) c.fillRect((x + w / 2 + MW / 2) * sc - 2, (H / 2 - cy - h * 0.4) * sc, 4, h * 0.8 * sc); x += w + GAP; return; } // un separador (raya vertical), sin tecla
-        addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint, paint: it.paint }), x + w / 2, cy); x += w + GAP; });
+        addW(new Btn(it.label, w, it.h || h, it.onPress, { style: st, font: it.font || (r.t === 'tabs' ? 0.4 : undefined), accent: it.accent || (tint && st === 'normal' && !it.icon && it.badge === undefined ? tint : undefined), icon: it.icon, badge: it.badge, tint: it.tint || tint, paint: it.paint, fill: it.fill }), x + w / 2, cy); x += w + GAP; });
     } else if (r.t === 'cards') { // fichas que se marcan y desmarcan (los enemigos: foeCardRows), sin etiqueta, a todo el ancho
       const cols = r.cols, w = (CW - GAP * (cols - 1)) / cols, sel = () => foeList(r.key), btns = [];
       r.items.forEach((it, k) => { const x = X0 + (k % cols) * (w + GAP) + w / 2, yy = cy + h / 2 - CARD_H / 2 - Math.floor(k / cols) * (CARD_H + GAP);

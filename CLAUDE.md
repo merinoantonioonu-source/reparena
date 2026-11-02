@@ -96,11 +96,17 @@ No las cambies sin preguntarle.
 - El resumen de la ronda, lo esencial (opción A elegida): dónde acabó y el ejercicio, el número grande, la medalla y las
   perfectas, tres casillas (puntos, tiempo y kcal), un solo logro (el más importante) y dos botones, «Otra ronda» y «Menú
   principal». Nada de nivel, semana, mejor ronda, derribados, precisión ni combo.
-- Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**.
+- Con cartas de mejora por elegir, la oleada siguiente **espera a que el jugador elija**. Salen como mucho **cada tres oleadas** y solo
+  si se las gana (pocos golpes en esas tres).
 - Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
   mientras se ve, no sale nada (ni enemigos ni orbes).
 - Arcos: el arco de plancha llega más despacio (velocidad propia), con un aviso grande delante y sin que lo adelante nada.
-- Arcos: la fiebre se ve en rojo (columnas de luz, pista y arena); con música, el compás se ve (♪ y destellos en cada pulso).
+- Arcos: la fiebre se ve en rojo (columnas de luz, pista y arena) y con tormenta roja en el cielo de todos los entornos
+  (nubarrones, niebla roja y relámpagos); con música, el compás se ve (♪ y destellos en cada pulso).
+- Arcos va **«Al fallo» de serie** (reto de aguante).
+- Arcos inclinados: agacharse en el centro no vale; hay que apartarse hacia el lado alto (pared de energía bajo el lado
+  bajo hasta pasado el centro) y bajar sobre esa pierna.
+- Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos).
 
 **Enemigos y física**
 - Los enemigos **nunca atraviesan** compuertas, piedras, cajas ni otros sólidos.
@@ -151,7 +157,8 @@ No las cambies sin preguntarle.
     título; con Sesiones, EMPEZAR SESIÓN); debajo, las cifras en fichas (nivel, hoy, racha y misiones; al tocarlas,
     Progreso); luego el **modo** (Combate, Arcos, Barras, Toques) con su color y, tras un separador, **Sesiones**; con un
     modo, sus ejercicios y la dificultad (galones, «Al fallo», la ronda en una ficha y lo del ojo); con Sesiones, la
-    sesión bloque a bloque, legible; Spotify; y **Opciones ▸** (Rivales y armas, Progreso, Sonido, Entorno y Ajustes, en
+    sesión bloque a bloque, legible; el modo, los ejercicios y la dificultad, cada uno en su caja con título y color
+    (los modos, teclas enteras de su color; los ejercicios, en blanco); Spotify; y **Opciones ▸** (Rivales y armas, Progreso, Sonido, Entorno y Ajustes, en
     pestañas) y Salir; en Ajustes, las pestañas de los modos se llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;

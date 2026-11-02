@@ -17,15 +17,20 @@ const PERKS = {
   combo: { name: 'Combo de hierro', col: '#ff8a3d', desc: 'El primer golpe de cada oleada no te rompe el combo' },
   calm: { name: 'Calma', col: '#7ee081', desc: 'Los enemigos se mueven un 15 % más despacio' }
 };
-const PK = { has: new Set(), offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0 };
+// every: cada cuántas oleadas superadas hay cartas; maxHits: los golpes que puedes llevarte en ese tramo para ganártelas
+const PK = { has: new Set(), offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0, every: 3, maxHits: 3, since: 0, taken0: 0 };
 const perksOn = () => !!settings.perks && isCombat();
 const surpriseOn = () => !!settings.surprises && isCombat();
 const perkHas = k => PK.has.has(k);
 
 /* ---------- Mejoras entre oleadas ---------- */
 // Al superar una oleada (con descanso por delante), las cartas salen a los pocos segundos (después del «¡Oleada superada!»)
+// Las cartas hay que ganárselas: como mucho, cada tres oleadas superadas, y solo si en ese tramo no te han dado más de
+// tres veces (si no, otras tres oleadas). Así no cortan el ritmo tras cada oleada
 function perkWaveCleared() {
-  if (perksOn() && !SES.active && perkPool().length) PK.offerT = 1.2;
+  PK.since++; const hits = stats.taken - PK.taken0;
+  if (PK.since >= PK.every) { const earned = hits <= PK.maxHits; PK.since = 0; PK.taken0 = stats.taken;
+    if (earned && perksOn() && !SES.active && perkPool().length) PK.offerT = 1.2; else if (!earned && perksOn()) cheer(`Sin mejora: ${hits} golpes en ${PK.every} oleadas`, '#a49fc8', 1.6); }
   chestMaybe();
 }
 const perkPool = () => Object.keys(PERKS).filter(k => !PK.has.has(k) && (!PERKS[k].ok || PERKS[k].ok()));
@@ -251,7 +256,7 @@ function chestOpen() {
 
 /* ---------- Cada ronda y cada fotograma ---------- */
 function perkReset() {
-  PK.has.clear(); Object.assign(PK, { offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0 });
+  PK.has.clear(); Object.assign(PK, { offer: null, offerT: -1, shield: 0, comboSave: 0, perfN: 0, since: 0, taken0: 0 });
   rushStop(true); RUSH.planT = -1; RUSH.song = spConnected() && SP.st && SP.st.item ? SP.st.item.id : null;
   perkClear(); ghostReset();
 }

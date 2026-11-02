@@ -31,7 +31,28 @@ function fitFont(c, text, max, start, fam) {
 
 /* =================== ENTORNO VR =================== */
 const env = new THREE.Group(); scene.add(env);
-const skyMat = new THREE.ShaderMaterial({
+// Tormenta de la fiebre de los Arcos (71_arcs): todos los cielos se enrojecen y oscurecen, con relámpagos rojos. Los
+// valores (cuánta tormenta, el relámpago y el paso de las nubes) se comparten entre los cielos (fortaleza, bosque,
+// naturaleza, isla y cómic); la niebla toma el mismo tono
+const STORM = { k: { value: 0 }, f: { value: 0 }, t: { value: 0 } }, STORM_FOG = new THREE.Color(0x3a0806);
+function stormSky(mat) {
+  Object.assign(mat.uniforms, { uStorm: STORM.k, uStormF: STORM.f, uStormT: STORM.t });
+  mat.fragmentShader = `uniform float uStorm; uniform float uStormF; uniform float uStormT;
+    float stH(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+    float stN(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(stH(i),stH(i+vec2(1.0,0.0)),f.x), mix(stH(i+vec2(0.0,1.0)),stH(i+vec2(1.0,1.0)),f.x), f.y); }
+` + mat.fragmentShader.replace(/}\s*$/, `
+      if (uStorm > 0.001) { /* nubarrones oscuros que corren deprisa, con rojo entre ellos y en el horizonte, y los relámpagos */
+        vec3 sd = normalize(vP); float sh = sd.y, stL = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
+        vec2 su = sd.xz / (max(sh, 0.0) + 0.25) * 1.6 + vec2(uStormT * 0.06, uStormT * 0.025);
+        float cl = smoothstep(0.35, 0.8, stN(su) * 0.6 + stN(su * 2.3 + 3.1) * 0.4) * smoothstep(-0.05, 0.2, sh);
+        vec3 stC = mix(vec3(0.2, 0.016, 0.008), vec3(0.035, 0.005, 0.005), cl) + vec3(0.45, 0.05, 0.02) * smoothstep(0.3, -0.05, sh) + vec3(0.25, 0.03, 0.015) * stL;
+        stC += uStormF * vec3(1.0, 0.35, 0.22) * (0.2 + (1.0 - cl) * 0.6) * smoothstep(-0.1, 0.3, sh);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, stC, uStorm);
+      }
+    }`);
+  return mat;
+}
+const skyMat = stormSky(new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { time: { value: 0 }, flash: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform float time; uniform float flash; varying vec3 vP;
@@ -49,7 +70,7 @@ const skyMat = new THREE.ShaderMaterial({
       c += flash * vec3(0.55,0.6,0.85) * (0.35 + cl * 1.2) * smoothstep(-0.1, 0.3, h);
       gl_FragColor = vec4(c, 1.0);
     }`
-});
+}));
 const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), skyMat); sky.renderOrder = -10; env.add(sky);
 const envFloor = new THREE.Mesh(new THREE.CircleGeometry(36, 64), M.floor); envFloor.rotation.x = -Math.PI / 2; envFloor.receiveShadow = true; env.add(envFloor);
 const outerGround = new THREE.Mesh(new THREE.RingGeometry(35.9, 150, 48), std({ color: 0x15100e, roughness: 1 })); outerGround.rotation.x = -Math.PI / 2; outerGround.position.y = -0.01; env.add(outerGround);

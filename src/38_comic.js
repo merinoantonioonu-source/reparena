@@ -177,7 +177,7 @@ for (const g of [scene, arena]) { const add = g.add; g.add = function (...o) { c
 function comicEnvBuild() {
   if (COMIC.sky) return;
   // cielo de dibujo: melocotón en el horizonte y azul claro arriba, con nubes blancas de borde entintado y la panza lavanda
-  COMIC.sky = new THREE.ShaderMaterial({
+  COMIC.sky = stormSky(new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false, extensions: { derivatives: true }, uniforms: { uT: { value: 0 } },
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: `uniform float uT; varying vec3 vP;
@@ -204,7 +204,7 @@ function comicEnvBuild() {
         c = mix(c, cloud, cl); c = mix(c, vec3(0.2,0.13,0.25), ink * 0.85);
         gl_FragColor = vec4(c, 1.0);
       }`
-  });
+  }));
   // suelo color arena con grietas a tinta (ramas que se abren) y manchas algo más claras
   const S = 1024, cv = mkCanvas(S), x = cv.getContext('2d'), R = rng(11);
   x.fillStyle = '#ecc9a4'; x.fillRect(0, 0, S, S);
