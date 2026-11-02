@@ -21,11 +21,13 @@ def sounds_html():
         m = re.match(r'^\| `([a-z0-9\-]+)` \| (.*) \|\s*$', line)
         if m and cur: cur[1].append((m.group(1), m.group(2)))
     out = ['<section class="sounds" id="soundsBox">', '<h2>Sonidos que puedes cambiar</h2>',
-           '<p class="note">Sube a la carpeta <code>sounds/</code> del repositorio un archivo <code>.mp3</code>, <code>.ogg</code> o <code>.wav</code> con el nombre exacto (por ejemplo <code>rayo.mp3</code>) y el juego lo usará en lugar del sonido sintetizado. En GitHub: carpeta <code>sounds</code> → <b>Add file → Upload files</b> → <b>Commit changes</b>.</p>']
+           '<p class="note">Sube a la carpeta <code>sounds/</code> del repositorio un archivo <code>.mp3</code>, <code>.ogg</code> o <code>.wav</code> con el nombre exacto (por ejemplo <code>rayo.mp3</code>) y el juego lo usará en lugar del sonido sintetizado. En GitHub: carpeta <code>sounds</code> → <b>Add file → Upload files</b> → <b>Commit changes</b>.</p>',
+           '<p class="note">Pulsa cualquier sonido de la lista para <b>escucharlo como suena ahora en el juego</b>: si es tu archivo, pone «tu archivo»; si no, «sintetizado». Así sabes si te merece la pena cambiarlo.</p>']
     for title, rows in groups:
         if not rows: continue
         out.append('<h3>' + inline(title) + '</h3><div class="sndlist">')
-        out += ['<div class="snd"><code>' + n + '</code><span>' + inline(d) + '</span></div>' for n, d in rows]
+        # cada fila es un botón: al pulsarlo suena el sonido que usa el juego ahora (tu archivo o el sintetizado)
+        out += ['<button type="button" class="snd" data-snd="' + n + '" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>' + n + '</code><span>' + inline(d) + '<em class="sndsrc" aria-live="polite"></em></span></button>' for n, d in rows]
         out.append('</div>')
     out.append('</section>')
     return '\n'.join(out)

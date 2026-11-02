@@ -129,7 +129,10 @@ button{font:inherit;cursor:pointer}
 .hist table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .sounds h3{margin:18px 0 8px;font-size:.95rem;color:var(--muted);letter-spacing:.04em}
 .sndlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 18px}
-.snd{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.snd{display:flex;gap:10px;align-items:baseline;padding:6px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;font-size:.9rem;text-align:left;width:100%;cursor:pointer;border-radius:6px}
+.snd:hover,.snd:focus-visible{background:rgba(60,240,198,.08)}.snd.playing{background:rgba(60,240,198,.16)}
+.sndplay{flex:0 0 auto;font-style:normal;color:var(--teal,#3cf0c6);font-size:.8rem;width:1.1em}
+.sndsrc{display:block;font-style:normal;font-size:.78rem;color:var(--muted)}.sndsrc:empty{display:none}.sndsrc.file{color:#ffd166}.sndsrc.synth{color:#7fd4ff}
 .snd code{flex:0 0 auto;min-width:150px;color:var(--teal,#3cf0c6);font-weight:600}
 .snd span{color:var(--fg)}
 .hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
