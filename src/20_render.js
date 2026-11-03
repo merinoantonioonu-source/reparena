@@ -15,7 +15,7 @@ if (renderer.debug) renderer.debug.checkShaderErrors = false; renderer.shadowMap
 renderer.shadowMap.enabled = !!settings.shadows && settings.look !== 'comic'; renderer.shadowMap.type = THREE.PCFShadowMap; // (la suave pedía muchas más muestras por píxel: en las gafas, tirones)
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
-if (renderer.xr.setFoveation) renderer.xr.setFoveation(0.6);
+if (renderer.xr.setFoveation) renderer.xr.setFoveation(0.3); // (luego la ajusta qualStep: 80_main)
 $('#stage').prepend(renderer.domElement);
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 const MAX_ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4);
