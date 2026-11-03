@@ -47,7 +47,9 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
   silueta (stencil y copias de la figura del enemigo) dejaban planos de basura blancos y azules pegados a la vista en
   cuanto salía la primera diana.
 - En las gafas, no cambies la capa de imagen (`XRWebGLLayer`) a menudo: cada una ocupa otra memoria de vídeo y, con
-  muchos cambios, las gafas pintan planos de basura blancos y azules. La foveación se cambia en la capa de ahora.
+  muchos cambios, las gafas pintan planos de basura blancos y azules. La foveación se cambia en la capa de ahora. La
+  resolución se elige una vez al entrar (`qualSessionStart`, `src/80_main.js`) y no cambia en la partida: para aligerar,
+  solo foveación y sombras (si no, la nitidez se quedaba baja y las letras, borrosas).
 - Los modelos 3D están en `models/` (Quaternius, cada pack con su licencia). Los sonidos se pueden sustituir con
   archivos en `sounds/` (lista en `sounds/LEEME.md`, que el build copia a la página).
 - Los simulacros de las pruebas son limitados:
