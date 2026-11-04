@@ -776,7 +776,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const T = { maxV: 0, biomes: new Set(), branch: 0, chest: 0 };
     await runConfig('Travesía', { ...base, mode: 'trek', exercise: 'squat', waves: 3, repsWave: 6, repsInc: 0, rest: 0, lives: 3 }, t => {
       RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; RA.TREK.nextChase = 1e9; /* (los lobos, en su prueba) */ T.maxV = Math.max(T.maxV, RA.TREK.v); T.biomes.add(RA.TREK.biome);
-      for (const o of RA.TREK.obs) { if (o.kind === 'log') T.branch++; else if (o.kind === 'branch') T.duck = 1; else T.chest++; } }, 240, s => s.reps < 18 ? `deberían contar las 18 repeticiones de los tres tramos (${s.reps})` : RA.TREK.dist < 12 ? `debería avanzar por el sendero (${RA.TREK.dist.toFixed(1)} m)` : T.maxV > 1.51 ? `demasiado deprisa para no marear (${T.maxV.toFixed(2)} m/s)` : T.biomes.size < 3 ? `cada tramo con su paisaje (${[...T.biomes]})` : !T.branch || !T.chest ? 'deberían salir troncos que saltar (en sentadillas) y cofres' : T.duck ? 'en sentadillas no deberían salir ramas para agacharse (es lo mismo que te hace avanzar)' : s.taken ? 'las ramas no quitan vidas' : '');
+      for (const o of RA.TREK.obs) { if (o.kind === 'log') T.branch++; else if (o.kind === 'branch') T.duck = 1; else T.chest++; } }, 240, s => s.reps < 18 ? `deberían contar las 18 repeticiones de los tres tramos (${s.reps})` : RA.TREK.dist < 12 ? `debería avanzar por el sendero (${RA.TREK.dist.toFixed(1)} m)` : T.maxV > 1.5 * RA.settings.trekSpeed / 100 + 0.01 ? `más deprisa que la velocidad elegida (${T.maxV.toFixed(2)} m/s)` : T.biomes.size < 3 ? `cada tramo con su paisaje (${[...T.biomes]})` : !T.branch || !T.chest ? 'deberían salir troncos que saltar (en sentadillas) y cofres' : T.duck ? 'en sentadillas no deberían salir ramas para agacharse (es lo mismo que te hace avanzar)' : s.taken ? 'las ramas no quitan vidas' : '');
     // la velocidad, del ritmo y de lo hondo: media sentadilla despacio < sentadilla honda a buen ritmo
     const want = (depthK, gap) => { RA.TREK.lastRep = performance.now() / 1000 - gap; RA.TREK.minY = RA.calibRef - depthK * RA.settings.squatDepth / 100; RA.trekRep({ perfect: false }); return RA.TREK.want; };
     const slow = want(0.6, 4), good = want(1.0, 2.4), hard = want(1.5, 1.6); log(`trek speed: shallow and slow ${slow.toFixed(2)} · normal ${good.toFixed(2)} · deep and fast ${hard.toFixed(2)} m/s`);
@@ -784,13 +784,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // las paradas cuentan otro movimiento con la cabeza: saltos, sentadillas y zancadas (embestidas hacia delante)
     { const c0 = RA.calibRef, H = RA.HL, seq = (move, pts) => { RA.TREK.halt = { move }; Object.assign(RA.TMV, { st: 'up', z0: 0 }); let n = 0; for (const [y, z] of pts) { H.y = c0 + y; H.z = z; if (RA.trekMoveStep()) n++; } RA.TREK.halt = null; return n; };
       const sq = RA.settings.squatDepth / 100, jumps = seq('jump', [[0, 0], [0.15, 0], [0, 0], [0.15, 0], [0.01, 0], [0.05, 0]]), squats = seq('squat', [[0, 0], [-sq, 0], [0, 0], [-sq * 0.5, 0], [0, 0]]), lunges = seq('lunge', [[0, 0], [-0.2, -0.3], [0, -0.3], [-0.2, 0], [0, 0]]);
-      // zancadas laterales (el arroyo): a la izquierda, otra vez a la izquierda (mal: tocaba la derecha) y a la derecha
-      RA.TREK.halt = { move: 'side', sides: [-1, 1, -1], got: 0 }; Object.assign(RA.TMV, { st: 'up', x0: 0, z0: 0 }); let sides = 0;
-      for (const [y, x] of [[0, 0], [-0.15, -0.3], [0, 0], [-0.15, -0.3], [0, 0], [-0.15, 0.3], [0, 0.2], [0, 0]]) { H.y = c0 + y; H.x = x; H.z = 0; if (RA.trekMoveStep()) { sides++; RA.TREK.halt.got++; } }
-      RA.TREK.halt = null; H.x = 0;
-      log(`trek stops: jumps ${jumps} (2) · squats ${squats} (1) · lunges ${lunges} (1) · side lunges ${sides} (2)`);
+      log(`trek stops: jumps ${jumps} (2) · squats ${squats} (1) · lunges ${lunges} (1)`);
       if (jumps !== 2 || squats !== 1 || lunges !== 1) errors.push(`Travesía: las paradas deberían contar saltos, sentadillas hondas y zancadas hacia delante (${jumps}, ${squats}, ${lunges})`);
-      if (sides !== 2) errors.push(`Travesía: en el arroyo, cada zancada lateral debería contar solo hacia el lado de la piedra siguiente y al volver al centro (${sides} de 2)`); }
+      }
     log(`trek: ${RA.TREK.dist.toFixed(1)} m · top speed ${T.maxV.toFixed(2)} m/s · landscapes ${[...T.biomes]} · branches ducked ${RA.TREK.ducked}, hit ${RA.TREK.hits} · chests ${RA.TREK.got}`); }
   // Travesía: el arroyo (zancadas laterales de piedra en piedra) y el desfiladero (saltos de pilar en pilar, que se hunden;
   // si tardas, el pilar se hunde contigo: una vida, solo la primera vez)
