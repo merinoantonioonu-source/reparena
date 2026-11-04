@@ -142,6 +142,7 @@ function demoTips(ex, mode) {
   else if (mode === 'arcs') extra = 'Extra: 10 seguidos sin fallo, fiebre (puntos ×2).';
   else if (mode === 'bars') extra = ex === 'hang' ? 'Extra: aguanta para cerrar el remolino.' : 'Extra: revienta pompas para más puntos.';
   else if (mode === 'touch') extra = 'Extra: vuelve a la postura entre toque y toque.';
+  else if (mode === 'trek') extra = 'Extra: más rápida y más honda, más deprisa; esquiva y salta los retos.';
   return { perfect, extra };
 }
 
@@ -154,6 +155,7 @@ function demoInfo(ex, mode) {
   if (mode === 'arcs') what = 'Agáchate a tiempo para que el arco pase por encima de la cabeza.';
   else if (mode === 'bars') what = ex === 'hang' ? '' : 'Cada subida revienta con la cabeza la pompa que espera arriba.';
   else if (mode === 'touch') what = 'Mete la cabeza por el hueco del aro cuando llegue.';
+  else if (mode === 'trek') what = 'Cada repetición te empuja por el sendero; si paras, te paras.';
   else {
     const sw = typeof swordSet === 'function' && swordSet(), pist = typeof pistolOn === 'function' && pistolOn();
     const foe = foesKind === 'flyers' ? 'al volador' : foesKind === 'spider' ? 'a la araña' : foesKind === 'mix' ? 'al enemigo' : D.tiny ? 'a la araña' : 'al robot';
@@ -220,6 +222,13 @@ function demoDraw(c, W, H, ex, mode, t) {
     c.fillStyle = 'rgba(255,40,20,.16)'; c.fillRect(X(bx) - s * 0.03, Y(2.0), s * 0.06, Y(by) - Y(2.0));
     c.shadowColor = DC.red; c.shadowBlur = 16; c.fillStyle = '#ffb0a0'; c.beginPath(); c.arc(X(bx), Y(by), s * 0.045, 0, TAU); c.fill();
     c.strokeStyle = DC.red; c.lineWidth = 3; c.beginPath(); c.arc(X(bx), Y(by), s * 0.07, 0, TAU); c.stroke(); c.shadowBlur = 0;
+  } else if (mode === 'trek') {
+    // la Travesía: el sendero corre bajo los pies; cada repetición da un empujón (las marcas del suelo van más deprisa)
+    const n = fires.filter(f => f >= 0 && f <= u).length, last = fires.filter(f => f >= 0 && f <= u).pop(), boost = last !== undefined ? Math.exp(-(u - last) * 6) : 0;
+    const off = ((u * 1.2 + n * 0.5 + (1 - boost) * 0) % 0.5 + 0.5) % 0.5;
+    c.strokeStyle = boost > 0.3 ? DC.gold : '#8a7448'; c.lineWidth = Math.max(3, s * 0.03);
+    for (let x = -1.2; x < 2.4; x += 0.5) { const xx = x - off; c.beginPath(); c.moveTo(X(xx), fy + 6); c.lineTo(X(xx + 0.22), fy + 6); c.stroke(); }
+    if (boost > 0.05) { c.globalAlpha = boost; c.fillStyle = DC.gold; c.font = `bold ${Math.round(s * 0.16)}px ${FD}`; c.fillText('»»', X(0.45), Y(1.0)); c.globalAlpha = 1; }
   } else if (mode === 'combat') {
     // un enemigo entra por la derecha y cae con la repetición
     const fl = foesKind === 'flyers' || (foesKind === 'mix' && cyc % 2 === 1), sp = D.tiny || foesKind === 'spider';

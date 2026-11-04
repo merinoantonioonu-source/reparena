@@ -105,14 +105,17 @@ function texAvg(t) {
 // la figura. Las normales de las esquinas se promedian (aOutN) para que el borde no se abra en los cantos de las cajas
 // (faceless: sin tinta en la cabeza, para los que llevan userData.noFaceInk —el diablillo y el lanzador—: de lejos, el borde
 // de grosor fijo en pantalla se colaba por los huecos de la cara y la llenaba de manchas negras; aOutK lo apaga allí)
-const OUTL = { w: { value: 0.006 }, mats: {} };
+// El grosor es fijo en la pantalla hasta OUTL.d metros y, más lejos, fijo en el mundo (cada vez más fino): si no, de lejos
+// la tinta tapaba la forma. Y solo en el borde de verdad: donde la cara mira hacia ti, nada (allí la dirección del borde
+// salía al azar y la tinta aparecía y desaparecía al mover la cabeza)
+const OUTL = { w: { value: 0.006 }, d: { value: 2.5 }, mats: {} };
 function outlMat(skin, faceless) {
   const k = (skin ? 's' : 'n') + (faceless ? 'f' : ''); if (OUTL.mats[k]) return OUTL.mats[k];
   const m = new THREE.MeshBasicMaterial({ color: 0x1b1222, side: THREE.BackSide, skinning: skin, toneMapped: false });
   if (m.color.convertSRGBToLinear) m.color.convertSRGBToLinear(); // (tinta de verdad: el color del material va en lineal; si no, salía gris violáceo)
   m.onBeforeCompile = sh => {
-    sh.uniforms.uOutW = OUTL.w;
-    sh.vertexShader = (faceless ? '#define OUT_K\nattribute float aOutK;\n' : '') + 'attribute vec3 aOutN;\nuniform float uOutW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+    sh.uniforms.uOutW = OUTL.w; sh.uniforms.uOutD = OUTL.d;
+    sh.vertexShader = (faceless ? '#define OUT_K\nattribute float aOutK;\n' : '') + 'attribute vec3 aOutN;\nuniform float uOutW;\nuniform float uOutD;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
 	vec3 oN = aOutN;
 	#ifdef USE_SKINNING
 		oN = ( bindMatrixInverse * ( skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW ) * bindMatrix * vec4( oN, 0.0 ) ).xyz;
@@ -125,9 +128,10 @@ function outlMat(skin, faceless) {
 	#ifdef OUT_K
 		oK = aOutK;
 	#endif
-	gl_Position.xy += normalize( oD + vec2( 1e-5 ) ) * uOutW * oK * gl_Position.w;`);
+	float oL = length( oD );
+	gl_Position.xy += oD / max( oL, 1e-4 ) * smoothstep( 0.03, 0.3, oL ) * uOutW * oK * min( gl_Position.w, uOutD );`);
   };
-  m.customProgramCacheKey = () => 'comic-outline' + (faceless ? 'f' : '');
+  m.customProgramCacheKey = () => 'comic-outline2' + (faceless ? 'f' : '');
   return (OUTL.mats[k] = m);
 }
 function outN(g) {
@@ -153,7 +157,7 @@ function outK(mesh) {
   g.setAttribute('aOutK', new THREE.BufferAttribute(out, 1)); return true;
 }
 function outlAdd(mesh) {
-  if (COMIC.ol.has(mesh) || mesh.userData.isOutline || !(mesh.isMesh || mesh.isSkinnedMesh)) return;
+  if (COMIC.ol.has(mesh) || mesh.userData.isOutline || mesh.userData.noInk || !(mesh.isMesh || mesh.isSkinnedMesh)) return; // (noInk: sin contorno, como los bandidos)
   const mt = mesh.material; COMIC.ol.set(mesh, null);
   if (!mt || Array.isArray(mt) || !mt.isMeshStandardMaterial || mt.transparent || mt.side !== THREE.FrontSide || !mesh.geometry) return;
   if (mesh.isInstancedMesh && mesh.count > 64) return; // (la vegetación: miles de copias)

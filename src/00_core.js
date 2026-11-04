@@ -29,9 +29,9 @@ const CUTE_GATE = ['demon', 'greendemon', 'cyclops', 'yeti', 'skull', 'alien', '
 // Atajo de antes (y de los bloques de una sesión): solo los de tierra, solo voladores o los dos
 const FOE_CATS = [['robots', 'Por tierra'], ['flyers', 'Voladores'], ['mix', 'Mezcla']];
 // Los del juego van en «Ajustes» (por pestañas); sonido y entorno tienen su propio submenú; menú y meta son comunes
-const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Tu cuerpo (recorridos)', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
+const GROUP_NAMES = { partida: 'Partida', ejercicio: 'Tu cuerpo (recorridos)', enemigos: 'Enemigos', armas: 'Armas', cada: 'Cada enemigo', arcos: 'Arcos', toques: 'Toques', barras: 'Barras', travesia: 'Travesía', sistema: 'Menú y avisos', perfil: 'Tu meta', sonido: 'Sonido y música', entorno: 'Entorno y vista' };
 const OWN_MENU = ['sonido', 'entorno']; // grupos con submenú propio (no salen como pestañas de Ajustes)
-const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos', toques: 'Modo Toques', barras: 'Modo Barras' }; // nombre en las pestañas de las gafas (los de los modos, distintos de los modos de arriba del menú)
+const GROUP_TAB = { sistema: 'Menú', ejercicio: 'Tu cuerpo', arcos: 'Modo Arcos', toques: 'Modo Toques', barras: 'Modo Barras', travesia: 'Modo Travesía' }; // nombre en las pestañas de las gafas (los de los modos, distintos de los modos de arriba del menú)
 // «Tu cuerpo» no es dificultad: lo que se mueve tu cuerpo en cada ejercicio (cuánto bajas, subes o aguantas); se guarda para cada uno
 const BODY_NOTE = 'No es la dificultad (esa es el rango): es lo que se mueve tu cuerpo en este ejercicio, cuánto bajas, subes o aguantas para que cuente. Se guarda para cada ejercicio.';
 // Qué ejercicios se juegan en cada modo (el primero es el que se elige al cambiar a ese modo)
@@ -217,6 +217,8 @@ const SCHEMA = [
   { key: 'arcCombo', g: 'arcos', label: 'Combinaciones (dos a la vez o muy seguidos)', short: 'Combinaciones', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], hint: 'A veces llegan dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez, agáchate) o tres muy seguidos (con música, a un pulso uno de otro). Más esfuerzo y más coordinación.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
+  { key: 'trekSpeed', g: 'travesia', label: 'Velocidad de avance', short: 'Velocidad', type: 'num', min: 60, max: 200, step: 10, def: 130, unit: '%', modes: ['trek'], hint: 'Cuánto te empuja cada repetición por el sendero. Al 100 %, una sentadilla honda y a buen ritmo te lleva a 5,4 km/h; al 200 %, al doble. Los lobos se adaptan.' },
+  { key: 'trekCurves', g: 'travesia', label: 'Sendero con curvas', short: 'Curvas', type: 'toggle', def: 1, modes: ['trek'], hint: 'El sendero serpentea y el paisaje gira despacio a tu alrededor. Si te mareas, quítalo y el sendero irá recto.' },
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
   { key: 'barWait', g: 'barras', label: 'Tiempo para reventarlo', short: 'Tiempo reventar', type: 'num', min: 0, max: 60, step: 1, def: 12, unit: 's', zero: 'Sin límite', modes: ['bars'], noEx: ['hang'], hint: 'Si no llegas a tiempo, el bicho te pica (pierdes una vida) o la pompa se escapa.' },
@@ -358,7 +360,7 @@ function setSetting(key, v) {
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
-  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'doorH', 'dipH',
+  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre

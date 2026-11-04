@@ -73,19 +73,23 @@ No las cambies sin preguntarle.
 **Travesía** (`src/75_trek.js`)
 - Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. La velocidad sale del
   ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Despacio (como mucho
-  1,5 m/s), en línea recta y sobre una plataforma quieta bajo los pies, para que no maree.
+  1,5 m/s por la «Velocidad de avance», de 60 a 200 %, 130 % de serie), sobre una plataforma quieta bajo los pies. El
+  sendero serpentea (el mundo gira despacio a tu alrededor; «Sendero con curvas» lo quita si marea). Detrás, siempre paisaje.
 - Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
-  una gema), el derrumbe (la roca se aparta embistiéndola con zancadas), el arroyo (de piedra en piedra con zancadas
-  laterales), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (B con C:
-  esquivar su golpe —agacharse ante el gancho, apartarse ante el directo— los aturde, y entonces se les tumba a puñetazos). Lobos que te persiguen: si vas más despacio,
+  una gema), el derrumbe (la roca se aparta embistiéndola con zancadas), el arroyo sinuoso (de piedra en piedra con
+  saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (B con C:
+  esquivar su golpe —agacharse ante el gancho, apartarse ante el directo, con aviso largo y el golpe a cámara lenta— los
+  aturde, y entonces se les tumba a puñetazos; con la cabeza del personaje base y sin contorno). Lobos que te persiguen: si vas más despacio,
   te alcanzan y muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
 - El marcador, siempre flotando a un lado (nada de columnas que vayan contigo).
 - El paisaje se dibuja todo junto, una pieza por modelo: que no pida más a la gráfica que el bosque de Combate.
+- Fondos realistas: si hay foto panorámica en `models/fondos/` (ver su `LEEME.md`), se ve detrás del paisaje de cómic.
+- Su caricatura no habla de rayos: cada repetición empuja por el sendero.
 
 **Repeticiones y disparo**
 - Cada repetición (sentadilla, zancada…) carga **un disparo por mano**, como mucho uno por mano y sin acumular.
@@ -150,6 +154,8 @@ No las cambies sin preguntarle.
 - Parados esperando su turno, bailan al compás (el marcado o el de la canción de Spotify), también los robots.
 - El lanzador tira algo más deprisa (y más a menudo) cuanto más difícil, poco a poco (como mucho un 40 %).
 - Al abrirse una compuerta, su interior es oscuro.
+- Los contornos de tinta: finos de lejos (grosor fijo en el mundo pasados 2,5 m) y solo en el borde de verdad (sin
+  parpadeos al mover la cabeza).
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
 - Los voladores baten las alas siempre rápido, a su ritmo, sin depender de lo deprisa que avancen.
 - Cada enemigo tiene resistencia, fuerza y dureza en la tabla del desarrollador; los nuevos entran solos en ella.
