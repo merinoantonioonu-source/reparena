@@ -71,7 +71,7 @@ function loadBeasts() {
   const tex = (f, srgb) => { const t = T.load(`models/tex/${f}.jpg`); t.flipY = false; if (srgb) t.encoding = THREE.sRGBEncoding; return t; };
   const core = Object.keys(BEAST_DEF).filter(k => !BEAST_DEF[k].lazy);
   Promise.all([get('anims'), ...core.map(get)]).then(([U, ...models]) => {
-    const up = U.scene.getObjectByName('pelvis').position.z;
+    const up = U.scene.getObjectByName('pelvis').position.z; BEAST.U = U; BEAST.ualPelvis = up; // (también para los bandidos de la Travesía)
     core.forEach((k, i) => {
       const D = BEAST_DEF[k];
       if (D.own) { // sus propias animaciones, con los nombres de la biblioteca; sus colores, de una paleta pequeña (sin suavizar)
