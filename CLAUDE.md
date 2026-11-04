@@ -88,6 +88,8 @@ No las cambies sin preguntarle.
   el elemento. Las casas se montan con las piezas del Medieval Village.
 - El marcador, siempre flotando a un lado (nada de columnas que vayan contigo).
 - El paisaje se dibuja todo junto, una pieza por modelo: que no pida más a la gráfica que el bosque de Combate.
+- El agua, realista (no una mancha azul): ondas que el viento eriza a rachas, reflejo del cielo y destellos; en el río,
+  corriente con espuma y estelas en las piedras.
 - Fondos realistas: si hay foto panorámica en `models/fondos/` (ver su `LEEME.md`), se ve detrás del paisaje de cómic.
 - Su caricatura no habla de rayos: cada repetición empuja por el sendero.
 
