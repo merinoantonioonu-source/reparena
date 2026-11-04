@@ -225,8 +225,9 @@ function layoutArena() {
     const P = roomGates ? plan.gates[i] : null; g.on = !roomGates || !!P;
     if (P) { g.x = P.x; g.z = P.z; g.scale = plan.gs; g.g.rotation.y = P.rot; }
     else { g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.rotation.y = Math.atan2(-g.x, D); }
-    g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(g.scale); g.side.visible = !roomGates;
-    g.g.visible = g.on && !push && !forestOn() && settings.mode !== 'trek'; // (en la Travesía no hay compuertas: el sendero)
+    const pano = arcs && settings.pano && settings.pano !== 'off' && !roomGates && !arMode; // (Arcos con fondo realista: sin compuertas ni muros, por el paisaje)
+    g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(g.scale); g.side.visible = !roomGates && !pano;
+    g.g.visible = g.on && !push && !forestOn() && settings.mode !== 'trek' && !pano; // (en la Travesía no hay compuertas: el sendero)
   });
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
