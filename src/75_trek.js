@@ -14,6 +14,8 @@ const trekOn = () => settings.mode === 'trek';
 const TREK_BIOMES = [
   { name: 'Bosque', fog: 0xc4dcea, dens: 0.014, hemi: 0xd6ecff, hemiI: 0.95, key: 0xfff0d2, keyI: 1.5, dusk: 0,
     trees: ['CommonTree_3', 'CommonTree_4', 'CommonTree_5', 'CommonTree_4', 'Pine_2'], nTree: 9, bush: 5, rock: 3, flower: 10, water: false },
+  { name: 'Aldea', fog: 0xd6e6ee, dens: 0.011, hemi: 0xe8f0ff, hemiI: 1.0, key: 0xfff2dc, keyI: 1.55, dusk: 0,
+    trees: ['CommonTree_4', 'CommonTree_3', 'Bush_Common_Flowers'], nTree: 3, bush: 4, rock: 1, flower: 18, water: false, village: true },
   { name: 'Pradera del lago', fog: 0xd2e8f2, dens: 0.009, hemi: 0xe2f2ff, hemiI: 1.0, key: 0xfff6e0, keyI: 1.6, dusk: 0,
     trees: ['CommonTree_4', 'Bush_Common_Flowers', 'CommonTree_3'], nTree: 4, bush: 6, rock: 4, flower: 20, water: true },
   { name: 'Pinar al atardecer', fog: 0xe3a27c, dens: 0.016, hemi: 0xffc9a0, hemiI: 0.8, key: 0xffa860, keyI: 1.25, dusk: 1,
@@ -58,6 +60,12 @@ function trekChunk(b, slot) {
   const free = (x, z, r) => !taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r);
   // side: -1, 1 o 0 (a los dos); con el lago, la derecha es agua
   const scatter = (n, x0, x1, fn) => { for (let i = 0, k = 0; i < n && k < n * 20; k++) { const s = R() < 0.5 ? -1 : 1; if (B.water && s > 0 && x0 > 2.6) continue; const x = s * (x0 + R() * (x1 - x0)), z = -R() * TREK_CH; if (fn(x, z) !== false) i++; } };
+  if (B.village && ALD.ready) { // la aldea: casas montadas con las piezas del Medieval Village, de cara al camino, con sus vallas, carros y cajas
+    for (const sd of [-1, 1]) { const z = -(4 + R() * 6), n = R() < 0.5 ? 'Aldea_Casa' : 'Aldea_Casona', x = sd * (n === 'Aldea_Casa' ? 6.5 : 7.5) + sd * R() * 2;
+      list.push([n, new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, -sd * Math.PI / 2 + (R() - 0.5) * 0.2), new V3(1, 1, 1))]); taken.push({ x, z, r: 5 });
+      if (R() < 0.6) { const x2 = sd * (4.2 + R()), z2 = z - 4 - R() * 3; add(R() < 0.5 ? 'Prop_Wagon' : 'Prop_Crate', x2, z2, R() < 0.5 ? 0.8 : 0.6); taken.push({ x: x2, z: z2, r: 1.5 }); }
+      for (let k = 0; k < 5; k++) { const fz = -2 - k * 2.05; if (R() < 0.85) list.push(['Prop_WoodenFence_Single', new THREE.Matrix4().compose(new V3(sd * 2.6, 0, fz), new Q4().setFromAxisAngle(_up, Math.PI / 2), new V3(1, 1, 1))]); } }
+  }
   scatter(B.nTree, 3.6, 15, (x, z) => { if (!free(x, z, 2.8)) return false; add(pick3(R, B.trees), x, z, 0.8 + R() * 0.55); taken.push({ x, z, r: 2.8 }); });
   scatter(B.bush, 2.2, 6, (x, z) => { if (!free(x, z, 1.2)) return false; add(R() < 0.5 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, 0.45 + R() * 0.3); taken.push({ x, z, r: 1.2 }); });
   scatter(B.rock, 2.4, 10, (x, z) => { if (!free(x, z, 1)) return false; add(`Rock_Medium_${1 + Math.floor(R() * 3)}`, x, z, 0.3 + R() * 0.45); taken.push({ x, z, r: 1 }); });
@@ -80,7 +88,7 @@ function trekInst() {
 // Cada hueco del frente lleva su trozo: el del tramo en el que entra al pasar al frente (así el paisaje nuevo llega de lejos)
 const _tkm = new THREE.Matrix4();
 function trekLayout() {
-  if (!NAT.ready) return; const I = trekInst();
+  if (!NAT.ready || !(ALD.ready || ALD.failed)) return; const I = trekInst(); // (con la aldea ya montada: sus casas van en las mismas piezas de dibujo)
   const span = TREK_CH * TREK_N, off = ((TREK.dist % span) + span) % span, n = {};
   for (const k in I) n[k] = 0;
   for (let i = 0; i < TREK_N; i++) {
@@ -92,6 +100,48 @@ function trekLayout() {
     const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; w.position.set(3.2 + 20, 0.02, z - TREK_CH / 2);
   }
   for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
+}
+
+/* ---------- La aldea: casas montadas con piezas del Medieval Village (Quaternius) ---------- */
+// Cada pieza es un modelo aparte (models/aldea/); sus texturas, reducidas, en models/tex/aldea/. Las paredes miden 2 × 3,1 m:
+// la casa es de 4 × 4 (dos paredes por lado) y la casona de 6 × 6 (tres), con esquinas, ventanas con contraventanas,
+// puerta, tejado de tejas y chimenea. Cada casa se junta en una sola pieza por material (así se dibuja de una vez)
+const ALD = { ready: false, loading: false, failed: false, parts: {} };
+const ALD_PIECES = ['Wall_Plaster_Straight', 'Wall_Plaster_Window_Wide_Round', 'Wall_Plaster_Door_Round', 'Wall_Plaster_WoodGrid', 'Wall_UnevenBrick_Straight', 'Wall_UnevenBrick_Window_Wide_Round', 'Wall_UnevenBrick_Door_Round',
+  'Corner_Exterior_Wood', 'Corner_Exterior_Brick', 'Roof_RoundTiles_4x4', 'Roof_RoundTiles_6x6', 'Prop_Chimney', 'Window_Wide_Round1', 'WindowShutters_Wide_Round_Open', 'Door_1_Round', 'Prop_Wagon', 'Prop_Crate', 'Prop_WoodenFence_Single', 'Roof_Front_Brick4', 'Roof_Front_Brick6'];
+const ALD_TEX = { MI_Plaster: 'plaster', MI_UnevenBrick: 'unevenbrick', MI_WoodTrim: 'woodtrim', MI_WoodTrim_Wear: 'woodtrim', MI_RoundTiles: 'roundtiles', MI_RockTrim: 'rocktrim', MI_Brick: 'brick', MI_RedBrick: 'redbrick' };
+function aldLoad() {
+  if (ALD.ready || ALD.loading || ALD.failed) return;
+  if (!THREE.GLTFLoader || typeof document === 'undefined') { ALD.failed = true; return; }
+  ALD.loading = true; const L = new THREE.GLTFLoader(), T = new THREE.TextureLoader(), mats = {};
+  const mat = n => mats[n] || (mats[n] = (() => { const t = ALD_TEX[n]; let map = null; if (t) { map = T.load(`models/tex/aldea/${t}.jpg`); map.encoding = THREE.sRGBEncoding; map.flipY = false; }
+    const m = new THREE.MeshStandardMaterial({ map, color: n === 'MI_WindowGlass' ? 0x9fc7e8 : 0xffffff, roughness: 0.9, metalness: 0 }); m.name = n; return m; })());
+  Promise.all(ALD_PIECES.map(n => new Promise((res, rej) => L.load(`models/aldea/${n}.glb`, g => res([n, g]), undefined, rej)))).then(all => {
+    for (const [n, g] of all) {
+      g.scene.updateMatrixWorld(true); const parts = [];
+      g.scene.traverse(o => { if (!o.isMesh) return; const geo = new THREE.BufferGeometry(); for (const a of ['position', 'normal', 'uv']) if (o.geometry.attributes[a]) geo.setAttribute(a, natFloat(o.geometry.attributes[a])); if (o.geometry.index) geo.setIndex(o.geometry.index); geo.applyMatrix4(o.matrixWorld); parts.push({ geo, mat: mat(o.material.name) }); });
+      ALD.parts[n] = parts;
+    }
+    for (const n of ['Prop_Wagon', 'Prop_Crate', 'Prop_WoodenFence_Single']) NAT.parts[n] = ALD.parts[n]; // (los sueltos, como cualquier modelo del paisaje)
+    NAT.parts.Aldea_Casa = aldHouse(2, 'Plaster', 'Wood'); NAT.parts.Aldea_Casona = aldHouse(3, 'UnevenBrick', 'Brick');
+    ALD.ready = true; ALD.loading = false;
+  }).catch(e => { ALD.failed = true; ALD.loading = false; console.log('No se pudo cargar la aldea:', e && e.message); });
+}
+// n paredes por lado; la fachada (+z) con la puerta en medio y ventanas; los lados, con una ventana; la de atrás, lisa
+function aldHouse(n, wall, corner) {
+  const half = n, put = [], M = (x, z, ry, y = 0) => new THREE.Matrix4().compose(new V3(x, y, z), new Q4().setFromAxisAngle(_up, ry), new V3(1, 1, 1));
+  const W = k => `Wall_${wall}_${k}`;
+  for (const [ry, ax] of [[0, 'f'], [Math.PI, 'b'], [Math.PI / 2, 'r'], [-Math.PI / 2, 'l']]) for (let i = 0; i < n; i++) {
+    const t = -half + 1 + i * 2, x = ax === 'f' || ax === 'b' ? (ax === 'f' ? t : -t) : (ax === 'r' ? half : -half), z = ax === 'f' ? half : ax === 'b' ? -half : (ax === 'r' ? -t : t);
+    const door = ax === 'f' && i === Math.floor(n / 2), win = !door && (ax === 'f' || ((ax === 'r' || ax === 'l') && i % 2 === 0));
+    put.push([door ? W('Door_Round') : win ? W('Window_Wide_Round') : (wall === 'Plaster' && ax === 'b' ? 'Wall_Plaster_WoodGrid' : W('Straight')), M(x, z, ry)]);
+    if (win) { put.push(['Window_Wide_Round1', M(x, z, ry)]); put.push(['WindowShutters_Wide_Round_Open', M(x, z, ry)]); }
+  }
+  for (const [x, z] of [[half, half], [-half, half], [half, -half], [-half, -half]]) put.push([`Corner_Exterior_${corner}`, M(x, z, 0)]);
+  put.push([n === 2 ? 'Roof_RoundTiles_4x4' : 'Roof_RoundTiles_6x6', M(0, 0, 0, 3.12)]); for (const ry of [0, Math.PI]) put.push([n === 2 ? 'Roof_Front_Brick4' : 'Roof_Front_Brick6', M(0, ry ? -half : half, ry, 3.12)]); // (los hastiales, bajo el tejado) put.push(['Prop_Chimney', M(half - 1, -half + 1, 0, 3.0)]);
+  const byMat = new Map();
+  for (const [p, m] of put) for (const part of ALD.parts[p] || []) { const g = part.geo.clone(); g.applyMatrix4(m); (byMat.get(part.mat) || byMat.set(part.mat, []).get(part.mat)).push(g); }
+  return [...byMat].map(([mat, gs]) => ({ geo: mergeGeos(gs), mat }));
 }
 
 /* ---------- Los retos del camino ---------- */
@@ -242,7 +292,7 @@ function trekChaseStep(dt, t) {
 function trekStep(dt, t) {
   const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
   TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
-  if (!trekOn()) return;
+  if (!trekOn()) return; aldLoad(); // (la aldea, desde que eliges la Travesía)
   TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
@@ -282,7 +332,7 @@ function trekLight(dt) {
 }
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
-  trekWolfLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
+  trekWolfLoad(); aldLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
   TREK.obs.forEach(o => TREK.group.remove(o.mesh)); trekChaseEnd(); Object.assign(TREK, { halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
