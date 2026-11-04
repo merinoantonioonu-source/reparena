@@ -321,23 +321,30 @@ renderer.setAnimationLoop((time, frame) => {
 // bajaba en plena partida poniendo una capa de imagen nueva, que ocupa otra memoria de vídeo; para no llenar las gafas de
 // planos de basura (blancos y azules), a la tercera ya no cambiaba: se quedaba en la que tuviera, a menudo la más baja, y
 // las letras se veían cada vez más borrosas, también en los menús y aunque eligieras «Alta»
-// · Alta: la de la pantalla de las gafas (la nativa; como mucho, ×1,5 la recomendada); Automática: la que recomienda el
-//   navegador; Media y Baja, algo menos
+// · el navegador de las Quest 3 da como «nativa» la recomendada (×1: 1680×1760 por ojo), por debajo de la pantalla (2064×2208):
+//   a ×1 la imagen se estira y se ve blanda. Alta: ×1,4 (más que la pantalla: lo más nítido); Automática: ×1,2 a 72 Hz (a
+//   90 o 120 Hz no hay tiempo para tanto: ×1); Media, ×1; Baja, ×0,8
 // · para aligerar, solo la foveación (menos detalle en los bordes de la vista: se cambia en la misma capa) y las sombras
 //   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, sin foveación
-const QRES = { alta: 'native', auto: 1, media: 0.85, baja: 0.72 };
+const QRES = { alta: 1.4, auto: 'hz', media: 1, baja: 0.8 };
 const QLV = [{ fov: 0.3, sh: 1, sm: 1024 }, { fov: 0.55, sh: 2, sm: 1024 }, { fov: 0.8, sh: 2, sm: 512 }, { fov: 1, sh: 3, sm: 512 }], QFIX = { alta: 0, auto: 0, media: 1, baja: 2 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, fov: -1, sc: 1, native: 1, swaps: 0 };
 const QUAL_SWAPS = 2; // (cambios de resolución en una sesión, solo si la cambias tú en el menú)
 const qualMin = () => QFIX[settings.quality] || 0;
 function qualScale(session) {
   try { QUAL.native = (typeof XRWebGLLayer !== 'undefined' && XRWebGLLayer.getNativeFramebufferScaleFactor && XRWebGLLayer.getNativeFramebufferScaleFactor(session)) || 1; } catch (e) { QUAL.native = 1; }
-  const v = QRES[settings.quality] || 1; return v === 'native' ? clamp(QUAL.native, 1, 1.5) : v;
+  const v = QRES[settings.quality] || 1; return v === 'hz' ? (+settings.xrHz > 72 ? 1 : 1.2) : Math.max(v, v > 1 ? QUAL.native : 0);
 }
 // antes de darle la sesión a three.js: así la única capa de la sesión ya nace con su resolución
 function qualSessionStart(session) {
   Object.assign(QUAL, { lv: qualMin(), fov: -1, swaps: 0, slow: 0, ok: 0, t: 0, n: 0, cool: 3 }); QUAL.sc = qualScale(session);
   if (renderer.xr.setFramebufferScaleFactor) renderer.xr.setFramebufferScaleFactor(QUAL.sc);
+}
+// Para el menú (Entorno → Calidad): con qué resolución pinta ahora y si la elegida espera a la próxima vez que entres
+function qualNote() {
+  const s = renderer.xr.getSession(); if (!s || preview) return '';
+  const L = s.renderState && s.renderState.baseLayer, px = L && L.framebufferWidth ? ` (${Math.round(L.framebufferWidth / 2)}×${L.framebufferHeight} por ojo)` : '', want = qualScale(s);
+  return `Ahora pinta a ×${QUAL.sc.toFixed(2)}${px}${Math.abs(want - QUAL.sc) > 0.01 ? ` · la elegida (×${want.toFixed(2)}), al volver a entrar en las gafas` : ''}`;
 }
 function qualLevel(lv) {
   QUAL.lv = lv; const sh = keyLight.shadow, sm = QLV[lv].sm; // sombras más bastas (sin recompilar nada: solo otra textura)
@@ -365,7 +372,7 @@ function qualStep(dt) {
 // Si cambias la calidad en plena sesión, la resolución nueva pide una capa nueva: como mucho QUAL_SWAPS veces; después, al
 // volver a entrar en las gafas
 settingHooks.push(k => {
-  if (k !== 'quality') return; qualLevel(qualMin()); QUAL.fov = -1; const s = renderer.xr.getSession(); if (!s || preview) return;
+  if (k !== 'quality' && k !== 'xrHz') return; if (k === 'quality') { qualLevel(qualMin()); QUAL.fov = -1; } const s = renderer.xr.getSession(); if (!s || preview) return;
   const sc = qualScale(s); if (Math.abs(sc - QUAL.sc) < 0.01) return;
   if (QUAL.swaps >= QUAL_SWAPS || typeof XRWebGLLayer === 'undefined') { say('La nueva resolución, la próxima vez que entres en las gafas', '#ffd166', 2.5); return; }
   try {
@@ -397,7 +404,7 @@ function perfStep(t, dt, jsMs = 0, rdMs = 0) {
     c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
     // la nitidez: los píxeles de cada ojo, la escala (y la de la pantalla de las gafas) y la foveación de ahora
     const xs = renderer.xr.getSession(), L = xs && xs.renderState && xs.renderState.baseLayer, px = L && L.framebufferWidth ? `${Math.round(L.framebufferWidth / 2)}×${L.framebufferHeight} por ojo` : 'sin gafas';
-    c.fillText(`${px} · ×${QUAL.sc.toFixed(2)} (gafas ×${QUAL.native.toFixed(2)}) · foveación ${Math.max(0, QUAL.fov).toFixed(2)} · ${ri.calls} llamadas`, 24, H * 0.83);
+    c.fillText(`${px} · ×${QUAL.sc.toFixed(2)} · foveación ${Math.max(0, QUAL.fov).toFixed(2)} · ${ri.calls} llamadas`, 24, H * 0.83);
     perfP.tex.needsUpdate = true;
     Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }
