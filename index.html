@@ -407,7 +407,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Vienen hacia ti amebas de agua que ondulan (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
         <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
-        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, pradera del lago y pinar al atardecer). Agáchate bajo las ramas bajas y toca con la mano los cofres de los lados.</small></label>
+        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo con zancadas laterales, el desfiladero que se desmorona a saltos… y lobos detrás.</small></label>
     </div>
     <p class="modeInfo" id="modeInfo"></p>
   </section>
@@ -605,7 +605,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
-      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero; agáchate bajo las ramas bajas y alarga la mano para tocar los cofres. Cada tramo, otro paisaje: bosque, pradera del lago y pinar al atardecer.</li>
+      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo con zancadas laterales de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan, y no dejes que te alcancen los lobos. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
       <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
@@ -14111,8 +14111,8 @@ function tempoRows(back) {
 // Recorres un sendero del bosque a fuerza de repeticiones: cada una te da impulso (las perfectas, más) y, si paras, te
 // paras. Vas de pie sobre una plataforma de madera quieta bajo los pies (lo fijo alrededor evita el mareo), que avanza
 // despacio y siempre en línea recta (como mucho TREK_VMAX). Cada oleada es un tramo con su paisaje: bosque, pradera del
-// lago y pinar al atardecer; el paisaje nuevo va llegando por delante. Por el camino: ramas bajas (agáchate al pasar) y
-// cofres a los lados (tócalos con la mano). Las ramas no quitan vidas: frenan en seco y rompen la racha.
+// lago y pinar al atardecer; el paisaje nuevo va llegando por delante. Por el camino, retos de otro movimiento (troncos,
+// ramas bajas, cofres con cadenas, el derrumbe, el arroyo y el desfiladero) y lobos que te persiguen.
 // El paisaje son trozos de 24 m (TREK_CH) con los modelos del Stylized Nature MegaKit (los del bosque, 34_nature) en
 // instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
 // mueven: corre su textura
@@ -14200,12 +14200,15 @@ function trekLayout() {
   if (!NAT.ready || !(ALD.ready || ALD.failed)) return; const I = trekInst(); // (con la aldea ya montada: sus casas van en las mismas piezas de dibujo)
   const span = TREK_CH * TREK_N, off = ((TREK.dist % span) + span) % span, n = {};
   for (const k in I) n[k] = 0;
+  // (en el arroyo y el desfiladero no crece nada: ni árboles en el agua ni hierba flotando sobre el vacío)
+  const cut = TREK.obs.filter(o => o.len).map(o => { const z = -(o.at - TREK.dist); return [z + 2, z - o.len - 2]; });
   for (let i = 0; i < TREK_N; i++) {
     let z = -i * TREK_CH + off; if (z > TREK_CH) z -= span; // (de TREK_CH por detrás a casi span por delante)
     const S = TREK.slots[i] || (TREK.slots[i] = { b: -1, z: 99 });
     if (S.b < 0 || z < S.z - TREK_CH * 0.5) S.b = TREK.biome; // (acaba de pasar al frente: con el paisaje de ahora)
     S.z = z;
-    for (const [k, M] of trekChunk(S.b, i)) { _tkm.copy(M); _tkm.elements[14] += z; for (const m of I[k]) m.setMatrixAt(n[k], _tkm); n[k]++; }
+    for (const [k, M] of trekChunk(S.b, i)) { const zz = M.elements[14] + z; if (cut.length && Math.abs(M.elements[12]) < 17 && cut.some(c => zz < c[0] && zz > c[1])) continue;
+      _tkm.copy(M); _tkm.elements[14] = zz; for (const m of I[k]) m.setMatrixAt(n[k], _tkm); n[k]++; }
     const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; w.position.set(3.2 + 20, 0.02, z - TREK_CH / 2);
   }
   for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
@@ -14247,7 +14250,8 @@ function aldHouse(n, wall, corner) {
     if (win) { put.push(['Window_Wide_Round1', M(x, z, ry)]); put.push(['WindowShutters_Wide_Round_Open', M(x, z, ry)]); }
   }
   for (const [x, z] of [[half, half], [-half, half], [half, -half], [-half, -half]]) put.push([`Corner_Exterior_${corner}`, M(x, z, 0)]);
-  put.push([n === 2 ? 'Roof_RoundTiles_4x4' : 'Roof_RoundTiles_6x6', M(0, 0, 0, 3.12)]); for (const ry of [0, Math.PI]) put.push([n === 2 ? 'Roof_Front_Brick4' : 'Roof_Front_Brick6', M(0, ry ? -half : half, ry, 3.12)]); // (los hastiales, bajo el tejado) put.push(['Prop_Chimney', M(half - 1, -half + 1, 0, 3.0)]);
+  put.push([n === 2 ? 'Roof_RoundTiles_4x4' : 'Roof_RoundTiles_6x6', M(0, 0, 0, 3.12)]); put.push(['Prop_Chimney', M(half - 1, -half + 1, 0, 3.0)]);
+  for (const ry of [0, Math.PI]) put.push([n === 2 ? 'Roof_Front_Brick4' : 'Roof_Front_Brick6', M(0, ry ? -half : half, ry, 3.12)]); // (los hastiales, bajo el tejado)
   const byMat = new Map();
   for (const [p, m] of put) for (const part of ALD.parts[p] || []) { const g = part.geo.clone(); g.applyMatrix4(m); (byMat.get(part.mat) || byMat.set(part.mat, []).get(part.mat)).push(g); }
   return [...byMat].map(([mat, gs]) => ({ geo: mergeGeos(gs), mat }));
@@ -14262,10 +14266,11 @@ const TREK_CHEST = { wood: std({ color: 0x8a5a2b, roughness: 0.8 }), gold: std({
 const TREK_SHADOW = (() => { const c = mkCanvas(128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 4, 64, 64, 62); g.addColorStop(0, 'rgba(20,30,10,0.55)'); g.addColorStop(1, 'rgba(20,30,10,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }); })();
 const trekLegs = () => ['squat', 'lunge', 'frontsq'].includes(settings.exercise);
 // los retos de cada ejercicio: nunca el mismo movimiento que te hace avanzar (la roca se embiste con zancadas: no con ellas)
-const trekKinds = () => { const ex = settings.exercise; return ex === 'lunge' ? ['log', 'chest'] : trekLegs() ? ['log', 'chest', 'rock'] : ex === 'jsquat' ? ['chest', 'rock'] : ['branch', 'chest', 'rock']; };
+// (el arroyo se cruza con zancadas laterales y el desfiladero, saltando: ni el uno con zancadas ni el otro con la sentadilla con salto)
+const trekKinds = () => { const ex = settings.exercise; return ex === 'lunge' ? ['log', 'chest', 'chasm'] : trekLegs() ? ['log', 'chest', 'stream', 'rock', 'chasm'] : ex === 'jsquat' ? ['chest', 'rock', 'stream'] : ['branch', 'chest', 'stream', 'rock', 'chasm']; };
 // el movimiento que rompe las cadenas del cofre: saltos (si avanzas con las piernas), zancadas (con la sentadilla con salto) o sentadillas (con curl)
 const trekChainMove = () => trekLegs() ? 'jump' : settings.exercise === 'jsquat' ? 'lunge' : 'squat';
-const TREK_MOVE = { jump: ['salto', 'saltos'], lunge: ['zancada', 'zancadas'], squat: ['sentadilla', 'sentadillas'] };
+const TREK_MOVE = { jump: ['salto', 'saltos'], lunge: ['zancada', 'zancadas'], squat: ['sentadilla', 'sentadillas'], side: ['zancada lateral', 'zancadas laterales'] };
 function trekShadow(g, w, d, x = 0) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), TREK_SHADOW); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.012, 0); g.add(m); }
 // una pieza de la isla pirata (cofre cerrado, cofre con oro), si ya se cargó
 function trekPart(g, n, s) { for (const p of (typeof ISL !== 'undefined' && ISL.parts[n]) || []) { const m = new THREE.Mesh(p.geo, p.mat); m.scale.setScalar(s); g.add(m); } }
@@ -14284,11 +14289,75 @@ function trekObsMesh(o) {
     o.box = new THREE.Group(); g.add(o.box); trekPart(o.box, 'Chest_Closed', 0.9);
     o.links = []; for (const a of [-0.35, 0.35]) for (let i = 0; i < 26; i++) { const t = i / 26 * TAU, l = new THREE.Mesh(MACE.link, MACE.ballMat); l.position.set(Math.cos(t) * 0.42 + a * 0.4, 0.32 + Math.sin(t) * 0.34, 0); l.rotation.set(0, i % 2 ? Math.PI / 2 : 0, t); l.scale.setScalar(1.4); g.add(l); o.links.push(l); }
     o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.y = 0.5; g.add(o.glow); trekShadow(g, 1.2, 1);
+  } else if (o.kind === 'stream') { // el arroyo: agua de orilla a orilla y piedras planas en zigzag (cada una, a un lado)
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(34, o.len), TREK_WATER); w.rotation.x = -Math.PI / 2; w.position.set(0, 0.03, -o.len / 2); w.userData.own = true; g.add(w);
+    const R = rng(o.seed), L = [];
+    o.stones = []; for (let k = 1; k <= o.need; k++) { const n = `Rock_Medium_${1 + k % 3}`, b = trekRockBox(n), sx = rand(0.7, 0.85) / b.w, sy = 0.3 / b.h, x = o.sides[k - 1] * 0.42, z = o.stop - k * o.step; L.push([n, trekM(x, 0.13 - (b.y0 + b.h) * sy, z, R() * TAU, sx, sy, sx)]); o.stones.push(new V3(x, 0.16, z)); }
+    trekBanks(L, R, 0, o.len);
+    trekMerge(g, L); o.glow = glowSprite(0x8ff0ff, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
+  } else if (o.kind === 'chasm') { // el desfiladero: un tajo hondo en el suelo y pilares de roca; cada salto, al siguiente
+    const D = 12, box = new THREE.BoxGeometry(34, D, o.len, 1, 6, 1); box.translate(0, -D / 2, -o.len / 2);
+    const P = box.attributes.position, col = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { const k = 0.95 * Math.exp(P.getY(i) * 0.28); col[i * 3] = k; col[i * 3 + 1] = k * 0.92; col[i * 3 + 2] = k * 0.85; } // (más oscuro cuanto más hondo)
+    box.setAttribute('color', new THREE.BufferAttribute(col, 3)); const pit = new THREE.Mesh(box, trekPitMat()); pit.userData.own = true; g.add(pit);
+    const R = rng(o.seed), L = []; trekRims(L, R, 0); trekRims(L, R, -o.len); trekMerge(g, L);
+    o.pillars = []; o.stones = []; for (let k = 1; k < o.need; k++) { const p = new THREE.Group(), x = (R() - 0.5) * 0.3, z = o.stop - k * o.step; p.position.set(x, 0, z); p.rotation.y = R() * TAU; for (const q of trekPillar()) p.add(new THREE.Mesh(q.geo, q.mat)); g.add(p); o.pillars.push(p); o.stones.push(new V3(x, 0.3, z)); }
+    o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else { // el derrumbe: una roca grande atravesada en el sendero
     o.box = new THREE.Group(); g.add(o.box); trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
   }
   TREK.group.add(g); return g;
 }
+// Rocas del paisaje (Stylized Nature MegaKit) juntas en una sola pieza por material: pocas llamadas de dibujo
+const trekM = (x, y, z, ry, sx, sy = sx, sz = sx) => new THREE.Matrix4().compose(new V3(x, y, z), new Q4().setFromAxisAngle(_up, ry), new V3(sx, sy, sz));
+function trekMergeParts(list) {
+  const by = new Map();
+  for (const [n, m] of list) for (const p of NAT.parts[n] || []) { const q = p.geo.clone(); q.applyMatrix4(m); (by.get(p.mat) || by.set(p.mat, []).get(p.mat)).push(q); }
+  return [...by].map(([mat, gs]) => ({ geo: mergeGeos(gs), mat }));
+}
+function trekMerge(g, list) { for (const q of trekMergeParts(list)) { const m = new THREE.Mesh(q.geo, q.mat); m.userData.own = true; g.add(m); } }
+// lo que mide una roca a escala 1 (ancho, alto y dónde empieza por abajo)
+function trekRockBox(n) {
+  const c = TREK.rbox || (TREK.rbox = {}); if (c[n]) return c[n];
+  const p = (NAT.parts[n] || [])[0]; let r = { w: 3, h: 2, y0: 0 };
+  if (p && p.geo.computeBoundingBox) { p.geo.computeBoundingBox(); const b = p.geo.boundingBox; if (b) r = { w: Math.max(0.1, b.max.x - b.min.x, b.max.z - b.min.z), h: Math.max(0.1, b.max.y - b.min.y), y0: b.min.y }; }
+  if (p) c[n] = r; return r;
+}
+// las orillas del arroyo: piedras y juncos a los dos lados del sendero
+function trekBanks(L, R, z0, len) {
+  for (const z of [z0, z0 - len]) for (const sd of [-1, 1]) for (let x = 1.2 + R() * 0.4; x < 9; x += 0.9 + R() * 1.2) {
+    const n = `Rock_Medium_${1 + Math.floor(R() * 3)}`, b = trekRockBox(n), s = (0.35 + R() * 0.4) / b.w; L.push([n, trekM(sd * x, -b.y0 * s - 0.05, z + (R() - 0.5) * 0.5, R() * TAU, s)]);
+    if (R() < 0.7) L.push([R() < 0.6 ? 'Grass_Wispy_Tall' : 'Grass_Common_Tall', trekM(sd * (x + 0.4), 0, z + (z === z0 ? 0.5 : -0.5) + (R() - 0.5) * 0.4, R() * TAU, 0.3 + R() * 0.2)]);
+  }
+}
+// el borde del desfiladero: rocas que asoman sobre el vacío, dejando libre el paso del sendero
+function trekRims(L, R, z) {
+  for (const sd of [-1, 1]) for (let x = 1.1 + R() * 0.3; x < 11; x += 0.8 + R()) { const n = `Rock_Medium_${1 + Math.floor(R() * 3)}`, b = trekRockBox(n), s = (0.6 + R() * 0.7) / b.w, sy = (0.35 + R() * 0.5) / b.h; L.push([n, trekM(sd * x, -0.1 - b.y0 * sy, z + (R() - 0.5) * 0.4, R() * TAU, s, sy, s)]); }
+}
+// un pilar de roca que sube del fondo: una piedra plana arriba (donde se aterriza) y otras más altas debajo, hasta el fondo
+function trekPillar() {
+  if (TREK.pillar) return TREK.pillar; if (!NAT.ready) return [];
+  const L = [];
+  for (let k = 0; k < 6; k++) { const n = `Rock_Medium_${1 + k % 3}`, b = trekRockBox(n), sx = (k ? 0.95 : 1.15) / b.w, h = k ? 2.6 : 0.55, sy = h / b.h, top = k ? -0.3 - (k - 1) * 2.3 : 0.1; L.push([n, trekM(0, top - (b.y0 + b.h) * sy, 0, k * 1.7, sx, sy, sx)]); }
+  return (TREK.pillar = trekMergeParts(L));
+}
+// las paredes del desfiladero, con la textura de las rocas del bosque y más oscuras hacia el fondo
+function trekPitMat() {
+  if (TREK.pitMat) return TREK.pitMat;
+  const src = (NAT.parts.Rock_Medium_1 || [])[0], map = src && src.mat.map ? src.mat.map.clone() : null;
+  if (map) { map.wrapS = map.wrapT = THREE.RepeatWrapping; map.repeat.set(10, 4); map.needsUpdate = true; }
+  return (TREK.pitMat = new THREE.MeshBasicMaterial({ map, color: 0x9a907e, vertexColors: true, side: THREE.BackSide })); // (sin luces: lo oscuro del fondo lo ponen los colores)
+}
+// El hueco del desfiladero en el suelo: el césped, el sendero y el agua no se pintan encima (así se ve el tajo de verdad)
+const TREK_HOLE = { value: new THREE.Vector4(1, -1, 0, 0) }, TREK_HOLE_M = { value: new THREE.Matrix4() };
+function trekHoleMat(m) {
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, { uHole: TREK_HOLE, uHoleM: TREK_HOLE_M });
+    sh.vertexShader = 'varying vec3 vHoleP;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vHoleP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'uniform vec4 uHole;\nuniform mat4 uHoleM;\nvarying vec3 vHoleP;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n  vec3 hP = (uHoleM * vec4(vHoleP, 1.0)).xyz; if (hP.x > uHole.x && hP.x < uHole.y && hP.z > uHole.z && hP.z < uHole.w) discard;');
+  };
+  m.customProgramCacheKey = () => 'trekhole'; if (typeof comicPatch === 'function') comicPatch(m); // (y el cómic encima, como en los demás)
+}
+for (const m of [natGround.material, trekPath.material, TREK_WATER]) trekHoleMat(m);
 // El tramo: cuántas repeticiones pide (lo pone la partida); los retos salen a ratos, uno de cada tipo por turnos
 function trekWave(i) {
   TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
@@ -14299,7 +14368,12 @@ function trekSpawn() {
   const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34), maxUp: -1 };
   if (kind === 'chest' && !(typeof ISL !== 'undefined' && ISL.ready)) { if (typeof islandLoad === 'function') islandLoad(); o.kind = 'log'; if (!trekKinds().includes('log')) o.kind = 'rock'; } // (el cofre, cuando la isla esté cargada)
   const N = Math.min(8, 4 + waveIdx); if (o.kind === 'chest') Object.assign(o, { move: trekChainMove(), need: N }); if (o.kind === 'rock') Object.assign(o, { move: 'lunge', need: Math.min(7, 3 + Math.ceil(waveIdx / 2)) });
-  o.mesh = trekObsMesh(o); TREK.obs.push(o); TREK.next += rand(10, 16);
+  // el arroyo y el desfiladero se quedan quietos bajo la plataforma (no siguen a la cabeza) y te paras al borde, a 0,9 m;
+  // cada movimiento te lleva un paso (step) adelante; exit es dónde acabas, ya en la otra orilla
+  if (o.kind === 'stream') { const n = Math.min(8, 4 + waveIdx); Object.assign(o, { move: 'side', need: n, step: 1.1, sides: Array.from({ length: n }, (_, k) => k % 2 ? 1 : -1), len: n * 1.1 - 0.9 + 0.6, exit: o.at - 0.9 + (n + 1) * 1.1 }); }
+  if (o.kind === 'chasm') { const n = Math.min(7, 4 + Math.floor(waveIdx / 2)); Object.assign(o, { move: 'jump', need: n, step: 1.6, len: (n - 1) * 1.6 + 1.1 - 0.9, exit: o.at - 0.9 + n * 1.6 }); } // (n saltos: n − 1 pilares y la otra orilla)
+  if (o.len) Object.assign(o, { fixed: true, stop: 0.9, seed: Math.floor(Math.random() * 1e4) });
+  o.mesh = trekObsMesh(o); TREK.obs.push(o); TREK.next += rand(10, 16) + (o.len || 0);
 }
 // Lo rápido que avanzas sale de cada repetición: de su ritmo (el tiempo desde la anterior) y, con las piernas, de lo
 // hondo que bajaste (frente a lo que pide el ejercicio); las perfectas, algo más. Esa velocidad se mantiene un poco más
@@ -14324,30 +14398,60 @@ const _tkh = new V3();
 //  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante, y volver
 // Las cadenas se rompen eslabón a eslabón; la roca, a cada embestida, se aparta un poco hasta rodar fuera. Si en 40 s no
 // sale, lo rodeas (sin premio)
-const TMV = { st: 'up', z0: 0 };
+//  · zancada lateral (el arroyo): bajar al menos 10 cm con la cabeza 22 cm hacia el lado de la piedra siguiente, y volver al centro
+const TMV = { st: 'up', z0: 0, x0: 0 };
 function trekMoveStep() {
-  const up = HL.y - calibRef, down = calibRef - HL.y, k = TREK.halt.move;
-  if (TMV.st === 'up') { if (Math.abs(down) < 0.05) TMV.z0 += (HL.z - TMV.z0) * 0.1; // (la postura de partida, de pie)
+  const up = HL.y - calibRef, down = calibRef - HL.y, o = TREK.halt, k = o.move, dx = HL.x - TMV.x0;
+  if (TMV.st === 'up') { if (Math.abs(down) < 0.05) { TMV.z0 += (HL.z - TMV.z0) * 0.1; if (Math.abs(dx) < 0.1) TMV.x0 += dx * 0.05; } // (la postura de partida, de pie)
+    if (k === 'side') { if (down > 0.1 && Math.abs(dx) > 0.22) TMV.st = dx * o.sides[o.got] > 0 ? 'hit' : 'wrong'; return false; }
     if (k === 'jump' ? up > settings.jumpHeight / 100 : k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : down > 0.12 && HL.z < TMV.z0 - 0.15) TMV.st = 'hit'; return false; }
-  if (k === 'jump' ? up < 0.04 : down < 0.07) { TMV.st = 'up'; return true; }
+  if (k === 'side' ? down < 0.06 && Math.abs(dx) < 0.15 : k === 'jump' ? up < 0.04 : down < 0.07) { const ok = TMV.st === 'hit'; TMV.st = 'up'; if (!ok) say(`¡Al otro lado: a la ${o.sides[o.got] < 0 ? 'izquierda' : 'derecha'}!`, '#ff8a3d', 1.4); return ok; }
   return false;
 }
-function trekHaltSay(o, first) { const [one, many] = TREK_MOVE[o.move], left = o.need - (o.got || 0); say(o.kind === 'chest' ? `¡Rompe las cadenas: ${left} ${left === 1 ? one : many}!` : `¡Embiste la roca: ${left} ${left === 1 ? one : many}!`, '#ffd166', first ? 2.4 : 1.4); }
+function trekHaltSay(o, first) {
+  const [one, many] = TREK_MOVE[o.move], left = o.need - (o.got || 0), n = `${left} ${left === 1 ? one : many}`;
+  say(o.kind === 'chest' ? `¡Rompe las cadenas: ${n}!` : o.kind === 'stream' ? `${first ? 'Cruza el arroyo: ' : ''}¡zancada lateral a la ${o.sides[o.got] < 0 ? 'izquierda' : 'derecha'}!` : o.kind === 'chasm' ? (first ? `¡Desfiladero! Salta de roca en roca: ${n}` : `¡Salta! Quedan ${left}`) : `¡Embiste la roca: ${n}!`, '#ffd166', first ? 2.4 : 1.4);
+}
+// en el desfiladero, cuánto aguanta cada pilar contigo encima antes de hundirse (menos en cada tramo y con el rango)
+const trekCrumbleT = () => Math.max(2.6, 5.5 - 0.3 * waveIdx - 0.15 * rankIdx());
+// un paso adelante en el arroyo o el desfiladero: la plataforma se desliza hasta la piedra o el pilar siguiente; en el
+// desfiladero, el pilar que dejas se hunde
+function trekHop(o, ok) {
+  o.got++; TREK.glide += o.step; o.pt = 0; const wp = arena.localToWorld(_tkh.set(0, 0.2, o.mesh.position.z + o.stop - o.got * o.step));
+  if (o.stones[o.got]) o.glow.position.copy(o.stones[o.got]); else o.glow.visible = false;
+  if (o.kind === 'stream') { SND.whoosh(wp, 'arc'); fx.sparks(wp.clone(), 18, [0.6, 0.85, 1], 1.6, 0.03); }
+  else { const p = o.pillars[o.got - 2]; if (p && !p.userData.sink) trekSink(p); if (ok) SND.whoosh(wp, 'arc'); }
+}
+function trekSink(p) { p.userData.sink = 0.01; const wp = p.parent ? p.parent.localToWorld(p.position.clone()) : p.position.clone(); wp.y = 0.2; fx.smoke(wp, 0.7, 0.4, 2); SND.explosion(wp, false); }
 function trekHaltStep(dt, t) {
   const o = TREK.halt; if (!o) return;
   if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
   o.haltT += dt; const wp = arena.localToWorld(_tkh.set(o.mesh.position.x, 0.6, o.mesh.position.z));
+  if (o.len) { // el arroyo y el desfiladero: cada movimiento, un paso
+    if (trekMoveStep()) { score += 60; boardDirty = true; hapticBoth(0.5, 60); trekHop(o, true); if (o.got >= o.need) trekHaltEnd(o, true); else trekHaltSay(o); return; }
+    if (o.kind === 'chasm' && o.got >= 1) { // en un pilar: tiembla y, si tardas, se hunde contigo (una vida, solo la primera vez) y te lleva al siguiente
+      const p = o.pillars[o.got - 1], T = trekCrumbleT(); o.pt = (o.pt || 0) + dt;
+      if (p && o.pt > T * 0.55) { p.position.x = (p.userData.x0 === undefined ? (p.userData.x0 = p.position.x) : p.userData.x0) + Math.sin(t * 45) * 0.025 * (o.pt / T); if ((o.cr = (o.cr || 0) - dt) <= 0) { o.cr = 0.35; hapticBoth(0.3, 40); if (o.pt > T * 0.75) say('¡Se desmorona! ¡Salta!', '#ff8a3d', 0.8); } }
+      if (o.pt > T) { if (!o.fell) { o.fell = true; hurtPlayer({ silent: true }); say('¡Se hundió la roca! −1 vida', '#ff3b5c', 1.8); } else { combo = 0; say('¡Se hundió! Salta antes', '#ff8a3d', 1.4); }
+        if (p) trekSink(p); trekHop(o, false); if (o.got >= o.need) trekHaltEnd(o, true); }
+    }
+    if (o.haltT > 40 && o.got === 0 && TREK.halt === o) { say(o.kind === 'stream' ? 'Vadeas el arroyo' : 'Rodeas el desfiladero', '#a49fc8', 1.6); trekHaltEnd(o, false); }
+    return;
+  }
   if (trekMoveStep()) {
     o.got++; score += 60; boardDirty = true; hapticBoth(0.5, 60);
     if (o.kind === 'chest') { const cut = Math.ceil(o.links.length * o.got / o.need); o.links.forEach((l, i) => { if (i < cut && l.visible) { l.visible = false; } }); SND.metalHit(wp, true); fx.sparks(wp.clone(), 24, [1, 0.85, 0.5], 2.2, 0.03); }
-    else { o.box.position.z -= 0.22; o.box.rotation.x -= 0.25; SND.metalHit(wp, false); fx.smoke(wp.clone().setY(0.2), 0.6, 0.5, 2); }
+    else { o.box.position.z -= 0.22; o.box.rotation.x -= 0.25; SND.metalHit(wp, false); fx.smoke(new V3(wp.x, 0.2, wp.z), 0.6, 0.5, 2); }
     if (o.got >= o.need) trekHaltEnd(o, true); else trekHaltSay(o);
   }
   if (o.haltT > 40 && TREK.halt === o) { say(o.kind === 'chest' ? 'Dejas el cofre atrás' : 'Rodeas la roca', '#a49fc8', 1.6); trekHaltEnd(o, false); }
 }
 function trekHaltEnd(o, won) {
   TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1;
+  if (o.exit) { TREK.glide = Math.max(0, o.exit - TREK.dist); if (o.glow) o.glow.visible = false; } // (al otro lado, también si se acaba el tramo a medias)
   if (!won) return;
+  if (o.kind === 'stream') { TREK.ducked++; score += 300; cheer('¡Arroyo cruzado!', '#3cf0c6', 1.4); boardDirty = true; return; }
+  if (o.kind === 'chasm') { if (!o.fell) TREK.ducked++; score += o.fell ? 100 : 400; cheer(o.fell ? 'Desfiladero cruzado' : '¡Desfiladero cruzado sin caer!', '#3cf0c6', 1.6); boardDirty = true; return; }
   if (o.kind === 'chest') { // dentro, una llave (con tres, el tesoro del tramo) y una gema para tu colección
     while (o.box.children.length) o.box.remove(o.box.children[0]); trekPart(o.box, 'Chest_Gold', 0.9); o.links.forEach(l => l.visible = false);
     TREK.keys++; TREK.got++; score += 400; const gems = (store(TREK_GEMS) || 0) + 1; store(TREK_GEMS, gems); SND.victory(); cheer(`¡Cofre abierto! Llave ${TREK.keys}/3 · gema ${gems}`, '#ffd166', 2.2);
@@ -14406,13 +14510,16 @@ function trekStep(dt, t) {
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
   if (TREK.halt) { TREK.v = 0; TREK.push = 0; } // (parado ante el cofre o la roca)
-  const step = state === 'paused' ? 0 : TREK.v * dt; TREK.dist += step;
+  let step = state === 'paused' ? 0 : TREK.v * dt;
+  if (TREK.glide > 0 && state !== 'paused') { const g = Math.min(TREK.glide, dt * 1.8); TREK.glide -= g; step += g; } // (el paso a la piedra o el pilar siguiente)
+  TREK.dist += step;
   natGround.material.map.offset.y += step / 3.5; TREK_PATH_TEX.offset.y += step / 4; // (el suelo corre bajo tus pies)
   trekLayout(); trekLight(dt);
   // los retos: salen a 40 m y se juzgan al pasar por ti
   if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
   for (const o of TREK.obs) {
-    const z = HL.z - (o.at - TREK.dist); o.mesh.position.z = z;
+    const z = (o.fixed ? 0 : HL.z) - (o.at - TREK.dist); o.mesh.position.z = z;
+    if (o.pillars) for (const p of o.pillars) { const u = p.userData; if (u.sink) { u.sink += dt * 4; p.position.y -= u.sink * dt; p.rotation.z += dt * 0.25; if (p.position.y < -14) p.visible = false; } } // (los que se hunden, al fondo)
     if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
     if (o.lid && o.open) o.lid.rotation.x = Math.max(-1.9, o.lid.rotation.x - dt * 6);
     if (o.judged || state !== 'play') continue;
@@ -14423,12 +14530,18 @@ function trekStep(dt, t) {
     } else if (o.kind === 'branch') {
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
       if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
-    } else if (!o.done && o.at - TREK.dist <= 1.7 && TREK.halt !== o) { TREK.halt = o; o.got = 0; o.haltT = 0; TREK.v = 0; TREK.dist = o.at - 1.7; trekHaltSay(o, true); } // (el cofre o la roca, delante: te paras)
+    } else if (!o.done && o.at - TREK.dist <= (o.stop || 1.7) && TREK.halt !== o) { // (el cofre, la roca, el arroyo o el desfiladero, delante: te paras)
+      TREK.halt = o; o.got = 0; o.haltT = 0; TREK.v = 0; TREK.dist = o.at - (o.stop || 1.7); TMV.st = 'up'; TMV.x0 = HL.x; TMV.z0 = HL.z; trekHaltSay(o, true);
+      if (o.len && TREK.chase) trekChaseEnd(o.kind === 'stream' ? 'Los lobos no cruzan el agua' : 'Los lobos se quedan al borde', '#3cf0c6'); // (no te siguen)
+    }
   }
   trekHaltStep(dt, t); trekChaseStep(dt, t);
   for (const o of TREK.obs) { if (!o.done || !o.box) continue; o.out = Math.min(1, (o.out || 0) + dt * 1.2); o.mesh.position.x = o.side * 2.4 * smooth(o.out); if (o.kind === 'rock') o.box.rotation.z = -o.side * o.out * 2; } // (abierto o apartado, se hace a un lado)
-  TREK.obs = TREK.obs.filter(o => { const keep = o.mesh.position.z < HL.z + 6; if (!keep) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); }); } return keep; });
+  TREK.obs = TREK.obs.filter(o => { const keep = o.mesh.position.z - (o.len || 0) < HL.z + 6; if (!keep) trekDrop(o); return keep; });
+  // el hueco del desfiladero que se ve (si hay uno), en las coordenadas de la arena
+  const ch = TREK.obs.find(o => o.kind === 'chasm'); if (ch) { const z = ch.mesh.position.z; TREK_HOLE.value.set(-17, 17, z - ch.len, z); TREK_HOLE_M.value.copy(arena.matrixWorld).invert(); } else TREK_HOLE.value.set(1, -1, 0, 0);
 }
+function trekDrop(o) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); if (m.userData && m.userData.own) m.geometry.dispose(); }); }
 // La luz y la niebla del paisaje de ahora, poco a poco (la niebla, en su color de base: la tormenta de los Arcos la tiñe encima)
 const _tkc = new THREE.Color();
 function trekLight(dt) {
@@ -14442,7 +14555,7 @@ function trekLight(dt) {
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
   trekWolfLoad(); aldLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
-  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); trekChaseEnd(); Object.assign(TREK, { halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }

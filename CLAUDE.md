@@ -74,11 +74,12 @@ No las cambies sin preguntarle.
 - Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. La velocidad sale del
   ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Despacio (como mucho
   1,5 m/s), en línea recta y sobre una plataforma quieta bajo los pies, para que no maree.
-- Cada oleada, un tramo con su paisaje (bosque, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
+- Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
-  una gema) y el derrumbe (la roca se aparta embistiéndola con zancadas). Lobos que te persiguen: si vas más despacio,
+  una gema), el derrumbe (la roca se aparta embistiéndola con zancadas), el arroyo (de piedra en piedra con zancadas
+  laterales) y el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde). Lobos que te persiguen: si vas más despacio,
   te alcanzan y muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.

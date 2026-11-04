@@ -784,9 +784,26 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // las paradas cuentan otro movimiento con la cabeza: saltos, sentadillas y zancadas (embestidas hacia delante)
     { const c0 = RA.calibRef, H = RA.HL, seq = (move, pts) => { RA.TREK.halt = { move }; Object.assign(RA.TMV, { st: 'up', z0: 0 }); let n = 0; for (const [y, z] of pts) { H.y = c0 + y; H.z = z; if (RA.trekMoveStep()) n++; } RA.TREK.halt = null; return n; };
       const sq = RA.settings.squatDepth / 100, jumps = seq('jump', [[0, 0], [0.15, 0], [0, 0], [0.15, 0], [0.01, 0], [0.05, 0]]), squats = seq('squat', [[0, 0], [-sq, 0], [0, 0], [-sq * 0.5, 0], [0, 0]]), lunges = seq('lunge', [[0, 0], [-0.2, -0.3], [0, -0.3], [-0.2, 0], [0, 0]]);
-      log(`trek stops: jumps ${jumps} (2) · squats ${squats} (1) · lunges ${lunges} (1)`);
-      if (jumps !== 2 || squats !== 1 || lunges !== 1) errors.push(`Travesía: las paradas deberían contar saltos, sentadillas hondas y zancadas hacia delante (${jumps}, ${squats}, ${lunges})`); }
+      // zancadas laterales (el arroyo): a la izquierda, otra vez a la izquierda (mal: tocaba la derecha) y a la derecha
+      RA.TREK.halt = { move: 'side', sides: [-1, 1, -1], got: 0 }; Object.assign(RA.TMV, { st: 'up', x0: 0, z0: 0 }); let sides = 0;
+      for (const [y, x] of [[0, 0], [-0.15, -0.3], [0, 0], [-0.15, -0.3], [0, 0], [-0.15, 0.3], [0, 0.2], [0, 0]]) { H.y = c0 + y; H.x = x; H.z = 0; if (RA.trekMoveStep()) { sides++; RA.TREK.halt.got++; } }
+      RA.TREK.halt = null; H.x = 0;
+      log(`trek stops: jumps ${jumps} (2) · squats ${squats} (1) · lunges ${lunges} (1) · side lunges ${sides} (2)`);
+      if (jumps !== 2 || squats !== 1 || lunges !== 1) errors.push(`Travesía: las paradas deberían contar saltos, sentadillas hondas y zancadas hacia delante (${jumps}, ${squats}, ${lunges})`);
+      if (sides !== 2) errors.push(`Travesía: en el arroyo, cada zancada lateral debería contar solo hacia el lado de la piedra siguiente y al volver al centro (${sides} de 2)`); }
     log(`trek: ${RA.TREK.dist.toFixed(1)} m · top speed ${T.maxV.toFixed(2)} m/s · landscapes ${[...T.biomes]} · branches ducked ${RA.TREK.ducked}, hit ${RA.TREK.hits} · chests ${RA.TREK.got}`); }
+  // Travesía: el arroyo (zancadas laterales de piedra en piedra) y el desfiladero (saltos de pilar en pilar, que se hunden;
+  // si tardas, el pilar se hunde contigo: una vida, solo la primera vez)
+  { const T = { n: 0, st: null, ch: null, hop: 0, cr: 0 };
+    await runConfig('Travesía: arroyo y desfiladero', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 80, repsInc: 0, rest: 0, lives: 3 }, t => {
+      RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; RA.TREK.nextChase = 1e9; const O = RA.TREK.obs;
+      if (RA.state !== 'play' || !O.length) RA.TREK.nObs = 1; // (el primer reto, el arroyo; el siguiente, el desfiladero)
+      else if (O.length !== T.n) { T.n = O.length; const o = O[O.length - 1]; if (o.kind === 'stream') { T.st = T.st || o; RA.TREK.nObs = 3; } else if (o.kind === 'chasm') { T.ch = T.ch || o; RA.TREK.nObs = 0; } }
+      const h = RA.TREK.halt; if (!h || !h.len || RA.TMV.st !== 'up') return;
+      if (h.fell) T.cr = 1; if (h.kind === 'chasm' && h.got === 1 && !T.cr) return; // (en el primer pilar, espera a que se hunda)
+      if ((T.hop += 0.033) > 0.5) { T.hop = 0; RA.TMV.st = 'hit'; } }, 150,
+      s => !T.st || !T.ch ? `deberían salir el arroyo y el desfiladero (${!!T.st}, ${!!T.ch})` : !T.st.done || RA.TREK.dist < T.st.exit - 0.01 ? 'el arroyo debería cruzarse con zancadas laterales hasta la otra orilla' : !T.ch.done || RA.TREK.dist < T.ch.exit - 0.01 ? 'el desfiladero debería cruzarse saltando hasta la otra orilla' : !T.ch.fell || s.taken !== 1 ? `si tardas en saltar, el pilar debería hundirse contigo (una vida, una vez: ${s.taken})` : T.ch.pillars.filter(p => p.userData.sink).length !== T.ch.pillars.length ? 'los pilares que dejas deberían hundirse' : '', true);
+    log(`trek stream & chasm: stream ${T.st && T.st.got}/${T.st && T.st.need} · chasm ${T.ch && T.ch.got}/${T.ch && T.ch.need} fell ${T.ch && T.ch.fell} · ${RA.TREK.dist.toFixed(1)} m`); }
   // Travesía: si no avanzas, los lobos te alcanzan y muerden (una vida)
   { let chased = 0; await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);
     log(`trek wolves: chased ${chased}`); }
