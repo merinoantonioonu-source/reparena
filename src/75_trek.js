@@ -94,46 +94,66 @@ function trekLayout() {
   for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
 }
 
-/* ---------- Los retos del camino: ramas bajas y cofres ---------- */
+/* ---------- Los retos del camino ---------- */
+// Piden otro movimiento que el que te hace avanzar: con las piernas (sentadillas, zancadas, frontales), un tronco caído en el
+// suelo que hay que saltar; con los brazos (curl), una rama baja apoyada en dos rocas, para agacharse; y, en todos, cofres a
+// un lado para alargar la mano. Todo apoyado en el suelo, con su sombra, y avanzando con él
 const TREK_BARK = std({ color: 0x7a5232, roughness: 0.95 });
 const TREK_CHEST = { wood: std({ color: 0x8a5a2b, roughness: 0.8 }), gold: std({ color: 0xffc94a, roughness: 0.35, metalness: 0.8 }) };
+const TREK_SHADOW = (() => { const c = mkCanvas(128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 4, 64, 64, 62); g.addColorStop(0, 'rgba(20,30,10,0.55)'); g.addColorStop(1, 'rgba(20,30,10,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }); })();
+const trekLegs = () => ['squat', 'lunge', 'frontsq'].includes(settings.exercise);
+const trekKinds = () => trekLegs() ? ['log', 'chest'] : settings.exercise === 'jsquat' ? ['chest'] : ['branch', 'chest']; // (la sentadilla con salto ya salta y se agacha: solo cofres)
+function trekShadow(g, w, d, x = 0) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), TREK_SHADOW); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.012, 0); g.add(m); }
+function trekRock(g, x, s) { const n = `Rock_Medium_${1 + Math.floor(Math.random() * 3)}`; for (const p of NAT.parts[n] || []) { const m = new THREE.Mesh(p.geo, p.mat); m.position.x = x; m.scale.setScalar(s); m.rotation.y = Math.random() * TAU; g.add(m); } }
 function trekObsMesh(o) {
   const g = new THREE.Group();
-  if (o.kind === 'branch') { // un tronco atravesado, apoyado en dos horquillas, a la altura que obliga a agacharse
-    const log = new THREE.Mesh(G.cyl(0.13, 0.15, 3.6, 12), TREK_BARK); log.rotation.z = Math.PI / 2; log.position.y = o.y + 0.14; g.add(log);
-    for (const s of [-1, 1]) { const p = new THREE.Mesh(G.cyl(0.08, 0.1, o.y + 0.14, 8), TREK_BARK); p.position.set(s * 1.75, (o.y + 0.14) / 2, 0); g.add(p);
-      const fk = new THREE.Mesh(G.cyl(0.05, 0.07, 0.5, 6), TREK_BARK); fk.position.set(s * 1.62, o.y + 0.3, 0); fk.rotation.z = s * 0.6; g.add(fk); } // (las horquillas)
+  if (o.kind === 'branch') { // una rama gruesa apoyada en dos rocas grandes, a la altura que obliga a agacharse
+    const log = new THREE.Mesh(G.cyl(0.13, 0.16, 4.2, 12), TREK_BARK); log.rotation.z = Math.PI / 2 + 0.03; log.position.y = o.y + 0.14; g.add(log);
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(G.cyl(0.11, 0.16, o.y + 0.14, 8), TREK_BARK); p.position.set(s * 1.85, (o.y + 0.14) / 2, 0); g.add(p); trekRock(g, s * 1.85, 0.75); }
+    trekShadow(g, 4.4, 0.9);
+  } else if (o.kind === 'log') { // un tronco caído atravesado en el sendero: hay que saltarlo
+    const log = new THREE.Mesh(G.cyl(0.11, 0.13, 3.4, 12), TREK_BARK); log.rotation.z = Math.PI / 2; log.rotation.y = 0.08; log.position.y = 0.11; g.add(log);
+    for (const s of [-1, 1]) trekRock(g, s * 1.9, 0.45);
+    trekShadow(g, 3.8, 0.8);
   } else { // el cofre, sobre un tocón a la altura de la mano
-    const st = new THREE.Mesh(G.cyl(0.2, 0.24, 0.75, 10), TREK_BARK); st.position.y = 0.375; g.add(st);
+    const st = new THREE.Mesh(G.cyl(0.2, 0.26, 0.75, 10), TREK_BARK); st.position.y = 0.375; g.add(st);
     const box = new THREE.Mesh(G.box(0.36, 0.22, 0.26), TREK_CHEST.wood); box.position.y = 0.86; g.add(box);
     const lid = new THREE.Group(); lid.position.set(0, 0.97, -0.13); g.add(lid); const lt = new THREE.Mesh(G.box(0.37, 0.08, 0.27), TREK_CHEST.wood); lt.position.set(0, 0.04, 0.13); lid.add(lt);
     for (const x of [-0.14, 0.14]) { const b = new THREE.Mesh(G.box(0.03, 0.31, 0.27), TREK_CHEST.gold); b.position.set(x, 0.9, 0); g.add(b); }
-    o.lid = lid; o.glow = glowSprite(0xffd166, 0.7, 0.5); o.glow.position.y = 1.0; g.add(o.glow);
+    o.lid = lid; o.glow = glowSprite(0xffd166, 0.7, 0.5); o.glow.position.y = 1.0; g.add(o.glow); trekShadow(g, 0.9, 0.9);
   }
   TREK.group.add(g); return g;
 }
-// El tramo: cuántas repeticiones pide (lo pone la partida) y dónde salen las ramas y los cofres, uno de cada a ratos
+// El tramo: cuántas repeticiones pide (lo pone la partida); los retos salen a ratos, uno de cada tipo por turnos
 function trekWave(i) {
   TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
   TREK.next = TREK.dist + 9; return [];
 }
 function trekSpawn() {
-  const kind = TREK.obs.length % 2 ? 'chest' : 'branch', top = calibRef + HEAD_TOP;
-  const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34) };
+  const K = trekKinds(), kind = K[TREK.obs.length % K.length], top = calibRef + HEAD_TOP;
+  const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34), maxUp: -1 };
   o.mesh = trekObsMesh(o); if (kind === 'chest') o.mesh.position.x = o.side * 0.85;
   TREK.obs.push(o); TREK.next += rand(9, 15);
 }
-// cada repetición pone una velocidad de crucero durante 2,2 s (las perfectas, algo más); sin repeticiones, se va frenando
+// Lo rápido que avanzas sale de cada repetición: de su ritmo (el tiempo desde la anterior) y, con las piernas, de lo
+// hondo que bajaste (frente a lo que pide el ejercicio); las perfectas, algo más. Esa velocidad se mantiene un poco más
+// de lo que tardaste en hacerla; sin la siguiente, frenas
 function trekRep(opts) {
-  TREK.want = Math.min(TREK_VMAX, opts.perfect ? 1.25 : 0.95); TREK.push = 2.2;
-  if (opts.perfect) { cheer('¡PERFECTA!', '#3cf0c6', 1.0); SND.perfect(); } else say('¡Bien!', '#ffffff', 0.7, false);
+  const now = performance.now() / 1000, gap = TREK.lastRep ? now - TREK.lastRep : 2.4; TREK.lastRep = now;
+  const kc = clamp(2.4 / Math.max(0.5, gap), 0.6, 1.5);
+  const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
+  const ki = trekLegs() || settings.exercise === 'jsquat' ? clamp(depth / Math.max(0.05, req), 0.6, 1.6) : 1;
+  TREK.minY = 9; TREK.kc = kc; TREK.ki = ki;
+  TREK.want = clamp(0.8 * kc * ki * (opts.perfect ? 1.1 : 1), 0.3, TREK_VMAX); TREK.push = clamp(gap * 1.3, 1.6, 3);
+  if (kc * ki > 1.45) cheer('¡A TOPE!', '#8fdc5a', 0.9); else if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (ki < 0.75) say('Baja más: irás más deprisa', '#ffd166', 1.0); else say('¡Bien!', '#ffffff', 0.7, false);
+  if (opts.perfect) SND.perfect();
 }
 const _tkh = new V3();
 function trekStep(dt, t) {
   const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
   TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
   if (!trekOn()) return;
-  TREK.push = (TREK.push || 0) - dt;
+  TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
   const step = state === 'paused' ? 0 : TREK.v * dt; TREK.dist += step;
@@ -146,7 +166,11 @@ function trekStep(dt, t) {
     if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
     if (o.lid && o.open) o.lid.rotation.x = Math.max(-1.9, o.lid.rotation.x - dt * 6);
     if (o.judged || state !== 'play') continue;
-    if (o.kind === 'branch') {
+    if (o.kind === 'log') { // saltarlo: mientras pasa bajo ti cuenta lo más alto que llegaste
+      if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Salta!', '#ffd166', 1.2);
+      if (Math.abs(z - HL.z) < 0.45) o.maxUp = Math.max(o.maxUp, head.p.y - calibRef);
+      if (z >= HL.z + 0.45) { o.judged = true; if (o.maxUp < settings.jumpHeight / 100) { TREK.v *= 0.2; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, 0.2, z)), false); hapticBoth(0.8, 120); say('¡Salta el tronco!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 150; SND.whoosh(arena.localToWorld(_tkh.set(0, 0.2, z)), 'arc'); cheer('¡Saltado!', '#3cf0c6', 0.9); } boardDirty = true; }
+    } else if (o.kind === 'branch') {
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
       if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
     } else {
@@ -170,7 +194,7 @@ function trekLight(dt) {
 }
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
-  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); Object.assign(TREK, { v: 0, want: 0, push: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); Object.assign(TREK, { v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }
