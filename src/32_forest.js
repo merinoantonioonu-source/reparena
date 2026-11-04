@@ -57,7 +57,7 @@ const forestSkyMat = stormSky(new THREE.ShaderMaterial({
 const forestSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), forestSkyMat); forestSky.renderOrder = -10; forest.add(forestSky);
 const forestGround = new THREE.Mesh(new THREE.CircleGeometry(60, 64), std({ map: SURF.moss.map, normalMap: SURF.moss.normal, roughnessMap: SURF.moss.orm, metalness: 0, roughness: 1 }));
 forestGround.rotation.x = -Math.PI / 2; forestGround.position.y = -0.005; forestGround.receiveShadow = true; forest.add(forestGround);
-// Lo que se mueve: luciérnagas y niebla baja entre los árboles
+// Lo que se mueve: la niebla baja entre los árboles (las luciérnagas, en 56_motes)
 const FOREST = { flies: [], mist: [], built: '', owlT: 6, creakT: 9 };
 const mistTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), R = rng(17); for (let i = 0; i < 26; i++) { const px = 64 + (R() - 0.5) * 70, py = 64 + (R() - 0.5) * 40, rr = 14 + R() * 30; blob(x, px, py, rr, 'rgba(255,255,255,0.25)'); } x.globalCompositeOperation = 'destination-in'; const g = x.createRadialGradient(64, 64, 20, 64, 64, 63); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return c; })());
 
@@ -108,8 +108,7 @@ function buildForest() {
   for (const [s, e] of [[p1, new V3(p1.x + 0.1, H + 0.7, -0.3)], [p2, new V3(p2.x + 0.2, H + 0.45, 0.3)], [p3, new V3(p3.x + 0.4, H + 0.35, 0.1)]]) { k.add('bark', limbBetween(s, e, 0.015, 0.004, 6), C_BARK); k.add('leaf', G.sph(0.22, 7, 5), C_LEAF[0], e.x, e.y + 0.05, e.z, 0, 0, 0, 1, 0.7, 1); }
   FOREST.hero = k.build({ bark: M.bark, leaf: M.leaf, glow: M.glow, halo: M.halo }, { cast: true, receive: true }); forest.add(FOREST.hero);
   if (!FOREST.flies.length) {
-    const fm = new THREE.SpriteMaterial({ map: TX.halo, color: 0xc8ff6a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
-    for (let i = 0; i < 40; i++) { const s = new THREE.Sprite(fm.clone()), a = R() * TAU, d = 1.2 + R() * 9; s.scale.setScalar(0.05); forest.add(s); FOREST.flies.push({ s, base: new V3(Math.cos(a) * d, 0.3 + R() * 2.6, Math.sin(a) * d), ph: R() * TAU, sp: 0.3 + R() * 0.6 }); }
+    // (las luciérnagas, las de todos los entornos: 56_motes)
     const mm = new THREE.SpriteMaterial({ map: mistTex, color: 0x9fb4b0, transparent: true, opacity: 0.2, depthWrite: false });
     for (let i = 0; i < 16; i++) { const s = new THREE.Sprite(mm), a = R() * TAU, d = 2.5 + R() * 14; s.scale.set(5 + R() * 4, 1.6 + R(), 1); forest.add(s); FOREST.mist.push({ s, base: new V3(Math.cos(a) * d, 0.5 + R() * 0.6, Math.sin(a) * d), ph: R() * TAU }); }
   }
