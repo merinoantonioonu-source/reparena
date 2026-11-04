@@ -1,0 +1,180 @@
+/* =================== TRAVESÍA =================== */
+// Recorres un sendero del bosque a fuerza de repeticiones: cada una te da impulso (las perfectas, más) y, si paras, te
+// paras. Vas de pie sobre una plataforma de madera quieta bajo los pies (lo fijo alrededor evita el mareo), que avanza
+// despacio y siempre en línea recta (como mucho TREK_VMAX). Cada oleada es un tramo con su paisaje: bosque, pradera del
+// lago y pinar al atardecer; el paisaje nuevo va llegando por delante. Por el camino: ramas bajas (agáchate al pasar) y
+// cofres a los lados (tócalos con la mano). Las ramas no quitan vidas: frenan en seco y rompen la racha.
+// El paisaje son trozos de 24 m (TREK_CH) con los modelos del Stylized Nature MegaKit (los del bosque, 34_nature) en
+// instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
+// mueven: corre su textura
+const TREK_VMAX = 1.5, TREK_CH = 24, TREK_N = 4, TREK_PATH = 96;
+const TREK = { group: new THREE.Group(), v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
+TREK.group.visible = false; arena.add(TREK.group);
+const trekOn = () => settings.mode === 'trek';
+const TREK_BIOMES = [
+  { name: 'Bosque', fog: 0xc4dcea, dens: 0.014, hemi: 0xd6ecff, hemiI: 0.95, key: 0xfff0d2, keyI: 1.5, dusk: 0,
+    trees: ['CommonTree_3', 'CommonTree_4', 'CommonTree_5', 'CommonTree_4', 'Pine_2'], nTree: 9, bush: 5, rock: 3, flower: 10, water: false },
+  { name: 'Pradera del lago', fog: 0xd2e8f2, dens: 0.009, hemi: 0xe2f2ff, hemiI: 1.0, key: 0xfff6e0, keyI: 1.6, dusk: 0,
+    trees: ['CommonTree_4', 'Bush_Common_Flowers', 'CommonTree_3'], nTree: 4, bush: 6, rock: 4, flower: 20, water: true },
+  { name: 'Pinar al atardecer', fog: 0xe3a27c, dens: 0.016, hemi: 0xffc9a0, hemiI: 0.8, key: 0xffa860, keyI: 1.25, dusk: 1,
+    trees: ['Pine_2', 'Pine_4', 'Pine_5', 'Pine_4', 'DeadTree_1'], nTree: 10, bush: 3, rock: 5, flower: 5, water: false }
+];
+// El cielo de día se tiñe de atardecer en el pinar: naranja en el horizonte y malva arriba
+const TREK_DUSK = { value: 0 };
+Object.assign(natSkyMat.uniforms, { uDusk: TREK_DUSK });
+natSkyMat.fragmentShader = 'uniform float uDusk;\n' + natSkyMat.fragmentShader.replace('gl_FragColor = vec4(c, 1.0);', `
+      vec3 dk = mix(vec3(1.0, 0.56, 0.32), vec3(0.36, 0.3, 0.55), smoothstep(-0.02, 0.5, h)) + vec3(1.0, 0.7, 0.4) * pow(max(dot(d, normalize(vec3(0.0, 0.08, -1.0))), 0.0), 18.0) * 0.6;
+      c = mix(c, dk * (0.8 + 0.25 * c), uDusk);
+      gl_FragColor = vec4(c, 1.0);`);
+
+/* ---------- Lo que no se mueve: la plataforma, el sendero y la luz ---------- */
+const trekTex = (draw, rx = 1, ry = 1) => { const c = mkCanvas(256), x = c.getContext('2d'); draw(x, rng(5)); return texFrom(c, { repeat: [rx, ry] }); };
+const TREK_PATH_TEX = trekTex((x, R) => {
+  const g = x.createLinearGradient(0, 0, 256, 0); g.addColorStop(0, '#5f8f3a'); g.addColorStop(0.2, '#8a7448'); g.addColorStop(0.5, '#9b8155'); g.addColorStop(0.8, '#8a7448'); g.addColorStop(1, '#5f8f3a');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 900; i++) { const X = 40 + R() * 176, Y = R() * 256; x.fillStyle = R() < 0.5 ? 'rgba(70,52,30,0.35)' : 'rgba(190,165,120,0.3)'; x.fillRect(X, Y, 2 + R() * 4, 2 + R() * 3); } // (tierra y piedrecitas)
+}, 1, TREK_PATH / 4);
+const trekPath = new THREE.Mesh(new THREE.PlaneGeometry(3, TREK_PATH), new THREE.MeshStandardMaterial({ map: TREK_PATH_TEX, roughness: 1, metalness: 0 }));
+trekPath.rotation.x = -Math.PI / 2; trekPath.position.set(0, 0.004, -TREK_PATH / 2 + 6); trekPath.receiveShadow = true; TREK.group.add(trekPath);
+// la plataforma de tablones, con dos faroles delante (lo quieto que se ve al avanzar)
+const TREK_DECK = (() => {
+  const g = new THREE.Group(), wood = std({ map: trekTex((x, R) => { for (let i = 0; i < 8; i++) { x.fillStyle = `hsl(28,${35 + R() * 15}%,${26 + R() * 10}%)`; x.fillRect(0, i * 32, 256, 30); x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(0, i * 32 + 30, 256, 2); } }), roughness: 0.9 });
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.05, 1.5), wood); deck.position.y = 0.012; deck.receiveShadow = true; g.add(deck);
+  for (const s of [-1, 1]) {
+    const post = new THREE.Mesh(G.cyl(0.03, 0.04, 0.8, 8), wood); post.position.set(s * 0.82, 0.42, -0.7); g.add(post);
+    const lamp = new THREE.Mesh(G.box(0.08, 0.11, 0.08), new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false })); lamp.position.set(s * 0.82, 0.88, -0.7); g.add(lamp);
+    const glow = glowSprite(0xffc070, 0.3, 0.45); glow.position.copy(lamp.position); g.add(glow);
+  }
+  TREK.group.add(g); return g;
+})();
+
+/* ---------- El paisaje, por trozos ---------- */
+// Cada trozo es una lista de [modelo, posición dentro del trozo]; todos los trozos se dibujan juntos, con una sola pieza por
+// modelo y material (si no, cada trozo pedía sus propias piezas: el doble de dibujo que el bosque, y en las gafas no llegaba)
+function trekChunk(b, slot) {
+  const key = b + '_' + slot; if (TREK.cache[key]) return TREK.cache[key];
+  const B = TREK_BIOMES[b], R = rng(101 + b * 37 + slot * 11), list = [], taken = [];
+  const add = (n, x, z, s) => { if (NAT.parts[n]) list.push([n, new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, R() * TAU), new V3(s, s, s))]); };
+  const free = (x, z, r) => !taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r);
+  // side: -1, 1 o 0 (a los dos); con el lago, la derecha es agua
+  const scatter = (n, x0, x1, fn) => { for (let i = 0, k = 0; i < n && k < n * 20; k++) { const s = R() < 0.5 ? -1 : 1; if (B.water && s > 0 && x0 > 2.6) continue; const x = s * (x0 + R() * (x1 - x0)), z = -R() * TREK_CH; if (fn(x, z) !== false) i++; } };
+  scatter(B.nTree, 3.6, 15, (x, z) => { if (!free(x, z, 2.8)) return false; add(pick3(R, B.trees), x, z, 0.8 + R() * 0.55); taken.push({ x, z, r: 2.8 }); });
+  scatter(B.bush, 2.2, 6, (x, z) => { if (!free(x, z, 1.2)) return false; add(R() < 0.5 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, 0.45 + R() * 0.3); taken.push({ x, z, r: 1.2 }); });
+  scatter(B.rock, 2.4, 10, (x, z) => { if (!free(x, z, 1)) return false; add(`Rock_Medium_${1 + Math.floor(R() * 3)}`, x, z, 0.3 + R() * 0.45); taken.push({ x, z, r: 1 }); });
+  scatter(36, 1.6, 7, (x, z) => add(['Grass_Common_Short', 'Grass_Common_Short', 'Grass_Common_Tall', 'Grass_Wispy_Short'][Math.floor(R() * 4)], x, z, 0.2 + R() * 0.15));
+  scatter(B.flower, 1.7, 6, (x, z) => add('Flower_3_Group', x, z, 0.22 + R() * 0.12));
+  scatter(6, 2, 7, (x, z) => add(['Fern_1', 'Plant_1_Big', 'Clover_1', 'Mushroom_Common'][Math.floor(R() * 4)], x, z, 0.3 + R() * 0.2));
+  if (B.water) for (let i = 0; i < 10; i++) add(R() < 0.6 ? 'Grass_Wispy_Tall' : 'Grass_Common_Tall', 2.6 + R() * 0.9, -R() * TREK_CH, 0.3 + R() * 0.2); // (juncos en la orilla)
+  return (TREK.cache[key] = list);
+}
+const TREK_WATER = new THREE.MeshStandardMaterial({ color: 0x4f9ccf, roughness: 0.12, metalness: 0.25, transparent: true, opacity: 0.88 });
+// las piezas de dibujo, una por modelo y material, con sitio para todos los trozos; y un lago por hueco (se ve en los de agua)
+function trekInst() {
+  if (TREK.inst) return TREK.inst; const cap = {};
+  for (let b = 0; b < TREK_BIOMES.length; b++) for (let i = 0; i < TREK_N; i++) { const c = {}; trekChunk(b, i).forEach(([n]) => c[n] = (c[n] || 0) + 1); for (const n in c) cap[n] = Math.max(cap[n] || 0, c[n]); }
+  TREK.inst = {}; TREK.lakes = [];
+  for (const n in cap) TREK.inst[n] = NAT.parts[n].map(p => { const m = new THREE.InstancedMesh(p.geo, p.mat, cap[n] * TREK_N); m.count = 0; m.frustumCulled = false; if (m.instanceMatrix.setUsage) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); TREK.group.add(m); return m; });
+  for (let i = 0; i < TREK_N; i++) { const w = new THREE.Mesh(new THREE.PlaneGeometry(40, TREK_CH), TREK_WATER); w.rotation.x = -Math.PI / 2; w.visible = false; TREK.group.add(w); TREK.lakes.push(w); }
+  return TREK.inst;
+}
+// Cada hueco del frente lleva su trozo: el del tramo en el que entra al pasar al frente (así el paisaje nuevo llega de lejos)
+const _tkm = new THREE.Matrix4();
+function trekLayout() {
+  if (!NAT.ready) return; const I = trekInst();
+  const span = TREK_CH * TREK_N, off = ((TREK.dist % span) + span) % span, n = {};
+  for (const k in I) n[k] = 0;
+  for (let i = 0; i < TREK_N; i++) {
+    let z = -i * TREK_CH + off; if (z > TREK_CH) z -= span; // (de TREK_CH por detrás a casi span por delante)
+    const S = TREK.slots[i] || (TREK.slots[i] = { b: -1, z: 99 });
+    if (S.b < 0 || z < S.z - TREK_CH * 0.5) S.b = TREK.biome; // (acaba de pasar al frente: con el paisaje de ahora)
+    S.z = z;
+    for (const [k, M] of trekChunk(S.b, i)) { _tkm.copy(M); _tkm.elements[14] += z; for (const m of I[k]) m.setMatrixAt(n[k], _tkm); n[k]++; }
+    const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; w.position.set(3.2 + 20, 0.02, z - TREK_CH / 2);
+  }
+  for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
+}
+
+/* ---------- Los retos del camino: ramas bajas y cofres ---------- */
+const TREK_BARK = std({ color: 0x7a5232, roughness: 0.95 });
+const TREK_CHEST = { wood: std({ color: 0x8a5a2b, roughness: 0.8 }), gold: std({ color: 0xffc94a, roughness: 0.35, metalness: 0.8 }) };
+function trekObsMesh(o) {
+  const g = new THREE.Group();
+  if (o.kind === 'branch') { // un tronco atravesado, apoyado en dos horquillas, a la altura que obliga a agacharse
+    const log = new THREE.Mesh(G.cyl(0.13, 0.15, 3.6, 12), TREK_BARK); log.rotation.z = Math.PI / 2; log.position.y = o.y + 0.14; g.add(log);
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(G.cyl(0.08, 0.1, o.y + 0.14, 8), TREK_BARK); p.position.set(s * 1.75, (o.y + 0.14) / 2, 0); g.add(p);
+      const fk = new THREE.Mesh(G.cyl(0.05, 0.07, 0.5, 6), TREK_BARK); fk.position.set(s * 1.62, o.y + 0.3, 0); fk.rotation.z = s * 0.6; g.add(fk); } // (las horquillas)
+  } else { // el cofre, sobre un tocón a la altura de la mano
+    const st = new THREE.Mesh(G.cyl(0.2, 0.24, 0.75, 10), TREK_BARK); st.position.y = 0.375; g.add(st);
+    const box = new THREE.Mesh(G.box(0.36, 0.22, 0.26), TREK_CHEST.wood); box.position.y = 0.86; g.add(box);
+    const lid = new THREE.Group(); lid.position.set(0, 0.97, -0.13); g.add(lid); const lt = new THREE.Mesh(G.box(0.37, 0.08, 0.27), TREK_CHEST.wood); lt.position.set(0, 0.04, 0.13); lid.add(lt);
+    for (const x of [-0.14, 0.14]) { const b = new THREE.Mesh(G.box(0.03, 0.31, 0.27), TREK_CHEST.gold); b.position.set(x, 0.9, 0); g.add(b); }
+    o.lid = lid; o.glow = glowSprite(0xffd166, 0.7, 0.5); o.glow.position.y = 1.0; g.add(o.glow);
+  }
+  TREK.group.add(g); return g;
+}
+// El tramo: cuántas repeticiones pide (lo pone la partida) y dónde salen las ramas y los cofres, uno de cada a ratos
+function trekWave(i) {
+  TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
+  TREK.next = TREK.dist + 9; return [];
+}
+function trekSpawn() {
+  const kind = TREK.obs.length % 2 ? 'chest' : 'branch', top = calibRef + HEAD_TOP;
+  const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34) };
+  o.mesh = trekObsMesh(o); if (kind === 'chest') o.mesh.position.x = o.side * 0.85;
+  TREK.obs.push(o); TREK.next += rand(9, 15);
+}
+// cada repetición pone una velocidad de crucero durante 2,2 s (las perfectas, algo más); sin repeticiones, se va frenando
+function trekRep(opts) {
+  TREK.want = Math.min(TREK_VMAX, opts.perfect ? 1.25 : 0.95); TREK.push = 2.2;
+  if (opts.perfect) { cheer('¡PERFECTA!', '#3cf0c6', 1.0); SND.perfect(); } else say('¡Bien!', '#ffffff', 0.7, false);
+}
+const _tkh = new V3();
+function trekStep(dt, t) {
+  const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
+  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
+  if (!trekOn()) return;
+  TREK.push = (TREK.push || 0) - dt;
+  if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
+  else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
+  const step = state === 'paused' ? 0 : TREK.v * dt; TREK.dist += step;
+  natGround.material.map.offset.y += step / 3.5; TREK_PATH_TEX.offset.y += step / 4; // (el suelo corre bajo tus pies)
+  trekLayout(); trekLight(dt);
+  // los retos: salen a 40 m y se juzgan al pasar por ti
+  if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
+  for (const o of TREK.obs) {
+    const z = HL.z - (o.at - TREK.dist); o.mesh.position.z = z;
+    if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
+    if (o.lid && o.open) o.lid.rotation.x = Math.max(-1.9, o.lid.rotation.x - dt * 6);
+    if (o.judged || state !== 'play') continue;
+    if (o.kind === 'branch') {
+      if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
+      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
+    } else {
+      const reach = Math.abs(z - HL.z) < 0.6;
+      if (reach) for (const s of ['left', 'right']) { const h = hands[s]; if (!h.ok) continue; arena.worldToLocal(_tkh.copy(h.wrist)); if (Math.hypot(_tkh.x - o.mesh.position.x, _tkh.y - 0.9, _tkh.z - z) < 0.32) { o.judged = o.open = true; TREK.got++; score += 300; SND.orb(h.wrist); fx.sparks(h.wrist.clone(), 40, [1, 0.82, 0.3], 2.4, 0.04); haptic(s, 0.6, 80); cheer('¡Cofre! +300', '#ffd166', 1.4); boardDirty = true; break; } }
+      if (!o.judged && reach && (TREK.sayT = (TREK.sayT || 0) - dt) <= 0) { TREK.sayT = 3; say(`¡Toca el cofre ${o.side < 0 ? '← izquierda' : 'derecha →'}!`, '#ffd166', 1.2); }
+      if (z > HL.z + 0.7) o.judged = true;
+    }
+  }
+  TREK.obs = TREK.obs.filter(o => { const keep = o.mesh.position.z < HL.z + 6; if (!keep) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); }); } return keep; });
+}
+// La luz y la niebla del paisaje de ahora, poco a poco (la niebla, en su color de base: la tormenta de los Arcos la tiñe encima)
+const _tkc = new THREE.Color();
+function trekLight(dt) {
+  if (!natureOn()) return;
+  const B = TREK_BIOMES[TREK.biome], k = Math.min(1, dt * 0.6), f = scene.fog;
+  if (f) { if (!f.base) f.base = f.color.clone(); f.base.lerp(_tkc.setHex(B.fog), k); f.density += (B.dens - f.density) * k; renderer.setClearColor(f.base, 1); }
+  hemi.color.lerp(_tkc.setHex(B.hemi), k); hemi.intensity += (B.hemiI - hemi.intensity) * k;
+  keyLight.color.lerp(_tkc.setHex(B.key), k); keyLight.intensity += (B.keyI - keyLight.intensity) * k;
+  TREK_DUSK.value += (B.dusk - TREK_DUSK.value) * k;
+}
+// Al empezar una ronda: desde el principio del sendero, en el bosque
+function trekReset() {
+  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); Object.assign(TREK, { v: 0, want: 0, push: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.slots = []; TREK_DUSK.value = 0;
+  natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
+}
+settingHooks.push(k => {
+  if (k === 'mode' || k === '*') { if (!trekOn()) { natGround.material.map.offset.y = 0; TREK_DUSK.value = 0; } }
+  if ((k === 'mode' || k === 'look' || k === '*') && trekOn() && settings.look !== 'comic') setSetting('look', 'comic'); // (la Travesía, siempre en cómic)
+});

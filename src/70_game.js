@@ -1259,6 +1259,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
+  if (settings.mode === 'trek') { if (state !== 'play') return; registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero)
   registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -1298,7 +1299,7 @@ function onPower(pow, deep) {
   if (pow >= 4 && sorbFor()) sorbMax(); // la bola, al máximo: el destello
 }
 function onCharge() {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || settings.mode === 'trek' || isBars()) return;
   charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && !sorbFor(); SND.charge(); boardDirty = true; // (con rayos, la carga se ve en la bola de energía: 54_suporb)
 }
 const DET = {
@@ -2150,6 +2151,7 @@ function buildWave(i) {
   LADDER.fresh = []; // (solo el combate anuncia enemigos nuevos: que no quede el aviso de la partida anterior en arcos, toques o barras)
   if (isBars()) return buildBarWave(i);
   if (settings.mode === 'touch') return buildTouchWave(i);
+  if (settings.mode === 'trek') return trekWave(i); // (en la Travesía no sale nadie: el tramo se hace con repeticiones)
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
@@ -2342,6 +2344,9 @@ settingHooks.push(k => {
   store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
 })();
 // Arcos pasa a ir «Al fallo» de serie: también en los ejercicios de Arcos ya guardados (una vez)
+// El estilo Cómic pasa a ser el de serie (en Realista, con la resolución alta, las gafas no llegan): también para quien ya
+// jugaba en Realista (una vez)
+(function comicMigrate() { if (settings.lookV) return; settings.look = 'comic'; settings.lookV = 1; store(STORE_KEY, settings); })();
 (function arcFailMigrate() {
   if (settings.arcFailV) return;
   const all = store(COMBO_KEY) || {}; for (const id in all) if (id.startsWith('arcs|') && all[id]) all[id].toFail = 1;
@@ -2381,7 +2386,7 @@ function armsMenu(back) {
 //    con Sesiones: la sesión preparada, bloque a bloque, y las guardadas
 //  · Spotify (si está conectado) y, abajo, Opciones (rivales y armas, progreso, sonido, entorno y ajustes) y Salir
 // Se recuerdan la vista (modo o sesiones) y la pestaña de Opciones
-const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff', EX_COL = '#e4e8f2', MODE_BOX = '#8c86b4';
+const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6', trek: '#8fdc5a' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff', EX_COL = '#e4e8f2', MODE_BOX = '#8c86b4';
 const LOBBY = { view: uiPrefs().lobbyView === 'ses' ? 'ses' : 'mode', opt: uiPrefs().lobbyOpt || 'foes', foe: '' };
 // Los ejercicios del modo, en rejilla (6 por fila si son muchos), y lo que le toca: la barra o las paralelas en Barras,
 // las combinaciones en Toques
@@ -2615,7 +2620,7 @@ function beginRun() {
   TROPHY.fail = -1; // (el récord al fallo de este ejercicio, se mira en la primera oleada)
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
+  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); trekReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0, holdT: 0, pow: 1 }); DET.fr.o = null; Object.assign(DET.plp, { state: 'up', charged: false }); DET.pl.boost = 0;
   stateT = 0; boardDirty = true;
@@ -2943,7 +2948,7 @@ function gameStep(dt, t) {
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
-    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
+    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
       rampWaveEnd(!BAR.failed);
@@ -2969,7 +2974,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t); perkStep(dt, t);
+  arxStep(dt, t); trekStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

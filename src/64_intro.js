@@ -360,7 +360,7 @@ function introDraw() {
   plate(W - 40, true, B.note.toUpperCase(), B.name.toUpperCase(), '#ff8a8a', '', B.bars, ['#ff8a3d', '#ff3b5c']);
   P.tex.needsUpdate = true;
 }
-const introOn = () => !!settings.intro && (xrActive || preview);
+const introOn = () => !!settings.intro && (xrActive || preview) && settings.mode !== 'trek'; // (en la Travesía no hay duelo)
 function introStart() {
   if (!introOn()) return;
   INTRO.t = 0; INTRO.wait = true; INTRO.skip = false; INTRO.thumbT = 0; INTRO.center = center.mesh.visible; center.mesh.visible = false;
