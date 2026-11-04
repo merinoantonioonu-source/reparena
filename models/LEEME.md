@@ -16,6 +16,7 @@
 | `tentaculo.glb` | **Tentáculo** del charco de las barras (Pirate Kit, de Quaternius, CC0) con sus cuatro animaciones: reposo (se mece), pinchazo, latigazo y barrido. Convertido de su `.gltf` a `.glb`, sin simplificar (3.900 triángulos: con menos se veía a facetas). Se descarga al salir el charco; si no carga, salen los tentáculos hechos a mano. |
 | `animales/lobo.glb` | **Lobo** (pack de animales animados de Quaternius, CC0): cuerpo, esqueleto, colores y sus 12 animaciones (reposo, andar, galope, salto, ataque, comer, recibir golpe y morir), convertido de su `.gltf` a `.glb` con [gltfpack](https://meshoptimizer.org/gltf/) (sin cuantizar). Los lobos que te persiguen en la Travesía. |
 | `aldea/*.glb`, `tex/aldea/` | **Aldea** (Medieval Village MegaKit, versión gratuita, de Quaternius, CC0): las piezas con que el juego monta las casas de la Travesía (paredes de yeso y de ladrillo, lisas, con ventana, con puerta y de entramado; esquinas; tejados de tejas de 4 × 4 y 6 × 6 y sus hastiales; ventana, contraventanas, puerta y chimenea) y los sueltos (carro, caja y valla), convertidos de sus `.fbx` con FBX2glTF. Sus texturas de color, reducidas a 512 px. |
+| `bandidos/bandido.glb`, `tex/bandidos/` | **Bandido** (Modular Character Outfits – Fantasy, versión gratuita, de Quaternius, CC0): el explorador con capucha («Male Ranger»), cuerpo y esqueleto (el mismo que el de `anims.glb`), convertido de su `.fbx` con FBX2glTF y aligerado con [gltfpack](https://meshoptimizer.org/gltf/) (sin cuantizar). Sus texturas de color, reducidas a 512 px: dos ropas (`ranger1`, `ranger2`) y la piel (`piel`). Los bandidos que cortan el paso en la Travesía. |
 | `retratos.png` | Los retratos de los enemigos para sus fichas del menú (7 por fila, de 192 px, en el orden de `FOE_PIC`), hechos con estos modelos por `tests/retratos.js`. |
 | `anims.glb` | Las animaciones que usa el juego (andar, trotar, correr, puñetazos, tajo de espada, recibir golpe, morir, bailar, lanzar un hechizo, voltereta y guardia), sacadas de la **Universal Animation Library** (Quaternius, CC0), hecha para el mismo esqueleto, y de la **Universal Animation Library 2** (CC0, mismo esqueleto y misma pose de reposo): salir despedido y caer de espaldas (`Hit_Knockback`), levantarse del suelo (`LayToIdle`), un gancho (`Melee_Hook`), tres tajos (`Sword_Regular_A/B/C`) y lanzar (`OverhandThrow`), con los giros de sus huesos y el balanceo de la pelvis, como las demás. Solo lleva el esqueleto y esas animaciones (sin los dedos ni la malla). |
 | `tex/` | Las texturas, reducidas a 1024 px para que carguen deprisa en las Quest: tres colores por monstruo (`*_color1..3.jpg`), relieve (`*_normal`), rugosidad y metal (`*_orm`) y brillo de los ojos (`*_emissive`). |
@@ -35,6 +36,8 @@ Los zombis verde y gordo: el Ultimate Platformer Pack trae su licencia (`License
 El Pirate Kit (isla, piratas y tentáculo): el zip no trae archivo de licencia; Quaternius publica sus packs gratuitos como CC0 (dominio público).
 
 Los monstruitos: el zip de Cute Animated Monsters no trae archivo de licencia; Quaternius publica sus packs gratuitos como CC0 (dominio público).
+
+Los bandidos: el pack trae su licencia (`License_Standard.txt`): CC0 1.0 (dominio público).
 
 El bosque de día: el pack trae su licencia (`License_Standard.txt`): CC0 1.0 (dominio público).
 
