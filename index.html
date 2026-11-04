@@ -7089,7 +7089,7 @@ function drawBoard() {
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
   // Travesía: los metros recorridos, la velocidad de ahora y el paisaje
-  if (settings.mode === 'trek' && live && state !== 'rest') { const t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h · ${TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
+  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }
@@ -14117,7 +14117,7 @@ function tempoRows(back) {
 // instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
 // mueven: corre su textura
 const TREK_VMAX = 1.5, TREK_CH = 24, TREK_N = 4, TREK_PATH = 96;
-const TREK = { group: new THREE.Group(), v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
+const TREK = { group: new THREE.Group(), nextChase: 30, keys: 0, halt: null, chase: null, v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
 TREK.group.visible = false; arena.add(TREK.group);
 const trekOn = () => settings.mode === 'trek';
 const TREK_BIOMES = [
@@ -14211,8 +14211,14 @@ const TREK_BARK = std({ color: 0x7a5232, roughness: 0.95 });
 const TREK_CHEST = { wood: std({ color: 0x8a5a2b, roughness: 0.8 }), gold: std({ color: 0xffc94a, roughness: 0.35, metalness: 0.8 }) };
 const TREK_SHADOW = (() => { const c = mkCanvas(128), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 4, 64, 64, 62); g.addColorStop(0, 'rgba(20,30,10,0.55)'); g.addColorStop(1, 'rgba(20,30,10,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }); })();
 const trekLegs = () => ['squat', 'lunge', 'frontsq'].includes(settings.exercise);
-const trekKinds = () => trekLegs() ? ['log', 'chest'] : settings.exercise === 'jsquat' ? ['chest'] : ['branch', 'chest']; // (la sentadilla con salto ya salta y se agacha: solo cofres)
+// los retos de cada ejercicio: nunca el mismo movimiento que te hace avanzar (la roca se embiste con zancadas: no con ellas)
+const trekKinds = () => { const ex = settings.exercise; return ex === 'lunge' ? ['log', 'chest'] : trekLegs() ? ['log', 'chest', 'rock'] : ex === 'jsquat' ? ['chest', 'rock'] : ['branch', 'chest', 'rock']; };
+// el movimiento que rompe las cadenas del cofre: saltos (si avanzas con las piernas), zancadas (con la sentadilla con salto) o sentadillas (con curl)
+const trekChainMove = () => trekLegs() ? 'jump' : settings.exercise === 'jsquat' ? 'lunge' : 'squat';
+const TREK_MOVE = { jump: ['salto', 'saltos'], lunge: ['zancada', 'zancadas'], squat: ['sentadilla', 'sentadillas'] };
 function trekShadow(g, w, d, x = 0) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), TREK_SHADOW); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.012, 0); g.add(m); }
+// una pieza de la isla pirata (cofre cerrado, cofre con oro), si ya se cargó
+function trekPart(g, n, s) { for (const p of (typeof ISL !== 'undefined' && ISL.parts[n]) || []) { const m = new THREE.Mesh(p.geo, p.mat); m.scale.setScalar(s); g.add(m); } }
 function trekRock(g, x, s) { const n = `Rock_Medium_${1 + Math.floor(Math.random() * 3)}`; for (const p of NAT.parts[n] || []) { const m = new THREE.Mesh(p.geo, p.mat); m.position.x = x; m.scale.setScalar(s); m.rotation.y = Math.random() * TAU; g.add(m); } }
 function trekObsMesh(o) {
   const g = new THREE.Group();
@@ -14224,12 +14230,12 @@ function trekObsMesh(o) {
     const log = new THREE.Mesh(G.cyl(0.11, 0.13, 3.4, 12), TREK_BARK); log.rotation.z = Math.PI / 2; log.rotation.y = 0.08; log.position.y = 0.11; g.add(log);
     for (const s of [-1, 1]) trekRock(g, s * 1.9, 0.45);
     trekShadow(g, 3.8, 0.8);
-  } else { // el cofre, sobre un tocón a la altura de la mano
-    const st = new THREE.Mesh(G.cyl(0.2, 0.26, 0.75, 10), TREK_BARK); st.position.y = 0.375; g.add(st);
-    const box = new THREE.Mesh(G.box(0.36, 0.22, 0.26), TREK_CHEST.wood); box.position.y = 0.86; g.add(box);
-    const lid = new THREE.Group(); lid.position.set(0, 0.97, -0.13); g.add(lid); const lt = new THREE.Mesh(G.box(0.37, 0.08, 0.27), TREK_CHEST.wood); lt.position.set(0, 0.04, 0.13); lid.add(lt);
-    for (const x of [-0.14, 0.14]) { const b = new THREE.Mesh(G.box(0.03, 0.31, 0.27), TREK_CHEST.gold); b.position.set(x, 0.9, 0); g.add(b); }
-    o.lid = lid; o.glow = glowSprite(0xffd166, 0.7, 0.5); o.glow.position.y = 1.0; g.add(o.glow); trekShadow(g, 0.9, 0.9);
+  } else if (o.kind === 'chest') { // el cofre de la isla pirata (Pirate Kit), en medio del camino y atado con cadenas
+    o.box = new THREE.Group(); g.add(o.box); trekPart(o.box, 'Chest_Closed', 0.9);
+    o.links = []; for (const a of [-0.35, 0.35]) for (let i = 0; i < 26; i++) { const t = i / 26 * TAU, l = new THREE.Mesh(MACE.link, MACE.ballMat); l.position.set(Math.cos(t) * 0.42 + a * 0.4, 0.32 + Math.sin(t) * 0.34, 0); l.rotation.set(0, i % 2 ? Math.PI / 2 : 0, t); l.scale.setScalar(1.4); g.add(l); o.links.push(l); }
+    o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.y = 0.5; g.add(o.glow); trekShadow(g, 1.2, 1);
+  } else { // el derrumbe: una roca grande atravesada en el sendero
+    o.box = new THREE.Group(); g.add(o.box); trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
   }
   TREK.group.add(g); return g;
 }
@@ -14239,15 +14245,17 @@ function trekWave(i) {
   TREK.next = TREK.dist + 9; return [];
 }
 function trekSpawn() {
-  const K = trekKinds(), kind = K[TREK.obs.length % K.length], top = calibRef + HEAD_TOP;
+  const K = trekKinds(), kind = K[(TREK.nObs = (TREK.nObs || 0) + 1) % K.length], /* (por turnos) */ top = calibRef + HEAD_TOP;
   const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34), maxUp: -1 };
-  o.mesh = trekObsMesh(o); if (kind === 'chest') o.mesh.position.x = o.side * 0.85;
-  TREK.obs.push(o); TREK.next += rand(9, 15);
+  if (kind === 'chest' && !(typeof ISL !== 'undefined' && ISL.ready)) { if (typeof islandLoad === 'function') islandLoad(); o.kind = 'log'; if (!trekKinds().includes('log')) o.kind = 'rock'; } // (el cofre, cuando la isla esté cargada)
+  const N = Math.min(8, 4 + waveIdx); if (o.kind === 'chest') Object.assign(o, { move: trekChainMove(), need: N }); if (o.kind === 'rock') Object.assign(o, { move: 'lunge', need: Math.min(7, 3 + Math.ceil(waveIdx / 2)) });
+  o.mesh = trekObsMesh(o); TREK.obs.push(o); TREK.next += rand(10, 16);
 }
 // Lo rápido que avanzas sale de cada repetición: de su ritmo (el tiempo desde la anterior) y, con las piernas, de lo
 // hondo que bajaste (frente a lo que pide el ejercicio); las perfectas, algo más. Esa velocidad se mantiene un poco más
 // de lo que tardaste en hacerla; sin la siguiente, frenas
 function trekRep(opts) {
+  if (TREK.halt) { trekHaltSay(TREK.halt); return; } // (parado: lo que toca es el otro movimiento)
   const now = performance.now() / 1000, gap = TREK.lastRep ? now - TREK.lastRep : 2.4; TREK.lastRep = now;
   const kc = clamp(2.4 / Math.max(0.5, gap), 0.6, 1.5);
   const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
@@ -14258,6 +14266,88 @@ function trekRep(opts) {
   if (opts.perfect) SND.perfect();
 }
 const _tkh = new V3();
+
+/* ---------- Paradas: el cofre con cadenas y la roca del derrumbe ---------- */
+// Ante el cofre o la roca te paras; lo que te mueve ahora es otro movimiento, contado por la cabeza:
+//  · salto: subir jumpHeight sobre tu altura de pie y volver
+//  · sentadilla: bajar lo que pide la sentadilla (85 %) y volver arriba
+//  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante, y volver
+// Las cadenas se rompen eslabón a eslabón; la roca, a cada embestida, se aparta un poco hasta rodar fuera. Si en 40 s no
+// sale, lo rodeas (sin premio)
+const TMV = { st: 'up', z0: 0 };
+function trekMoveStep() {
+  const up = HL.y - calibRef, down = calibRef - HL.y, k = TREK.halt.move;
+  if (TMV.st === 'up') { if (Math.abs(down) < 0.05) TMV.z0 += (HL.z - TMV.z0) * 0.1; // (la postura de partida, de pie)
+    if (k === 'jump' ? up > settings.jumpHeight / 100 : k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : down > 0.12 && HL.z < TMV.z0 - 0.15) TMV.st = 'hit'; return false; }
+  if (k === 'jump' ? up < 0.04 : down < 0.07) { TMV.st = 'up'; return true; }
+  return false;
+}
+function trekHaltSay(o, first) { const [one, many] = TREK_MOVE[o.move], left = o.need - (o.got || 0); say(o.kind === 'chest' ? `¡Rompe las cadenas: ${left} ${left === 1 ? one : many}!` : `¡Embiste la roca: ${left} ${left === 1 ? one : many}!`, '#ffd166', first ? 2.4 : 1.4); }
+function trekHaltStep(dt, t) {
+  const o = TREK.halt; if (!o) return;
+  if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
+  o.haltT += dt; const wp = arena.localToWorld(_tkh.set(o.mesh.position.x, 0.6, o.mesh.position.z));
+  if (trekMoveStep()) {
+    o.got++; score += 60; boardDirty = true; hapticBoth(0.5, 60);
+    if (o.kind === 'chest') { const cut = Math.ceil(o.links.length * o.got / o.need); o.links.forEach((l, i) => { if (i < cut && l.visible) { l.visible = false; } }); SND.metalHit(wp, true); fx.sparks(wp.clone(), 24, [1, 0.85, 0.5], 2.2, 0.03); }
+    else { o.box.position.z -= 0.22; o.box.rotation.x -= 0.25; SND.metalHit(wp, false); fx.smoke(wp.clone().setY(0.2), 0.6, 0.5, 2); }
+    if (o.got >= o.need) trekHaltEnd(o, true); else trekHaltSay(o);
+  }
+  if (o.haltT > 40 && TREK.halt === o) { say(o.kind === 'chest' ? 'Dejas el cofre atrás' : 'Rodeas la roca', '#a49fc8', 1.6); trekHaltEnd(o, false); }
+}
+function trekHaltEnd(o, won) {
+  TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1;
+  if (!won) return;
+  if (o.kind === 'chest') { // dentro, una llave (con tres, el tesoro del tramo) y una gema para tu colección
+    while (o.box.children.length) o.box.remove(o.box.children[0]); trekPart(o.box, 'Chest_Gold', 0.9); o.links.forEach(l => l.visible = false);
+    TREK.keys++; TREK.got++; score += 400; const gems = (store(TREK_GEMS) || 0) + 1; store(TREK_GEMS, gems); SND.victory(); cheer(`¡Cofre abierto! Llave ${TREK.keys}/3 · gema ${gems}`, '#ffd166', 2.2);
+    if (TREK.keys >= 3) { TREK.keys = 0; score += 1500; trophy('¡TESORO DEL TRAMO!', 'Tres llaves: +1500 puntos'); }
+  } else { TREK.ducked++; score += 300; SND.explosion(arena.localToWorld(_tkh.set(0, 0.5, o.mesh.position.z)), false); cheer('¡Roca apartada!', '#3cf0c6', 1.4); }
+  boardDirty = true;
+}
+const TREK_GEMS = 'reparena3-gems';
+
+/* ---------- Lobos que te persiguen ---------- */
+// Salen del bosque por detrás y corren junto al camino: si vas más despacio que ellos, se acercan (los ves llegar a tu lado
+// y los oyes) y, si te alcanzan, muerden (una vida). Si vas más deprisa, se quedan atrás y abandonan. Más rápidos en cada
+// tramo y con el rango, poco a poco. Mientras estás parado ante un cofre o una roca, esperan
+const TREK_WOLF = { scene: null, clips: [], loading: false, failed: false };
+function trekWolfLoad() {
+  if (TREK_WOLF.scene || TREK_WOLF.loading || TREK_WOLF.failed) return;
+  if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { TREK_WOLF.failed = true; return; }
+  TREK_WOLF.loading = true;
+  new THREE.GLTFLoader().load('models/animales/lobo.glb', g => { TREK_WOLF.scene = g.scene; TREK_WOLF.clips = g.animations; TREK_WOLF.loading = false; }, undefined, e => { TREK_WOLF.failed = true; TREK_WOLF.loading = false; console.log('No se pudo cargar el lobo:', e && e.message); });
+}
+const trekWolfV = () => Math.min(1.3, 0.72 + 0.07 * waveIdx + 0.03 * rankIdx()); // (en m/s: hay que ir más deprisa que ellos)
+function trekChaseStart() {
+  const n = waveIdx >= 2 ? 2 : 1, C = { gap: 7, v: trekWolfV(), wolves: [], t: 0, growl: 0 };
+  for (let i = 0; i < n; i++) {
+    C.wolves.push({ side: n === 2 ? (i ? 1 : -1) : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 3 });
+  }
+  TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera', '#ff8a3d', 2); SND.roar(arena.localToWorld(_tkh.set(0, 0.6, HL.z + 6)), 0.7);
+}
+// (sus figuras, en cuanto el modelo esté cargado)
+function trekWolfMeshes(C) {
+  if (!TREK_WOLF.scene) return;
+  for (const w of C.wolves) {
+    if (!w.mesh) { w.mesh = THREE.SkeletonUtils.clone(TREK_WOLF.scene); w.mesh.scale.setScalar(0.33); w.mesh.rotation.y = Math.PI; TREK.group.add(w.mesh); w.mix = new THREE.AnimationMixer(w.mesh); const c = TREK_WOLF.clips.find(a => a.name === 'Gallop'); if (c) { w.act = w.mix.clipAction(c); w.act.play(); } }
+  }
+}
+function trekChaseEnd(msg, col) { const C = TREK.chase; if (!C) return; C.wolves.forEach(w => { if (w.mesh) TREK.group.remove(w.mesh); }); TREK.chase = null; TREK.nextChase = TREK.dist + rand(45, 70); if (msg) cheer(msg, col, 1.6); boardDirty = true; }
+function trekChaseStep(dt, t) {
+  if (state === 'play' && !TREK.chase && !TREK.halt && TREK.dist >= TREK.nextChase) { trekWolfLoad(); trekChaseStart(); }
+  const C = TREK.chase; if (!C) return; if (TREK_WOLF.scene && !C.wolves[0].mesh) trekWolfMeshes(C);
+  if (state === 'rest' || state === 'end') { trekChaseEnd(); return; }
+  if (state === 'play' && !TREK.halt) { C.t += dt; C.gap += (TREK.v - C.v) * dt; if (C.bit) C.gap += dt * 2; } // (tras morder, se quedan atrás)
+  for (const w of C.wolves) {
+    const z = HL.z + Math.max(-0.3, C.gap * 0.75 - 0.8), x = w.side * (1.5 + Math.max(0, C.gap - 2) * 0.15);
+    if (w.mesh) { w.mesh.position.set(x, 0, z + Math.sin(t * 2 + w.ph) * 0.15); if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt); }
+  }
+  if (C.gap < 3 && (C.growl -= dt) <= 0) { C.growl = 1.6; SND.hiss(arena.localToWorld(_tkh.set(C.wolves[0].side * 1.5, 0.6, HL.z + 0.5))); hapticBoth(0.25, 40); }
+  if (!C.bit && C.gap <= 0.4) { C.bit = true; hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); boardDirty = true; }
+  if (C.gap >= 14) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
+  else if (C.t > 45) trekChaseEnd('Los lobos se cansan', '#a49fc8');
+}
 function trekStep(dt, t) {
   const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
   TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
@@ -14265,6 +14355,7 @@ function trekStep(dt, t) {
   TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
+  if (TREK.halt) { TREK.v = 0; TREK.push = 0; } // (parado ante el cofre o la roca)
   const step = state === 'paused' ? 0 : TREK.v * dt; TREK.dist += step;
   natGround.material.map.offset.y += step / 3.5; TREK_PATH_TEX.offset.y += step / 4; // (el suelo corre bajo tus pies)
   trekLayout(); trekLight(dt);
@@ -14282,13 +14373,10 @@ function trekStep(dt, t) {
     } else if (o.kind === 'branch') {
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
       if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
-    } else {
-      const reach = Math.abs(z - HL.z) < 0.6;
-      if (reach) for (const s of ['left', 'right']) { const h = hands[s]; if (!h.ok) continue; arena.worldToLocal(_tkh.copy(h.wrist)); if (Math.hypot(_tkh.x - o.mesh.position.x, _tkh.y - 0.9, _tkh.z - z) < 0.32) { o.judged = o.open = true; TREK.got++; score += 300; SND.orb(h.wrist); fx.sparks(h.wrist.clone(), 40, [1, 0.82, 0.3], 2.4, 0.04); haptic(s, 0.6, 80); cheer('¡Cofre! +300', '#ffd166', 1.4); boardDirty = true; break; } }
-      if (!o.judged && reach && (TREK.sayT = (TREK.sayT || 0) - dt) <= 0) { TREK.sayT = 3; say(`¡Toca el cofre ${o.side < 0 ? '← izquierda' : 'derecha →'}!`, '#ffd166', 1.2); }
-      if (z > HL.z + 0.7) o.judged = true;
-    }
+    } else if (!o.done && o.at - TREK.dist <= 1.7 && TREK.halt !== o) { TREK.halt = o; o.got = 0; o.haltT = 0; TREK.v = 0; TREK.dist = o.at - 1.7; trekHaltSay(o, true); } // (el cofre o la roca, delante: te paras)
   }
+  trekHaltStep(dt, t); trekChaseStep(dt, t);
+  for (const o of TREK.obs) { if (!o.done || !o.box) continue; o.out = Math.min(1, (o.out || 0) + dt * 1.2); o.mesh.position.x = o.side * 2.4 * smooth(o.out); if (o.kind === 'rock') o.box.rotation.z = -o.side * o.out * 2; } // (abierto o apartado, se hace a un lado)
   TREK.obs = TREK.obs.filter(o => { const keep = o.mesh.position.z < HL.z + 6; if (!keep) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); }); } return keep; });
 }
 // La luz y la niebla del paisaje de ahora, poco a poco (la niebla, en su color de base: la tormenta de los Arcos la tiñe encima)
@@ -14303,7 +14391,8 @@ function trekLight(dt) {
 }
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
-  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); Object.assign(TREK, { v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  trekWolfLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
+  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); trekChaseEnd(); Object.assign(TREK, { halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }
