@@ -24,6 +24,10 @@ const NAV = { cur: '', open: false, sig: '', t: 0 };
 const navSecs = () => { const m = $('.main'); if (!m || !m.querySelectorAll) return []; try { return [...m.querySelectorAll(':scope > section')].filter(s => s.id && !s.hidden); } catch (e) { return []; } };
 const navText = el => { let t = ''; for (const n of el.childNodes || []) { if (n.nodeType === 3) t += n.textContent; else if (n.nodeType === 1 && n.tagName !== 'BUTTON' && !(n.classList && (n.classList.contains('count') || n.classList.contains('qm')))) t += n.textContent; } return t.replace(/\s+/g, ' ').trim(); };
 const navName = s => s.dataset.toc || navText(s.querySelector('h2') || s);
+// En el móvil, cada apartado es una ficha con su icono y su color (en el ordenador no se ven)
+const NAV_ICO = { todayBox: ['☀️', '#ffd166'], secHist: ['📈', '#3cf0c6'], secMode: ['🎮', '#ff4fa3'], secEx: ['🏋️', '#7ee2ff'], secCommon: ['⚙️', '#b8a7ff'], secMusic: ['🎵', '#8fdc5a'],
+  secSpec: ['🎛️', '#ff8a3d'], devSection: ['🛠️', '#a49fc8'], secSession: ['📋', '#ffd166'], secHow: ['🥽', '#7ee2ff'] };
+const navIco = s => NAV_ICO[s.id] || ['🔊', '#a49fc8'];
 function navSubs(sec) {
   const out = [];
   sec.querySelectorAll('h3').forEach((h, i) => {
@@ -39,8 +43,8 @@ function tocRender(force) {
   const sig = secs.map(navName).join('|') + '#' + cur.id + '#' + subs.map(x => x.id + x.t).join('|') + NAV.open;
   secs.forEach(s => s.classList.toggle('on', s === cur)); document.body.dataset.sec = cur.id;
   if (sig === NAV.sig && !force) return; NAV.sig = sig;
-  nav.innerHTML = `<button type="button" class="tocBar" data-nav="toggle" aria-expanded="${NAV.open}" aria-controls="tocList"><span class="tocIco" aria-hidden="true">☰</span><span class="tocNow">${escHTML(navName(cur))}</span><span class="tocHint">Apartados ${NAV.open ? '▴' : '▾'}</span></button>
-    <ol class="tocList" id="tocList">${secs.map(s => `<li class="${s === cur ? 'on' : ''}"><a href="#${s.id}" data-nav="${s.id}"${s === cur ? ' aria-current="true"' : ''}>${escHTML(navName(s))}</a>${s === cur && subs.length ? `<ol>${subs.map(x => `<li><a href="#${x.id}" data-nav="${s.id}" data-sub="${x.id}">${escHTML(x.t)}</a></li>`).join('')}</ol>` : ''}</li>`).join('')}</ol>`;
+  nav.innerHTML = `<button type="button" class="tocBar" data-nav="toggle" aria-expanded="${NAV.open}" aria-controls="tocList"><span class="tocIco" aria-hidden="true">${navIco(cur)[0]}</span><span class="tocNow">${escHTML(navName(cur))}</span><span class="tocHint">${NAV.open ? '✕ Cerrar' : '☰ Apartados'}</span></button>
+    <ol class="tocList" id="tocList">${secs.map(s => `<li class="${s === cur ? 'on' : ''}" style="--ac:${navIco(s)[1]}"><a href="#${s.id}" data-nav="${s.id}"${s === cur ? ' aria-current="true"' : ''}><span class="tocI" aria-hidden="true">${navIco(s)[0]}</span><span class="tocT">${escHTML(navName(s))}</span></a>${s === cur && subs.length ? `<ol>${subs.map(x => `<li><a href="#${x.id}" data-nav="${s.id}" data-sub="${x.id}">${escHTML(x.t)}</a></li>`).join('')}</ol>` : ''}</li>`).join('')}</ol>`;
   nav.classList.toggle('open', NAV.open);
   const pg = $('#secPager'), prev = secs[i - 1], next = secs[i + 1]; // (abajo, el anterior y el siguiente: para seguir sin volver al índice)
   if (pg) pg.innerHTML = `${prev ? `<button type="button" class="btn small" data-nav="${prev.id}">◂ ${escHTML(navName(prev))}</button>` : ''}${next ? `<button type="button" class="btn small alt next" data-nav="${next.id}">${escHTML(navName(next))} ▸</button>` : ''}`;
@@ -61,7 +65,8 @@ function navToHash(hash) {
 function pageNav() {
   const nav = $('#toc'); if (!nav || !nav.addEventListener) return;
   const onNav = ev => {
-    const a = ev.target && ev.target.closest ? ev.target.closest('[data-nav]') : null; if (!a) return; ev.preventDefault();
+    const a = ev.target && ev.target.closest ? ev.target.closest('[data-nav]') : null;
+    if (!a) { if (NAV.open && ev.target === nav) { NAV.open = false; tocRender(true); } return; } ev.preventDefault(); // (en el móvil, tocar fuera del panel, en lo oscurecido, lo cierra)
     if (a.dataset.nav === 'toggle') { NAV.open = !NAV.open; tocRender(true); return; }
     navGo(a.dataset.nav, a.dataset.sub || null);
   };
