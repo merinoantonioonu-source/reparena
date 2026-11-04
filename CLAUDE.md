@@ -90,7 +90,10 @@ No las cambies sin preguntarle.
 - El paisaje se dibuja todo junto, una pieza por modelo: que no pida más a la gráfica que el bosque de Combate.
 - El agua, realista (no una mancha azul): ondas que el viento eriza a rachas, reflejo del cielo y destellos; en el río,
   corriente con espuma y estelas en las piedras.
-- Fondos realistas: si hay foto panorámica en `models/fondos/` (ver su `LEEME.md`), se ve detrás del paisaje de cómic.
+- Fondos realistas (fotos de Poly Haven en `models/fondos/`, ver su `LEEME.md`): en la Travesía, uno por tramo; en los
+  demás modos, «Fondo realista» (Opciones → Entorno, 18 para elegir: paisajes abiertos, bosques, ciudades, playas). En los
+  abiertos, al fondo con el bosque de cómic delante; en los de suelo cercano, la foto entera y su suelo proyectado. En
+  Arcos, con fondo, sin compuertas: avanzas por el paisaje (el de la Travesía en los abiertos).
 - Su caricatura no habla de rayos: cada repetición empuja por el sendero.
 
 **Repeticiones y disparo**

@@ -11,7 +11,7 @@ NAT.group.visible = false; arena.add(NAT.group);
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
   Leaves: ['leaves.png', true], Flowers: ['flowers.png', true], Grass: ['grass.png', false, true], Mushrooms: ['mushrooms.jpg'], Rocks: ['rocks.jpg'] };
 // El entorno que toca: el elegido o, con «Alternar», uno distinto en cada partida
-const sceneryPick = () => settings.mode === 'trek' ? 'nature' : CAMP.env || (settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (en la campaña, el de la región; la Travesía, siempre por el bosque)
+const sceneryPick = () => settings.mode === 'trek' ? 'nature' : CAMP.env || (settings.pano && settings.pano !== 'off' ? 'nature' : settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (con fondo realista, en el bosque) // (en la campaña, el de la región; la Travesía, siempre por el bosque)
 function natureOn() { return !arMode && !forestOn() && sceneryPick() === 'nature' && NAT.ready; }
 // Atributos comprimidos (enteros normalizados) → números con decimales, para poder colocar cada pieza en su sitio
 function natFloat(a) {
@@ -117,10 +117,12 @@ function natFoot(n) {
 }
 function natureBuild() {
   if (!NAT.ready) return;
-  const D = arenaDepth(), key = D.toFixed(2); if (NAT.built === key) return; NAT.built = key;
+  // (con fondo realista: sin el bosque de detrás de las compuertas y con el abanico de delante más abierto, para que
+  // se vea el paisaje de la foto; a los lados, el bosque de siempre)
+  const D = arenaDepth(), op = settings.mode !== 'trek' && !!settings.pano && settings.pano !== 'off', key = D.toFixed(2) + (op ? 'p' : ''); if (NAT.built === key) return; NAT.built = key;
   while (natPlants.children.length) natPlants.remove(natPlants.children[0]);
   const R = rng(23), put = {}, trees = [];
-  const front = (x, z, extra) => Math.abs(Math.atan2(x, -z)) < 0.8 && Math.hypot(x, z) < D + extra; // el abanico de las compuertas
+  const front = (x, z, extra) => Math.abs(Math.atan2(x, -z)) < (op ? 1.15 : 0.8) && (op || Math.hypot(x, z) < D + extra); // el abanico de las compuertas
   const nearGate = (x, z, r) => gates.some(g => g.on && Math.hypot(g.x - x, g.z - z) < r);
   const add = (n, x, z, s, y = R() * TAU) => { if (NAT.parts[n]) (put[n] = put[n] || []).push(new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, y), new V3(s, s, s))); };
   // lo que no se puede atravesar (troncos, rocas y arbustos) cerca de donde andan los enemigos: un círculo con lo que
@@ -131,7 +133,7 @@ function natureBuild() {
   // árboles: los normales más cerca, los pinos más lejos, algún árbol seco
   scatter(24, 7, 34, big, (x, z, r) => { const k = R(), n = r > 20 && k < 0.7 ? pick3(R, ['Pine_2', 'Pine_4', 'Pine_5']) : k < 0.08 ? pick3(R, ['DeadTree_1', 'DeadTree_2']) : pick3(R, ['CommonTree_3', 'CommonTree_4', 'CommonTree_5']); const s = 0.8 + R() * 0.55; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 3.2 }); });
   // y un fondo de bosque detrás de las compuertas (más allá de donde salen los enemigos)
-  scatter(9, D + 6, D + 20, (x, z, r) => !nearGate(x, z, 5) && Math.abs(Math.atan2(x, -z)) < 0.9 && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r), (x, z) => { add(pick3(R, ['Pine_2', 'Pine_4', 'Pine_5', 'CommonTree_3', 'CommonTree_4']), x, z, 0.9 + R() * 0.5); trees.push({ x, z, r: 3.2 }); });
+  if (!op) scatter(9, D + 6, D + 20, (x, z, r) => !nearGate(x, z, 5) && Math.abs(Math.atan2(x, -z)) < 0.9 && !trees.some(t => Math.hypot(t.x - x, t.z - z) < t.r), (x, z) => { add(pick3(R, ['Pine_2', 'Pine_4', 'Pine_5', 'CommonTree_3', 'CommonTree_4']), x, z, 0.9 + R() * 0.5); trees.push({ x, z, r: 3.2 }); });
   scatter(16, 5.5, 14, big, (x, z) => { const n = R() < 0.6 ? 'Bush_Common' : 'Bush_Common_Flowers', s = 0.45 + R() * 0.3; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 1.6 }); });
   scatter(12, 5.5, 20, big, (x, z) => { const n = `Rock_Medium_${1 + Math.floor(R() * 3)}`, s = 0.3 + R() * 0.45; add(n, x, z, s); solid(n, x, z, s); trees.push({ x, z, r: 1.5 }); });
   // setas al pie de los árboles cercanos
@@ -232,7 +234,7 @@ function natGateStyle(on) {
   }
   gateLight.color.setHex(on ? 0xff8a30 : 0xff3a10);
 }
-settingHooks.push(k => { if (k === 'scenery') envSwitch(); else if (k === '*') applyEnvMode(); }); // (en las gafas, a oscuras: 64_intro)
+settingHooks.push(k => { if (k === 'scenery' || k === 'pano') envSwitch(); else if (k === '*') applyEnvMode(); }); // (en las gafas, a oscuras: 64_intro)
 // Con «Alternar», cada partida en un sitio distinto
 function sceneryNewRun() { if (settings.scenery !== 'mix') return; NAT.pick = { arena: 'nature', nature: 'island' }[NAT.pick] || 'arena'; applyEnvMode(); } // fortaleza → bosque → isla
 // Cada fotograma: el cielo se mueve y, de vez en cuando, canta un pájaro entre los árboles

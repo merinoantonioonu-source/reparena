@@ -12,13 +12,13 @@ const TREK = { group: new THREE.Group(), nextChase: 30, keys: 0, halt: null, cha
 TREK.group.visible = false; arena.add(TREK.group);
 const trekOn = () => settings.mode === 'trek';
 const TREK_BIOMES = [
-  { name: 'Bosque', pano: 'bosque', panoU: 0.82, fog: 0xc4dcea, dens: 0.014, hemi: 0xd6ecff, hemiI: 0.95, key: 0xfff0d2, keyI: 1.5, dusk: 0,
+  { name: 'Bosque', pano: 'bosque', fog: 0xc4dcea, dens: 0.014, hemi: 0xd6ecff, hemiI: 0.95, key: 0xfff0d2, keyI: 1.5, dusk: 0,
     trees: ['CommonTree_3', 'CommonTree_4', 'CommonTree_5', 'CommonTree_4', 'Pine_2'], nTree: 9, bush: 5, rock: 3, flower: 10, water: false },
-  { name: 'Aldea', pano: 'aldea', panoU: 0.45, fog: 0xd6e6ee, dens: 0.011, hemi: 0xe8f0ff, hemiI: 1.0, key: 0xfff2dc, keyI: 1.55, dusk: 0,
+  { name: 'Aldea', pano: 'aldea', fog: 0xd6e6ee, dens: 0.011, hemi: 0xe8f0ff, hemiI: 1.0, key: 0xfff2dc, keyI: 1.55, dusk: 0,
     trees: ['CommonTree_4', 'CommonTree_3', 'Bush_Common_Flowers'], nTree: 3, bush: 4, rock: 1, flower: 18, water: false, village: true },
-  { name: 'Pradera del lago', pano: 'lago', panoU: 0.25, fog: 0xd2e8f2, dens: 0.009, hemi: 0xe2f2ff, hemiI: 1.0, key: 0xfff6e0, keyI: 1.6, dusk: 0,
+  { name: 'Pradera del lago', pano: 'lago', fog: 0xd2e8f2, dens: 0.009, hemi: 0xe2f2ff, hemiI: 1.0, key: 0xfff6e0, keyI: 1.6, dusk: 0,
     trees: ['CommonTree_4', 'Bush_Common_Flowers', 'CommonTree_3'], nTree: 4, bush: 6, rock: 4, flower: 20, water: true },
-  { name: 'Pinar al atardecer', pano: 'atardecer', panoU: 0.6, fog: 0xe3a27c, dens: 0.016, hemi: 0xffc9a0, hemiI: 0.8, key: 0xffa860, keyI: 1.25, dusk: 1,
+  { name: 'Pinar al atardecer', pano: 'atardecer', fog: 0xe3a27c, dens: 0.016, hemi: 0xffc9a0, hemiI: 0.8, key: 0xffa860, keyI: 1.25, dusk: 1,
     trees: ['Pine_2', 'Pine_4', 'Pine_5', 'Pine_4', 'DeadTree_1'], nTree: 10, bush: 3, rock: 5, flower: 5, water: false }
 ];
 // El cielo de día se tiñe de atardecer en el pinar: naranja en el horizonte y malva arriba
@@ -51,10 +51,10 @@ const trekPath = (() => {
 // y el mundo gira a tu alrededor para que lo tengas siempre delante; tú sigues sobre la plataforma, mirando al frente.
 // Cada cosa del camino tiene su distancia a lo largo del sendero (s) y su separación a la derecha (u): trekBend la pone en
 // la arena. Sin «Sendero con curvas», recto
-const trekTh = s => settings.trekCurves ? 0.35 * Math.sin(s * TAU / 120) + 0.12 * Math.sin(s * TAU / 70 + 1.3) : 0;
+const trekTh = s => settings.trekCurves && trekOn() ? 0.35 * Math.sin(s * TAU / 120) + 0.12 * Math.sin(s * TAU / 70 + 1.3) : 0;
 const TREK_CV = { ds: 0.5, s0: -60, x: [0], z: [0], on: -1 };
 function trekP(s, out) { // el punto del sendero a la distancia s (tabla que crece según hace falta)
-  const C = TREK_CV; if (C.on !== settings.trekCurves) { C.on = settings.trekCurves; C.x = [0]; C.z = [0]; }
+  const C = TREK_CV, cv = !!settings.trekCurves && trekOn(); if (C.on !== cv) { C.on = cv; C.x = [0]; C.z = [0]; } // (en Arcos, recto)
   const f = Math.max(0, (s - C.s0) / C.ds), i = Math.floor(f);
   while (C.x.length < i + 2) { const k = C.x.length - 1, th = trekTh(C.s0 + (k + 0.5) * C.ds); C.x.push(C.x[k] + Math.sin(th) * C.ds); C.z.push(C.z[k] - Math.cos(th) * C.ds); }
   const t = f - i; out.x = C.x[i] + (C.x[i + 1] - C.x[i]) * t; out.z = C.z[i] + (C.z[i + 1] - C.z[i]) * t; return out;
@@ -637,9 +637,10 @@ function trekChaseStep(dt, t) {
   else if (C.t > 45) trekChaseEnd('Los lobos se cansan', '#a49fc8');
 }
 function trekStep(dt, t) {
-  const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
-  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
-  if (!trekOn()) return; aldLoad(); trekBandLoad(); // (la aldea y los bandidos, desde que eliges la Travesía)
+  const sc = arcScenic(), on = (trekOn() || sc) && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
+  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn() && !sc && !panoGround();
+  trekPath.visible = TREK_DECK.visible = trekOn();
+  if (!trekOn()) { panoStep(dt); if (sc) arcScenicStep(t); return; } aldLoad(); trekBandLoad(); // (la aldea y los bandidos, desde que eliges la Travesía)
   TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
@@ -684,32 +685,87 @@ function trekDrop(o) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.i
 // atardecer.jpg—, se ve de fondo en lugar del cielo dibujado: montañas y cielo de verdad, con los árboles y lo demás en
 // cómic delante. La niebla toma el color de su horizonte, para que lo de cerca se funda con ella. Gira con las curvas del
 // sendero (las montañas no se mueven). Al cambiar de tramo, una se funde con la otra. Si no hay foto, el cielo de siempre
-const TREK_PANO = { tex: {}, fog: {}, miss: {}, cur: null, a: null, b: null };
+const TREK_PANO = { tex: {}, fog: {}, lum: {}, miss: {}, cur: null, a: null, b: null };
+// Las fotos (Poly Haven, CC0) y la columna de cada una que queda de frente al empezar (u: lo mejor de la foto, delante).
+// En Arcos se elige una en «Fondo realista»; la Travesía usa la de cada tramo
+const PANOS = {
+  // paisaje abierto: el bosque de cómic (o, en Arcos, el paisaje de la Travesía) delante y la foto al fondo; b: el tramo de la Travesía que le va
+  aldea: { u: 0.45, label: 'Prado con los Alpes', b: 1 }, bosque: { u: 0.82, label: 'Pradera y montaña', b: 0 }, montana: { u: 0.55, label: 'Montaña y valle', b: 0 }, cumbre: { u: 0.62, label: 'Cumbre sobre el mar', b: 0 },
+  lago: { u: 0.25, label: 'Colinas con nubes', b: 2 }, atardecer: { u: 0.6, label: 'Colinas al atardecer', b: 3 }, ocaso: { u: 0.59, label: 'Ocaso junto al lago', b: 2 },
+  // con su suelo: la foto entera, también el suelo que pisas
+  pinar: { u: 0.5, label: 'Pinar con niebla', ground: true }, soleado: { u: 0.5, label: 'Bosque soleado', ground: true }, otono: { u: 0.5, label: 'Bosque en otoño', ground: true },
+  musgo: { u: 0.3, label: 'Bosque con musgo y arroyo', ground: true }, nevado: { u: 0.38, label: 'Bosque nevado', ground: true }, girasoles: { u: 0.5, label: 'Campo de girasoles', ground: true },
+  berlin: { u: 0.7, label: 'Berlín: Potsdamer Platz', ground: true }, shanghai: { u: 0.55, label: 'Shanghái de noche', ground: true }, venecia: { u: 0.6, label: 'Venecia al atardecer', ground: true },
+  mondello: { u: 0.55, label: 'Playa de Mondello', ground: true }, amanecer: { u: 0.62, label: 'Amanecer en la playa', ground: true } };
+const panoGround = () => { const p = PANOS[TREK_PANO.cur]; return !!(p && p.ground && TREK_PANO.a && TREK_PANO.a.material.opacity > 0.5); };
+// Arcos con un paisaje abierto: avanzas por él (el de la Travesía, sin sus retos), sin compuertas
+const arcScenic = () => settings.mode === 'arcs' && PANOS[settings.pano] && !PANOS[settings.pano].ground && !arMode && natureOn();
+// la foto de ahora: en la Travesía, la del tramo; en Arcos (en el bosque), la elegida; si no, ninguna
+const panoWant = () => trekOn() ? TREK_BIOMES[TREK.biome].pano : PANOS[settings.pano] && typeof natureOn === 'function' && natureOn() ? settings.pano : null;
+// La foto en la tarjeta gráfica: cada punto del cielo toma el color de su dirección en la foto (equirrectangular). En las
+// de suelo cercano (bosques por dentro, ciudades, playas: tipo «suelo»), lo que miras por debajo del horizonte se proyecta
+// sobre el suelo del juego desde donde se hizo la foto (a 1,7 m): pisas la plaza o la arena de la foto, y al moverte o
+// agacharte el suelo se ve en su sitio. Sin mipmaps (la foto se ve siempre a su tamaño o más grande: así no sale la costura)
+const PANO_VS = `varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const PANO_FS = `uniform sampler2D map; uniform float opacity, uYaw, uGround, uH; uniform vec3 uC; varying vec3 vW;
+  void main() {
+    vec3 d = normalize(vW - cameraPosition), dir = d;
+    if (uGround > 0.5 && d.y < -0.002) { vec3 p = cameraPosition + d * ((uC.y - cameraPosition.y) / d.y), q = p - vec3(uC.x, uC.y + uH, uC.z); if (length(q.xz) < 90.0) dir = normalize(q); }
+    float c = cos(-uYaw), s = sin(-uYaw); vec3 l = vec3(dir.x * c + dir.z * s, dir.y, -dir.x * s + dir.z * c);
+    vec2 uv = vec2(fract(atan(l.z, l.x) / 6.2831853), 1.0 - acos(clamp(l.y, -1.0, 1.0)) / 3.1415927);
+    gl_FragColor = vec4(texture2D(map, uv).rgb, opacity);
+  }`;
 function trekPanoMesh() {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(130, 48, 24), new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
-  m.scale.x = -1; m.renderOrder = -9; m.frustumCulled = false; m.userData.noInk = true; NAT.group.add(m); return m; // (scale.x −1: vista desde dentro, si no, la foto sale como en un espejo)
+  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: null }, opacity: { value: 0 }, uYaw: { value: 0 }, uGround: { value: 0 }, uH: { value: 1.7 }, uC: { value: new THREE.Vector3() } }, vertexShader: PANO_VS, fragmentShader: PANO_FS, side: THREE.BackSide, transparent: true, depthWrite: false });
+  const m = new THREE.Mesh(new THREE.SphereGeometry(130, 32, 16), mat);
+  Object.defineProperty(mat, 'map', { get: () => mat.uniforms.map.value, set: v => { mat.uniforms.map.value = v; } }); // (como un material normal: .map y .opacity)
+  Object.defineProperty(mat, 'opacity', { get: () => mat.uniforms.opacity.value, set: v => { mat.uniforms.opacity.value = v; } });
+  m.renderOrder = -9; m.frustumCulled = false; m.userData.noInk = true; NAT.group.add(m); return m;
 }
 function trekPanoLoad(n) {
   const P = TREK_PANO; if (P.tex[n] || P.miss[n] || typeof document === 'undefined' || !THREE.TextureLoader) return;
   P.tex[n] = 'loading';
   new THREE.TextureLoader().load(`models/fondos/${n}.jpg`, t => {
-    t.encoding = THREE.sRGBEncoding; t.anisotropy = MAX_ANISO; P.tex[n] = t;
-    try { const c = mkCanvas(64), x = c.getContext('2d'); x.drawImage(t.image, 0, 0, 64, 64); const d = x.getImageData(0, 30, 64, 3).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } const k = d.length / 4; P.fog[n] = new THREE.Color(r / k / 255, g / k / 255, b / k / 255); } catch (e) { P.fog[n] = null; } // (el color del horizonte, para la niebla)
+    t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; P.tex[n] = t;
+    try { const c = mkCanvas(64), x = c.getContext('2d'); x.drawImage(t.image, 0, 0, 64, 64); const all = x.getImageData(0, 0, 64, 64).data; let L = 0; for (let i = 0; i < all.length; i += 4) L += (all[i] * 0.3 + all[i + 1] * 0.59 + all[i + 2] * 0.11) / 255; P.lum[n] = L / (all.length / 4); const d = x.getImageData(0, 30, 64, 3).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } const k = d.length / 4; P.fog[n] = new THREE.Color(r / k / 255, g / k / 255, b / k / 255); } catch (e) { P.fog[n] = null; } // (el color del horizonte, para la niebla)
   }, undefined, () => { P.miss[n] = true; delete P.tex[n]; });
 }
 function trekPanoStep(dt) {
-  const P = TREK_PANO, n = TREK_BIOMES[TREK.biome].pano; trekPanoLoad(n);
-  if (!P.a) { P.a = trekPanoMesh(); P.b = trekPanoMesh(); }
-  const t = P.tex[n], ready = t && t !== 'loading';
-  if (ready && P.cur !== n) { const old = P.a; P.a = P.b; P.b = old; P.a.material.map = t; P.a.material.opacity = 0; P.a.material.needsUpdate = true; P.cur = n; P.a.userData.yaw = TAU * ((TREK_BIOMES[TREK.biome].panoU || 0.75) - 0.75); } // (la nueva, delante, empieza transparente; panoU: la columna de la foto que queda de frente al empezar)
+  const P = TREK_PANO, n = panoWant(); if (n) trekPanoLoad(n);
+  if (!P.a) { if (!n) return null; P.a = trekPanoMesh(); P.b = trekPanoMesh(); }
+  const t = n && P.tex[n], ready = !!t && t !== 'loading';
+  if (ready && P.cur !== n) { const old = P.a; P.a = P.b; P.b = old; P.a.material.map = t; P.a.material.opacity = 0; P.a.material.needsUpdate = true; P.cur = n; P.a.userData.yaw = TAU * ((PANOS[n] ? PANOS[n].u : 0.75) - 0.75); P.a.userData.ground = !!(PANOS[n] && PANOS[n].ground) && !trekOn(); }
+  if (!n) P.cur = null; // (la nueva, delante, empieza transparente; panoU: la columna de la foto que queda de frente al empezar)
   P.a.material.opacity = ready ? Math.min(1, P.a.material.opacity + dt * 0.5) : Math.max(0, P.a.material.opacity - dt);
   if (P.a.material.opacity >= 1 && P.b.material.map) { // (la de antes, ya tapada: fuera de la memoria de vídeo; cada foto ocupa unos 40 MB)
     const old = P.b.material.map; if (old !== P.a.material.map) { old.dispose(); for (const k in P.tex) if (P.tex[k] === old) delete P.tex[k]; }
     P.b.material.map = null; P.b.material.needsUpdate = true; }
   P.b.material.opacity = P.a.material.opacity >= 1 ? 0 : P.b.material.opacity; P.a.renderOrder = -8; P.b.renderOrder = -9;
-  for (const m of [P.a, P.b]) { m.visible = trekOn() && m.material.opacity > 0.001 && !!m.material.map; m.position.copy(natSky.position); m.rotation.y = TF.th + (m.userData.yaw || 0); }
-  natSky.visible = !(trekOn() && P.a.visible && P.a.material.opacity >= 1);
+  const on = !!n || P.a.material.opacity > 0.001;
+  for (const m of [P.a, P.b]) { m.visible = on && m.material.opacity > 0.001 && !!m.material.map; m.position.copy(natSky.position); const U = m.material.uniforms; U.uYaw.value = (trekOn() ? TF.th : 0) + (m.userData.yaw || 0); U.uGround.value = m.userData.ground ? 1 : 0; U.uC.value.setFromMatrixPosition(arena.matrixWorld); }
+  natSky.visible = !(n && P.a.visible && P.a.material.opacity >= 1);
   return ready ? P.fog[n] : null;
+}
+// En los demás modos, con «Fondo realista» (Opciones → Entorno): la foto detrás, la niebla del color de su horizonte y la
+// luz según lo clara que es (de noche, más oscura); en las de suelo cercano, sin el césped ni las plantas del bosque (el
+// suelo es el de la foto) y con las sombras sobre él. Sin foto, todo como antes
+const PANO_SHADOW = (() => { const m = new THREE.Mesh(new THREE.CircleGeometry(40, 48), new THREE.ShadowMaterial({ opacity: 0.35 })); m.rotation.x = -Math.PI / 2; m.position.y = 0.003; m.receiveShadow = true; m.visible = false; m.userData.noInk = true; NAT.group.add(m); return m; })();
+function panoStep(dt) {
+  const P = TREK_PANO; if (!P.a && !panoWant()) return; const pf = trekPanoStep(dt), f = scene.fog, g = panoGround();
+  natGround.visible = !g; PANO_SHADOW.visible = g;
+  if (pf && f && natureOn()) { if (!f.base) f.base = f.color.clone(); if (!P.fog0) P.fog0 = f.base.clone(); f.base.lerp(pf, Math.min(1, dt * 0.6)); renderer.setClearColor(f.base, 1); }
+  else if (!pf && P.fog0 && f && f.base) { f.base.copy(P.fog0); P.fog0 = null; } // (sin foto, vuelve su niebla)
+  if (pf) { if (!P.l0) P.l0 = [hemi.intensity, keyLight.intensity]; const k = clamp(0.3 + (P.lum[P.cur] || 0.5) * 1.3, 0.45, 1.05); hemi.intensity += (P.l0[0] * k - hemi.intensity) * Math.min(1, dt * 2); keyLight.intensity += (P.l0[1] * k - keyLight.intensity) * Math.min(1, dt * 2); }
+  else if (P.l0) { hemi.intensity = P.l0[0]; keyLight.intensity = P.l0[1]; P.l0 = null; }
+}
+// Arcos por un paisaje abierto: el de la Travesía (sin sus retos ni su sendero), que pasa a tu lado a la velocidad de los
+// arcos (los metros de la ronda), recto bajo la pista
+function arcScenicStep(t) {
+  const B = PANOS[settings.pano].b || 0; if (TREK.biome !== B) { TREK.biome = B; TREK.slots = []; }
+  if (TREK.obs.length) { TREK.obs.forEach(trekDrop); TREK.obs = []; }
+  const d = typeof ARX !== 'undefined' ? ARX.dist || 0 : 0, step = d - (TREK.arcD === undefined ? d : TREK.arcD); TREK.arcD = d;
+  if (step < 0 || step > 5) TREK.slots = []; else natGround.material.map.offset.y += step / 3.5; // (una ronda nueva: el paisaje, desde el principio)
+  TREK.dist = d; trekFrame(); trekLayout(); TREK_WT.value = t;
 }
 // La luz y la niebla del paisaje de ahora, poco a poco (la niebla, en su color de base: la tormenta de los Arcos la tiñe encima)
 const _tkc = new THREE.Color();
@@ -729,6 +785,6 @@ function trekReset() {
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }
 settingHooks.push(k => {
-  if (k === 'mode' || k === '*') { if (!trekOn()) { natGround.material.map.offset.y = 0; TREK_DUSK.value = 0; NAT.group.position.y = 0; natSky.visible = true; if (TREK_PANO.a) TREK_PANO.a.visible = TREK_PANO.b.visible = false; } }
+  if (k === 'mode' || k === '*') { if (!trekOn()) { natGround.material.map.offset.y = 0; TREK_DUSK.value = 0; NAT.group.position.y = 0; natSky.visible = true; trekPath.visible = TREK_DECK.visible = false; } }
   if ((k === 'mode' || k === 'look' || k === '*') && trekOn() && settings.look !== 'comic') setSetting('look', 'comic'); // (la Travesía, siempre en cómic)
 });
