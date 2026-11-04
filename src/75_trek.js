@@ -97,7 +97,7 @@ function trekChunk(b, slot) {
   const add = (n, x, z, s) => { if (NAT.parts[n]) list.push([n, new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, R() * TAU), new V3(s, s, s))]); };
   const free = (x, z, r) => !taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r);
   // side: -1, 1 o 0 (a los dos); con el lago, la derecha es agua
-  const scatter = (n, x0, x1, fn) => { for (let i = 0, k = 0; i < n && k < n * 20; k++) { const s = R() < 0.5 ? -1 : 1; if (B.water && s > 0 && x0 > 2.6) continue; const x = s * (x0 + R() * (x1 - x0)), z = -R() * TREK_CH; if (fn(x, z) !== false) i++; } };
+  const scatter = (n, x0, x1, fn) => { for (let i = 0, k = 0; i < n && k < n * 20; k++) { const s = R() < 0.5 ? -1 : 1; const x = s * (x0 + R() * (x1 - x0)), z = -R() * TREK_CH; if (B.water && x > 2.7) continue; /* (en el agua, nada) */ if (fn(x, z) !== false) i++; } };
   if (B.village && ALD.ready) { // la aldea: casas montadas con las piezas del Medieval Village, de cara al camino, con sus vallas, carros y cajas
     for (const sd of [-1, 1]) { const z = -(4 + R() * 6), n = R() < 0.5 ? 'Aldea_Casa' : 'Aldea_Casona', x = sd * (n === 'Aldea_Casa' ? 6.5 : 7.5) + sd * R() * 2;
       list.push([n, new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, -sd * Math.PI / 2 + (R() - 0.5) * 0.2), new V3(1, 1, 1))]); taken.push({ x, z, r: 5 });
@@ -113,14 +113,68 @@ function trekChunk(b, slot) {
   if (B.water) for (let i = 0; i < 10; i++) add(R() < 0.6 ? 'Grass_Wispy_Tall' : 'Grass_Common_Tall', 2.6 + R() * 0.9, -R() * TREK_CH, 0.3 + R() * 0.2); // (juncos en la orilla)
   return (TREK.cache[key] = list);
 }
-const TREK_WATER = new THREE.MeshStandardMaterial({ color: 0x4f9ccf, roughness: 0.12, metalness: 0.25, transparent: true, opacity: 0.88 });
+/* ---------- El agua: ondas que el viento eriza y, en el río, la corriente ---------- */
+// En la tarjeta gráfica: la superficie se riza con ondas finas en varias direcciones y con ruido, y el viento las aviva a
+// rachas (manchas rizadas que corren por el lago). Refleja el cielo más cuanto más de lado la miras (Fresnel), con el
+// color del horizonte abajo y el azul arriba, y el sol saca destellos que bailan. En el río, todo baja con la corriente:
+// la superficie, unas vetas de espuma y, alrededor de cada piedra, su espuma y la estela que deja río abajo
+const TREK_WT = { value: 0 }, TREK_SUN = { value: new THREE.Vector3(0.4, 0.7, -0.6) };
+const TREK_WATER_VS = `varying vec2 vP; varying vec3 vW;
+  #include <fog_pars_vertex>
+  void main() { vP = position.xy; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+  }`;
+const TREK_WATER_FS = `uniform float time, uFlow; uniform vec2 uOff; uniform vec3 uSun, uDeep; uniform vec3 uRocks[8]; uniform vec4 uHole; uniform mat4 uHoleM;
+  varying vec2 vP; varying vec3 vW;
+  #include <common>
+  #include <fog_pars_fragment>
+  float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float ns(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hs(i), hs(i + vec2(1.0, 0.0)), f.x), mix(hs(i + vec2(0.0, 1.0)), hs(i + vec2(1.0, 1.0)), f.x), f.y); }
+  float H(vec2 p) {
+    vec2 q = p - vec2(time * uFlow, 0.0); // (en el río, todo baja con la corriente)
+    float g = 0.3 + 1.1 * ns(p * 0.13 + vec2(time * 0.22, time * 0.09)); // rachas de viento
+    float h = sin(dot(q, vec2(2.3, 1.1)) + time * 2.1) * 0.5 + sin(dot(q, vec2(-1.7, 2.9)) + time * 2.7) * 0.35 + sin(dot(q, vec2(4.6, -3.1)) + time * 3.9) * 0.18;
+    h += (ns(q * 3.1 + time * vec2(0.5, 0.3)) - 0.5) * 0.7 + (ns(q * 7.3 - time * vec2(0.4, 0.8)) - 0.5) * 0.35;
+    #ifdef RIVER
+      h += (ns(vec2(q.x * 0.9, q.y * 3.5)) - 0.5) * 1.2; // remolinos alargados en la dirección de la corriente
+    #endif
+    return h * g;
+  }
+  void main() {
+    vec3 hP = (uHoleM * vec4(vW, 1.0)).xyz; if (hP.x > uHole.x && hP.x < uHole.y && hP.z > uHole.z && hP.z < uHole.w) discard;
+    vec2 p = vP + uOff; float e = 0.05, k = 0.07;
+    vec3 N = normalize(vec3(-(H(p + vec2(e, 0.0)) - H(p - vec2(e, 0.0))) / (2.0 * e) * k, 1.0, (H(p + vec2(0.0, e)) - H(p - vec2(0.0, e))) / (2.0 * e) * k));
+    vec3 V = normalize(cameraPosition - vW), R = reflect(-V, N);
+    float fr = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+    vec3 hz = vec3(0.78, 0.87, 0.93);
+    #ifdef USE_FOG
+      hz = fogColor;
+    #endif
+    vec3 sky = mix(hz, vec3(0.3, 0.5, 0.85), clamp(R.y * 1.6, 0.0, 1.0));
+    vec3 c = mix(uDeep, sky, fr) + vec3(1.0, 0.95, 0.82) * pow(max(dot(R, normalize(uSun)), 0.0), 220.0) * 2.2; // destellos del sol
+    #ifdef RIVER
+      vec2 q = p - vec2(time * uFlow, 0.0);
+      float foam = smoothstep(0.72, 0.92, ns(vec2(q.x * 0.7, q.y * 4.0))) * 0.45; // vetas de espuma que bajan
+      for (int i = 0; i < 8; i++) { vec3 r = uRocks[i]; if (r.z <= 0.0) continue; vec2 d = p - r.xy; float dl = length(d) - r.z;
+        float wake = d.x > 0.0 ? exp(-abs(d.y) * 5.0 / (1.0 + d.x * 0.8)) * exp(-d.x * 0.7) : 0.0; // la estela, río abajo
+        foam += (smoothstep(0.1, -0.05, dl) * 0.8 + wake * 0.6) * smoothstep(0.25, 0.75, ns(q * 7.0 + float(i) * 3.1)); } // (a jirones, no un halo)
+      c = mix(c, vec3(0.92, 0.96, 0.97), clamp(foam, 0.0, 0.9));
+    #endif
+    gl_FragColor = vec4(c, 1.0);
+    #include <fog_fragment>
+  }`;
+function trekWaterMat(river) {
+  const u = { time: TREK_WT, uSun: TREK_SUN, uHole: TREK_HOLE, uHoleM: TREK_HOLE_M, uFlow: { value: river ? 0.9 : 0 }, uOff: { value: new THREE.Vector2() }, uDeep: { value: new THREE.Color(river ? 0x123a36 : 0x0b2c3c) },
+    uRocks: { value: Array.from({ length: 8 }, () => new THREE.Vector3()) }, fogColor: { value: new THREE.Color() }, fogNear: { value: 1 }, fogFar: { value: 2000 }, fogDensity: { value: 0.00025 } };
+  return new THREE.ShaderMaterial({ uniforms: u, vertexShader: TREK_WATER_VS, fragmentShader: TREK_WATER_FS, fog: true, defines: river ? { RIVER: 1 } : {} });
+}
 // las piezas de dibujo, una por modelo y material, con sitio para todos los trozos; y un lago por hueco (se ve en los de agua)
 function trekInst() {
   if (TREK.inst) return TREK.inst; const cap = {};
   for (let b = 0; b < TREK_BIOMES.length; b++) for (let i = 0; i < TREK_N; i++) { const c = {}; trekChunk(b, i).forEach(([n]) => c[n] = (c[n] || 0) + 1); for (const n in c) cap[n] = Math.max(cap[n] || 0, c[n]); }
   TREK.inst = {}; TREK.lakes = [];
   for (const n in cap) TREK.inst[n] = NAT.parts[n].map(p => { const m = new THREE.InstancedMesh(p.geo, p.mat, cap[n] * TREK_N); m.count = 0; m.frustumCulled = false; if (m.instanceMatrix.setUsage) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); TREK.group.add(m); return m; });
-  for (let i = 0; i < TREK_N; i++) { const w = new THREE.Mesh(new THREE.PlaneGeometry(40, TREK_CH * 1.3), TREK_WATER); w.rotation.x = -Math.PI / 2; w.visible = false; TREK.group.add(w); TREK.lakes.push(w); } // (más largo que el trozo: en las curvas se solapan y no queda raya entre ellos)
+  for (let i = 0; i < TREK_N; i++) { const w = new THREE.Mesh(new THREE.PlaneGeometry(40, TREK_CH * 1.3), trekWaterMat(false)); w.rotation.x = -Math.PI / 2; w.visible = false; TREK.group.add(w); TREK.lakes.push(w); } // (más largo que el trozo: en las curvas se solapan y no queda raya entre ellos)
   return TREK.inst;
 }
 // Cada hueco del frente lleva su trozo: el del tramo en el que entra al pasar al frente (así el paisaje nuevo llega de lejos)
@@ -139,7 +193,7 @@ function trekLayout() {
     for (const [k, M] of trekChunk(S.b, i)) { const zz = M.elements[14] + z; if (cut.length && Math.abs(M.elements[12]) < 17 && cut.some(c => zz < c[0] && zz > c[1])) continue;
       const a = trekBend(TREK.dist - zz, M.elements[12], _tkq); _tkm.copy(M); _tkm.elements[12] = 0; _tkm.elements[14] = 0; if (a) _tkm.premultiply(_tkr.makeRotationY(a)); _tkm.elements[12] = _tkq.x; _tkm.elements[14] = _tkq.z; // (en su sitio de la curva)
       for (const m of I[k]) m.setMatrixAt(n[k], _tkm); n[k]++; }
-    const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; const a = trekBend(TREK.dist - (z - TREK_CH / 2), 3.2 + 20, _tkq); w.position.set(_tkq.x, 0.02, _tkq.z); w.rotation.set(-Math.PI / 2, 0, a);
+    const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; const a = trekBend(TREK.dist - (z - TREK_CH / 2), 3.2 + 20, _tkq); w.position.set(_tkq.x, 0.02, _tkq.z); w.rotation.set(-Math.PI / 2, 0, a); w.material.uniforms.uOff.value.set(0, TREK.dist - (z - TREK_CH / 2)); // (las ondas siguen de un trozo al otro, sin costura)
   }
   for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
 }
@@ -224,10 +278,11 @@ function trekObsMesh(o) {
     // las orillas serpentean (en el sendero, el ancho justo de las piedras)
     o.eN = x => 1.2 * Math.sin(0.2 * x) + 0.5 * Math.sin(0.55 * x); o.eF = x => -o.len - 1.3 * Math.sin(0.17 * x) + 0.5 * Math.sin(0.5 * x);
     const wg = new THREE.PlaneGeometry(34, o.len, 68, 1), wp = wg.attributes.position; for (let i = 0; i < wp.count; i++) { const x = wp.getX(i); wp.setY(i, -o.len / 2 - (wp.getY(i) > 0 ? o.eF(x) : o.eN(x))); }
-    const w = new THREE.Mesh(wg, TREK_WATER); w.rotation.x = -Math.PI / 2; w.position.set(0, 0.03, -o.len / 2); w.userData.own = true; g.add(w);
+    const w = new THREE.Mesh(wg, trekWaterMat(true)); w.rotation.x = -Math.PI / 2; w.position.set(0, 0.03, -o.len / 2); w.userData.own = w.userData.ownMat = true; g.add(w); o.water = w;
     const R = rng(o.seed), L = [];
     o.stones = []; for (let k = 1; k <= o.need; k++) { const n = `Rock_Medium_${1 + k % 3}`, b = trekRockBox(n), sx = rand(0.7, 0.85) / b.w, sy = 0.3 / b.h, x = o.sides[k - 1] * 0.42, z = o.stop - k * o.step; L.push([n, trekM(x, 0.13 - (b.y0 + b.h) * sy, z, R() * TAU, sx, sy, sx)]); o.stones.push(new V3(x, 0.16, z)); }
     trekBanks(L, R, o.eN, o.eF);
+    o.stones.forEach((p, i) => { if (i < 8) w.material.uniforms.uRocks.value[i].set(p.x, -p.z - o.len / 2, 0.36); }); // (las piedras, en las coordenadas del agua: su espuma y su estela)
     trekMerge(g, L); o.glow = glowSprite(0x8ff0ff, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'chasm') { // el desfiladero: un tajo hondo en el suelo y pilares de roca; cada salto, al siguiente
     const D = 12, box = new THREE.BoxGeometry(34, D, o.len, 1, 6, 1); box.translate(0, -D / 2, -o.len / 2);
@@ -295,7 +350,7 @@ function trekHoleMat(m) {
   };
   m.customProgramCacheKey = () => 'trekhole'; if (typeof comicPatch === 'function') comicPatch(m); // (y el cómic encima, como en los demás)
 }
-for (const m of [natGround.material, trekPath.material, TREK_WATER]) trekHoleMat(m);
+for (const m of [natGround.material, trekPath.material]) trekHoleMat(m);
 // El tramo: cuántas repeticiones pide (lo pone la partida); los retos salen a ratos, uno de cada tipo por turnos
 function trekWave(i) {
   TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
@@ -594,6 +649,7 @@ function trekStep(dt, t) {
   TREK.dist += step;
   natGround.material.map.offset.y += step / 3.5; // (el suelo corre bajo tus pies)
   trekFrame(); trekRibbon(); trekLayout(); trekLight(dt); trekHopStep(dt);
+  TREK_WT.value = t; TREK_SUN.value.copy(keyLight.position).sub(keyLight.target.position).normalize(); // (el agua se mueve; los destellos, donde está el sol)
   // los retos: salen a 40 m y se juzgan al pasar por ti
   if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
   for (const o of TREK.obs) {
@@ -622,7 +678,7 @@ function trekStep(dt, t) {
   // el hueco del desfiladero que se ve (si hay uno), en las coordenadas del propio desfiladero
   const ch = TREK.obs.find(o => o.kind === 'chasm'); if (ch) { TREK_HOLE.value.set(-17, 17, -ch.len, 0); TREK_HOLE_M.value.copy(ch.mesh.matrixWorld).invert(); } else TREK_HOLE.value.set(1, -1, 0, 0);
 }
-function trekDrop(o) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); if (m.userData && m.userData.own) m.geometry.dispose(); }); }
+function trekDrop(o) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); if (m.userData && m.userData.own) m.geometry.dispose(); if (m.userData && m.userData.ownMat) m.material.dispose(); }); }
 /* ---------- El fondo: una foto panorámica de verdad, si está ---------- */
 // Si en models/fondos/ hay una foto panorámica (equirrectangular, 2:1) para el tramo —bosque.jpg, aldea.jpg, lago.jpg,
 // atardecer.jpg—, se ve de fondo en lugar del cielo dibujado: montañas y cielo de verdad, con los árboles y lo demás en
