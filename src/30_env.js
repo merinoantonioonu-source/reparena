@@ -226,7 +226,7 @@ function layoutArena() {
     if (P) { g.x = P.x; g.z = P.z; g.scale = plan.gs; g.g.rotation.y = P.rot; }
     else { g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.rotation.y = Math.atan2(-g.x, D); }
     g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(g.scale); g.side.visible = !roomGates;
-    g.g.visible = g.on && !push && !forestOn();
+    g.g.visible = g.on && !push && !forestOn() && settings.mode !== 'trek'; // (en la Travesía no hay compuertas: el sendero)
   });
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
@@ -234,7 +234,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn();
+  const trek = settings.mode === 'trek'; safeRing.visible = !push && !isBars() && !trek; hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn() && !trek;
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && settings.look !== 'comic' && !forestOn();

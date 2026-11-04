@@ -66,6 +66,17 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
 
 No las cambies sin preguntarle.
 
+**Estilo**
+- **Todo se diseña para el estilo Cómic** (`src/38_comic.js`), que es el de serie: en Realista, con la resolución alta, las
+  gafas no llegan y va a saltos. Lo nuevo se prueba y se mira en Cómic; Realista queda como opción.
+
+**Travesía** (`src/75_trek.js`)
+- Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. Despacio (como mucho
+  1,5 m/s), en línea recta y sobre una plataforma quieta bajo los pies, para que no maree.
+- Cada oleada, un tramo con su paisaje (bosque, pradera del lago, pinar al atardecer); por el camino, ramas bajas
+  (agacharse; frenan y rompen la racha, sin quitar vidas) y cofres a los lados (tocarlos con la mano).
+- El paisaje se dibuja todo junto, una pieza por modelo: que no pida más a la gráfica que el bosque de Combate.
+
 **Repeticiones y disparo**
 - Cada repetición (sentadilla, zancada…) carga **un disparo por mano**, como mucho uno por mano y sin acumular.
 - Con las manos desnudas no se dispara pellizcando. Se lanza con una **sacudida de la mano hacia el enemigo**: puede

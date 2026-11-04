@@ -405,6 +405,9 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <label class="card"><input type="radio" name="mode" id="mode-touch" value="touch">
         <span class="tag">Cabeza y manos</span><b>Toques</b>
         <small>Vienen hacia ti amebas de agua que ondulan (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
+      <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
+        <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
+        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, pradera del lago y pinar al atardecer). Agáchate bajo las ramas bajas y toca con la mano los cofres de los lados.</small></label>
     </div>
     <p class="modeInfo" id="modeInfo"></p>
   </section>
@@ -602,6 +605,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
+      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero; agáchate bajo las ramas bajas y alarga la mano para tocar los cofres. Cada tramo, otro paisaje: bosque, pradera del lago y pinar al atardecer.</li>
       <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
@@ -749,7 +753,7 @@ const smooth = t => t * t * (3 - 2 * t);
 
 const EX_NAMES = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Flexiones en pica', inchworm: 'Flexiones inchworm', dips: 'Fondos en silla', curl: 'Curl de bíceps', curl2: 'Curl con barra o kettlebell', twist: 'Antebrazos (barra flexible)', press: 'Press de hombro', press2: 'Press con barra', fraise: 'Elevaciones frontales (una pesa)', thruster: 'Sentadilla con press', frontsq: 'Sentadilla con elevación frontal', jsquat: 'Sentadilla con salto', swing: 'Swing con kettlebell', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha con un brazo', plankrow: 'Remo en plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
 const EX_SHORT = { squat: 'Sentadillas', lunge: 'Zancadas', pushup: 'Flexiones', pike: 'Pica', inchworm: 'Inchworm', dips: 'Fondos silla', curl: 'Curl', curl2: 'Curl barra', twist: 'Antebrazos', press: 'Press hombro', press2: 'Press barra', fraise: 'Elev. frontal', thruster: 'Sent. + press', frontsq: 'Sent. + elev.', jsquat: 'Sent. + salto', swing: 'Swing', chop: 'Leñador', dlrow: 'Peso muerto', plank1: 'Plancha 1 brazo', plankrow: 'Remo plancha', splank: 'Plancha lateral', superman: 'Superman', row: 'Remo invertido', pullup: 'Dominadas', hang: 'Colgado', jump: 'Saltos', abs: 'Abdominales', combo: 'Combinado', slam: 'Slam' };
-const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques' };
+const MODE_NAMES = { combat: 'Combate', arcs: 'Arcos', bars: 'Barras', touch: 'Toques', trek: 'Travesía' };
 // Asalto y Enjambre eran dos modos; ahora son Combate con robots o con voladores (para ajustes, sesiones e historial viejos)
 const LEGACY_MODES = { walkers: { foes: 'robots', aim: 'auto' }, flyers: { foes: 'flyers', aim: 'hands' } }; // (foes: ver foeCatPatch)
 // Enemigos que se pueden elegir, en tres grupos: los que andan y salen de las compuertas, los que salen de las trampillas
@@ -777,7 +781,8 @@ const MODE_EX = {
   // (se quitaron el press de hombro, el press con barra y la flexión en pica, que en las gafas no se detectaban bien, y el
   // leñador, que no aportaba nada; su código sigue, por si vuelven, y su historial se sigue viendo)
   combat: ['squat', 'lunge', 'jsquat', 'pushup', 'inchworm', 'dips', 'curl', 'curl2', 'twist', 'fraise', 'thruster', 'frontsq', 'swing', 'dlrow', 'plank1', 'splank', 'superman'], arcs: ['squat'],
-  bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'] // (en Toques, sentadillas y zancadas pasan a ser el Slam)
+  bars: ['row', 'pullup', 'hang'], touch: ['slam', 'jump', 'abs', 'pushup', 'combo'], // (en Toques, sentadillas y zancadas pasan a ser el Slam)
+  trek: ['squat', 'lunge', 'jsquat', 'frontsq', 'curl', 'curl2'] // (de pie: en la Travesía se avanza por el sendero)
 };
 // Zonas del cuerpo, para ordenar los ejercicios por lo que trabajan (opcional)
 const BODY_ZONES = [
@@ -975,7 +980,7 @@ const SCHEMA = [
   { key: 'menuDist', g: 'sistema', label: 'Distancia del menú al aparecer', short: 'Dist. menú', type: 'num', min: 30, max: 200, step: 5, def: 85, unit: 'cm', cond: () => settings.menuWhere === 'stand', hint: 'Con el atril: el menú se queda fijo y tendrás que acercarte para pulsarlo.' },
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['left', 'A la izquierda'], ['right', 'A la derecha'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'A un lado: grande (el doble que sobre las compuertas) y siempre a la vista, por delante y a un lado, fuera del camino de lo que viene. Auto: a la izquierda en VR y en una columna (o en tu pared) en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
-  { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['real', 'Realista'], ['comic', 'Cómic (prueba)']], def: 'real', hint: 'Cómic (prueba): aspecto de dibujo animado, como Retronika o Broken Edge: contornos negros, sombreado plano con un corte duro y sombras de color, rayado a lápiz en la sombra y colores claros; sin sombras en tiempo real (más ligero). En la fortaleza, cielo con nubes de dibujo y suelo con grietas a tinta.' },
+  { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['comic', 'Cómic'], ['real', 'Realista']], def: 'comic', hint: 'Cómic (de serie, y siempre en la Travesía): aspecto de dibujo animado, como Retronika o Broken Edge: contornos negros, sombreado plano con un corte duro y sombras de color, rayado a lápiz en la sombra y colores claros; sin sombras en tiempo real: mucho más ligero, va fluido en las gafas (en Realista, con más resolución, da saltos). En la fortaleza, cielo con nubes de dibujo y suelo con grietas a tinta.' },
   { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'La nitidez, fija en toda la sesión. Alta: más resolución que la pantalla de las gafas (×1,4: lo más nítido; pide más a la gráfica). Automática: ×1,2 a 72 imágenes por segundo (a 90 o 120, ×1). Media: ×1, la que da el navegador. Baja: ×0,8. Con 90 o 120 imágenes por segundo el juego no llega y se ve a saltos: mejor 72. Si el juego no llega a la frecuencia de las gafas, solo emborrona un poco los bordes de la vista (foveación) y hace las sombras más bastas: el centro y los menús siguen nítidos. Cambiarla dentro de las gafas vale como mucho dos veces por sesión; si no, al volver a entrar.'},
   { key: 'xrHz', g: 'entorno', label: 'Fotogramas por segundo en las gafas', short: 'Fotogramas', type: 'choice', opts: [['72', '72 (estable)'], ['90', '90'], ['120', '120']], def: '72', hint: 'A 72 la imagen va siempre fluida (como en muchos juegos de las Quest); a 90 o 120 es más suave si las gafas llegan, pero si no llegan da tirones.' },
   { key: 'perfHud', g: 'sistema', label: 'Medidor de fotogramas', short: 'Medidor', type: 'toggle', def: 0, hint: 'Muestra abajo a la izquierda de la vista los fotogramas por segundo y los que se pierden (si ves pérdidas, baja la frecuencia o quita las sombras) y la nitidez: los píxeles de cada ojo, la escala y la foveación.' },
@@ -2682,7 +2687,7 @@ function layoutArena() {
     if (P) { g.x = P.x; g.z = P.z; g.scale = plan.gs; g.g.rotation.y = P.rot; }
     else { g.x = (i - 1) * sp; g.z = -D; g.scale = gs; g.g.rotation.y = Math.atan2(-g.x, D); }
     g.g.position.set(g.x, 0, g.z); g.g.scale.setScalar(g.scale); g.side.visible = !roomGates;
-    g.g.visible = g.on && !push && !forestOn();
+    g.g.visible = g.on && !push && !forestOn() && settings.mode !== 'trek'; // (en la Travesía no hay compuertas: el sendero)
   });
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
@@ -2690,7 +2695,7 @@ function layoutArena() {
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
-  safeRing.visible = !push && !isBars(); hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn();
+  const trek = settings.mode === 'trek'; safeRing.visible = !push && !isBars() && !trek; hazardLine.visible = !push && !arMode && foesHas('robots') && !natureOn() && !islandOn() && !trek;
   arcTrack.visible = arcs;
   if (arcs) { const len = D + 2; rails.forEach(r => { r.scale.z = len; r.position.set(r.position.x, 0.006, -D / 2 + 1); }); trackFloor.scale.y = len; trackFloor.position.z = -D / 2 + 1; }
   catcher.visible = arMode && !!settings.shadows && settings.look !== 'comic' && !forestOn();
@@ -2988,7 +2993,7 @@ NAT.group.visible = false; arena.add(NAT.group);
 const NAT_TEX = { Bark_NormalTree: ['bark_tree.jpg'], Bark_DeadTree: ['bark_dead.jpg'], Leaves_NormalTree: ['leaves_tree.png', true], Leaves_Pine: ['leaves_pine.png', true], Leaves_TwistedTree: ['leaves_bush.png', true],
   Leaves: ['leaves.png', true], Flowers: ['flowers.png', true], Grass: ['grass.png', false, true], Mushrooms: ['mushrooms.jpg'], Rocks: ['rocks.jpg'] };
 // El entorno que toca: el elegido o, con «Alternar», uno distinto en cada partida
-const sceneryPick = () => CAMP.env || (settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (en la campaña, el de la región)
+const sceneryPick = () => settings.mode === 'trek' ? 'nature' : CAMP.env || (settings.scenery === 'mix' ? NAT.pick : settings.scenery); // (en la campaña, el de la región; la Travesía, siempre por el bosque)
 function natureOn() { return !arMode && !forestOn() && sceneryPick() === 'nature' && NAT.ready; }
 // Atributos comprimidos (enteros normalizados) → números con decimales, para poder colocar cada pieza en su sitio
 function natFloat(a) {
@@ -7083,6 +7088,8 @@ function drawBoard() {
     const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
+  // Travesía: los metros recorridos y el paisaje
+  if (settings.mode === 'trek' && live && state !== 'rest') { const t1 = `${Math.round(TREK.dist)} m · ${TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }
@@ -7786,7 +7793,7 @@ function introDraw() {
   plate(W - 40, true, B.note.toUpperCase(), B.name.toUpperCase(), '#ff8a8a', '', B.bars, ['#ff8a3d', '#ff3b5c']);
   P.tex.needsUpdate = true;
 }
-const introOn = () => !!settings.intro && (xrActive || preview);
+const introOn = () => !!settings.intro && (xrActive || preview) && settings.mode !== 'trek'; // (en la Travesía no hay duelo)
 function introStart() {
   if (!introOn()) return;
   INTRO.t = 0; INTRO.wait = true; INTRO.skip = false; INTRO.thumbT = 0; INTRO.center = center.mesh.visible; center.mesh.visible = false;
@@ -10737,6 +10744,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
+  if (settings.mode === 'trek') { if (state !== 'play') return; registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero)
   registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -10776,7 +10784,7 @@ function onPower(pow, deep) {
   if (pow >= 4 && sorbFor()) sorbMax(); // la bola, al máximo: el destello
 }
 function onCharge() {
-  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
+  if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || settings.mode === 'trek' || isBars()) return;
   charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && !sorbFor(); SND.charge(); boardDirty = true; // (con rayos, la carga se ve en la bola de energía: 54_suporb)
 }
 const DET = {
@@ -11628,6 +11636,7 @@ function buildWave(i) {
   LADDER.fresh = []; // (solo el combate anuncia enemigos nuevos: que no quede el aviso de la partida anterior en arcos, toques o barras)
   if (isBars()) return buildBarWave(i);
   if (settings.mode === 'touch') return buildTouchWave(i);
+  if (settings.mode === 'trek') return trekWave(i); // (en la Travesía no sale nadie: el tramo se hace con repeticiones)
   let total = waveReps(i);
   const mode = settings.mode, list = [];
   if (mode === 'arcs') {
@@ -11820,6 +11829,9 @@ settingHooks.push(k => {
   store(COMBO_KEY, all); settings.rankV = 2; store(STORE_KEY, settings);
 })();
 // Arcos pasa a ir «Al fallo» de serie: también en los ejercicios de Arcos ya guardados (una vez)
+// El estilo Cómic pasa a ser el de serie (en Realista, con la resolución alta, las gafas no llegan): también para quien ya
+// jugaba en Realista (una vez)
+(function comicMigrate() { if (settings.lookV) return; settings.look = 'comic'; settings.lookV = 1; store(STORE_KEY, settings); })();
 (function arcFailMigrate() {
   if (settings.arcFailV) return;
   const all = store(COMBO_KEY) || {}; for (const id in all) if (id.startsWith('arcs|') && all[id]) all[id].toFail = 1;
@@ -11859,7 +11871,7 @@ function armsMenu(back) {
 //    con Sesiones: la sesión preparada, bloque a bloque, y las guardadas
 //  · Spotify (si está conectado) y, abajo, Opciones (rivales y armas, progreso, sonido, entorno y ajustes) y Salir
 // Se recuerdan la vista (modo o sesiones) y la pestaña de Opciones
-const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff', EX_COL = '#e4e8f2', MODE_BOX = '#8c86b4';
+const MODE_COL = { combat: '#ff8a3d', arcs: '#ff4fa3', bars: '#ffd166', touch: '#3cf0c6', trek: '#8fdc5a' }, SES_COL = '#b9a6ff', DIFF_COL = '#5ab8ff', EX_COL = '#e4e8f2', MODE_BOX = '#8c86b4';
 const LOBBY = { view: uiPrefs().lobbyView === 'ses' ? 'ses' : 'mode', opt: uiPrefs().lobbyOpt || 'foes', foe: '' };
 // Los ejercicios del modo, en rejilla (6 por fila si son muchos), y lo que le toca: la barra o las paralelas en Barras,
 // las combinaciones en Toques
@@ -12093,7 +12105,7 @@ function beginRun() {
   TROPHY.fail = -1; // (el récord al fallo de este ejercicio, se mira en la primera oleada)
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
-  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
+  stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); trekReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
   if (swordSet()) say('Espadas: despeja el espacio a tu alrededor y ponte la correa de los mandos', '#ffd166', 3.5);
   DET.sq.state = DET.pu.state = DET.lu.state = DET.di.state = 'up'; DET.curl.left.state = DET.curl.right.state = DET.pr.left.state = DET.pr.right.state = 'down'; DET.pl.left.state = DET.pl.right.state = 'down'; Object.assign(DET.bar, { state: 'down', lost: 0 }); Object.assign(DET.barp, { state: 'down', lost: 0 }); DET.su.state = 'down'; DET.fr.state = 'down'; Object.assign(DET.th, { pending: null, armed: false, quiet: 0 }); DET.ch.state = 'idle'; Object.assign(DET.dl, { armed: false, was: false, rowing: false, o: null }); Object.assign(DET.tw, { last: null, acc: 0, lo: 0, hi: 0, dir: 0, n: 0, t0: -1, lostT: 0, first: false, ext: 0, holdT: 0, pow: 1 }); DET.fr.o = null; Object.assign(DET.plp, { state: 'up', charged: false }); DET.pl.boost = 0;
   stateT = 0; boardDirty = true;
@@ -12421,7 +12433,7 @@ function gameStep(dt, t) {
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
-    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : enemies.some(e => e.alive);
+    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
       rampWaveEnd(!BAR.failed);
@@ -12447,7 +12459,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t); perkStep(dt, t);
+  arxStep(dt, t); trekStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));
@@ -14094,6 +14106,187 @@ function tempoRows(back) {
   rows.push({ t: 'btns', items }); if (songItems.length) rows.push({ t: 'btns', items: songItems });
   return rows;
 }
+
+/* =================== TRAVESÍA =================== */
+// Recorres un sendero del bosque a fuerza de repeticiones: cada una te da impulso (las perfectas, más) y, si paras, te
+// paras. Vas de pie sobre una plataforma de madera quieta bajo los pies (lo fijo alrededor evita el mareo), que avanza
+// despacio y siempre en línea recta (como mucho TREK_VMAX). Cada oleada es un tramo con su paisaje: bosque, pradera del
+// lago y pinar al atardecer; el paisaje nuevo va llegando por delante. Por el camino: ramas bajas (agáchate al pasar) y
+// cofres a los lados (tócalos con la mano). Las ramas no quitan vidas: frenan en seco y rompen la racha.
+// El paisaje son trozos de 24 m (TREK_CH) con los modelos del Stylized Nature MegaKit (los del bosque, 34_nature) en
+// instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
+// mueven: corre su textura
+const TREK_VMAX = 1.5, TREK_CH = 24, TREK_N = 4, TREK_PATH = 96;
+const TREK = { group: new THREE.Group(), v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
+TREK.group.visible = false; arena.add(TREK.group);
+const trekOn = () => settings.mode === 'trek';
+const TREK_BIOMES = [
+  { name: 'Bosque', fog: 0xc4dcea, dens: 0.014, hemi: 0xd6ecff, hemiI: 0.95, key: 0xfff0d2, keyI: 1.5, dusk: 0,
+    trees: ['CommonTree_3', 'CommonTree_4', 'CommonTree_5', 'CommonTree_4', 'Pine_2'], nTree: 9, bush: 5, rock: 3, flower: 10, water: false },
+  { name: 'Pradera del lago', fog: 0xd2e8f2, dens: 0.009, hemi: 0xe2f2ff, hemiI: 1.0, key: 0xfff6e0, keyI: 1.6, dusk: 0,
+    trees: ['CommonTree_4', 'Bush_Common_Flowers', 'CommonTree_3'], nTree: 4, bush: 6, rock: 4, flower: 20, water: true },
+  { name: 'Pinar al atardecer', fog: 0xe3a27c, dens: 0.016, hemi: 0xffc9a0, hemiI: 0.8, key: 0xffa860, keyI: 1.25, dusk: 1,
+    trees: ['Pine_2', 'Pine_4', 'Pine_5', 'Pine_4', 'DeadTree_1'], nTree: 10, bush: 3, rock: 5, flower: 5, water: false }
+];
+// El cielo de día se tiñe de atardecer en el pinar: naranja en el horizonte y malva arriba
+const TREK_DUSK = { value: 0 };
+Object.assign(natSkyMat.uniforms, { uDusk: TREK_DUSK });
+natSkyMat.fragmentShader = 'uniform float uDusk;\n' + natSkyMat.fragmentShader.replace('gl_FragColor = vec4(c, 1.0);', `
+      vec3 dk = mix(vec3(1.0, 0.56, 0.32), vec3(0.36, 0.3, 0.55), smoothstep(-0.02, 0.5, h)) + vec3(1.0, 0.7, 0.4) * pow(max(dot(d, normalize(vec3(0.0, 0.08, -1.0))), 0.0), 18.0) * 0.6;
+      c = mix(c, dk * (0.8 + 0.25 * c), uDusk);
+      gl_FragColor = vec4(c, 1.0);`);
+
+/* ---------- Lo que no se mueve: la plataforma, el sendero y la luz ---------- */
+const trekTex = (draw, rx = 1, ry = 1) => { const c = mkCanvas(256), x = c.getContext('2d'); draw(x, rng(5)); return texFrom(c, { repeat: [rx, ry] }); };
+const TREK_PATH_TEX = trekTex((x, R) => {
+  const g = x.createLinearGradient(0, 0, 256, 0); g.addColorStop(0, '#5f8f3a'); g.addColorStop(0.2, '#8a7448'); g.addColorStop(0.5, '#9b8155'); g.addColorStop(0.8, '#8a7448'); g.addColorStop(1, '#5f8f3a');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 900; i++) { const X = 40 + R() * 176, Y = R() * 256; x.fillStyle = R() < 0.5 ? 'rgba(70,52,30,0.35)' : 'rgba(190,165,120,0.3)'; x.fillRect(X, Y, 2 + R() * 4, 2 + R() * 3); } // (tierra y piedrecitas)
+}, 1, TREK_PATH / 4);
+const trekPath = new THREE.Mesh(new THREE.PlaneGeometry(3, TREK_PATH), new THREE.MeshStandardMaterial({ map: TREK_PATH_TEX, roughness: 1, metalness: 0 }));
+trekPath.rotation.x = -Math.PI / 2; trekPath.position.set(0, 0.004, -TREK_PATH / 2 + 6); trekPath.receiveShadow = true; TREK.group.add(trekPath);
+// la plataforma de tablones, con dos faroles delante (lo quieto que se ve al avanzar)
+const TREK_DECK = (() => {
+  const g = new THREE.Group(), wood = std({ map: trekTex((x, R) => { for (let i = 0; i < 8; i++) { x.fillStyle = `hsl(28,${35 + R() * 15}%,${26 + R() * 10}%)`; x.fillRect(0, i * 32, 256, 30); x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(0, i * 32 + 30, 256, 2); } }), roughness: 0.9 });
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.05, 1.5), wood); deck.position.y = 0.012; deck.receiveShadow = true; g.add(deck);
+  for (const s of [-1, 1]) {
+    const post = new THREE.Mesh(G.cyl(0.03, 0.04, 0.8, 8), wood); post.position.set(s * 0.82, 0.42, -0.7); g.add(post);
+    const lamp = new THREE.Mesh(G.box(0.08, 0.11, 0.08), new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false })); lamp.position.set(s * 0.82, 0.88, -0.7); g.add(lamp);
+    const glow = glowSprite(0xffc070, 0.3, 0.45); glow.position.copy(lamp.position); g.add(glow);
+  }
+  TREK.group.add(g); return g;
+})();
+
+/* ---------- El paisaje, por trozos ---------- */
+// Cada trozo es una lista de [modelo, posición dentro del trozo]; todos los trozos se dibujan juntos, con una sola pieza por
+// modelo y material (si no, cada trozo pedía sus propias piezas: el doble de dibujo que el bosque, y en las gafas no llegaba)
+function trekChunk(b, slot) {
+  const key = b + '_' + slot; if (TREK.cache[key]) return TREK.cache[key];
+  const B = TREK_BIOMES[b], R = rng(101 + b * 37 + slot * 11), list = [], taken = [];
+  const add = (n, x, z, s) => { if (NAT.parts[n]) list.push([n, new THREE.Matrix4().compose(new V3(x, 0, z), new Q4().setFromAxisAngle(_up, R() * TAU), new V3(s, s, s))]); };
+  const free = (x, z, r) => !taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r);
+  // side: -1, 1 o 0 (a los dos); con el lago, la derecha es agua
+  const scatter = (n, x0, x1, fn) => { for (let i = 0, k = 0; i < n && k < n * 20; k++) { const s = R() < 0.5 ? -1 : 1; if (B.water && s > 0 && x0 > 2.6) continue; const x = s * (x0 + R() * (x1 - x0)), z = -R() * TREK_CH; if (fn(x, z) !== false) i++; } };
+  scatter(B.nTree, 3.6, 15, (x, z) => { if (!free(x, z, 2.8)) return false; add(pick3(R, B.trees), x, z, 0.8 + R() * 0.55); taken.push({ x, z, r: 2.8 }); });
+  scatter(B.bush, 2.2, 6, (x, z) => { if (!free(x, z, 1.2)) return false; add(R() < 0.5 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, 0.45 + R() * 0.3); taken.push({ x, z, r: 1.2 }); });
+  scatter(B.rock, 2.4, 10, (x, z) => { if (!free(x, z, 1)) return false; add(`Rock_Medium_${1 + Math.floor(R() * 3)}`, x, z, 0.3 + R() * 0.45); taken.push({ x, z, r: 1 }); });
+  scatter(36, 1.6, 7, (x, z) => add(['Grass_Common_Short', 'Grass_Common_Short', 'Grass_Common_Tall', 'Grass_Wispy_Short'][Math.floor(R() * 4)], x, z, 0.2 + R() * 0.15));
+  scatter(B.flower, 1.7, 6, (x, z) => add('Flower_3_Group', x, z, 0.22 + R() * 0.12));
+  scatter(6, 2, 7, (x, z) => add(['Fern_1', 'Plant_1_Big', 'Clover_1', 'Mushroom_Common'][Math.floor(R() * 4)], x, z, 0.3 + R() * 0.2));
+  if (B.water) for (let i = 0; i < 10; i++) add(R() < 0.6 ? 'Grass_Wispy_Tall' : 'Grass_Common_Tall', 2.6 + R() * 0.9, -R() * TREK_CH, 0.3 + R() * 0.2); // (juncos en la orilla)
+  return (TREK.cache[key] = list);
+}
+const TREK_WATER = new THREE.MeshStandardMaterial({ color: 0x4f9ccf, roughness: 0.12, metalness: 0.25, transparent: true, opacity: 0.88 });
+// las piezas de dibujo, una por modelo y material, con sitio para todos los trozos; y un lago por hueco (se ve en los de agua)
+function trekInst() {
+  if (TREK.inst) return TREK.inst; const cap = {};
+  for (let b = 0; b < TREK_BIOMES.length; b++) for (let i = 0; i < TREK_N; i++) { const c = {}; trekChunk(b, i).forEach(([n]) => c[n] = (c[n] || 0) + 1); for (const n in c) cap[n] = Math.max(cap[n] || 0, c[n]); }
+  TREK.inst = {}; TREK.lakes = [];
+  for (const n in cap) TREK.inst[n] = NAT.parts[n].map(p => { const m = new THREE.InstancedMesh(p.geo, p.mat, cap[n] * TREK_N); m.count = 0; m.frustumCulled = false; if (m.instanceMatrix.setUsage) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); TREK.group.add(m); return m; });
+  for (let i = 0; i < TREK_N; i++) { const w = new THREE.Mesh(new THREE.PlaneGeometry(40, TREK_CH), TREK_WATER); w.rotation.x = -Math.PI / 2; w.visible = false; TREK.group.add(w); TREK.lakes.push(w); }
+  return TREK.inst;
+}
+// Cada hueco del frente lleva su trozo: el del tramo en el que entra al pasar al frente (así el paisaje nuevo llega de lejos)
+const _tkm = new THREE.Matrix4();
+function trekLayout() {
+  if (!NAT.ready) return; const I = trekInst();
+  const span = TREK_CH * TREK_N, off = ((TREK.dist % span) + span) % span, n = {};
+  for (const k in I) n[k] = 0;
+  for (let i = 0; i < TREK_N; i++) {
+    let z = -i * TREK_CH + off; if (z > TREK_CH) z -= span; // (de TREK_CH por detrás a casi span por delante)
+    const S = TREK.slots[i] || (TREK.slots[i] = { b: -1, z: 99 });
+    if (S.b < 0 || z < S.z - TREK_CH * 0.5) S.b = TREK.biome; // (acaba de pasar al frente: con el paisaje de ahora)
+    S.z = z;
+    for (const [k, M] of trekChunk(S.b, i)) { _tkm.copy(M); _tkm.elements[14] += z; for (const m of I[k]) m.setMatrixAt(n[k], _tkm); n[k]++; }
+    const w = TREK.lakes[i]; w.visible = TREK_BIOMES[S.b].water; w.position.set(3.2 + 20, 0.02, z - TREK_CH / 2);
+  }
+  for (const k in I) for (const m of I[k]) { m.count = n[k]; m.instanceMatrix.needsUpdate = true; }
+}
+
+/* ---------- Los retos del camino: ramas bajas y cofres ---------- */
+const TREK_BARK = std({ color: 0x7a5232, roughness: 0.95 });
+const TREK_CHEST = { wood: std({ color: 0x8a5a2b, roughness: 0.8 }), gold: std({ color: 0xffc94a, roughness: 0.35, metalness: 0.8 }) };
+function trekObsMesh(o) {
+  const g = new THREE.Group();
+  if (o.kind === 'branch') { // un tronco atravesado, apoyado en dos horquillas, a la altura que obliga a agacharse
+    const log = new THREE.Mesh(G.cyl(0.13, 0.15, 3.6, 12), TREK_BARK); log.rotation.z = Math.PI / 2; log.position.y = o.y + 0.14; g.add(log);
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(G.cyl(0.08, 0.1, o.y + 0.14, 8), TREK_BARK); p.position.set(s * 1.75, (o.y + 0.14) / 2, 0); g.add(p);
+      const fk = new THREE.Mesh(G.cyl(0.05, 0.07, 0.5, 6), TREK_BARK); fk.position.set(s * 1.62, o.y + 0.3, 0); fk.rotation.z = s * 0.6; g.add(fk); } // (las horquillas)
+  } else { // el cofre, sobre un tocón a la altura de la mano
+    const st = new THREE.Mesh(G.cyl(0.2, 0.24, 0.75, 10), TREK_BARK); st.position.y = 0.375; g.add(st);
+    const box = new THREE.Mesh(G.box(0.36, 0.22, 0.26), TREK_CHEST.wood); box.position.y = 0.86; g.add(box);
+    const lid = new THREE.Group(); lid.position.set(0, 0.97, -0.13); g.add(lid); const lt = new THREE.Mesh(G.box(0.37, 0.08, 0.27), TREK_CHEST.wood); lt.position.set(0, 0.04, 0.13); lid.add(lt);
+    for (const x of [-0.14, 0.14]) { const b = new THREE.Mesh(G.box(0.03, 0.31, 0.27), TREK_CHEST.gold); b.position.set(x, 0.9, 0); g.add(b); }
+    o.lid = lid; o.glow = glowSprite(0xffd166, 0.7, 0.5); o.glow.position.y = 1.0; g.add(o.glow);
+  }
+  TREK.group.add(g); return g;
+}
+// El tramo: cuántas repeticiones pide (lo pone la partida) y dónde salen las ramas y los cofres, uno de cada a ratos
+function trekWave(i) {
+  TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
+  TREK.next = TREK.dist + 9; return [];
+}
+function trekSpawn() {
+  const kind = TREK.obs.length % 2 ? 'chest' : 'branch', top = calibRef + HEAD_TOP;
+  const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34) };
+  o.mesh = trekObsMesh(o); if (kind === 'chest') o.mesh.position.x = o.side * 0.85;
+  TREK.obs.push(o); TREK.next += rand(9, 15);
+}
+// cada repetición pone una velocidad de crucero durante 2,2 s (las perfectas, algo más); sin repeticiones, se va frenando
+function trekRep(opts) {
+  TREK.want = Math.min(TREK_VMAX, opts.perfect ? 1.25 : 0.95); TREK.push = 2.2;
+  if (opts.perfect) { cheer('¡PERFECTA!', '#3cf0c6', 1.0); SND.perfect(); } else say('¡Bien!', '#ffffff', 0.7, false);
+}
+const _tkh = new V3();
+function trekStep(dt, t) {
+  const on = trekOn() && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
+  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn();
+  if (!trekOn()) return;
+  TREK.push = (TREK.push || 0) - dt;
+  if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
+  else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
+  const step = state === 'paused' ? 0 : TREK.v * dt; TREK.dist += step;
+  natGround.material.map.offset.y += step / 3.5; TREK_PATH_TEX.offset.y += step / 4; // (el suelo corre bajo tus pies)
+  trekLayout(); trekLight(dt);
+  // los retos: salen a 40 m y se juzgan al pasar por ti
+  if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
+  for (const o of TREK.obs) {
+    const z = HL.z - (o.at - TREK.dist); o.mesh.position.z = z;
+    if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
+    if (o.lid && o.open) o.lid.rotation.x = Math.max(-1.9, o.lid.rotation.x - dt * 6);
+    if (o.judged || state !== 'play') continue;
+    if (o.kind === 'branch') {
+      if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
+      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
+    } else {
+      const reach = Math.abs(z - HL.z) < 0.6;
+      if (reach) for (const s of ['left', 'right']) { const h = hands[s]; if (!h.ok) continue; arena.worldToLocal(_tkh.copy(h.wrist)); if (Math.hypot(_tkh.x - o.mesh.position.x, _tkh.y - 0.9, _tkh.z - z) < 0.32) { o.judged = o.open = true; TREK.got++; score += 300; SND.orb(h.wrist); fx.sparks(h.wrist.clone(), 40, [1, 0.82, 0.3], 2.4, 0.04); haptic(s, 0.6, 80); cheer('¡Cofre! +300', '#ffd166', 1.4); boardDirty = true; break; } }
+      if (!o.judged && reach && (TREK.sayT = (TREK.sayT || 0) - dt) <= 0) { TREK.sayT = 3; say(`¡Toca el cofre ${o.side < 0 ? '← izquierda' : 'derecha →'}!`, '#ffd166', 1.2); }
+      if (z > HL.z + 0.7) o.judged = true;
+    }
+  }
+  TREK.obs = TREK.obs.filter(o => { const keep = o.mesh.position.z < HL.z + 6; if (!keep) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.isSprite) m.material.dispose(); }); } return keep; });
+}
+// La luz y la niebla del paisaje de ahora, poco a poco (la niebla, en su color de base: la tormenta de los Arcos la tiñe encima)
+const _tkc = new THREE.Color();
+function trekLight(dt) {
+  if (!natureOn()) return;
+  const B = TREK_BIOMES[TREK.biome], k = Math.min(1, dt * 0.6), f = scene.fog;
+  if (f) { if (!f.base) f.base = f.color.clone(); f.base.lerp(_tkc.setHex(B.fog), k); f.density += (B.dens - f.density) * k; renderer.setClearColor(f.base, 1); }
+  hemi.color.lerp(_tkc.setHex(B.hemi), k); hemi.intensity += (B.hemiI - hemi.intensity) * k;
+  keyLight.color.lerp(_tkc.setHex(B.key), k); keyLight.intensity += (B.keyI - keyLight.intensity) * k;
+  TREK_DUSK.value += (B.dusk - TREK_DUSK.value) * k;
+}
+// Al empezar una ronda: desde el principio del sendero, en el bosque
+function trekReset() {
+  TREK.obs.forEach(o => TREK.group.remove(o.mesh)); Object.assign(TREK, { v: 0, want: 0, push: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.slots = []; TREK_DUSK.value = 0;
+  natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
+}
+settingHooks.push(k => {
+  if (k === 'mode' || k === '*') { if (!trekOn()) { natGround.material.map.offset.y = 0; TREK_DUSK.value = 0; } }
+  if ((k === 'mode' || k === 'look' || k === '*') && trekOn() && settings.look !== 'comic') setSetting('look', 'comic'); // (la Travesía, siempre en cómic)
+});
 
 
 /* =================== ESPADAS (con los mandos) =================== */
