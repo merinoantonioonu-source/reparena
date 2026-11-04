@@ -5,10 +5,14 @@ delante. Si falta una, ese tramo usa el cielo dibujado de siempre.
 
 | Archivo | Tramo |
 | --- | --- |
-| `bosque.jpg` | Bosque |
-| `aldea.jpg` | Aldea |
-| `lago.jpg` | Pradera del lago |
-| `atardecer.jpg` | Pinar al atardecer |
+| `bosque.jpg` | Bosque: «Lilienstein» (pradera con bosque y la montaña de cumbre plana) |
+| `aldea.jpg` | Aldea: «Alps Field» (prado con montañas) |
+| `lago.jpg` | Pradera del lago: «Kloofendal 48d Partly Cloudy» (colinas con nubes grandes) |
+| `atardecer.jpg` | Pinar al atardecer: «Rolling Hills» (colinas con el sol bajo) |
+
+Las cuatro son de [Poly Haven](https://polyhaven.com/hdris) (CC0, dominio público), en su versión «Tonemapped JPG»,
+reducidas de 8192 × 4096 a 4096 × 2048. En el juego, cada una mira hacia lo mejor de la foto (`panoU` en `TREK_BIOMES`,
+`src/75_trek.js`: la columna de la foto que queda de frente) y, al cambiar de tramo, la anterior se borra de la memoria.
 
 Cómo deben ser:
 
