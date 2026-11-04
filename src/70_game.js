@@ -2974,7 +2974,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t); trekStep(dt, t); perkStep(dt, t);
+  arxStep(dt, t); trekStep(dt, t); motesStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

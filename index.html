@@ -1008,6 +1008,7 @@ const SCHEMA = [
   { key: 'pano', g: 'entorno', label: 'Fondo realista', short: 'Fondo', type: 'choice', grid: 3, opts: [['off', 'No (cielo dibujado)'], ['aldea', 'Prado con los Alpes'], ['bosque', 'Pradera y montaña'], ['montana', 'Montaña y valle'], ['cumbre', 'Cumbre sobre el mar'], ['lago', 'Colinas con nubes'], ['atardecer', 'Colinas al atardecer'], ['ocaso', 'Ocaso junto al lago'],
     ['pinar', 'Pinar con niebla'], ['soleado', 'Bosque soleado'], ['otono', 'Bosque en otoño'], ['musgo', 'Bosque con musgo'], ['nevado', 'Bosque nevado'], ['girasoles', 'Campo de girasoles'], ['berlin', 'Berlín'], ['shanghai', 'Shanghái de noche'], ['venecia', 'Venecia al atardecer'], ['mondello', 'Playa de Mondello'], ['amanecer', 'Amanecer en la playa']],
     def: 'off', cond: () => settings.mode !== 'trek', relayout: true, hint: 'Una foto panorámica de verdad (Poly Haven) a tu alrededor. En los paisajes abiertos (los siete primeros), al fondo, con el bosque de cómic delante; en Arcos, avanzas por él, sin compuertas. En los bosques por dentro, las ciudades y las playas, la foto entera, también el suelo que pisas. La Travesía tiene los suyos, uno por tramo.' },
+  { key: 'motes', g: 'entorno', label: 'Luciérnagas', short: 'Luciérnagas', type: 'toggle', def: 1, hint: 'Puntitos de luz que flotan a tu alrededor con un vuelo sereno y sinuoso, como insectos: dan vida al entorno (en VR). De día, dorados como polen al sol; de noche, luciérnagas.' },
   { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', cond: () => settings.mode === 'trek' || !settings.pano || settings.pano === 'off', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
   { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
@@ -1125,7 +1126,7 @@ function setSetting(key, v) {
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'depth', 'board']);
+  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
 const isBasic = f => devRowOk(f) ? devEye().includes(f.key) : f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
@@ -2917,7 +2918,7 @@ const forestSkyMat = stormSky(new THREE.ShaderMaterial({
 const forestSky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), forestSkyMat); forestSky.renderOrder = -10; forest.add(forestSky);
 const forestGround = new THREE.Mesh(new THREE.CircleGeometry(60, 64), std({ map: SURF.moss.map, normalMap: SURF.moss.normal, roughnessMap: SURF.moss.orm, metalness: 0, roughness: 1 }));
 forestGround.rotation.x = -Math.PI / 2; forestGround.position.y = -0.005; forestGround.receiveShadow = true; forest.add(forestGround);
-// Lo que se mueve: luciérnagas y niebla baja entre los árboles
+// Lo que se mueve: la niebla baja entre los árboles (las luciérnagas, en 56_motes)
 const FOREST = { flies: [], mist: [], built: '', owlT: 6, creakT: 9 };
 const mistTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), R = rng(17); for (let i = 0; i < 26; i++) { const px = 64 + (R() - 0.5) * 70, py = 64 + (R() - 0.5) * 40, rr = 14 + R() * 30; blob(x, px, py, rr, 'rgba(255,255,255,0.25)'); } x.globalCompositeOperation = 'destination-in'; const g = x.createRadialGradient(64, 64, 20, 64, 64, 63); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return c; })());
 
@@ -2968,8 +2969,7 @@ function buildForest() {
   for (const [s, e] of [[p1, new V3(p1.x + 0.1, H + 0.7, -0.3)], [p2, new V3(p2.x + 0.2, H + 0.45, 0.3)], [p3, new V3(p3.x + 0.4, H + 0.35, 0.1)]]) { k.add('bark', limbBetween(s, e, 0.015, 0.004, 6), C_BARK); k.add('leaf', G.sph(0.22, 7, 5), C_LEAF[0], e.x, e.y + 0.05, e.z, 0, 0, 0, 1, 0.7, 1); }
   FOREST.hero = k.build({ bark: M.bark, leaf: M.leaf, glow: M.glow, halo: M.halo }, { cast: true, receive: true }); forest.add(FOREST.hero);
   if (!FOREST.flies.length) {
-    const fm = new THREE.SpriteMaterial({ map: TX.halo, color: 0xc8ff6a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
-    for (let i = 0; i < 40; i++) { const s = new THREE.Sprite(fm.clone()), a = R() * TAU, d = 1.2 + R() * 9; s.scale.setScalar(0.05); forest.add(s); FOREST.flies.push({ s, base: new V3(Math.cos(a) * d, 0.3 + R() * 2.6, Math.sin(a) * d), ph: R() * TAU, sp: 0.3 + R() * 0.6 }); }
+    // (las luciérnagas, las de todos los entornos: 56_motes)
     const mm = new THREE.SpriteMaterial({ map: mistTex, color: 0x9fb4b0, transparent: true, opacity: 0.2, depthWrite: false });
     for (let i = 0; i < 16; i++) { const s = new THREE.Sprite(mm), a = R() * TAU, d = 2.5 + R() * 14; s.scale.set(5 + R() * 4, 1.6 + R(), 1); forest.add(s); FOREST.mist.push({ s, base: new V3(Math.cos(a) * d, 0.5 + R() * 0.6, Math.sin(a) * d), ph: R() * TAU }); }
   }
@@ -5941,6 +5941,62 @@ function sorbFizzle() { SORB.fizz = 0.3; fx.sparks(SORB.pos.clone(), 10, [1, 0.2
 // velocidad que iba hacia ti, rebotada
 function sorbAway(n) { const d = _sorbB.copy(head.p).sub(SORB.pos).normalize(); for (const o of PADD.p.slice(-n)) { if (!o.v) continue; const k = o.v.dot(d); if (k > 0) o.v.addScaledVector(d, -2 * k); } }
 function sorbReset() { SORB.on = false; SORB.k = 0; SORB.vis = 0; SORB.burst = 0; SORB.fizz = 0; SORB.init = false; SORB.mx = -1; SORB.pow = 0; SORB.g.visible = SORB.num.visible = SORB.flash.visible = SORB.wave.visible = false; }
+
+/* =================== LUCIÉRNAGAS =================== */
+// Puntitos de luz que flotan alrededor, para dar vida al entorno (en VR, en todos los entornos; se quitan en Entorno →
+// «Luciérnagas»). Todo en la tarjeta gráfica: cada una es un punto con su núcleo y un halo suave, y su vuelo sale de
+// su semilla: ondas lentas en las tres direcciones, de frecuencias que no casan (nunca repite el dibujo), con un tiempo
+// propio que a ratos corre y a ratos casi se para (se cierne como un insecto y luego se va), un poco de subir y bajar y
+// un temblor finísimo de alas. Se encienden y apagan despacio, cada una a su ritmo, con algún destello. Nunca a menos
+// de 80 cm de tu cabeza. Cuando avanzas (la Travesía y los Arcos por el paisaje) se quedan atrás, como el paisaje.
+// De día, doradas y pálidas (como polen al sol); de noche, verdes amarillentas
+const MOTE_N = 90, MOTE_SPAN = 15;
+const MOTES = (() => {
+  const g = new THREE.BufferGeometry(), base = new Float32Array(MOTE_N * 3), seed = new Float32Array(MOTE_N * 4), R = rng(91);
+  for (let i = 0; i < MOTE_N; i++) {
+    const a = R() * TAU, d = 1.3 + Math.pow(R(), 0.8) * 12; // (más cerca que lejos, pero no encima)
+    base.set([Math.sin(a) * d, 0.25 + Math.pow(R(), 1.3) * 3, -Math.cos(a) * d], i * 3); seed.set([R(), R(), R(), R()], i * 4);
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(base, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uScroll: { value: 0 }, uSpan: { value: MOTE_SPAN }, uHead: { value: new THREE.Vector3(0, 1.6, 0) }, uVH: { value: 1000 }, uColor: { value: new THREE.Color(0xfff2b8) }, uGain: { value: 1 } },
+    vertexShader: `attribute vec4 aSeed; uniform float uTime, uScroll, uSpan, uVH; uniform vec3 uHead; varying float vA;
+      void main() {
+        float t = uTime; vec3 ph = aSeed.wzy * 6.2832;
+        // su tiempo propio: avanza a ratos deprisa y a ratos casi nada (se cierne, y luego sigue)
+        float tw = t * (0.32 + 0.22 * aSeed.x) + 1.1 * sin(t * (0.19 + 0.14 * aSeed.y) + aSeed.z * 6.2832) + 0.5 * sin(t * (0.47 + 0.2 * aSeed.w) + ph.x);
+        vec3 f = vec3(0.71 + 0.33 * aSeed.x, 0.53 + 0.31 * aSeed.y, 0.89 + 0.29 * aSeed.z);
+        vec3 off = vec3(sin(tw * f.x + ph.x) * 1.1 + sin(tw * 2.37 * f.y + ph.y) * 0.32,
+                        sin(tw * f.y * 0.8 + ph.z) * 0.42 + sin(tw * 3.13 + ph.x) * 0.09,
+                        cos(tw * f.z + ph.y) * 1.1 + sin(tw * 2.71 * f.x + ph.z) * 0.32);
+        off += vec3(sin(t * 23.0 + ph.x), sin(t * 19.0 + ph.y), sin(t * 21.0 + ph.z)) * 0.005; // (el temblor de las alas)
+        vec3 p = position + off;
+        p.z = mod(p.z + uScroll + uSpan, 2.0 * uSpan) - uSpan; // (al avanzar, se quedan atrás y vuelven a salir delante)
+        vec3 dh = p - uHead; float dl = length(dh); if (dl < 0.8) p = uHead + dh / max(dl, 0.001) * 0.8; // (lejos de tu cara)
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
+        float b = 0.5 + 0.5 * sin(t * (0.5 + 0.9 * aSeed.y) + aSeed.x * 6.2832), tw2 = 0.35 + 0.65 * pow(b, 3.0); // (se encienden y apagan despacio; a ratos, un destello)
+        vA = tw2 * smoothstep(16.0, 7.0, -mv.z) * smoothstep(0.35, 0.9, -mv.z) * smoothstep(uSpan, uSpan - 3.0, abs(p.z));
+        gl_PointSize = clamp(0.1 * (0.75 + 0.5 * aSeed.w) * projectionMatrix[1][1] * uVH * 0.5 / -mv.z, 1.5, 48.0); // (unos 10 cm con el halo; el punto, un par de centímetros)
+      }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uGain; varying float vA;
+      void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float d2 = dot(q, q); if (d2 > 1.0) discard;
+        float core = exp(-d2 * 14.0), halo = exp(-d2 * 3.5) * 0.4, a = min(1.0, (core * 1.4 + halo) * vA * uGain);
+        gl_FragColor = vec4(mix(uColor, vec3(1.0), core * 0.6), a); }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.visible = false; pts.userData.noInk = true; arena.add(pts); return pts;
+})();
+const _moteNight = new THREE.Color(0xc8ff6a), _moteDay = new THREE.Color(0xffe58a);
+function motesStep(dt, t) {
+  const on = !!settings.motes && !arMode && state !== 'idle' && (preview || xrActive); MOTES.visible = on; if (!on) return;
+  const U = MOTES.material.uniforms, night = forestOn() || (!natureOn() && !(typeof islandOn === 'function' && islandOn()) && !comicOn()) || (typeof TREK_PANO !== 'undefined' && TREK_PANO.cur === 'shanghai');
+  U.uTime.value = t; U.uHead.value.copy(HL);
+  U.uScroll.value = settings.mode === 'trek' ? TREK.dist : (typeof arcScenic === 'function' && arcScenic() && typeof ARX !== 'undefined') ? ARX.dist || 0 : 0;
+  U.uColor.value.copy(night ? _moteNight : _moteDay); U.uGain.value = night ? 1.1 : 1.5;
+  // el alto de la imagen de cada ojo (en las gafas) o de la ventana: para que midan lo mismo en todas partes
+  const xs = renderer.xr && renderer.xr.isPresenting && renderer.xr.getSession(), L = xs && xs.renderState && xs.renderState.baseLayer;
+  U.uVH.value = L && L.framebufferHeight ? L.framebufferHeight : innerHeight * (renderer.getPixelRatio ? renderer.getPixelRatio() : 1);
+}
 
 
 /* =================== ESTADO DEL JUGADOR =================== */
@@ -12504,7 +12560,7 @@ function gameStep(dt, t) {
     SPLEGS.fem.count = SPLEGS.tib.count = SPLEGS.n; if (SPLEGS.n) { SPLEGS.fem.instanceMatrix.needsUpdate = true; SPLEGS.tib.instanceMatrix.needsUpdate = true; }
   }
   if (settings.mode === 'arcs') { updateNextArc(); jumpTrack(dt); }
-  arxStep(dt, t); trekStep(dt, t); perkStep(dt, t);
+  arxStep(dt, t); trekStep(dt, t); motesStep(dt, t); perkStep(dt, t);
   const f = fwdH();
   if (isFloor() && head.p.y < 1) chargeOrb.position.copy(head.p).addScaledVector(f, 0.28).add(tmpA.set(0, -0.2, 0));
   else chargeOrb.position.copy(head.p).addScaledVector(f, 0.42).add(tmpA.set(0, -0.36, 0));

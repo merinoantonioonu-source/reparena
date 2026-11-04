@@ -159,6 +159,8 @@ No las cambies sin preguntarle.
 - Parados esperando su turno, bailan al compás (el marcado o el de la canción de Spotify), también los robots.
 - El lanzador tira algo más deprisa (y más a menudo) cuanto más difícil, poco a poco (como mucho un 40 %).
 - Al abrirse una compuerta, su interior es oscuro.
+- Luciérnagas (`src/56_motes.js`, Entorno → «Luciérnagas»): puntitos de luz con vuelo sereno y sinuoso de insecto (se
+  ciernen, siguen, tiemblan un poco), en la tarjeta gráfica; nada de sprites que giren en círculo (las de antes, toscas).
 - Los contornos de tinta: finos de lejos (grosor fijo en el mundo pasados 2,5 m) y solo en el borde de verdad (sin
   parpadeos al mover la cabeza).
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
