@@ -71,10 +71,13 @@ No las cambies sin preguntarle.
   gafas no llegan y va a saltos. Lo nuevo se prueba y se mira en Cómic; Realista queda como opción.
 
 **Travesía** (`src/75_trek.js`)
-- Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. Despacio (como mucho
+- Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. La velocidad sale del
+  ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Despacio (como mucho
   1,5 m/s), en línea recta y sobre una plataforma quieta bajo los pies, para que no maree.
-- Cada oleada, un tramo con su paisaje (bosque, pradera del lago, pinar al atardecer); por el camino, ramas bajas
-  (agacharse; frenan y rompen la racha, sin quitar vidas) y cofres a los lados (tocarlos con la mano).
+- Cada oleada, un tramo con su paisaje (bosque, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
+  que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
+  racha, sin quitar vidas); cofres a los lados (tocarlos con la mano). Todo apoyado en el suelo, con su sombra.
+- El marcador, siempre flotando a un lado (nada de columnas que vayan contigo).
 - El paisaje se dibuja todo junto, una pieza por modelo: que no pida más a la gráfica que el bosque de Combate.
 
 **Repeticiones y disparo**

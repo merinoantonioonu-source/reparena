@@ -215,7 +215,7 @@ let boardDirty = true;
 const layoutHooks = []; // lo que se recoloca con la arena (el bosque de día)
 function arenaDepth() { const P = roomPlan(); return settings.depth > 0 ? settings.depth : P && isFinite(P.front) ? clamp(P.front - 0.3, 2.5, 6) : (arMode ? 6 : 11); }
 function gateScale() { return arMode ? 0.72 : 1; }
-function boardMode() { return settings.board === 'auto' ? (arMode ? 'column' : 'left') : settings.board; }
+function boardMode() { if (settings.mode === 'trek') return settings.board === 'right' ? 'right' : 'left'; return settings.board === 'auto' ? (arMode ? 'column' : 'left') : settings.board; } // (en la Travesía, siempre flotando a un lado: no hay compuertas, y una columna parecería ir contigo por arte de magia)
 const boardSideS = () => boardMode() === 'left' ? -1 : boardMode() === 'right' ? 1 : 0; // (a qué lado va el marcador, si va a un lado)
 function layoutArena() {
   const D = arenaDepth(), push = isTiny(), low = isFloor() || settings.exercise === 'inchworm', gs = gateScale(), arcs = settings.mode === 'arcs';
