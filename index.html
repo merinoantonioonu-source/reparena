@@ -602,6 +602,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
+      <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
       <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, como mucho cada tres oleadas y si te la ganas (3 golpes o menos en ellas), eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma): la oleada siguiente espera a que elijas. En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre en el suelo, a tu derecha, que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
@@ -975,7 +976,7 @@ const SCHEMA = [
   { key: 'board', g: 'entorno', label: 'Marcador', type: 'choice', opts: [['auto', 'Auto'], ['left', 'A la izquierda'], ['right', 'A la derecha'], ['gate', 'Compuertas'], ['column', 'Columna']], def: 'auto', hint: 'A un lado: grande (el doble que sobre las compuertas) y siempre a la vista, por delante y a un lado, fuera del camino de lo que viene. Auto: a la izquierda en VR y en una columna (o en tu pared) en realidad mixta.' },
   { key: 'shadows', g: 'entorno', label: 'Sombras', type: 'toggle', def: 1, hint: 'Desactívalas si notas tirones.' },
   { key: 'look', g: 'entorno', label: 'Estilo visual', short: 'Estilo', type: 'choice', opts: [['real', 'Realista'], ['comic', 'Cómic (prueba)']], def: 'real', hint: 'Cómic (prueba): aspecto de dibujo animado, como Retronika o Broken Edge: contornos negros, sombreado plano con un corte duro y sombras de color, rayado a lápiz en la sombra y colores claros; sin sombras en tiempo real (más ligero). En la fortaleza, cielo con nubes de dibujo y suelo con grietas a tinta.' },
-  { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'La nitidez, fija en toda la sesión. Alta: la resolución de la pantalla de las gafas (la más nítida; pide más a la gráfica). Automática: la que recomienda el navegador. Media y Baja: algo menos, para que vaya más suelto. Si el juego no llega a la frecuencia de las gafas, solo emborrona un poco los bordes de la vista (foveación) y hace las sombras más bastas: el centro y los menús siguen nítidos. Cambiarla dentro de las gafas vale como mucho dos veces por sesión; si no, al volver a entrar.'},
+  { key: 'quality', g: 'entorno', label: 'Calidad de imagen', short: 'Calidad', type: 'choice', opts: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']], def: 'auto', hint: 'La nitidez, fija en toda la sesión. Alta: más resolución que la pantalla de las gafas (×1,4: lo más nítido; pide más a la gráfica). Automática: ×1,2 a 72 imágenes por segundo (a 90 o 120, ×1). Media: ×1, la que da el navegador. Baja: ×0,8. Con 90 o 120 imágenes por segundo el juego no llega y se ve a saltos: mejor 72. Si el juego no llega a la frecuencia de las gafas, solo emborrona un poco los bordes de la vista (foveación) y hace las sombras más bastas: el centro y los menús siguen nítidos. Cambiarla dentro de las gafas vale como mucho dos veces por sesión; si no, al volver a entrar.'},
   { key: 'xrHz', g: 'entorno', label: 'Fotogramas por segundo en las gafas', short: 'Fotogramas', type: 'choice', opts: [['72', '72 (estable)'], ['90', '90'], ['120', '120']], def: '72', hint: 'A 72 la imagen va siempre fluida (como en muchos juegos de las Quest); a 90 o 120 es más suave si las gafas llegan, pero si no llegan da tirones.' },
   { key: 'perfHud', g: 'sistema', label: 'Medidor de fotogramas', short: 'Medidor', type: 'toggle', def: 0, hint: 'Muestra abajo a la izquierda de la vista los fotogramas por segundo y los que se pierden (si ves pérdidas, baja la frecuencia o quita las sombras) y la nitidez: los píxeles de cada ojo, la escala y la foveación.' },
   { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
@@ -6758,6 +6759,43 @@ function lazyAt(L, want, wantQ, dt, ang = LAZY.ang) {
   return L;
 }
 const LZ = { center: mkLazy(), toast: mkLazy(), warn: mkLazy() };
+/* ---------- Logros, en grande ---------- */
+// La meta del día, un récord, un nivel o el cofre del día: un aviso propio, grande y dorado, aparte del marcador, con
+// chispas y fanfarria; uno tras otro (como mucho 4 en cola). Va arriba, por encima de lo que llega (o abajo si ahí tapa
+// algo), quieto en el mundo y derecho como los demás avisos de la vista; también sobre el negro del final de la ronda
+const TROPHY_SECS = 3.6;
+const TROPHY = { q: [], t: 0, met: null, p: makePanel(1.25, 0.42, 1024, { depthTest: false, hd: 1.5 }) };
+TROPHY.p.mesh.visible = false; TROPHY.p.mesh.renderOrder = 55; TROPHY.p.mesh.material.transparent = true; scene.add(TROPHY.p.mesh);
+HUD.trophy = { slots: [[0, 0.42], [0, -0.52], [-0.8, 0.22], [0.8, 0.22]], z: -1.6, w: 1.25, h: 0.42, slot: 0, off: new V3(0, 0.42, -1.6), fade: 1 }; LZ.trophy = mkLazy();
+function trophy(title, sub = '', color = '#ffd166') { if (TROPHY.q.length < 4 && !TROPHY.q.some(o => o.title === title)) TROPHY.q.push({ title, sub, color }); }
+function drawTrophy(o) {
+  const c = TROPHY.p.ctx, W = TROPHY.p.W, H = TROPHY.p.H; c.clearRect(0, 0, W, H);
+  rr(c, 10, 10, W - 20, H - 20, 46); { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(48,30,8,0.94)'); g.addColorStop(1, 'rgba(20,12,4,0.94)'); c.fillStyle = g; } c.fill();
+  c.lineWidth = 12; c.strokeStyle = o.color; c.stroke(); rr(c, 28, 28, W - 56, H - 56, 32); c.lineWidth = 3; c.strokeStyle = 'rgba(255,240,200,0.6)'; c.stroke();
+  const star = (x, y, r) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr2 = i % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } c.closePath(); c.fillStyle = o.color; c.fill(); };
+  star(H * 0.36, H * 0.5, H * 0.2); star(W - H * 0.36, H * 0.5, H * 0.2);
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = o.color; fitFont(c, o.title, W - H * 1.3, Math.round(H * (o.sub ? 0.36 : 0.44)), '%px ' + FD); c.fillText(o.title, W / 2, H * (o.sub ? 0.4 : 0.52));
+  if (o.sub) { c.fillStyle = '#fff3d6'; fitFont(c, o.sub, W - H * 1.2, Math.round(H * 0.19), '600 %px ' + FB); c.fillText(o.sub, W / 2, H * 0.75); }
+  TROPHY.p.tex.needsUpdate = true;
+}
+function trophyStep(dt, n) {
+  // la meta del día, al alcanzarla en plena ronda (si ya la tenías al empezar, no)
+  if (!GAME_STATES.includes(state)) TROPHY.met = null;
+  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
+  const m = TROPHY.p.mesh;
+  if (TROPHY.t <= 0) {
+    if (!(xrActive || preview)) TROPHY.q.length = 0; // (sin gafas ni prueba, no se guardan para luego)
+    if (!TROPHY.q.length) { m.visible = false; LZ.trophy.init = false; TROPHY.cur = ''; return; }
+    const o = TROPHY.q.shift(); drawTrophy(o); TROPHY.cur = o.title; TROPHY.t = TROPHY_SECS; m.visible = true; LZ.trophy.init = false;
+    SND.combo(); hapticBoth(0.7, 160);
+  }
+  TROPHY.t -= dt; const age = TROPHY_SECS - TROPHY.t;
+  const L = lazyAt(LZ.trophy, hudSlot(HUD.trophy, HUD.trophy.slots, n, dt), hudQ(), dt);
+  m.position.copy(L.at); m.quaternion.copy(L.q);
+  m.scale.setScalar(age < 0.25 ? 0.6 + 1.8 * age : age < 0.4 ? 1.05 - (age - 0.25) / 3 : 1); // (entra con un golpe y se asienta)
+  m.material.opacity = Math.min(1, TROPHY.t * 2.5, age * 6) * HUD.trophy.fade;
+  if (age < dt * 1.5 || (age > 0.6 && age < 0.6 + dt)) fx.sparks(m.position, 50, [1, 0.82, 0.3], 2.6, 0.04);
+}
 // Un aviso quieto que tapa lo que viene se aclara enseguida y se va a un hueco libre
 function lazyClear(L, mesh, w, h, n, dt) {
   const hides = n > 0 && panelHides(mesh, w, h, true, n); if (hides) L.go = true;
@@ -6825,6 +6863,7 @@ function updateWarn(dt) {
 function updateViewPanels(dt) {
   fixvStep(); updateWarn(dt); updateChargeFloor(dt);
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
+  trophyStep(dt, n);
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
     const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), hudQ(), dt);
@@ -11948,7 +11987,8 @@ function soundMenu(back) {
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneRows(again, inGame) {
   const room = ['roomMode', 'roomOcclude', 'roomShow'];
-  return [...viewRows(again), ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key })), ...(inGame ? [] : roomRows(again))];
+  const qn = qualNote(); // (la resolución de ahora, debajo de la calidad)
+  return [...viewRows(again), ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).flatMap(f => [{ t: 'field', key: f.key, after: f.key === 'quality' || f.key === 'xrHz' ? again : undefined }, ...(f.key === 'quality' && qn ? [{ t: 'text', text: qn, color: /al volver/.test(qn) ? '#ffd166' : '#a49fc8' }] : [])]), ...(inGame ? [] : roomRows(again))];
 }
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame);
@@ -12050,6 +12090,7 @@ function warmStep() {
 // todo lo que quede, de una vez (si empieza la partida antes de acabar la cola)
 function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
+  TROPHY.fail = -1; // (el récord al fallo de este ejercicio, se mira en la primera oleada)
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
@@ -12115,6 +12156,8 @@ function rampWaveEnd(ok) {
   else RAMP.note = ok ? `Te han dado ${bad} veces: la próxima, igual de difícil` : 'La próxima, igual de difícil';
 }
 function startWave(i) {
+  // al fallo: al pasar de la oleada más lejana a la que llegaste nunca con este ejercicio, en grande
+  if (settings.toFail && !SES.active) { if (TROPHY.fail < 0) TROPHY.fail = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); if (TROPHY.fail > 0 && i + 1 === TROPHY.fail + 1) trophy('¡RÉCORD AL FALLO!', `Oleada ${i + 1}: nunca habías llegado tan lejos`); }
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
   if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = repTimeOf(settings.exercise, 'bars'); }
   else if (settings.mode === 'arcs') spawnInterval = 60 / dv('arcRate');
@@ -13372,10 +13415,12 @@ function careerRun(o) {
     // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
     const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
+    trophy('¡COFRE DEL DÍA!', 'Las tres misiones de hoy, cumplidas');
     G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
   if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
   const l0 = lvlOf().n; CR.xp += xp; G.xp += xp; const l1 = lvlOf().n;
+  if (l1 > l0) trophy(`¡NIVEL ${l1}!`, titleOf(l1) !== titleOf(l0) ? `Ahora eres ${titleOf(l1)}` : `${CR.xp} XP`);
   for (let n = l0 + 1; n <= l1; n++) { G.notes.push([`¡Nivel ${n}!${titleOf(n) !== titleOf(n - 1) ? ` Ahora eres ${titleOf(n)}` : ''}`, '#ffd166']); unlocksAt(n).forEach(u => G.notes.push([`Desbloqueado: ${u}`, '#ff4fa3'])); }
   crSave();
 }
@@ -14784,7 +14829,7 @@ function ghostStep(dt) {
   if (!ghostOn() || !['play', 'rest'].includes(state)) return;
   GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
   const B = GH.best, n = ghostNow();
-  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); trophy('¡NUEVO RÉCORD!', `Tu mejor ronda de ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
 }
 // Para el marcador: dónde ibas en tu mejor ronda en este momento (g), lo que llevas ahora (n) y tu récord (best)
 function ghostAt() {
@@ -15271,23 +15316,30 @@ renderer.setAnimationLoop((time, frame) => {
 // bajaba en plena partida poniendo una capa de imagen nueva, que ocupa otra memoria de vídeo; para no llenar las gafas de
 // planos de basura (blancos y azules), a la tercera ya no cambiaba: se quedaba en la que tuviera, a menudo la más baja, y
 // las letras se veían cada vez más borrosas, también en los menús y aunque eligieras «Alta»
-// · Alta: la de la pantalla de las gafas (la nativa; como mucho, ×1,5 la recomendada); Automática: la que recomienda el
-//   navegador; Media y Baja, algo menos
+// · el navegador de las Quest 3 da como «nativa» la recomendada (×1: 1680×1760 por ojo), por debajo de la pantalla (2064×2208):
+//   a ×1 la imagen se estira y se ve blanda. Alta: ×1,4 (más que la pantalla: lo más nítido); Automática: ×1,2 a 72 Hz (a
+//   90 o 120 Hz no hay tiempo para tanto: ×1); Media, ×1; Baja, ×0,8
 // · para aligerar, solo la foveación (menos detalle en los bordes de la vista: se cambia en la misma capa) y las sombras
 //   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, sin foveación
-const QRES = { alta: 'native', auto: 1, media: 0.85, baja: 0.72 };
+const QRES = { alta: 1.4, auto: 'hz', media: 1, baja: 0.8 };
 const QLV = [{ fov: 0.3, sh: 1, sm: 1024 }, { fov: 0.55, sh: 2, sm: 1024 }, { fov: 0.8, sh: 2, sm: 512 }, { fov: 1, sh: 3, sm: 512 }], QFIX = { alta: 0, auto: 0, media: 1, baja: 2 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, fov: -1, sc: 1, native: 1, swaps: 0 };
 const QUAL_SWAPS = 2; // (cambios de resolución en una sesión, solo si la cambias tú en el menú)
 const qualMin = () => QFIX[settings.quality] || 0;
 function qualScale(session) {
   try { QUAL.native = (typeof XRWebGLLayer !== 'undefined' && XRWebGLLayer.getNativeFramebufferScaleFactor && XRWebGLLayer.getNativeFramebufferScaleFactor(session)) || 1; } catch (e) { QUAL.native = 1; }
-  const v = QRES[settings.quality] || 1; return v === 'native' ? clamp(QUAL.native, 1, 1.5) : v;
+  const v = QRES[settings.quality] || 1; return v === 'hz' ? (+settings.xrHz > 72 ? 1 : 1.2) : Math.max(v, v > 1 ? QUAL.native : 0);
 }
 // antes de darle la sesión a three.js: así la única capa de la sesión ya nace con su resolución
 function qualSessionStart(session) {
   Object.assign(QUAL, { lv: qualMin(), fov: -1, swaps: 0, slow: 0, ok: 0, t: 0, n: 0, cool: 3 }); QUAL.sc = qualScale(session);
   if (renderer.xr.setFramebufferScaleFactor) renderer.xr.setFramebufferScaleFactor(QUAL.sc);
+}
+// Para el menú (Entorno → Calidad): con qué resolución pinta ahora y si la elegida espera a la próxima vez que entres
+function qualNote() {
+  const s = renderer.xr.getSession(); if (!s || preview) return '';
+  const L = s.renderState && s.renderState.baseLayer, px = L && L.framebufferWidth ? ` (${Math.round(L.framebufferWidth / 2)}×${L.framebufferHeight} por ojo)` : '', want = qualScale(s);
+  return `Ahora pinta a ×${QUAL.sc.toFixed(2)}${px}${Math.abs(want - QUAL.sc) > 0.01 ? ` · la elegida (×${want.toFixed(2)}), al volver a entrar en las gafas` : ''}`;
 }
 function qualLevel(lv) {
   QUAL.lv = lv; const sh = keyLight.shadow, sm = QLV[lv].sm; // sombras más bastas (sin recompilar nada: solo otra textura)
@@ -15315,7 +15367,7 @@ function qualStep(dt) {
 // Si cambias la calidad en plena sesión, la resolución nueva pide una capa nueva: como mucho QUAL_SWAPS veces; después, al
 // volver a entrar en las gafas
 settingHooks.push(k => {
-  if (k !== 'quality') return; qualLevel(qualMin()); QUAL.fov = -1; const s = renderer.xr.getSession(); if (!s || preview) return;
+  if (k !== 'quality' && k !== 'xrHz') return; if (k === 'quality') { qualLevel(qualMin()); QUAL.fov = -1; } const s = renderer.xr.getSession(); if (!s || preview) return;
   const sc = qualScale(s); if (Math.abs(sc - QUAL.sc) < 0.01) return;
   if (QUAL.swaps >= QUAL_SWAPS || typeof XRWebGLLayer === 'undefined') { say('La nueva resolución, la próxima vez que entres en las gafas', '#ffd166', 2.5); return; }
   try {
@@ -15347,7 +15399,7 @@ function perfStep(t, dt, jsMs = 0, rdMs = 0) {
     c.fillText(`juego ${PERF.js.toFixed(1)} ms · dibujo ${PERF.rd.toFixed(1)} ms (lo peor)`, 24, H * 0.54);
     // la nitidez: los píxeles de cada ojo, la escala (y la de la pantalla de las gafas) y la foveación de ahora
     const xs = renderer.xr.getSession(), L = xs && xs.renderState && xs.renderState.baseLayer, px = L && L.framebufferWidth ? `${Math.round(L.framebufferWidth / 2)}×${L.framebufferHeight} por ojo` : 'sin gafas';
-    c.fillText(`${px} · ×${QUAL.sc.toFixed(2)} (gafas ×${QUAL.native.toFixed(2)}) · foveación ${Math.max(0, QUAL.fov).toFixed(2)} · ${ri.calls} llamadas`, 24, H * 0.83);
+    c.fillText(`${px} · ×${QUAL.sc.toFixed(2)} · foveación ${Math.max(0, QUAL.fov).toFixed(2)} · ${ri.calls} llamadas`, 24, H * 0.83);
     perfP.tex.needsUpdate = true;
     Object.assign(PERF, { n: 0, t0: t, worst: 0, lost: 0, js: 0, rd: 0 });
   }

@@ -49,7 +49,8 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
 - En las gafas, no cambies la capa de imagen (`XRWebGLLayer`) a menudo: cada una ocupa otra memoria de vídeo y, con
   muchos cambios, las gafas pintan planos de basura blancos y azules. La foveación se cambia en la capa de ahora. La
   resolución se elige una vez al entrar (`qualSessionStart`, `src/80_main.js`) y no cambia en la partida: para aligerar,
-  solo foveación y sombras (si no, la nitidez se quedaba baja y las letras, borrosas).
+  solo foveación y sombras (si no, la nitidez se quedaba baja y las letras, borrosas). El navegador de las Quest 3 da
+  como «nativa» ×1 (1680×1760 por ojo, menos que la pantalla): para que se vea nítido hay que pedir más (Alta ×1,4).
 - Los modelos 3D están en `models/` (Quaternius, cada pack con su licencia). Los sonidos se pueden sustituir con
   archivos en `sounds/` (lista en `sounds/LEEME.md`, que el build copia a la página).
 - Los simulacros de las pruebas son limitados:
@@ -145,7 +146,9 @@ No las cambies sin preguntarle.
   - Diseño elegido (C): rosco doble (fuera, la oleada con la muesca del récord; dentro, la racha en 10 tramos), oleadas en
     puntos, un solo hueco para mensajes a 48 px o más. En el relámpago, el borde es una mecha. Nada de cargas ni escudo en
     el marcador: se ven en el juego (bola en la mano, celdas del bláster, brazalete del escudo en el antebrazo).
-- Las celebraciones (`cheer`) van solo al marcador; delante de la cara, solo lo que pide hacer algo ya o colocarse.
+- Las celebraciones (`cheer`) van solo al marcador; delante de la cara, solo lo que pide hacer algo ya o colocarse. Los
+  logros importantes (meta del día, récord, récord al fallo, nivel, cofre del día) salen además en grande, en su propio
+  aviso dorado (`trophy`, `src/60_ui.js`), sin tapar lo que llega.
 - Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura) **nunca se ladean
   con la cabeza**: siempre derechos de pie y colgado.
   - Tumbado y en plancha: en el suelo bajo la cara o en el techo, de cara a los ojos, con lo de arriba del texto hacia la

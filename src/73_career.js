@@ -98,10 +98,12 @@ function careerRun(o) {
     // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
     const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
+    trophy('¡COFRE DEL DÍA!', 'Las tres misiones de hoy, cumplidas');
     G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
   if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
   const l0 = lvlOf().n; CR.xp += xp; G.xp += xp; const l1 = lvlOf().n;
+  if (l1 > l0) trophy(`¡NIVEL ${l1}!`, titleOf(l1) !== titleOf(l0) ? `Ahora eres ${titleOf(l1)}` : `${CR.xp} XP`);
   for (let n = l0 + 1; n <= l1; n++) { G.notes.push([`¡Nivel ${n}!${titleOf(n) !== titleOf(n - 1) ? ` Ahora eres ${titleOf(n)}` : ''}`, '#ffd166']); unlocksAt(n).forEach(u => G.notes.push([`Desbloqueado: ${u}`, '#ff4fa3'])); }
   crSave();
 }

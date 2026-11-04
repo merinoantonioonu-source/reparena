@@ -2509,7 +2509,8 @@ function soundMenu(back) {
 // Dónde juegas: escenario, distancia, marcador, efectos y, en realidad mixta, la vista y la habitación (esta, solo fuera de la partida)
 function sceneRows(again, inGame) {
   const room = ['roomMode', 'roomOcclude', 'roomShow'];
-  return [...viewRows(again), ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).map(f => ({ t: 'field', key: f.key })), ...(inGame ? [] : roomRows(again))];
+  const qn = qualNote(); // (la resolución de ahora, debajo de la calidad)
+  return [...viewRows(again), ...SCHEMA.filter(f => f.g === 'entorno' && !room.includes(f.key) && fieldShown(f)).flatMap(f => [{ t: 'field', key: f.key, after: f.key === 'quality' || f.key === 'xrHz' ? again : undefined }, ...(f.key === 'quality' && qn ? [{ t: 'text', text: qn, color: /al volver/.test(qn) ? '#ffd166' : '#a49fc8' }] : [])]), ...(inGame ? [] : roomRows(again))];
 }
 function sceneMenu(back, inGame) {
   const again = () => sceneMenu(back, inGame);
@@ -2611,6 +2612,7 @@ function warmStep() {
 // todo lo que quede, de una vez (si empieza la partida antes de acabar la cola)
 function warmShaders() { warmQueue(); let n = 0; while (WARM.q.length && n++ < 60) warmStep(); }
 function beginRun() {
+  TROPHY.fail = -1; // (el récord al fallo de este ejercicio, se mira en la primera oleada)
   audioInit(); resetWorld(); hideMenu(); lastAnchor = null; sceneryNewRun(); applyEnvMode(); runSaved = false; spRoundStart(); exSongsStart(); // al acabar, el resumen sale delante de donde estés
   waveIdx = 0; lives = nLives() || 0; score = 0; combo = 0; calibT = 0; waveDone = 0; waveTarget = 0;
   stats = newStats(); trkReset(); SUP_ATK.next = 0; sorbReset(); guardReset(); gunReset(); swordReset(); throwReset(); arxReset(); BEAT.off = null; BEAT.last = -1; boardDayRefresh(); Object.assign(RAMP, { lvl: 0, note: '', up: false }); perkReset();
@@ -2676,6 +2678,8 @@ function rampWaveEnd(ok) {
   else RAMP.note = ok ? `Te han dado ${bad} veces: la próxima, igual de difícil` : 'La próxima, igual de difícil';
 }
 function startWave(i) {
+  // al fallo: al pasar de la oleada más lejana a la que llegaste nunca con este ejercicio, en grande
+  if (settings.toFail && !SES.active) { if (TROPHY.fail < 0) TROPHY.fail = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && r.fail).reduce((a, r) => Math.max(a, r.fail), 0); if (TROPHY.fail > 0 && i + 1 === TROPHY.fail + 1) trophy('¡RÉCORD AL FALLO!', `Oleada ${i + 1}: nunca habías llegado tan lejos`); }
   waveIdx = i; spawnQueue = buildWave(i); waveTarget = waveReps(i); waveDone = 0;
   if (isBars()) { BAR.hold = 0; BAR.need = settings.exercise === 'hang' ? hangSecs(i) : 0; spawnInterval = repTimeOf(settings.exercise, 'bars'); }
   else if (settings.mode === 'arcs') spawnInterval = 60 / dv('arcRate');
