@@ -625,7 +625,7 @@ const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75
 const DAY_MS = 864e5;
 const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
-// Los escudos de racha (73_career: el cofre del día da uno, como mucho dos): los días que salvó un escudo, sin entrenar
+// Los escudos de racha (73_career: el cofre del día da uno, como mucho tres): los días que salvó un escudo, sin entrenar
 const streakSave = () => { const c = store('reparena3-career') || {}; return { n: Math.max(0, +c.shield || 0), frozen: Array.isArray(c.frozen) ? c.frozen : [], saved: c.saved || null }; };
 function progress(h = store(HIST_KEY) || [], now = Date.now(), frozen = streakSave().frozen) {
   const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now), fz = new Set(frozen);

@@ -135,7 +135,7 @@ No las cambies sin preguntarle.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 - Para animar a volver (`src/73_career.js`): experiencia y nivel con título y colores desbloqueables (solo se ven),
-  misiones del día con su cofre (+100 XP, un escudo de racha —como mucho dos: un día sin entrenar se gasta solo y la racha
+  misiones del día con su cofre (+100 XP, un escudo de racha —como mucho tres: un día sin entrenar se gasta solo y la racha
   sigue— y un color), campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
   estrellas) y, en Progreso, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
 - El resumen de la ronda, lo esencial (opción A elegida): dónde acabó y el ejercicio, el número grande, la medalla y las

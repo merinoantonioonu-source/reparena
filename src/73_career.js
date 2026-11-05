@@ -4,12 +4,12 @@
 //    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
 //  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
 //    del día (+100 XP, un escudo de racha y un color antes de tiempo)
-//  · los escudos de racha (como mucho dos): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
+//  · los escudos de racha (como mucho tres): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
 //  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
 //    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
 //  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
 // Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
-const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 2, SHIELD_COL = '#7fd4ff';
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 3, SHIELD_COL = '#7fd4ff';
 const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), shield: clamp(+s.shield || 0, 0, SHIELD_MAX), frozen: Array.isArray(s.frozen) ? s.frozen.slice(-120) : [], saved: s.saved && s.saved.day ? s.saved : null, gain: null }; })();
 const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
 function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
@@ -84,6 +84,17 @@ function misToday(now = Date.now()) {
   CR.mis = { day, list, chest: false }; crSave(); return CR.mis;
 }
 const misLeft = () => misToday().list.filter(m => !m.done).length;
+// Cada misión cumplida se celebra en grande (es lo que más anima a volver). Las de cantidad y calidad (repeticiones,
+// minutos, perfectas, combo), en cuanto llegas, en plena ronda; las de ganar, de modo, de ejercicio o de estrellas, al
+// acabarla. cel: ya celebrada en esta ronda (al acabar no se repite)
+function misCheer(m, M) { const k = M.list.filter(x => x.done || x.cel).length; trophy(k >= 3 ? '¡TRES DE TRES!' : `¡MISIÓN ${k} DE 3!`, k >= 3 && !M.chest ? `${MIS[m.t].txt(m)} · el cofre, al acabar` : MIS[m.t].txt(m), '#3cf0c6'); }
+let misRun = null;
+function misLive() {
+  if (state !== 'play' || typeof stats === 'undefined') return; const M = misToday();
+  if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
+  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
+  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+}
 
 /* ---------- Al acabar cada ronda ---------- */
 // o: lo de la ronda (repeticiones, perfectas, minutos, combo, si ganaste y los golpes recibidos). Lo ganado se va
@@ -93,12 +104,13 @@ function careerRun(o) {
   let xp = (o.hang ? Math.round(o.reps / 2) : o.reps + o.perfect) + (o.win ? WIN_XP : 0);
   if (CAMP.run) { const c = campResult(o); G.camp = c; xp += STAR_XP * c.newStars; o.stars = c.newStars; if (c.newStars) G.notes.push([`Campaña: ${c.newStars === 1 ? 'una estrella nueva' : `${c.newStars} estrellas nuevas`}`, '#ffd166']); }
   const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
-  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
+  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); if (!m.cel) misCheer(m, M); m.cel = false; } });
   if (!M.chest && M.list.every(m => m.done)) {
-    // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
+    // el cofre: experiencia, un escudo de racha (si no tienes ya los tres) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
     const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
-    trophy('¡COFRE DEL DÍA!', 'Las tres misiones de hoy, cumplidas');
+    trophy('¡COFRE DEL DÍA!', `Las tres misiones de hoy · +${CHEST_XP} XP${p ? ` · ${p.label}` : ''}`);
+    if (sh) trophy('¡ESCUDO DE RACHA!', `Tienes ${CR.shield} de ${SHIELD_MAX}: si un día no entrenas, tu racha sigue`, SHIELD_COL); // (el premio que más cuenta: su propio aviso)
     G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
   if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }

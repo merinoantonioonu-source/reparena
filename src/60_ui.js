@@ -859,7 +859,7 @@ const TROPHY_SECS = 3.6;
 const TROPHY = { q: [], t: 0, met: null, p: makePanel(1.25, 0.42, 1024, { depthTest: false, hd: 1.5 }) };
 TROPHY.p.mesh.visible = false; TROPHY.p.mesh.renderOrder = 55; TROPHY.p.mesh.material.transparent = true; scene.add(TROPHY.p.mesh);
 HUD.trophy = { slots: [[0, 0.42], [0, -0.52], [-0.8, 0.22], [0.8, 0.22]], z: -1.6, w: 1.25, h: 0.42, slot: 0, off: new V3(0, 0.42, -1.6), fade: 1 }; LZ.trophy = mkLazy();
-function trophy(title, sub = '', color = '#ffd166') { if (TROPHY.q.length < 4 && !TROPHY.q.some(o => o.title === title)) TROPHY.q.push({ title, sub, color }); }
+function trophy(title, sub = '', color = '#ffd166') { if (TROPHY.q.length < 6 && !TROPHY.q.some(o => o.title === title)) TROPHY.q.push({ title, sub, color }); }
 function drawTrophy(o) {
   const c = TROPHY.p.ctx, W = TROPHY.p.W, H = TROPHY.p.H; c.clearRect(0, 0, W, H);
   rr(c, 10, 10, W - 20, H - 20, 46); { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(48,30,8,0.94)'); g.addColorStop(1, 'rgba(20,12,4,0.94)'); c.fillStyle = g; } c.fill();
@@ -873,7 +873,7 @@ function drawTrophy(o) {
 function trophyStep(dt, n) {
   // la meta del día, al alcanzarla en plena ronda (si ya la tenías al empezar, no)
   if (!GAME_STATES.includes(state)) TROPHY.met = null;
-  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
+  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); /* (las misiones, en cuanto se cumplen: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
   const m = TROPHY.p.mesh;
   if (TROPHY.t <= 0) {
     if (!(xrActive || preview)) TROPHY.q.length = 0; // (sin gafas ni prueba, no se guardan para luego)
