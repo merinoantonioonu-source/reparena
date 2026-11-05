@@ -135,7 +135,7 @@ No las cambies sin preguntarle.
 - Las mejoras, sorpresas y demás premios (`src/79_perks.js`) nunca dan más cargas ni más daño: cambian el ritmo, la
   defensa o los puntos, pero las oleadas piden las mismas repeticiones.
 - Para animar a volver (`src/73_career.js`): experiencia y nivel con título y colores desbloqueables (solo se ven),
-  misiones del día con su cofre (+100 XP, un escudo de racha —como mucho dos: un día sin entrenar se gasta solo y la racha
+  misiones del día con su cofre (+100 XP, un escudo de racha —como mucho tres: un día sin entrenar se gasta solo y la racha
   sigue— y un color), campaña por modo y ejercicio (7 regiones, una por rango, con jefe en el quinto nivel,
   estrellas) y, en Progreso, tu semana y tu mejor ronda. Los ajustes de un nivel de la campaña no tocan los tuyos.
 - El resumen de la ronda, lo esencial (opción A elegida): dónde acabó y el ejercicio, el número grande, la medalla y las
@@ -165,6 +165,9 @@ No las cambies sin preguntarle.
 - Parados esperando su turno, bailan al compás (el marcado o el de la canción de Spotify), también los robots.
 - El lanzador tira algo más deprisa (y más a menudo) cuanto más difícil, poco a poco (como mucho un 40 %).
 - Al abrirse una compuerta, su interior es oscuro.
+- Toques: las «amebas» son aros de neón (tubo de luz con flechas que giran hacia el hueco; estallan en chispas), elegidos
+  por el usuario en vez de los aros de agua (se leían mal y no casaban con Cómic).
+- Pulsómetro (`src/57_pulse.js`): reloj o banda Bluetooth con el servicio estándar de pulso; el pulso, en el marcador.
 - Luciérnagas (`src/56_motes.js`, Entorno → «Luciérnagas»): puntitos de luz con vuelo sereno y sinuoso de insecto (se
   ciernen, siguen, tiemblan un poco), en la tarjeta gráfica; nada de sprites que giren en círculo (las de antes, toscas).
 - Los contornos de tinta: finos de lejos (grosor fijo en el mundo pasados 2,5 m) y solo en el borde de verdad (sin
@@ -187,8 +190,9 @@ No las cambies sin preguntarle.
     puntos, un solo hueco para mensajes a 48 px o más. En el relámpago, el borde es una mecha. Nada de cargas ni escudo en
     el marcador: se ven en el juego (bola en la mano, celdas del bláster, brazalete del escudo en el antebrazo).
 - Las celebraciones (`cheer`) van solo al marcador; delante de la cara, solo lo que pide hacer algo ya o colocarse. Los
-  logros importantes (meta del día, récord, récord al fallo, nivel, cofre del día) salen además en grande, en su propio
-  aviso dorado (`trophy`, `src/60_ui.js`), sin tapar lo que llega.
+  logros importantes (meta del día, cada misión cumplida, cofre del día, escudo de racha, nivel, récord al fallo y cada
+  récord de la ronda: repeticiones, tiempo, puntos, combo, perfectas, metros, en cuanto se baten) salen además en grande, en
+  su propio aviso dorado (`trophy`, `src/60_ui.js`), sin tapar lo que llega.
 - Los avisos de la vista (los del centro, PERFECTA, las indicaciones para colocarse, la caricatura) **nunca se ladean
   con la cabeza**: siempre derechos de pie y colgado.
   - Tumbado y en plancha: en el suelo bajo la cara o en el techo, de cara a los ojos, con lo de arriba del texto hacia la
@@ -215,8 +219,9 @@ No las cambies sin preguntarle.
 - Menús compactos y al alcance de la mano:
   - lo poco usado va en submenús (Sonido, Entorno, Ajustes…);
   - el menú principal, simple (el usuario lo complica si quiere, en Opciones): arriba, **EMPEZAR** grande (en lugar del
-    título; con Sesiones, EMPEZAR SESIÓN); debajo, las cifras en fichas (nivel, hoy, racha y misiones; al tocarlas,
-    Progreso); luego el **modo** (Combate, Arcos, Barras, Toques) con su color y, tras un separador, **Sesiones**; con un
+    título; con Sesiones, EMPEZAR SESIÓN); debajo, las **metas de hoy** en una franja (las tres misiones con su barra y la racha con
+    sus escudos; al tocarla, Progreso → Misiones); a la izquierda del menú, la columna «HOY» (metas, cofre, racha y nivel);
+    al entrar en las gafas, la carátula «METAS DE HOY» (8 s, o cualquier botón). Las tres cosas, elegidas por el usuario; luego el **modo** (Combate, Arcos, Barras, Toques) con su color y, tras un separador, **Sesiones**; con un
     modo, sus ejercicios y la dificultad (galones, «Al fallo», la ronda en una ficha y lo del ojo); con Sesiones, la
     sesión bloque a bloque, legible; el modo, los ejercicios y la dificultad, cada uno en su caja con título y color
     (los modos, teclas enteras de su color; los ejercicios, en blanco); Spotify; y **Opciones ▸** (Rivales y armas, Progreso, Sonido, Entorno y Ajustes, en

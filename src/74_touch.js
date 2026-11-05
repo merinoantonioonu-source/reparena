@@ -1,6 +1,6 @@
 
 /* =================== MODO TOQUES: AMEBAS DE AGUA PARA LA CABEZA Y DIAMANTES PARA LAS MANOS =================== */
-// Aquí no se dispara: vienen hacia ti amebas de agua con forma de aro que ondulan (mete la cabeza por el hueco) y
+// Aquí no se dispara: vienen hacia ti aros de neón con flechas que giran (las «amebas»: mete la cabeza por el hueco) y
 // diamantes con la mano que los toca dibujada (izquierda azul, derecha naranja). Llegan a la altura que obliga a hacer
 // el movimiento: abajo en la sentadilla o la flexión, arriba en el salto, en el arco del abdominal (o girados, en los
 // oblicuos). Cada uno espera un momento delante de ti; si no lo tocas, pasa de largo y te golpea.
@@ -60,42 +60,21 @@ const gemGeo = new THREE.OctahedronGeometry(1, 0);
 const padBaseGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.035, 32), padTopGeo = new THREE.CylinderGeometry(0.12, 0.128, 0.024, 32), padRippleGeo = new THREE.RingGeometry(0.17, 0.2, 40);
 padBaseGeo.translate(0, 0.015, 0); const padBaseMat = std({ color: 0x24212e, metalness: 0.75, roughness: 0.35 });
 const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3(), _tu = new V3(), _ta = new V3(), _tb = new V3();
-// Ameba: un aro de agua cuyo borde ondula como un líquido (en la GPU): ondas que recorren el perímetro, el grosor
-// que se hincha y se estrecha, y el aro que se alabea. Se sombrea como agua: brillos, borde que refleja y cáusticas.
-const amebaGeo = new THREE.TorusGeometry(1, 0.2, 18, 72);
-const WATER_VS = `uniform float uTime; uniform float uAmp; uniform float uPulse; uniform float uBurst;
-varying vec3 vN; varying vec3 vV; varying vec2 vUV;
-vec3 ringPos(float u, float v) {
-  float t = uTime * (0.7 + 0.35 * uAmp), aR = min(uAmp, 1.2); // más agitada, más deprisa; el hueco apenas cambia (es lo que hay que acertar)
-  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + aR * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
-  float r = 0.2 * (1.0 - uBurst * 0.8) * (1.0 + uAmp * (0.32 * sin(4.0 * u - 2.1 * t) + 0.16 * sin(7.0 * u + 2.9 * t + v * 2.0) + 0.06 * sin(13.0 * u + 5.0 * v - 6.0 * t)));
-  float z = uAmp * 1.6 * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
-  vec2 c = vec2(cos(u), sin(u));
-  return vec3(c * (R + r * cos(v)), z + r * sin(v));
-}
-void main() {
-  float u = atan(position.y, position.x), v = atan(position.z, length(position.xy) - 1.0);
-  vec3 p = ringPos(u, v);
-  vec3 n = normalize(cross(ringPos(u + 0.01, v) - p, ringPos(u, v + 0.01) - p));
-  if (dot(n, vec3(vec2(cos(u), sin(u)) * cos(v), sin(v))) < 0.0) n = -n;
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  vN = normalize(normalMatrix * n); vV = normalize(-mv.xyz); vUV = vec2(u, v);
-  gl_Position = projectionMatrix * mv;
-}`;
-const WATER_FS = `uniform float uTime; uniform float uOpacity; uniform vec3 uColor;
-varying vec3 vN; varying vec3 vV; varying vec2 vUV;
-void main() {
-  vec3 n = normalize(vN), v = normalize(vV);
-  float ndv = abs(dot(n, v)), fr = pow(1.0 - ndv, 2.0);
-  vec3 r = reflect(-v, n);
-  float spec = pow(max(dot(r, normalize(vec3(-0.35, 0.85, 0.4))), 0.0), 90.0) * 2.4 + pow(max(dot(r, normalize(vec3(0.55, 0.25, 0.8))), 0.0), 20.0) * 0.45;
-  float ca = sin(vUV.x * 9.0 + uTime * 2.2 + sin(vUV.y * 3.0 + uTime) * 1.5) * sin(vUV.x * 5.0 - uTime * 1.6 + vUV.y * 2.0);
-  vec3 deep = uColor * 0.28, shallow = mix(uColor, vec3(1.0), 0.3);
-  vec3 col = mix(deep, shallow, 0.35 + 0.65 * ndv) + uColor * smoothstep(0.5, 1.0, ca) * 0.5;
-  col = mix(col, vec3(0.85, 0.96, 1.0), fr * 0.55) + vec3(spec);
-  gl_FragColor = vec4(col, clamp(0.4 + 0.5 * fr + spec, 0.0, 1.0) * uOpacity);
-}`;
-const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: WATER_VS, fragmentShader: WATER_FS, transparent: true, depthWrite: false });
+// Aro de neón (lo que eligió el usuario en vez de la ameba de agua, que se leía mal de lejos): un tubo de luz sólida con
+// el centro casi blanco y el borde de su color, con destellos que corren por él; alrededor, un brillo suave y ocho
+// flechas que giran apuntando al hueco. Los mismos uniformes que el agua (late con el pulso, se abre y se apaga al
+// reventar), así el resto no cambia. El hueco, del mismo tamaño que el de la ameba
+const neonGeo = new THREE.TorusGeometry(0.88, 0.075, 12, 96), neonGlowGeo = new THREE.TorusGeometry(0.88, 0.2, 10, 72);
+const NEON_VS = `uniform float uPulse; uniform float uBurst; varying vec3 vN; varying vec3 vV; varying float vU;
+void main() { vec3 p = position * (1.0 + uPulse * 0.06 + uBurst * 0.8); vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vU = atan(position.y, position.x); gl_Position = projectionMatrix * mv; }`;
+const NEON_FS = `uniform float uTime; uniform float uOpacity; uniform float uPulse; uniform vec3 uColor; varying vec3 vN; varying vec3 vV; varying float vU;
+void main() { float ndv = abs(dot(normalize(vN), normalize(vV))), core = pow(ndv, 3.0);
+  float run = pow(0.5 + 0.5 * sin(vU * 4.0 - uTime * 5.0), 8.0); // (destellos que corren por el tubo)
+  vec3 c = mix(uColor * 0.9, vec3(1.0), core * 0.75 + run * 0.35) * (1.0 + uPulse * 0.4);
+  gl_FragColor = vec4(c, uOpacity); }`;
+const chevGeo = (() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, -0.1, 0, -0.09, 0.06, 0, 0, 0.015, 0, 0, -0.1, 0, 0, 0.015, 0, 0.09, 0.06, 0]), 3)); return g; })(); // (una flecha de dos triángulos, la punta hacia el centro)
+const neonRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: NEON_VS, fragmentShader: NEON_FS, transparent: true, toneMapped: false });
 
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
 function moveSpec(move, sd0) {
@@ -200,9 +179,14 @@ class TouchTarget {
     const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
     this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
     if (this.part === 'head') {
-      this.mat = waterRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
-      this.ring = new THREE.Mesh(amebaGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
-      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.mat = neonRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
+      this.ring = new THREE.Mesh(neonGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring); this.ring.userData.noInk = true;
+      this.glowMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false });
+      const glow = new THREE.Mesh(neonGlowGeo, this.glowMat); glow.userData.noInk = true; this.ring.add(glow);
+      this.chevMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.7), transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      this.chev = new THREE.Group(); this.chev.scale.setScalar(this.r * 1.25); this.root.add(this.chev);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, m = new THREE.Mesh(chevGeo, this.chevMat); m.position.set(Math.cos(a) * 1.22, Math.sin(a) * 1.22, 0); m.rotation.z = a - Math.PI / 2; m.userData.noInk = true; this.chev.add(m); }
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }); // (sin sumar luz: sobre el cielo claro de Cómic se quedaba blanco)
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
@@ -299,13 +283,13 @@ class TouchTarget {
       else if (Math.floor(this.held) !== Math.floor(this.held - dt)) { const left = Math.ceil(this.hold - this.held); say(`Aguanta ${left}`, '#ffd166', 0.6, true); SND.beep(1 + (this.hold - left) * 0.1); }
     } else if (this.mode === 'burst') { // la ameba se rompe: el agua se abre hacia fuera y se deshace
       this.popT += dt; const k = Math.min(1, this.popT / 0.22);
-      this.mat.uniforms.uBurst.value = k; this.mat.uniforms.uOpacity.value = 1 - k; this.haloMat.opacity = 0.4 * (1 - k); this.iconMat.opacity = 0;
+      this.mat.uniforms.uBurst.value = k; this.mat.uniforms.uOpacity.value = 1 - k; this.haloMat.opacity = 0.4 * (1 - k); this.iconMat.opacity = 0; this.chev.scale.setScalar(this.r * 1.25 * (1 + k)); this.chevMat.opacity = this.glowMat.opacity = 1 - k; // (el aro se abre y las flechas salen despedidas)
       if (k >= 1) { this.dispose(); return; }
     } else if (this.mode === 'pass') {
       // fallado: se aleja un poco hacia ti, se encoge y se apaga (no te atraviesa la cara)
       this.popT += dt; this.root.position.addScaledVector(this.dir, dt * 0.8); this.root.position.y -= dt * 0.3;
       const f = 1 - this.popT / 0.5; this.root.scale.setScalar(Math.max(0.05, 0.3 + 0.7 * f));
-      if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; } else this.mat.opacity = Math.max(0, f) * 0.9;
+      if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; this.chevMat.opacity = Math.max(0, f); this.glowMat.opacity = Math.max(0, f) * 0.25; } else this.mat.opacity = Math.max(0, f) * 0.9;
       if (f <= 0) { this.dispose(); return; }
     }
     if (this.ring && this.mode !== 'approach' && this.mode !== 'wait') this.root.quaternion.copy(this.q0);
@@ -316,7 +300,8 @@ class TouchTarget {
       const near = this.mode === 'wait' || this.mode === 'hold', U = this.mat.uniforms;
       U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
-      if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
+      if (this.mode !== 'pass' && this.mode !== 'burst') { this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25; this.glowMat.opacity = (near ? 0.32 : 0.22) + pulse * 0.2; }
+      this.chev.rotation.z -= dt * (near ? 2.2 : 1.1); this.glowMat.color.copy(U.uColor.value); // (las flechas giran; más deprisa cuando está a tu alcance)
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
       if (this.mode !== 'pass') this.shellMat.opacity = 0.14 + pulse * 0.25 + (this.mode === 'wait' ? 0.1 : 0);
@@ -340,8 +325,8 @@ class TouchTarget {
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
-      SND.waterPop(c, !!this.hold);
-      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb, head.p);
+      SND.pop(c, !!this.hold); SND.zap(c); // (el aro de neón estalla en chispas de su color, con un destello)
+      fx.sparks(c, 46, rgb, 2.8, 0.035); fx.sparks(c, 18, [1, 1, 1], 1.8, 0.02); fx.glow(c, rgb, 0.7, 0.2);
       this.mode = 'burst'; this.popT = 0; return;
     }
     if (this.part === 'cut') { this.split(c, rgb); return; }
@@ -373,7 +358,7 @@ class TouchTarget {
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
-    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
+    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); }
     this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose(); if (this.box) { this.shellMat.dispose(); this.arrowMat.dispose(); }
   }
 }

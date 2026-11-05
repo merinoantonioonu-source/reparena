@@ -4,12 +4,12 @@
 //    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
 //  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
 //    del día (+100 XP, un escudo de racha y un color antes de tiempo)
-//  · los escudos de racha (como mucho dos): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
+//  · los escudos de racha (como mucho tres): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
 //  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
 //    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
 //  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
 // Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
-const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 2, SHIELD_COL = '#7fd4ff';
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 3, SHIELD_COL = '#7fd4ff';
 const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), shield: clamp(+s.shield || 0, 0, SHIELD_MAX), frozen: Array.isArray(s.frozen) ? s.frozen.slice(-120) : [], saved: s.saved && s.saved.day ? s.saved : null, gain: null }; })();
 const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
 function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
@@ -84,6 +84,39 @@ function misToday(now = Date.now()) {
   CR.mis = { day, list, chest: false }; crSave(); return CR.mis;
 }
 const misLeft = () => misToday().list.filter(m => !m.done).length;
+// Cada misión cumplida se celebra en grande (es lo que más anima a volver). Las de cantidad y calidad (repeticiones,
+// minutos, perfectas, combo), en cuanto llegas, en plena ronda; las de ganar, de modo, de ejercicio o de estrellas, al
+// acabarla. cel: ya celebrada en esta ronda (al acabar no se repite)
+function misCheer(m, M) { const k = M.list.filter(x => x.done || x.cel).length; trophy(k >= 3 ? '¡TRES DE TRES!' : `¡MISIÓN ${k} DE 3!`, k >= 3 && !M.chest ? `${MIS[m.t].txt(m)} · el cofre, al acabar` : MIS[m.t].txt(m), '#3cf0c6'); }
+let misRun = null;
+function misLive() {
+  if (state !== 'play' || typeof stats === 'undefined') return; const M = misToday();
+  if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
+  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
+  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+}
+
+/* ---------- Récords, en plena ronda ---------- */
+// Al empezar cada ronda se miran tus mejores marcas de este modo y ejercicio (las de «Al fallo», aparte) y, en cuanto
+// superas una, sale su propio aviso grande (una vez por ronda cada una). Solo si ya tenías marca: la primera vez, no.
+// En las sesiones, no (cada bloque es un trozo). La oleada al fallo tiene el suyo (startWave)
+const REC_DEF = [
+  ['reps', 'REPETICIONES', () => settings.exercise === 'hang' ? 0 : stats.reps, r => r.ex === 'hang' ? 0 : r.reps, v => `${v} repeticiones`],
+  ['hold', 'TIEMPO COLGADO', () => settings.exercise === 'hang' ? Math.floor(stats.hold) : 0, r => r.ex === 'hang' ? r.reps : 0, v => mmss(v)],
+  ['time', 'TIEMPO', () => settings.toFail ? Math.floor(stats.time) : 0, r => r.fail ? r.time : 0, v => `${mmss(v)} aguantando`], // (al fallo: lo que aguantas)
+  ['score', 'PUNTOS', () => score, r => r.score, v => `${v} puntos`],
+  ['combo', 'COMBO', () => stats.bestCombo, r => r.combo, v => `combo ×${v}`],
+  ['perfect', 'PERFECTAS', () => stats.perfect, r => r.perfect, v => `${v} perfectas`],
+  ['dist', 'DISTANCIA', () => settings.mode === 'arcs' ? Math.floor(ARX.dist || 0) : settings.mode === 'trek' ? Math.floor(TREK.dist || 0) : 0, r => r.dist, v => `${v} m`]];
+const REC = { run: null, best: {}, got: {} };
+function recLive() {
+  if (state !== 'play' || typeof stats === 'undefined' || SES.active) return;
+  if (REC.run !== stats) { // una ronda nueva: tus marcas de este modo y ejercicio (al fallo o no)
+    REC.run = stats; REC.got = {}; REC.best = {}; const H = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && !!r.fail === !!settings.toFail);
+    for (const [k, , , old] of REC_DEF) REC.best[k] = H.reduce((a, r) => Math.max(a, +old(r) || 0), 0);
+  }
+  for (const [k, name, now, , txt] of REC_DEF) { const v = now(), b = REC.best[k]; if (!REC.got[k] && b > 0 && v > b) { REC.got[k] = true; trophy(`¡RÉCORD DE ${name}!`, `${txt(v)}${settings.toFail ? ' al fallo' : ''} · antes, ${txt(b)}`); cheer('¡NUEVO RÉCORD!', '#ffd166', 1.6); } }
+}
 
 /* ---------- Al acabar cada ronda ---------- */
 // o: lo de la ronda (repeticiones, perfectas, minutos, combo, si ganaste y los golpes recibidos). Lo ganado se va
@@ -93,12 +126,13 @@ function careerRun(o) {
   let xp = (o.hang ? Math.round(o.reps / 2) : o.reps + o.perfect) + (o.win ? WIN_XP : 0);
   if (CAMP.run) { const c = campResult(o); G.camp = c; xp += STAR_XP * c.newStars; o.stars = c.newStars; if (c.newStars) G.notes.push([`Campaña: ${c.newStars === 1 ? 'una estrella nueva' : `${c.newStars} estrellas nuevas`}`, '#ffd166']); }
   const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
-  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
+  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); if (!m.cel) misCheer(m, M); m.cel = false; } });
   if (!M.chest && M.list.every(m => m.done)) {
-    // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
+    // el cofre: experiencia, un escudo de racha (si no tienes ya los tres) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
     const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
-    trophy('¡COFRE DEL DÍA!', 'Las tres misiones de hoy, cumplidas');
+    trophy('¡COFRE DEL DÍA!', `Las tres misiones de hoy · +${CHEST_XP} XP${p ? ` · ${p.label}` : ''}`);
+    if (sh) trophy('¡ESCUDO DE RACHA!', `Tienes ${CR.shield} de ${SHIELD_MAX}: si un día no entrenas, tu racha sigue`, SHIELD_COL); // (el premio que más cuenta: su propio aviso)
     G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
   if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
@@ -267,6 +301,84 @@ function careerHTML() {
     <p class="chest">${M.chest ? 'Cofre del día abierto' : `Cumple las tres misiones y se abre el cofre del día: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`}</p>
     <p class="shield">🛡 Escudos de racha: <b>${CR.shield} de ${SHIELD_MAX}</b>. Si un día no entrenas, se gasta uno solo y tu racha sigue.</p></div>`;
 }
+/* ---------- Metas de hoy, siempre a la vista (lo que más anima a volver) ---------- */
+// Las eligió el usuario las tres a la vez:
+//  1) al entrar en las gafas (o en la prueba del ordenador), la carátula «METAS DE HOY»: grande, a 2 m, con todo lo demás
+//     oscurecido; las tres metas con lo que llevas, lo que da el cofre y la racha con los escudos. Se va sola (8 s) o con
+//     cualquier botón, el pulgar arriba o una tecla, como la carátula del duelo
+//  2) al lado del menú principal, la columna «HOY»: lo mismo, y tu nivel
+//  3) en el menú principal, bajo EMPEZAR, la franja: las tres metas (con su barra) y la racha con sus escudos, en teclas
+//     que llevan a Progreso → Misiones
+const misGot = m => Math.min(m.n, m.t === 'mins' ? Math.floor(m.got) : m.got);
+const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, star: () => 'Estrella nueva' };
+const misShort = m => (MIS_SHORT[m.t] || (x => MIS[x.t].txt(x)))(m);
+// una meta: el círculo (con ✓ si está), su texto, la barra y lo que llevas; tc: el color de la letra
+function drawGoal(c, m, x, y, w, h, tc, long) {
+  const r = h * 0.2, cx = x + r, cy = y + h * 0.36, done = m.done, got = misGot(m), tx = x + r * 2 + h * 0.12, tw = w - (tx - x);
+  c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = done ? '#3cf0c6' : 'rgba(128,128,128,0.35)'; c.fill();
+  if (done) { c.strokeStyle = '#06261f'; c.lineWidth = r * 0.32; c.lineCap = 'round'; c.beginPath(); c.moveTo(cx - r * 0.45, cy); c.lineTo(cx - r * 0.1, cy + r * 0.38); c.lineTo(cx + r * 0.5, cy - r * 0.42); c.stroke(); }
+  const t = long ? MIS[m.t].txt(m) : misShort(m); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = done ? '#2bd4ad' : tc; fitFont(c, t, tw, Math.round(h * 0.3), '700 %px ' + FB); c.fillText(t, tx, cy);
+  const by = y + h * 0.7, bh = Math.max(4, h * 0.11), bw = tw * 0.62; rr(c, tx, by - bh / 2, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.3)'; c.fill();
+  if (got > 0) { rr(c, tx, by - bh / 2, Math.max(bh, bw * got / m.n), bh, bh / 2); c.fillStyle = done ? '#3cf0c6' : PROG_COL; c.fill(); }
+  c.textAlign = 'right'; c.fillStyle = done ? '#2bd4ad' : tc; const g = done ? `+${MIS_XP} XP` : `${got} / ${m.n}`; fitFont(c, g, tw * 0.34, Math.round(h * 0.24), '700 %px ' + FB); c.fillText(g, x + w, by);
+}
+const shieldsTxt = () => `${CR.shield} de ${SHIELD_MAX} ${CR.shield === 1 ? 'escudo' : 'escudos'}`;
+// 3) la franja del menú principal: tres teclas con sus metas y una con la racha
+function goalTiles() {
+  const M = misToday(), P = progress(), go = () => progressOpen('mis');
+  return [...M.list.map(m => ({ label: `${m.done ? 'Cumplida: ' : 'Meta: '}${MIS[m.t].txt(m)}`, flex: 1.15, onPress: go, paint: (c, W, H, tc) => drawGoal(c, m, H * 0.14, H * 0.1, W - H * 0.28, H * 0.8, tc) })),
+    { label: `Racha de ${daysTxt(P.streak)} · ${shieldsTxt()}`, onPress: go, paint: (c, W, H, tc) => {
+      drawFlame(c, H * 0.32, H * 0.32, H * 0.2); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = tc; const x = H * 0.6; fitFont(c, daysTxt(P.streak), W - x - 6, Math.round(H * 0.26), '800 %px ' + FB); c.fillText(daysTxt(P.streak), x, H * 0.32);
+      const sr = H * 0.12; for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, H * 0.2 + sr + i * sr * 2.3, H * 0.72, sr, i < CR.shield);
+      const tx = H * 0.2 + SHIELD_MAX * sr * 2.3 + 6, left = M.list.filter(m => !m.done).length, ct = M.chest ? 'cofre ✓' : `cofre: ${left}`; drawChest(c, tx + sr, H * 0.74, sr * 0.8, M.chest); c.fillStyle = M.chest ? '#c99a1e' : tc; fitFont(c, ct, W - tx - sr * 2.4 - 4, Math.round(H * 0.19), '700 %px ' + FB); c.fillText(ct, tx + sr * 2.4, H * 0.72); } }];
+}
+// lo común de la carátula y de la columna: título, las tres metas, el cofre, la racha con los escudos y (en la columna) el nivel
+function drawHoy(c, W, H, big) {
+  const M = misToday(), P = progress(), L = lvlOf(), pad = W * 0.06, done = M.list.filter(m => m.done).length;
+  c.clearRect(0, 0, W, H); rr(c, 6, 6, W - 12, H - 12, W * 0.05); { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(42,31,69,0.97)'); g.addColorStop(1, 'rgba(24,18,44,0.97)'); c.fillStyle = g; } c.fill();
+  c.lineWidth = big ? 10 : 7; c.strokeStyle = big ? '#ff4fa3' : '#3cf0c6'; c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle'; const t = big ? 'METAS DE HOY' : 'HOY'; fitFont(c, t, W - pad * 2, Math.round(H * (big ? 0.09 : 0.075)), '%px ' + FD); glowText(c, t, W / 2, H * (big ? 0.1 : 0.075), '#ffd166', 14);
+  if (big) { c.fillStyle = '#a49fc8'; const st = M.chest ? '¡Las tres cumplidas! El cofre de hoy ya es tuyo' : `${done} de 3 · cumple las tres y se abre el cofre del día`; fitFont(c, st, W - pad * 2, Math.round(H * 0.045), '600 %px ' + FB); c.fillText(st, W / 2, H * 0.18); }
+  const y0 = H * (big ? 0.24 : 0.14), gh = H * (big ? 0.15 : 0.13);
+  M.list.forEach((m, i) => drawGoal(c, m, pad, y0 + i * gh * 1.08, W - pad * 2, gh, '#eeeaff', big));
+  let y = y0 + 3 * gh * 1.08 + H * 0.03; const s = H * (big ? 0.045 : 0.04);
+  drawChest(c, pad + s, y + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = '#ffd166'; const ct = M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP, un escudo y un color`; fitFont(c, ct, W - pad * 2 - s * 3, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(ct, pad + s * 2.6, y);
+  y += H * (big ? 0.085 : 0.075); drawFlame(c, pad + s, y, s * 0.9); c.fillStyle = '#ffb36b'; const rt = `Racha: ${daysTxt(P.streak)}`; fitFont(c, rt, W * 0.42, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(rt, pad + s * 2.6, y);
+  for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, W - pad - (SHIELD_MAX - i) * s * 2.1 + s, y, s * 0.85, i < CR.shield);
+  if (!big) { y += H * 0.085; drawLvlBadge(c, pad + s * 1.2, y, s * 1.2, L.n); c.fillStyle = '#eeeaff'; const lt = `Nivel ${L.n} · ${titleOf(L.n)}`; fitFont(c, lt, W - pad * 2 - s * 3.5, Math.round(H * 0.04), '700 %px ' + FB); c.fillText(lt, pad + s * 3, y - H * 0.012);
+    const bx = pad + s * 3, bw = W - pad - bx, bh = H * 0.016; rr(c, bx, y + H * 0.022, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.35)'; c.fill(); if (L.into) { rr(c, bx, y + H * 0.022, Math.max(bh, bw * L.into / L.need), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); } }
+  else { c.textAlign = 'center'; c.fillStyle = '#a49fc8'; fitFont(c, 'Cualquier botón (o el pulgar arriba) para seguir', W - pad * 2, Math.round(H * 0.038), '600 %px ' + FB); c.fillText('Cualquier botón (o el pulgar arriba) para seguir', W / 2, H * 0.94); }
+}
+// 2) la columna «HOY», a la izquierda del menú principal (se va con él)
+const HOY_W = 0.36, HOY_H = 0.52;
+function goalSide(m) {
+  if (!m || !m.group) return; const p = makePanel(HOY_W, HOY_H, 512, { hd: 1.5 }); drawHoy(p.ctx, p.W, p.H, false); p.tex.needsUpdate = true;
+  p.mesh.position.set(-MW / 2 - 0.03 - HOY_W / 2, m.H / 2 - HOY_H / 2, 0); p.mesh.renderOrder = RO.menu; m.group.add(p.mesh);
+}
+// 1) la carátula al entrar
+const GOALS = { t: -1, p: null, veil: null, mask: { left: 0, right: 0 }, thumbT: 0, skip: false, shown: false };
+const GOALS_DUR = 8;
+function goalsIntro() {
+  if (GOALS.shown || !(xrActive || preview) || typeof document === 'undefined') return; GOALS.shown = true;
+  if (!GOALS.p) { GOALS.p = makePanel(1.3, 0.95, 1024, { depthTest: false, hd: 1.5 }); GOALS.p.mesh.renderOrder = RO.menu + 6; scene.add(GOALS.p.mesh);
+    GOALS.veil = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 10), new THREE.MeshBasicMaterial({ color: 0x05030c, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false })); GOALS.veil.renderOrder = RO.menu + 5; scene.add(GOALS.veil); }
+  drawHoy(GOALS.p.ctx, GOALS.p.W, GOALS.p.H, true); GOALS.p.tex.needsUpdate = true;
+  hudLocal(_glP.set(0, 0.05, -2), GOALS.p.mesh.position); GOALS.p.mesh.quaternion.copy(hudQ());
+  GOALS.t = 0; GOALS.skip = false; GOALS.thumbT = 0; for (const s of ['left', 'right']) GOALS.mask[s] = padMask(hands[s]); SND.combo();
+}
+const _glP = new V3();
+function goalsStep(dt) {
+  if (GOALS.t < 0) return; GOALS.t += dt;
+  if (!(xrActive || preview) || GAME_STATES.includes(state)) GOALS.skip = true; // (si empiezas a jugar, se va)
+  for (const s of ['left', 'right']) { const m = padMask(hands[s]); if (m & ~GOALS.mask[s]) GOALS.skip = true; GOALS.mask[s] = m; }
+  if (thumbsUp(hands.left) || thumbsUp(hands.right)) { GOALS.thumbT += dt; if (GOALS.thumbT > 0.25) GOALS.skip = true; } else GOALS.thumbT = 0;
+  if (GOALS.skip && GOALS.t < GOALS_DUR - 0.3) GOALS.t = GOALS_DUR - 0.3;
+  const t = GOALS.t, a = t < 0.3 ? smooth(t / 0.3) : clamp((GOALS_DUR - t) / 0.3, 0, 1);
+  GOALS.veil.position.copy(head.p); GOALS.veil.material.opacity = a * 0.78; GOALS.veil.visible = a > 0.01;
+  GOALS.p.mesh.material.opacity = a; GOALS.p.mesh.visible = a > 0.01; GOALS.p.mesh.scale.setScalar(1 + 0.05 * Math.max(0, 1 - t / 0.4));
+  if (t >= GOALS_DUR) { GOALS.t = -1; GOALS.p.mesh.visible = GOALS.veil.visible = false; }
+}
+if (typeof addEventListener === 'function') addEventListener('keydown', () => { if (GOALS.t >= 0 && preview) GOALS.skip = true; }); // (en el ordenador, cualquier tecla)
 // Las fichas de tus cifras en el menú principal (teclas: al tocarlas, Opciones → Progreso): nivel, hoy, racha y misiones.
 // Dibujadas en la cara de la tecla; tc es el color de su letra
 function statTiles() {

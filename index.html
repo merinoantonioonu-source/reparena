@@ -246,6 +246,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfilt select,.spfilt input{padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.85rem}
 .spfilt input{width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
 .spfilt small{color:var(--muted)}
+.hrnow{margin-left:8px;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
 .spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
 .spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
 .spx:hover,.spx:focus-visible{opacity:1;color:var(--fg);background:var(--panel)}
@@ -433,7 +434,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-touch" value="touch">
         <span class="tag">Cabeza y manos</span><b>Toques</b>
-        <small>Vienen hacia ti amebas de agua que ondulan (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
+        <small>Vienen hacia ti aros de neón con flechas que giran (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
         <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
         <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar golpe tras golpe hasta que caen agotados… y lobos detrás.</small></label>
@@ -524,6 +525,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>3 · Opciones comunes</h2>
     <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
+    <h3>Pulsómetro</h3>
+    <p>Tu pulso en el marcador del juego, con el color de tu zona (lo que cuenta como pulso máximo, en «Tu meta»). Vale cualquier reloj o banda que emita el pulso por Bluetooth como un pulsómetro normal. En un <b>Amazfit</b> (con Zepp OS 3 o más): en el reloj, Ajustes → Frecuencia cardíaca → <b>Emitir frecuencia cardíaca</b> (Heart Rate Push); algunos solo lo emiten durante un entrenamiento: empieza uno en el reloj. Después pulsa <b>Conectar pulsómetro</b> aquí, en el navegador de las gafas, elígelo en la lista y entra en el juego.</p>
+    <div class="actions"><button class="btn alt" id="btnHr">Conectar pulsómetro</button><button class="btn small" id="btnHrOff">Desconectar</button><span class="hrnow" id="hrNow"></span></div>
+    <p class="status" id="hrStatus"></p>
   </section>
 
   <section class="music" id="secMusic" data-toc="Sonido y música">
@@ -624,7 +629,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Arcos inclinados</strong> (Ajustes → Arcos): cuando la barra llega torcida, apártate hacia el lado alto flexionando esa pierna y estirando la otra; el marcador avisa hacia qué lado. Agacharse en el centro no vale: bajo el lado bajo hay una pared de energía hasta pasado el centro. Ahí mismo eliges si los arcos salen con ritmo regular o irregular, cuánto hay que bajar en los inclinados y lo separados que están sus extremos (más separados, más peso sobre una pierna). Con música de Spotify, los arcos llegan <b>al compás</b>: cada uno, en un pulso. Los orbes vienen también por encima de la cabeza y muy abajo, para agacharse; recogidos en el pulso, valen el doble. Con ritmo, las canciones lentas traen los arcos algo más despacio y las rápidas, más deprisa; cada 32 pulsos hay una frase intensa o un respiro, y a veces un <b>túnel</b> de arcos bajos en el que hay que aguantar abajo. Tras 10 seguidos sin fallo, la <b>fiebre</b>: puntos ×2, más deprisa y una tormenta roja con relámpagos en el cielo. Cuanto más difícil, el láser barre más deprisa y con amagos.</li>
       <li><strong>Plancha lateral:</strong> aguanta con la cadera arriba; cada pocos segundos sale un disparo. En cada descanso, cambia de lado.</li>
       <li><strong>Espadas (Ajustes → Espada, con los mandos):</strong> una o dos, metálica o láser. En Combate contra robots cada sentadilla carga la hoja y derribas a los robots con tajos rápidos; si marcan su golpe, pon la hoja en la marca (agachado si es medio o bajo) para pararlo y contraatacar con el doble de daño. En Toques corta los bloques en la dirección de su flecha. Despeja el espacio y ponte la correa de los mandos.</li>
-      <li><strong>Toques:</strong> mete la cabeza por el hueco de las amebas de agua (turquesa, con una cabeza dibujada) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción, o, con Spotify conectado, elige «Ritmo de Spotify» y el ritmo seguirá a cada canción.</li>
+      <li><strong>Toques:</strong> mete la cabeza por el hueco de los aros de neón (turquesa, con flechas que giran apuntando al hueco y una cabeza dibujada; al pasar, estallan en chispas) y toca los diamantes con la mano que llevan dibujada (I azul, la izquierda; D naranja, la derecha). También valen mientras vienen de camino, si atinas. Entre un toque y el siguiente vuelve a la postura de partida: tras un abdominal, baja al suelo antes de la siguiente ameba; tras un diamante, retira la mano. Cada uno espera un momento delante de ti; si se va sin tocarlo, te golpea. En los abdominales túmbate boca arriba con los pies hacia delante. Para ir al ritmo de la música, toca «Al compás» en el menú cuatro veces siguiendo el pulso de la canción, o, con Spotify conectado, elige «Ritmo de Spotify» y el ritmo seguirá a cada canción.</li>
       <li><strong>Pistolas</strong> (sentadillas y zancadas en Combate, Ajustes → Enemigos): coge los mandos; cada sentadilla carga munición (las celdas del bláster y el marcador la muestran) y disparas tú con el gatillo donde apuntes. Sin mandos, pellizca índice y pulgar para disparar. Con las pistolas en la mano, el menú se abre con X o Y del mando izquierdo.</li>
       <li><strong>A golpes</strong> (Combate, Ajustes → Armas): un puñetazo rápido al enemigo que tienes delante, o un golpe con la pesa o el mando, lo echa atrás y lo aturde un momento (no le quita vida). Los enemigos nunca se ponen a tu lado ni detrás de ti, aunque avances hacia ellos.</li>
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
@@ -641,7 +646,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, como mucho cada tres oleadas y si te la ganas (3 golpes o menos en ellas), eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma): la oleada siguiente espera a que elijas. En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre en el suelo, a tu derecha, que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li><strong>Tu nivel:</strong> cada repetición te da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título (de Novato a Leyenda) y desbloqueas colores para tus manos y para el rayo normal. Solo se ven: no dan más cargas ni más daño. Se eligen en Progreso → Nivel.</li>
-      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más, un <b>escudo de racha</b> (como mucho dos) y, si queda alguno, un color antes de tiempo. Si un día no entrenas, al volver se gasta un escudo solo y tu racha sigue. Las ves en «Hoy» y en Progreso → Misiones.</li>
+      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más, un <b>escudo de racha</b> (como mucho tres) y, si queda alguno, un color antes de tiempo. Si un día no entrenas, al volver se gasta un escudo solo y tu racha sigue. Las ves en «Hoy» y en Progreso → Misiones.</li>
       <li><strong>Campaña:</strong> para cada modo y ejercicio, 35 niveles en 7 regiones, una por rango (de recluta a general), cada una en su entorno; el quinto nivel de cada región, con jefe. Ganar abre el siguiente y da de 1 a 3 estrellas (la mitad de perfectas, dos; tres cuartos y sin golpes, tres). Se juega desde Progreso → Campaña; los ajustes del nivel no tocan los tuyos.</li>
       <li><strong>Tu semana:</strong> en el resumen de cada ronda ves la experiencia ganada, los minutos de los últimos 7 días frente a tu meta y tu mejor ronda con ese ejercicio en ese modo, para saber si te has superado.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
@@ -1024,6 +1029,7 @@ const SCHEMA = [
   { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', cond: () => settings.mode === 'trek' || !settings.pano || settings.pano === 'off', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
   { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
+  { key: 'hrMax', g: 'perfil', label: 'Tu pulso máximo', short: 'Pulso máx.', type: 'num', min: 120, max: 220, step: 1, def: 190, unit: 'lpm', hint: 'Para los colores del pulso en el marcador (si conectas un pulsómetro, en Opciones comunes): azul por debajo del 60 %, verde hasta el 70 %, lima hasta el 80 %, naranja hasta el 90 % y rojo por encima. Si no lo sabes, 220 menos tu edad.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
   { key: 'roomMode', g: 'entorno', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'entorno', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
@@ -1138,7 +1144,7 @@ function setSetting(key, v) {
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'arcJumpH', 'arcHurdles', 'arcBurpee', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
+  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'hrMax', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
 const isBasic = f => devRowOk(f) ? devEye().includes(f.key) : f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
@@ -1396,7 +1402,7 @@ const runKcal = r => r.kcal != null ? r.kcal : kcalOf(r.ex, (r.time || 0) * 0.75
 const DAY_MS = 864e5;
 const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const noonOf = ms => { const d = new Date(ms); d.setHours(12, 0, 0, 0); return d.getTime(); }; // a mediodía, el cambio de hora no salta días
-// Los escudos de racha (73_career: el cofre del día da uno, como mucho dos): los días que salvó un escudo, sin entrenar
+// Los escudos de racha (73_career: el cofre del día da uno, como mucho tres): los días que salvó un escudo, sin entrenar
 const streakSave = () => { const c = store('reparena3-career') || {}; return { n: Math.max(0, +c.shield || 0), frozen: Array.isArray(c.frozen) ? c.frozen : [], saved: c.saved || null }; };
 function progress(h = store(HIST_KEY) || [], now = Date.now(), frozen = streakSave().frozen) {
   const days = new Set(h.map(r => dayKey(r.date))), today = dayKey(now), fz = new Set(frozen);
@@ -6011,6 +6017,71 @@ function motesStep(dt, t) {
   U.uVH.value = L && L.framebufferHeight ? L.framebufferHeight : innerHeight * (renderer.getPixelRatio ? renderer.getPixelRatio() : 1);
 }
 
+/* =================== PULSÓMETRO (BLUETOOTH) =================== */
+// Tu pulso en el marcador, de un reloj o una banda que lo emita como pulsómetro Bluetooth normal (el servicio estándar
+// «heart_rate»): los Amazfit con Zepp OS 3 o más («Emitir frecuencia cardíaca» / Heart Rate Push), Polar, Garmin
+// («Transmitir frecuencia cardíaca»), Wahoo… Se conecta desde la página (el navegador pide elegirlo: hace falta un
+// toque) y sigue conectado al entrar en las gafas. Si el navegador no tiene Bluetooth para páginas web, lo dice.
+// Colores por zonas, con tu pulso máximo estimado (220 − edad, o el que pongas): azul suave, verde (quema), amarillo
+// (aeróbico), naranja (umbral) y rojo (máximo)
+const HR = { dev: null, char: null, bpm: 0, t: 0, st: '', bad: false, tries: 0, max: 0 };
+const hrOk = () => typeof navigator !== 'undefined' && !!navigator.bluetooth && typeof navigator.bluetooth.requestDevice === 'function';
+const hrNow = () => HR.bpm && performance.now() - HR.t < 6000 ? HR.bpm : 0; // (sin datos en 6 s: nada)
+const HR_ZONES = [[0.6, '#7fd4ff'], [0.7, '#3cf0c6'], [0.8, '#c8f560'], [0.9, '#ffb36b'], [9, '#ff3b5c']];
+const hrMax = () => settings.hrMax || 190;
+const hrCol = b => (HR_ZONES.find(z => b < z[0] * hrMax()) || HR_ZONES[4])[1];
+function hrStatus(t, bad) { HR.st = t; HR.bad = !!bad; const el = typeof document !== 'undefined' && $('#hrStatus'); if (el) { el.textContent = t; el.style.color = bad ? 'var(--red)' : ''; } const off = $('#btnHrOff'); if (off) off.disabled = !HR.dev; }
+// Lo que manda el pulsómetro: el primer byte dice si el pulso viene en 8 o en 16 bits
+function hrParse(dv) {
+  const f = dv.getUint8(0), v = f & 1 ? dv.getUint16(1, true) : dv.getUint8(1);
+  if (v < 30 || v > 240) return; HR.bpm = v; HR.t = performance.now(); HR.max = Math.max(HR.max, v);
+  if (typeof boardDirty !== 'undefined') boardDirty = true;
+  const now = $('#hrNow'); if (now) { now.textContent = `♥ ${v} lpm`; now.style.color = hrCol(v); }
+}
+async function hrAttach(dev) {
+  hrStatus(`Conectando con ${dev.name || 'el pulsómetro'}…`);
+  const srv = await dev.gatt.connect(), svc = await srv.getPrimaryService('heart_rate'), ch = await svc.getCharacteristic('heart_rate_measurement');
+  ch.addEventListener('characteristicvaluechanged', ev => hrParse(ev.target.value)); await ch.startNotifications();
+  HR.char = ch; HR.tries = 0; hrStatus(`Conectado: ${dev.name || 'pulsómetro'}. Tu pulso sale en el marcador del juego.`);
+}
+// Si se pierde (el reloj se aleja o deja de emitir), se intenta otra vez unas cuantas veces
+function hrLost() {
+  HR.char = null; if (!HR.dev) return;
+  if (HR.tries++ >= 5) { hrStatus('Se perdió el pulsómetro. Vuelve a pulsar «Conectar pulsómetro».', true); return; }
+  hrStatus('Se perdió el pulsómetro: reconectando…', true);
+  setTimeout(() => { if (HR.dev) hrAttach(HR.dev).catch(hrLost); }, 2500);
+}
+async function hrConnect() {
+  if (!hrOk()) { hrStatus('Este navegador no deja conectar aparatos Bluetooth desde una página web (en las Quest, el navegador de Meta puede no permitirlo). Prueba en Chrome o Edge en un ordenador o un móvil Android.', true); return; }
+  try {
+    if (navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability())) { hrStatus('El Bluetooth de este aparato está apagado o el navegador no puede usarlo.', true); return; }
+    hrStatus('Elige tu reloj o pulsómetro en la lista…');
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    if (HR.dev && HR.dev !== dev) hrOff(true); HR.dev = dev; dev.addEventListener('gattserverdisconnected', hrLost);
+    await hrAttach(dev);
+  } catch (e) {
+    hrStatus(e && e.name === 'NotFoundError' ? 'No apareció ninguno o no elegiste. ¿Está emitiendo el pulso? En los Amazfit: Ajustes → Frecuencia cardíaca → «Emitir frecuencia cardíaca» (o empieza un entrenamiento en el reloj).' : 'No se pudo conectar: ' + (e && e.message || e), true);
+  }
+}
+function hrOff(quiet) {
+  const d = HR.dev; HR.dev = null; HR.char = null; HR.bpm = 0;
+  try { if (d && d.gatt && d.gatt.connected) d.gatt.disconnect(); } catch (e) { /* da igual */ }
+  if (!quiet) hrStatus('Desconectado.'); const now = $('#hrNow'); if (now) now.textContent = '';
+  if (typeof boardDirty !== 'undefined') boardDirty = true;
+}
+function hrInitPage() {
+  const b = $('#btnHr'), o = $('#btnHrOff'); if (!b) return;
+  b.addEventListener('click', hrConnect); if (o) o.addEventListener('click', () => hrOff());
+  hrStatus(hrOk() ? 'Sin conectar.' : 'Este navegador no deja conectar aparatos Bluetooth desde una página web: el botón lo intentará igualmente.', !hrOk());
+}
+// En el marcador, arriba a la derecha, bajo las vidas: un corazón y el número, del color de tu zona
+function drawPulse(c, x, y) {
+  const b = hrNow(); if (!b) return;
+  const col = hrCol(b), t = String(b);
+  c.save(); c.textAlign = 'right'; c.textBaseline = 'middle'; c.font = `46px ${FD}`; glowText(c, t, x, y, col, 10); const tw = c.measureText(t).width;
+  c.translate(x - tw - 34, y); c.font = `40px ${FB}`; c.textAlign = 'center'; glowText(c, '♥', 0, 2, col, 12); c.restore();
+}
+
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
@@ -6872,7 +6943,7 @@ const TROPHY_SECS = 3.6;
 const TROPHY = { q: [], t: 0, met: null, p: makePanel(1.25, 0.42, 1024, { depthTest: false, hd: 1.5 }) };
 TROPHY.p.mesh.visible = false; TROPHY.p.mesh.renderOrder = 55; TROPHY.p.mesh.material.transparent = true; scene.add(TROPHY.p.mesh);
 HUD.trophy = { slots: [[0, 0.42], [0, -0.52], [-0.8, 0.22], [0.8, 0.22]], z: -1.6, w: 1.25, h: 0.42, slot: 0, off: new V3(0, 0.42, -1.6), fade: 1 }; LZ.trophy = mkLazy();
-function trophy(title, sub = '', color = '#ffd166') { if (TROPHY.q.length < 4 && !TROPHY.q.some(o => o.title === title)) TROPHY.q.push({ title, sub, color }); }
+function trophy(title, sub = '', color = '#ffd166') { if (TROPHY.q.length < 6 && !TROPHY.q.some(o => o.title === title)) TROPHY.q.push({ title, sub, color }); }
 function drawTrophy(o) {
   const c = TROPHY.p.ctx, W = TROPHY.p.W, H = TROPHY.p.H; c.clearRect(0, 0, W, H);
   rr(c, 10, 10, W - 20, H - 20, 46); { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(48,30,8,0.94)'); g.addColorStop(1, 'rgba(20,12,4,0.94)'); c.fillStyle = g; } c.fill();
@@ -6886,7 +6957,7 @@ function drawTrophy(o) {
 function trophyStep(dt, n) {
   // la meta del día, al alcanzarla en plena ronda (si ya la tenías al empezar, no)
   if (!GAME_STATES.includes(state)) TROPHY.met = null;
-  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
+  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); recLive(); /* (las misiones y los récords, en cuanto se cumplen o se baten: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
   const m = TROPHY.p.mesh;
   if (TROPHY.t <= 0) {
     if (!(xrActive || preview)) TROPHY.q.length = 0; // (sin gafas ni prueba, no se guardan para luego)
@@ -6968,7 +7039,7 @@ function updateWarn(dt) {
 function updateViewPanels(dt) {
   fixvStep(); updateWarn(dt); updateChargeFloor(dt);
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
-  trophyStep(dt, n);
+  trophyStep(dt, n); goalsStep(dt); // (la carátula de las metas de hoy: 73_career)
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
     const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), hudQ(), dt);
@@ -7155,6 +7226,7 @@ function drawBoard() {
   if (!nLives()) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
   else if (nLives() <= 8) { let s = ''; for (let i = 0; i < nLives(); i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
   else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
+  drawPulse(c, RX + 4, 118); // (tu pulso, si hay pulsómetro: 57_pulse)
   // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
   // medio, tus repeticiones (en colgado, los segundos)
   const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
@@ -12118,7 +12190,7 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const rows = [
     { t: 'title', text: '', big: { label: ses ? (SES.blocks.length ? 'EMPEZAR SESIÓN' : 'SESIONES') : 'EMPEZAR', onPress: start } },
-    { t: 'btns', h: 0.085, items: statTiles() },
+    { t: 'btns', h: 0.1, items: goalTiles() }, // (las metas de hoy, bajo EMPEZAR: 73_career)
     ...box('Modo', MODE_BOX, [{ t: 'btns', h: 0.06, items: modes }]),
     ...(ses ? sesPreviewRows() : [...box(`Ejercicio · ${MODE_NAMES[settings.mode]}`, EX_COL, exR), ...box('Dificultad', DIFF_COL, lobbyDiffRows(again).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])))]),
     ...(roomBad ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
@@ -12126,6 +12198,7 @@ function lobbyMenu() {
     { t: 'btns', h: 0.052, items: [{ label: 'Opciones  ▸', flex: 3, accent: MC.set, onPress: () => optionsMenu() }, { label: 'Salir', style: 'danger', onPress: exitAll }] }];
   const m = openMenu(rows);
   m.rebuild = again; demoAttach(m); // al lado, la caricatura del ejercicio elegido
+  goalSide(m); goalsIntro(); // (a la izquierda, la columna «HOY»; al entrar, la carátula de las metas: 73_career)
 }
 // Opciones: todo lo que no está en el principal, en pestañas con su color (rivales y armas, progreso, sonido, entorno y
 // ajustes); «Volver» deja el principal en el mismo sitio
@@ -12246,7 +12319,7 @@ function warmQueue() {
   for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
   for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
   if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
-  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
+  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(neonGeo, neonRingMat(0x3cf0c6)));
 }
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
 // tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)
@@ -12361,7 +12434,7 @@ function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, score, combo: stats.bestCombo, ...(settings.mode === 'arcs' || settings.mode === 'trek' ? { dist: Math.floor(settings.mode === 'arcs' ? ARX.dist || 0 : TREK.dist || 0) } : {}), date: Date.now() }); // (puntos, combo y metros: para los récords)
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
   careerRun({ reps, perfect: stats.perfect, mins: stats.time / 60, combo: stats.bestCombo, win, taken: stats.taken, falls: stats.falls, mode: settings.mode, ex: settings.exercise, hang: settings.exercise === 'hang' }); // (experiencia, misiones y campaña: 73_career)
 }
@@ -13515,12 +13588,12 @@ function placeDone() {
 //    y desbloqueas colores de las manos y del rayo normal (solo se ven: nunca dan más cargas ni más daño)
 //  · cada día, tres misiones (una de volumen, una de calidad y una de variedad), +40 XP cada una y, con las tres, el cofre
 //    del día (+100 XP, un escudo de racha y un color antes de tiempo)
-//  · los escudos de racha (como mucho dos): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
+//  · los escudos de racha (como mucho tres): si un día no entrenas, se gasta uno solo y la racha sigue (ese día no suma)
 //  · una campaña por modo y ejercicio: 35 niveles en 7 regiones (una por rango, de recluta a general; el quinto nivel de
 //    cada una, con jefe), de 1 a 3 estrellas; ganar abre el siguiente
 //  · en el resumen de cada ronda, la experiencia ganada, tu semana y tu mejor ronda con ese ejercicio
 // Todo se guarda en CAREER_KEY (la experiencia, lo desbloqueado en cofres, los colores puestos, las misiones de hoy y la campaña)
-const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 2, SHIELD_COL = '#7fd4ff';
+const CAREER_KEY = 'reparena3-career', PROG_COL = '#c8f560', SHIELD_MAX = 3, SHIELD_COL = '#7fd4ff';
 const CR = (() => { const s = store(CAREER_KEY) || {}, obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {}; return { xp: Math.max(0, +s.xp || 0), seeded: !!s.seeded, own: Array.isArray(s.own) ? s.own : [], equip: obj(s.equip), mis: s.mis && Array.isArray(s.mis.list) ? s.mis : null, camp: obj(s.camp), shield: clamp(+s.shield || 0, 0, SHIELD_MAX), frozen: Array.isArray(s.frozen) ? s.frozen.slice(-120) : [], saved: s.saved && s.saved.day ? s.saved : null, gain: null }; })();
 const LOOKC = {}; // (el color puesto de cada cosa, ya resuelto: se mira en cada fotograma)
 function crSave() { const { gain, ...o } = CR; store(CAREER_KEY, o); for (const k in LOOKC) delete LOOKC[k]; }
@@ -13595,6 +13668,39 @@ function misToday(now = Date.now()) {
   CR.mis = { day, list, chest: false }; crSave(); return CR.mis;
 }
 const misLeft = () => misToday().list.filter(m => !m.done).length;
+// Cada misión cumplida se celebra en grande (es lo que más anima a volver). Las de cantidad y calidad (repeticiones,
+// minutos, perfectas, combo), en cuanto llegas, en plena ronda; las de ganar, de modo, de ejercicio o de estrellas, al
+// acabarla. cel: ya celebrada en esta ronda (al acabar no se repite)
+function misCheer(m, M) { const k = M.list.filter(x => x.done || x.cel).length; trophy(k >= 3 ? '¡TRES DE TRES!' : `¡MISIÓN ${k} DE 3!`, k >= 3 && !M.chest ? `${MIS[m.t].txt(m)} · el cofre, al acabar` : MIS[m.t].txt(m), '#3cf0c6'); }
+let misRun = null;
+function misLive() {
+  if (state !== 'play' || typeof stats === 'undefined') return; const M = misToday();
+  if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
+  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
+  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+}
+
+/* ---------- Récords, en plena ronda ---------- */
+// Al empezar cada ronda se miran tus mejores marcas de este modo y ejercicio (las de «Al fallo», aparte) y, en cuanto
+// superas una, sale su propio aviso grande (una vez por ronda cada una). Solo si ya tenías marca: la primera vez, no.
+// En las sesiones, no (cada bloque es un trozo). La oleada al fallo tiene el suyo (startWave)
+const REC_DEF = [
+  ['reps', 'REPETICIONES', () => settings.exercise === 'hang' ? 0 : stats.reps, r => r.ex === 'hang' ? 0 : r.reps, v => `${v} repeticiones`],
+  ['hold', 'TIEMPO COLGADO', () => settings.exercise === 'hang' ? Math.floor(stats.hold) : 0, r => r.ex === 'hang' ? r.reps : 0, v => mmss(v)],
+  ['time', 'TIEMPO', () => settings.toFail ? Math.floor(stats.time) : 0, r => r.fail ? r.time : 0, v => `${mmss(v)} aguantando`], // (al fallo: lo que aguantas)
+  ['score', 'PUNTOS', () => score, r => r.score, v => `${v} puntos`],
+  ['combo', 'COMBO', () => stats.bestCombo, r => r.combo, v => `combo ×${v}`],
+  ['perfect', 'PERFECTAS', () => stats.perfect, r => r.perfect, v => `${v} perfectas`],
+  ['dist', 'DISTANCIA', () => settings.mode === 'arcs' ? Math.floor(ARX.dist || 0) : settings.mode === 'trek' ? Math.floor(TREK.dist || 0) : 0, r => r.dist, v => `${v} m`]];
+const REC = { run: null, best: {}, got: {} };
+function recLive() {
+  if (state !== 'play' || typeof stats === 'undefined' || SES.active) return;
+  if (REC.run !== stats) { // una ronda nueva: tus marcas de este modo y ejercicio (al fallo o no)
+    REC.run = stats; REC.got = {}; REC.best = {}; const H = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && !!r.fail === !!settings.toFail);
+    for (const [k, , , old] of REC_DEF) REC.best[k] = H.reduce((a, r) => Math.max(a, +old(r) || 0), 0);
+  }
+  for (const [k, name, now, , txt] of REC_DEF) { const v = now(), b = REC.best[k]; if (!REC.got[k] && b > 0 && v > b) { REC.got[k] = true; trophy(`¡RÉCORD DE ${name}!`, `${txt(v)}${settings.toFail ? ' al fallo' : ''} · antes, ${txt(b)}`); cheer('¡NUEVO RÉCORD!', '#ffd166', 1.6); } }
+}
 
 /* ---------- Al acabar cada ronda ---------- */
 // o: lo de la ronda (repeticiones, perfectas, minutos, combo, si ganaste y los golpes recibidos). Lo ganado se va
@@ -13604,12 +13710,13 @@ function careerRun(o) {
   let xp = (o.hang ? Math.round(o.reps / 2) : o.reps + o.perfect) + (o.win ? WIN_XP : 0);
   if (CAMP.run) { const c = campResult(o); G.camp = c; xp += STAR_XP * c.newStars; o.stars = c.newStars; if (c.newStars) G.notes.push([`Campaña: ${c.newStars === 1 ? 'una estrella nueva' : `${c.newStars} estrellas nuevas`}`, '#ffd166']); }
   const M = misToday(), was = M.list.map(m => m.done); misAdd(M.list, o);
-  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); } });
+  M.list.forEach((m, i) => { if (!was[i] && m.got >= m.n) { m.done = true; xp += MIS_XP; G.notes.push([`Misión cumplida: ${MIS[m.t].txt(m)}`, '#3cf0c6']); if (!m.cel) misCheer(m, M); m.cel = false; } });
   if (!M.chest && M.list.every(m => m.done)) {
-    // el cofre: experiencia, un escudo de racha (si no tienes ya los dos) y un color antes de tiempo (si queda alguno)
+    // el cofre: experiencia, un escudo de racha (si no tienes ya los tres) y un color antes de tiempo (si queda alguno)
     M.chest = true; xp += CHEST_XP; const lk = lockedLooks(), p = lk.length ? lk[Math.floor(Math.random() * lk.length)] : null; if (p) CR.own.push(p.id);
     const sh = CR.shield < SHIELD_MAX; if (sh) CR.shield++;
-    trophy('¡COFRE DEL DÍA!', 'Las tres misiones de hoy, cumplidas');
+    trophy('¡COFRE DEL DÍA!', `Las tres misiones de hoy · +${CHEST_XP} XP${p ? ` · ${p.label}` : ''}`);
+    if (sh) trophy('¡ESCUDO DE RACHA!', `Tienes ${CR.shield} de ${SHIELD_MAX}: si un día no entrenas, tu racha sigue`, SHIELD_COL); // (el premio que más cuenta: su propio aviso)
     G.notes.push([`¡Cofre del día! +${CHEST_XP} XP${sh ? ` · escudo de racha (${CR.shield}/${SHIELD_MAX})` : ''}${p ? ` · ${p.label}` : ''}`, '#ffd166']);
   }
   if (CR.saved && !CR.saved.told) { CR.saved.told = true; G.notes.push([`Un escudo salvó tu racha: ${daysTxt(progress().streak)}`, SHIELD_COL]); }
@@ -13778,6 +13885,84 @@ function careerHTML() {
     <p class="chest">${M.chest ? 'Cofre del día abierto' : `Cumple las tres misiones y se abre el cofre del día: +${CHEST_XP} XP, un escudo de racha y, si queda alguno, un color`}</p>
     <p class="shield">🛡 Escudos de racha: <b>${CR.shield} de ${SHIELD_MAX}</b>. Si un día no entrenas, se gasta uno solo y tu racha sigue.</p></div>`;
 }
+/* ---------- Metas de hoy, siempre a la vista (lo que más anima a volver) ---------- */
+// Las eligió el usuario las tres a la vez:
+//  1) al entrar en las gafas (o en la prueba del ordenador), la carátula «METAS DE HOY»: grande, a 2 m, con todo lo demás
+//     oscurecido; las tres metas con lo que llevas, lo que da el cofre y la racha con los escudos. Se va sola (8 s) o con
+//     cualquier botón, el pulgar arriba o una tecla, como la carátula del duelo
+//  2) al lado del menú principal, la columna «HOY»: lo mismo, y tu nivel
+//  3) en el menú principal, bajo EMPEZAR, la franja: las tres metas (con su barra) y la racha con sus escudos, en teclas
+//     que llevan a Progreso → Misiones
+const misGot = m => Math.min(m.n, m.t === 'mins' ? Math.floor(m.got) : m.got);
+const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, star: () => 'Estrella nueva' };
+const misShort = m => (MIS_SHORT[m.t] || (x => MIS[x.t].txt(x)))(m);
+// una meta: el círculo (con ✓ si está), su texto, la barra y lo que llevas; tc: el color de la letra
+function drawGoal(c, m, x, y, w, h, tc, long) {
+  const r = h * 0.2, cx = x + r, cy = y + h * 0.36, done = m.done, got = misGot(m), tx = x + r * 2 + h * 0.12, tw = w - (tx - x);
+  c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = done ? '#3cf0c6' : 'rgba(128,128,128,0.35)'; c.fill();
+  if (done) { c.strokeStyle = '#06261f'; c.lineWidth = r * 0.32; c.lineCap = 'round'; c.beginPath(); c.moveTo(cx - r * 0.45, cy); c.lineTo(cx - r * 0.1, cy + r * 0.38); c.lineTo(cx + r * 0.5, cy - r * 0.42); c.stroke(); }
+  const t = long ? MIS[m.t].txt(m) : misShort(m); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = done ? '#2bd4ad' : tc; fitFont(c, t, tw, Math.round(h * 0.3), '700 %px ' + FB); c.fillText(t, tx, cy);
+  const by = y + h * 0.7, bh = Math.max(4, h * 0.11), bw = tw * 0.62; rr(c, tx, by - bh / 2, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.3)'; c.fill();
+  if (got > 0) { rr(c, tx, by - bh / 2, Math.max(bh, bw * got / m.n), bh, bh / 2); c.fillStyle = done ? '#3cf0c6' : PROG_COL; c.fill(); }
+  c.textAlign = 'right'; c.fillStyle = done ? '#2bd4ad' : tc; const g = done ? `+${MIS_XP} XP` : `${got} / ${m.n}`; fitFont(c, g, tw * 0.34, Math.round(h * 0.24), '700 %px ' + FB); c.fillText(g, x + w, by);
+}
+const shieldsTxt = () => `${CR.shield} de ${SHIELD_MAX} ${CR.shield === 1 ? 'escudo' : 'escudos'}`;
+// 3) la franja del menú principal: tres teclas con sus metas y una con la racha
+function goalTiles() {
+  const M = misToday(), P = progress(), go = () => progressOpen('mis');
+  return [...M.list.map(m => ({ label: `${m.done ? 'Cumplida: ' : 'Meta: '}${MIS[m.t].txt(m)}`, flex: 1.15, onPress: go, paint: (c, W, H, tc) => drawGoal(c, m, H * 0.14, H * 0.1, W - H * 0.28, H * 0.8, tc) })),
+    { label: `Racha de ${daysTxt(P.streak)} · ${shieldsTxt()}`, onPress: go, paint: (c, W, H, tc) => {
+      drawFlame(c, H * 0.32, H * 0.32, H * 0.2); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = tc; const x = H * 0.6; fitFont(c, daysTxt(P.streak), W - x - 6, Math.round(H * 0.26), '800 %px ' + FB); c.fillText(daysTxt(P.streak), x, H * 0.32);
+      const sr = H * 0.12; for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, H * 0.2 + sr + i * sr * 2.3, H * 0.72, sr, i < CR.shield);
+      const tx = H * 0.2 + SHIELD_MAX * sr * 2.3 + 6, left = M.list.filter(m => !m.done).length, ct = M.chest ? 'cofre ✓' : `cofre: ${left}`; drawChest(c, tx + sr, H * 0.74, sr * 0.8, M.chest); c.fillStyle = M.chest ? '#c99a1e' : tc; fitFont(c, ct, W - tx - sr * 2.4 - 4, Math.round(H * 0.19), '700 %px ' + FB); c.fillText(ct, tx + sr * 2.4, H * 0.72); } }];
+}
+// lo común de la carátula y de la columna: título, las tres metas, el cofre, la racha con los escudos y (en la columna) el nivel
+function drawHoy(c, W, H, big) {
+  const M = misToday(), P = progress(), L = lvlOf(), pad = W * 0.06, done = M.list.filter(m => m.done).length;
+  c.clearRect(0, 0, W, H); rr(c, 6, 6, W - 12, H - 12, W * 0.05); { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(42,31,69,0.97)'); g.addColorStop(1, 'rgba(24,18,44,0.97)'); c.fillStyle = g; } c.fill();
+  c.lineWidth = big ? 10 : 7; c.strokeStyle = big ? '#ff4fa3' : '#3cf0c6'; c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle'; const t = big ? 'METAS DE HOY' : 'HOY'; fitFont(c, t, W - pad * 2, Math.round(H * (big ? 0.09 : 0.075)), '%px ' + FD); glowText(c, t, W / 2, H * (big ? 0.1 : 0.075), '#ffd166', 14);
+  if (big) { c.fillStyle = '#a49fc8'; const st = M.chest ? '¡Las tres cumplidas! El cofre de hoy ya es tuyo' : `${done} de 3 · cumple las tres y se abre el cofre del día`; fitFont(c, st, W - pad * 2, Math.round(H * 0.045), '600 %px ' + FB); c.fillText(st, W / 2, H * 0.18); }
+  const y0 = H * (big ? 0.24 : 0.14), gh = H * (big ? 0.15 : 0.13);
+  M.list.forEach((m, i) => drawGoal(c, m, pad, y0 + i * gh * 1.08, W - pad * 2, gh, '#eeeaff', big));
+  let y = y0 + 3 * gh * 1.08 + H * 0.03; const s = H * (big ? 0.045 : 0.04);
+  drawChest(c, pad + s, y + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = '#ffd166'; const ct = M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP, un escudo y un color`; fitFont(c, ct, W - pad * 2 - s * 3, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(ct, pad + s * 2.6, y);
+  y += H * (big ? 0.085 : 0.075); drawFlame(c, pad + s, y, s * 0.9); c.fillStyle = '#ffb36b'; const rt = `Racha: ${daysTxt(P.streak)}`; fitFont(c, rt, W * 0.42, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(rt, pad + s * 2.6, y);
+  for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, W - pad - (SHIELD_MAX - i) * s * 2.1 + s, y, s * 0.85, i < CR.shield);
+  if (!big) { y += H * 0.085; drawLvlBadge(c, pad + s * 1.2, y, s * 1.2, L.n); c.fillStyle = '#eeeaff'; const lt = `Nivel ${L.n} · ${titleOf(L.n)}`; fitFont(c, lt, W - pad * 2 - s * 3.5, Math.round(H * 0.04), '700 %px ' + FB); c.fillText(lt, pad + s * 3, y - H * 0.012);
+    const bx = pad + s * 3, bw = W - pad - bx, bh = H * 0.016; rr(c, bx, y + H * 0.022, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.35)'; c.fill(); if (L.into) { rr(c, bx, y + H * 0.022, Math.max(bh, bw * L.into / L.need), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); } }
+  else { c.textAlign = 'center'; c.fillStyle = '#a49fc8'; fitFont(c, 'Cualquier botón (o el pulgar arriba) para seguir', W - pad * 2, Math.round(H * 0.038), '600 %px ' + FB); c.fillText('Cualquier botón (o el pulgar arriba) para seguir', W / 2, H * 0.94); }
+}
+// 2) la columna «HOY», a la izquierda del menú principal (se va con él)
+const HOY_W = 0.36, HOY_H = 0.52;
+function goalSide(m) {
+  if (!m || !m.group) return; const p = makePanel(HOY_W, HOY_H, 512, { hd: 1.5 }); drawHoy(p.ctx, p.W, p.H, false); p.tex.needsUpdate = true;
+  p.mesh.position.set(-MW / 2 - 0.03 - HOY_W / 2, m.H / 2 - HOY_H / 2, 0); p.mesh.renderOrder = RO.menu; m.group.add(p.mesh);
+}
+// 1) la carátula al entrar
+const GOALS = { t: -1, p: null, veil: null, mask: { left: 0, right: 0 }, thumbT: 0, skip: false, shown: false };
+const GOALS_DUR = 8;
+function goalsIntro() {
+  if (GOALS.shown || !(xrActive || preview) || typeof document === 'undefined') return; GOALS.shown = true;
+  if (!GOALS.p) { GOALS.p = makePanel(1.3, 0.95, 1024, { depthTest: false, hd: 1.5 }); GOALS.p.mesh.renderOrder = RO.menu + 6; scene.add(GOALS.p.mesh);
+    GOALS.veil = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 10), new THREE.MeshBasicMaterial({ color: 0x05030c, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false })); GOALS.veil.renderOrder = RO.menu + 5; scene.add(GOALS.veil); }
+  drawHoy(GOALS.p.ctx, GOALS.p.W, GOALS.p.H, true); GOALS.p.tex.needsUpdate = true;
+  hudLocal(_glP.set(0, 0.05, -2), GOALS.p.mesh.position); GOALS.p.mesh.quaternion.copy(hudQ());
+  GOALS.t = 0; GOALS.skip = false; GOALS.thumbT = 0; for (const s of ['left', 'right']) GOALS.mask[s] = padMask(hands[s]); SND.combo();
+}
+const _glP = new V3();
+function goalsStep(dt) {
+  if (GOALS.t < 0) return; GOALS.t += dt;
+  if (!(xrActive || preview) || GAME_STATES.includes(state)) GOALS.skip = true; // (si empiezas a jugar, se va)
+  for (const s of ['left', 'right']) { const m = padMask(hands[s]); if (m & ~GOALS.mask[s]) GOALS.skip = true; GOALS.mask[s] = m; }
+  if (thumbsUp(hands.left) || thumbsUp(hands.right)) { GOALS.thumbT += dt; if (GOALS.thumbT > 0.25) GOALS.skip = true; } else GOALS.thumbT = 0;
+  if (GOALS.skip && GOALS.t < GOALS_DUR - 0.3) GOALS.t = GOALS_DUR - 0.3;
+  const t = GOALS.t, a = t < 0.3 ? smooth(t / 0.3) : clamp((GOALS_DUR - t) / 0.3, 0, 1);
+  GOALS.veil.position.copy(head.p); GOALS.veil.material.opacity = a * 0.78; GOALS.veil.visible = a > 0.01;
+  GOALS.p.mesh.material.opacity = a; GOALS.p.mesh.visible = a > 0.01; GOALS.p.mesh.scale.setScalar(1 + 0.05 * Math.max(0, 1 - t / 0.4));
+  if (t >= GOALS_DUR) { GOALS.t = -1; GOALS.p.mesh.visible = GOALS.veil.visible = false; }
+}
+if (typeof addEventListener === 'function') addEventListener('keydown', () => { if (GOALS.t >= 0 && preview) GOALS.skip = true; }); // (en el ordenador, cualquier tecla)
 // Las fichas de tus cifras en el menú principal (teclas: al tocarlas, Opciones → Progreso): nivel, hoy, racha y misiones.
 // Dibujadas en la cara de la tecla; tc es el color de su letra
 function statTiles() {
@@ -13807,7 +13992,7 @@ function statTiles() {
 
 
 /* =================== MODO TOQUES: AMEBAS DE AGUA PARA LA CABEZA Y DIAMANTES PARA LAS MANOS =================== */
-// Aquí no se dispara: vienen hacia ti amebas de agua con forma de aro que ondulan (mete la cabeza por el hueco) y
+// Aquí no se dispara: vienen hacia ti aros de neón con flechas que giran (las «amebas»: mete la cabeza por el hueco) y
 // diamantes con la mano que los toca dibujada (izquierda azul, derecha naranja). Llegan a la altura que obliga a hacer
 // el movimiento: abajo en la sentadilla o la flexión, arriba en el salto, en el arco del abdominal (o girados, en los
 // oblicuos). Cada uno espera un momento delante de ti; si no lo tocas, pasa de largo y te golpea.
@@ -13867,42 +14052,21 @@ const gemGeo = new THREE.OctahedronGeometry(1, 0);
 const padBaseGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.035, 32), padTopGeo = new THREE.CylinderGeometry(0.12, 0.128, 0.024, 32), padRippleGeo = new THREE.RingGeometry(0.17, 0.2, 40);
 padBaseGeo.translate(0, 0.015, 0); const padBaseMat = std({ color: 0x24212e, metalness: 0.75, roughness: 0.35 });
 const _tq = new Q4(), _tz = new V3(0, 0, 1), _tv = new V3(), _tw = new V3(), _tu = new V3(), _ta = new V3(), _tb = new V3();
-// Ameba: un aro de agua cuyo borde ondula como un líquido (en la GPU): ondas que recorren el perímetro, el grosor
-// que se hincha y se estrecha, y el aro que se alabea. Se sombrea como agua: brillos, borde que refleja y cáusticas.
-const amebaGeo = new THREE.TorusGeometry(1, 0.2, 18, 72);
-const WATER_VS = `uniform float uTime; uniform float uAmp; uniform float uPulse; uniform float uBurst;
-varying vec3 vN; varying vec3 vV; varying vec2 vUV;
-vec3 ringPos(float u, float v) {
-  float t = uTime * (0.7 + 0.35 * uAmp), aR = min(uAmp, 1.2); // más agitada, más deprisa; el hueco apenas cambia (es lo que hay que acertar)
-  float R = 1.0 + uPulse * 0.08 + uBurst * 0.7 + aR * (0.06 * sin(3.0 * u + 1.7 * t) + 0.04 * sin(5.0 * u - 2.3 * t) + 0.02 * sin(9.0 * u + 3.3 * t));
-  float r = 0.2 * (1.0 - uBurst * 0.8) * (1.0 + uAmp * (0.32 * sin(4.0 * u - 2.1 * t) + 0.16 * sin(7.0 * u + 2.9 * t + v * 2.0) + 0.06 * sin(13.0 * u + 5.0 * v - 6.0 * t)));
-  float z = uAmp * 1.6 * (0.09 * sin(2.0 * u + 1.3 * t) + 0.04 * sin(6.0 * u - 2.6 * t));
-  vec2 c = vec2(cos(u), sin(u));
-  return vec3(c * (R + r * cos(v)), z + r * sin(v));
-}
-void main() {
-  float u = atan(position.y, position.x), v = atan(position.z, length(position.xy) - 1.0);
-  vec3 p = ringPos(u, v);
-  vec3 n = normalize(cross(ringPos(u + 0.01, v) - p, ringPos(u, v + 0.01) - p));
-  if (dot(n, vec3(vec2(cos(u), sin(u)) * cos(v), sin(v))) < 0.0) n = -n;
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  vN = normalize(normalMatrix * n); vV = normalize(-mv.xyz); vUV = vec2(u, v);
-  gl_Position = projectionMatrix * mv;
-}`;
-const WATER_FS = `uniform float uTime; uniform float uOpacity; uniform vec3 uColor;
-varying vec3 vN; varying vec3 vV; varying vec2 vUV;
-void main() {
-  vec3 n = normalize(vN), v = normalize(vV);
-  float ndv = abs(dot(n, v)), fr = pow(1.0 - ndv, 2.0);
-  vec3 r = reflect(-v, n);
-  float spec = pow(max(dot(r, normalize(vec3(-0.35, 0.85, 0.4))), 0.0), 90.0) * 2.4 + pow(max(dot(r, normalize(vec3(0.55, 0.25, 0.8))), 0.0), 20.0) * 0.45;
-  float ca = sin(vUV.x * 9.0 + uTime * 2.2 + sin(vUV.y * 3.0 + uTime) * 1.5) * sin(vUV.x * 5.0 - uTime * 1.6 + vUV.y * 2.0);
-  vec3 deep = uColor * 0.28, shallow = mix(uColor, vec3(1.0), 0.3);
-  vec3 col = mix(deep, shallow, 0.35 + 0.65 * ndv) + uColor * smoothstep(0.5, 1.0, ca) * 0.5;
-  col = mix(col, vec3(0.85, 0.96, 1.0), fr * 0.55) + vec3(spec);
-  gl_FragColor = vec4(col, clamp(0.4 + 0.5 * fr + spec, 0.0, 1.0) * uOpacity);
-}`;
-const waterRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: WATER_VS, fragmentShader: WATER_FS, transparent: true, depthWrite: false });
+// Aro de neón (lo que eligió el usuario en vez de la ameba de agua, que se leía mal de lejos): un tubo de luz sólida con
+// el centro casi blanco y el borde de su color, con destellos que corren por él; alrededor, un brillo suave y ocho
+// flechas que giran apuntando al hueco. Los mismos uniformes que el agua (late con el pulso, se abre y se apaga al
+// reventar), así el resto no cambia. El hueco, del mismo tamaño que el de la ameba
+const neonGeo = new THREE.TorusGeometry(0.88, 0.075, 12, 96), neonGlowGeo = new THREE.TorusGeometry(0.88, 0.2, 10, 72);
+const NEON_VS = `uniform float uPulse; uniform float uBurst; varying vec3 vN; varying vec3 vV; varying float vU;
+void main() { vec3 p = position * (1.0 + uPulse * 0.06 + uBurst * 0.8); vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vU = atan(position.y, position.x); gl_Position = projectionMatrix * mv; }`;
+const NEON_FS = `uniform float uTime; uniform float uOpacity; uniform float uPulse; uniform vec3 uColor; varying vec3 vN; varying vec3 vV; varying float vU;
+void main() { float ndv = abs(dot(normalize(vN), normalize(vV))), core = pow(ndv, 3.0);
+  float run = pow(0.5 + 0.5 * sin(vU * 4.0 - uTime * 5.0), 8.0); // (destellos que corren por el tubo)
+  vec3 c = mix(uColor * 0.9, vec3(1.0), core * 0.75 + run * 0.35) * (1.0 + uPulse * 0.4);
+  gl_FragColor = vec4(c, uOpacity); }`;
+const chevGeo = (() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, -0.1, 0, -0.09, 0.06, 0, 0, 0.015, 0, 0, -0.1, 0, 0, 0.015, 0, 0.09, 0.06, 0]), 3)); return g; })(); // (una flecha de dos triángulos, la punta hacia el centro)
+const neonRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: NEON_VS, fragmentShader: NEON_FS, transparent: true, toneMapped: false });
 
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
 function moveSpec(move, sd0) {
@@ -14007,9 +14171,14 @@ class TouchTarget {
     const col = this.part === 'head' ? TCH_COL.head : TCH_COL[this.hand];
     this.root = new THREE.Group(); this.root.position.copy(this.from); arena.add(this.root);
     if (this.part === 'head') {
-      this.mat = waterRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
-      this.ring = new THREE.Mesh(amebaGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring);
-      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.mat = neonRingMat(col); this.mat.uniforms.uAmp.value = 2.2;
+      this.ring = new THREE.Mesh(neonGeo, this.mat); this.ring.scale.setScalar(this.r * 1.25); this.root.add(this.ring); this.ring.userData.noInk = true;
+      this.glowMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false });
+      const glow = new THREE.Mesh(neonGlowGeo, this.glowMat); glow.userData.noInk = true; this.ring.add(glow);
+      this.chevMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.7), transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      this.chev = new THREE.Group(); this.chev.scale.setScalar(this.r * 1.25); this.root.add(this.chev);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, m = new THREE.Mesh(chevGeo, this.chevMat); m.position.set(Math.cos(a) * 1.22, Math.sin(a) * 1.22, 0); m.rotation.z = a - Math.PI / 2; m.userData.noInk = true; this.chev.add(m); }
+      this.haloMat = new THREE.MeshBasicMaterial({ map: ringHaloTex, color: col, transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }); // (sin sumar luz: sobre el cielo claro de Cómic se quedaba blanco)
       this.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.haloMat); this.halo.scale.setScalar(this.r * 3.6); this.root.add(this.halo);
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
@@ -14106,13 +14275,13 @@ class TouchTarget {
       else if (Math.floor(this.held) !== Math.floor(this.held - dt)) { const left = Math.ceil(this.hold - this.held); say(`Aguanta ${left}`, '#ffd166', 0.6, true); SND.beep(1 + (this.hold - left) * 0.1); }
     } else if (this.mode === 'burst') { // la ameba se rompe: el agua se abre hacia fuera y se deshace
       this.popT += dt; const k = Math.min(1, this.popT / 0.22);
-      this.mat.uniforms.uBurst.value = k; this.mat.uniforms.uOpacity.value = 1 - k; this.haloMat.opacity = 0.4 * (1 - k); this.iconMat.opacity = 0;
+      this.mat.uniforms.uBurst.value = k; this.mat.uniforms.uOpacity.value = 1 - k; this.haloMat.opacity = 0.4 * (1 - k); this.iconMat.opacity = 0; this.chev.scale.setScalar(this.r * 1.25 * (1 + k)); this.chevMat.opacity = this.glowMat.opacity = 1 - k; // (el aro se abre y las flechas salen despedidas)
       if (k >= 1) { this.dispose(); return; }
     } else if (this.mode === 'pass') {
       // fallado: se aleja un poco hacia ti, se encoge y se apaga (no te atraviesa la cara)
       this.popT += dt; this.root.position.addScaledVector(this.dir, dt * 0.8); this.root.position.y -= dt * 0.3;
       const f = 1 - this.popT / 0.5; this.root.scale.setScalar(Math.max(0.05, 0.3 + 0.7 * f));
-      if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; } else this.mat.opacity = Math.max(0, f) * 0.9;
+      if (this.ring) { this.mat.uniforms.uOpacity.value = Math.max(0, f); this.haloMat.opacity = Math.max(0, f) * 0.35; this.chevMat.opacity = Math.max(0, f); this.glowMat.opacity = Math.max(0, f) * 0.25; } else this.mat.opacity = Math.max(0, f) * 0.9;
       if (f <= 0) { this.dispose(); return; }
     }
     if (this.ring && this.mode !== 'approach' && this.mode !== 'wait') this.root.quaternion.copy(this.q0);
@@ -14123,7 +14292,8 @@ class TouchTarget {
       const near = this.mode === 'wait' || this.mode === 'hold', U = this.mat.uniforms;
       U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
-      if (this.mode !== 'pass' && this.mode !== 'burst') this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25;
+      if (this.mode !== 'pass' && this.mode !== 'burst') { this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25; this.glowMat.opacity = (near ? 0.32 : 0.22) + pulse * 0.2; }
+      this.chev.rotation.z -= dt * (near ? 2.2 : 1.1); this.glowMat.color.copy(U.uColor.value); // (las flechas giran; más deprisa cuando está a tu alcance)
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
       if (this.mode !== 'pass') this.shellMat.opacity = 0.14 + pulse * 0.25 + (this.mode === 'wait' ? 0.1 : 0);
@@ -14147,8 +14317,8 @@ class TouchTarget {
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
-      SND.waterPop(c, !!this.hold);
-      fx.waterBurst(c, _tw.set(0, 0, 1).applyQuaternion(this.root.quaternion).transformDirection(arena.matrixWorld), this.r * 1.25, rgb, head.p);
+      SND.pop(c, !!this.hold); SND.zap(c); // (el aro de neón estalla en chispas de su color, con un destello)
+      fx.sparks(c, 46, rgb, 2.8, 0.035); fx.sparks(c, 18, [1, 1, 1], 1.8, 0.02); fx.glow(c, rgb, 0.7, 0.2);
       this.mode = 'burst'; this.popT = 0; return;
     }
     if (this.part === 'cut') { this.split(c, rgb); return; }
@@ -14180,7 +14350,7 @@ class TouchTarget {
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
-    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); }
+    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); }
     this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose(); if (this.box) { this.shellMat.dispose(); this.arrowMat.dispose(); }
   }
 }
@@ -15813,7 +15983,7 @@ function ghostStep(dt) {
   if (!ghostOn() || !['play', 'rest'].includes(state)) return;
   GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
   const B = GH.best, n = ghostNow();
-  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); trophy('¡NUEVO RÉCORD!', `Tu mejor ronda de ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); /* (el aviso grande, el de los récords: 73_career) */ hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
 }
 // Para el marcador: dónde ibas en tu mejor ronda en este momento (g), lo que llevas ahora (n) y tu récord (best)
 function ghostAt() {
@@ -16219,7 +16389,7 @@ function startPreview() {
   applyEnvMode(); applyShadows(); ambientStart();
   state = 'lobby'; lobbyMenu();
 }
-function stopPreview() { campEnd(); CAMP.env = null; preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
+function stopPreview() { GOALS.shown = false; campEnd(); CAMP.env = null; preview = false; EQ.edit = null; PLACE.on = PLACE.wait = false; PV.handsUp = false; $('#stage').hidden = true; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); }
 $('#btnPreview').addEventListener('click', startPreview);
 $('#btnExitPreview').addEventListener('click', () => { saveRun(false); exitAll(); });
 addEventListener('keydown', e => {
@@ -16416,7 +16586,7 @@ async function startXR(ar) {
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     qualSessionStart(session); await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); warmQueue();
-    session.addEventListener('end', () => { endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
@@ -16444,7 +16614,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); pageNav(); pageHelp(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();
