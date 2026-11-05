@@ -246,6 +246,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfilt select,.spfilt input{padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.85rem}
 .spfilt input{width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
 .spfilt small{color:var(--muted)}
+.hrnow{margin-left:8px;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
 .spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
 .spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
 .spx:hover,.spx:focus-visible{opacity:1;color:var(--fg);background:var(--panel)}
@@ -524,6 +525,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>3 · Opciones comunes</h2>
     <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
+    <h3>Pulsómetro</h3>
+    <p>Tu pulso en el marcador del juego, con el color de tu zona (lo que cuenta como pulso máximo, en «Tu meta»). Vale cualquier reloj o banda que emita el pulso por Bluetooth como un pulsómetro normal. En un <b>Amazfit</b> (con Zepp OS 3 o más): en el reloj, Ajustes → Frecuencia cardíaca → <b>Emitir frecuencia cardíaca</b> (Heart Rate Push); algunos solo lo emiten durante un entrenamiento: empieza uno en el reloj. Después pulsa <b>Conectar pulsómetro</b> aquí, en el navegador de las gafas, elígelo en la lista y entra en el juego.</p>
+    <div class="actions"><button class="btn alt" id="btnHr">Conectar pulsómetro</button><button class="btn small" id="btnHrOff">Desconectar</button><span class="hrnow" id="hrNow"></span></div>
+    <p class="status" id="hrStatus"></p>
   </section>
 
   <section class="music" id="secMusic" data-toc="Sonido y música">

@@ -246,6 +246,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfilt select,.spfilt input{padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.85rem}
 .spfilt input{width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
 .spfilt small{color:var(--muted)}
+.hrnow{margin-left:8px;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
 .spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
 .spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
 .spx:hover,.spx:focus-visible{opacity:1;color:var(--fg);background:var(--panel)}
@@ -524,6 +525,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <h2>3 · Opciones comunes</h2>
     <p class="note">Valen para todos los modos y ejercicios: entorno y vista, habitación, menú y tu meta diaria. El sonido y la música, aquí debajo.</p>
     <div class="groups" id="commonGroups"></div>
+    <h3>Pulsómetro</h3>
+    <p>Tu pulso en el marcador del juego, con el color de tu zona (lo que cuenta como pulso máximo, en «Tu meta»). Vale cualquier reloj o banda que emita el pulso por Bluetooth como un pulsómetro normal. En un <b>Amazfit</b> (con Zepp OS 3 o más): en el reloj, Ajustes → Frecuencia cardíaca → <b>Emitir frecuencia cardíaca</b> (Heart Rate Push); algunos solo lo emiten durante un entrenamiento: empieza uno en el reloj. Después pulsa <b>Conectar pulsómetro</b> aquí, en el navegador de las gafas, elígelo en la lista y entra en el juego.</p>
+    <div class="actions"><button class="btn alt" id="btnHr">Conectar pulsómetro</button><button class="btn small" id="btnHrOff">Desconectar</button><span class="hrnow" id="hrNow"></span></div>
+    <p class="status" id="hrStatus"></p>
   </section>
 
   <section class="music" id="secMusic" data-toc="Sonido y música">
@@ -1024,6 +1029,7 @@ const SCHEMA = [
   { key: 'scenery', g: 'entorno', label: 'Entorno (en VR)', short: 'Entorno', type: 'choice', opts: [['arena', 'Fortaleza'], ['nature', 'Bosque'], ['island', 'Isla pirata'], ['mix', 'Alternar']], def: 'arena', cond: () => settings.mode === 'trek' || !settings.pano || settings.pano === 'off', hint: 'Dónde juegas en VR: la fortaleza industrial de noche, un claro del bosque a pleno día o una playa en una isla pirata, con el mar detrás de ti (Quaternius). Alternar: uno distinto en cada partida. En realidad mixta, tu habitación.' },
   { key: 'goalMin', g: 'perfil', label: 'Meta diaria de entrenamiento', short: 'Meta diaria', type: 'num', min: 5, max: 120, step: 5, def: 20, unit: 'min', hint: 'El anillo de «Hoy», arriba de la página, se llena al llegar a ella.' },
   { key: 'weight', g: 'perfil', label: 'Tu peso (para estimar las calorías)', short: 'Peso', type: 'num', min: 30, max: 200, step: 1, def: 70, unit: 'kg', hint: 'Solo para la estimación de calorías gastadas: con el esfuerzo de cada ejercicio (MET), tu peso y el tiempo de oleada y de descanso. Es una aproximación.' },
+  { key: 'hrMax', g: 'perfil', label: 'Tu pulso máximo', short: 'Pulso máx.', type: 'num', min: 120, max: 220, step: 1, def: 190, unit: 'lpm', hint: 'Para los colores del pulso en el marcador (si conectas un pulsómetro, en Opciones comunes): azul por debajo del 60 %, verde hasta el 70 %, lima hasta el 80 %, naranja hasta el 90 % y rojo por encima. Si no lo sabes, 220 menos tu edad.' },
   { key: 'exSort', g: 'sistema', label: 'Ejercicios en el menú', short: 'Ejercicios', type: 'choice', opts: [['mode', 'En lista'], ['body', 'Por zona del cuerpo']], def: 'mode', relayout: true, hint: 'Por zona del cuerpo: los ejercicios del modo elegido, agrupados por lo que trabajan. Siempre salen solo los que se pueden hacer en ese modo.' },
   { key: 'roomMode', g: 'entorno', label: 'Escala de habitación (realidad mixta)', short: 'Habitación', type: 'choice', opts: [['scan', 'Según el escaneo'], ['manual', 'Colocada a mano'], ['off', 'No']], def: 'scan', hint: 'Según el escaneo: con las Quest 3 y la habitación escaneada, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared y las paredes y los muebles tapan lo que pasa detrás. Colocada a mano: tú pones el sitio de juego, las compuertas, las trampillas y el marcador (se recuerda entre sesiones); sirve también si la habitación no cumple los requisitos. No: disposición fija, como en VR.' },
   { key: 'roomOcclude', g: 'entorno', label: 'Que paredes y muebles tapen lo virtual', short: 'Oclusión', type: 'toggle', def: 1, cond: () => settings.roomMode !== 'off', hint: 'En realidad mixta, lo que pasa por detrás de tus paredes y muebles queda tapado. Si algo no se ve cuando debería, apágalo (y mira «Ver lo escaneado»).' },
@@ -6011,6 +6017,71 @@ function motesStep(dt, t) {
   U.uVH.value = L && L.framebufferHeight ? L.framebufferHeight : innerHeight * (renderer.getPixelRatio ? renderer.getPixelRatio() : 1);
 }
 
+/* =================== PULSÓMETRO (BLUETOOTH) =================== */
+// Tu pulso en el marcador, de un reloj o una banda que lo emita como pulsómetro Bluetooth normal (el servicio estándar
+// «heart_rate»): los Amazfit con Zepp OS 3 o más («Emitir frecuencia cardíaca» / Heart Rate Push), Polar, Garmin
+// («Transmitir frecuencia cardíaca»), Wahoo… Se conecta desde la página (el navegador pide elegirlo: hace falta un
+// toque) y sigue conectado al entrar en las gafas. Si el navegador no tiene Bluetooth para páginas web, lo dice.
+// Colores por zonas, con tu pulso máximo estimado (220 − edad, o el que pongas): azul suave, verde (quema), amarillo
+// (aeróbico), naranja (umbral) y rojo (máximo)
+const HR = { dev: null, char: null, bpm: 0, t: 0, st: '', bad: false, tries: 0, max: 0 };
+const hrOk = () => typeof navigator !== 'undefined' && !!navigator.bluetooth && typeof navigator.bluetooth.requestDevice === 'function';
+const hrNow = () => HR.bpm && performance.now() - HR.t < 6000 ? HR.bpm : 0; // (sin datos en 6 s: nada)
+const HR_ZONES = [[0.6, '#7fd4ff'], [0.7, '#3cf0c6'], [0.8, '#c8f560'], [0.9, '#ffb36b'], [9, '#ff3b5c']];
+const hrMax = () => settings.hrMax || 190;
+const hrCol = b => (HR_ZONES.find(z => b < z[0] * hrMax()) || HR_ZONES[4])[1];
+function hrStatus(t, bad) { HR.st = t; HR.bad = !!bad; const el = typeof document !== 'undefined' && $('#hrStatus'); if (el) { el.textContent = t; el.style.color = bad ? 'var(--red)' : ''; } const off = $('#btnHrOff'); if (off) off.disabled = !HR.dev; }
+// Lo que manda el pulsómetro: el primer byte dice si el pulso viene en 8 o en 16 bits
+function hrParse(dv) {
+  const f = dv.getUint8(0), v = f & 1 ? dv.getUint16(1, true) : dv.getUint8(1);
+  if (v < 30 || v > 240) return; HR.bpm = v; HR.t = performance.now(); HR.max = Math.max(HR.max, v);
+  if (typeof boardDirty !== 'undefined') boardDirty = true;
+  const now = $('#hrNow'); if (now) { now.textContent = `♥ ${v} lpm`; now.style.color = hrCol(v); }
+}
+async function hrAttach(dev) {
+  hrStatus(`Conectando con ${dev.name || 'el pulsómetro'}…`);
+  const srv = await dev.gatt.connect(), svc = await srv.getPrimaryService('heart_rate'), ch = await svc.getCharacteristic('heart_rate_measurement');
+  ch.addEventListener('characteristicvaluechanged', ev => hrParse(ev.target.value)); await ch.startNotifications();
+  HR.char = ch; HR.tries = 0; hrStatus(`Conectado: ${dev.name || 'pulsómetro'}. Tu pulso sale en el marcador del juego.`);
+}
+// Si se pierde (el reloj se aleja o deja de emitir), se intenta otra vez unas cuantas veces
+function hrLost() {
+  HR.char = null; if (!HR.dev) return;
+  if (HR.tries++ >= 5) { hrStatus('Se perdió el pulsómetro. Vuelve a pulsar «Conectar pulsómetro».', true); return; }
+  hrStatus('Se perdió el pulsómetro: reconectando…', true);
+  setTimeout(() => { if (HR.dev) hrAttach(HR.dev).catch(hrLost); }, 2500);
+}
+async function hrConnect() {
+  if (!hrOk()) { hrStatus('Este navegador no deja conectar aparatos Bluetooth desde una página web (en las Quest, el navegador de Meta puede no permitirlo). Prueba en Chrome o Edge en un ordenador o un móvil Android.', true); return; }
+  try {
+    if (navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability())) { hrStatus('El Bluetooth de este aparato está apagado o el navegador no puede usarlo.', true); return; }
+    hrStatus('Elige tu reloj o pulsómetro en la lista…');
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    if (HR.dev && HR.dev !== dev) hrOff(true); HR.dev = dev; dev.addEventListener('gattserverdisconnected', hrLost);
+    await hrAttach(dev);
+  } catch (e) {
+    hrStatus(e && e.name === 'NotFoundError' ? 'No apareció ninguno o no elegiste. ¿Está emitiendo el pulso? En los Amazfit: Ajustes → Frecuencia cardíaca → «Emitir frecuencia cardíaca» (o empieza un entrenamiento en el reloj).' : 'No se pudo conectar: ' + (e && e.message || e), true);
+  }
+}
+function hrOff(quiet) {
+  const d = HR.dev; HR.dev = null; HR.char = null; HR.bpm = 0;
+  try { if (d && d.gatt && d.gatt.connected) d.gatt.disconnect(); } catch (e) { /* da igual */ }
+  if (!quiet) hrStatus('Desconectado.'); const now = $('#hrNow'); if (now) now.textContent = '';
+  if (typeof boardDirty !== 'undefined') boardDirty = true;
+}
+function hrInitPage() {
+  const b = $('#btnHr'), o = $('#btnHrOff'); if (!b) return;
+  b.addEventListener('click', hrConnect); if (o) o.addEventListener('click', () => hrOff());
+  hrStatus(hrOk() ? 'Sin conectar.' : 'Este navegador no deja conectar aparatos Bluetooth desde una página web: el botón lo intentará igualmente.', !hrOk());
+}
+// En el marcador, arriba a la derecha, bajo las vidas: un corazón y el número, del color de tu zona
+function drawPulse(c, x, y) {
+  const b = hrNow(); if (!b) return;
+  const col = hrCol(b), t = String(b);
+  c.save(); c.textAlign = 'right'; c.textBaseline = 'middle'; c.font = `46px ${FD}`; glowText(c, t, x, y, col, 10); const tw = c.measureText(t).width;
+  c.translate(x - tw - 34, y); c.font = `40px ${FB}`; c.textAlign = 'center'; glowText(c, '♥', 0, 2, col, 12); c.restore();
+}
+
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
@@ -6886,7 +6957,7 @@ function drawTrophy(o) {
 function trophyStep(dt, n) {
   // la meta del día, al alcanzarla en plena ronda (si ya la tenías al empezar, no)
   if (!GAME_STATES.includes(state)) TROPHY.met = null;
-  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); /* (las misiones, en cuanto se cumplen: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
+  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); recLive(); /* (las misiones y los récords, en cuanto se cumplen o se baten: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
   const m = TROPHY.p.mesh;
   if (TROPHY.t <= 0) {
     if (!(xrActive || preview)) TROPHY.q.length = 0; // (sin gafas ni prueba, no se guardan para luego)
@@ -7155,6 +7226,7 @@ function drawBoard() {
   if (!nLives()) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
   else if (nLives() <= 8) { let s = ''; for (let i = 0; i < nLives(); i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
   else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
+  drawPulse(c, RX + 4, 118); // (tu pulso, si hay pulsómetro: 57_pulse)
   // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
   // medio, tus repeticiones (en colgado, los segundos)
   const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
@@ -12361,7 +12433,7 @@ function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, score, combo: stats.bestCombo, ...(settings.mode === 'arcs' || settings.mode === 'trek' ? { dist: Math.floor(settings.mode === 'arcs' ? ARX.dist || 0 : TREK.dist || 0) } : {}), date: Date.now() }); // (puntos, combo y metros: para los récords)
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
   careerRun({ reps, perfect: stats.perfect, mins: stats.time / 60, combo: stats.bestCombo, win, taken: stats.taken, falls: stats.falls, mode: settings.mode, ex: settings.exercise, hang: settings.exercise === 'hang' }); // (experiencia, misiones y campaña: 73_career)
 }
@@ -13605,6 +13677,28 @@ function misLive() {
   if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
   const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
   M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+}
+
+/* ---------- Récords, en plena ronda ---------- */
+// Al empezar cada ronda se miran tus mejores marcas de este modo y ejercicio (las de «Al fallo», aparte) y, en cuanto
+// superas una, sale su propio aviso grande (una vez por ronda cada una). Solo si ya tenías marca: la primera vez, no.
+// En las sesiones, no (cada bloque es un trozo). La oleada al fallo tiene el suyo (startWave)
+const REC_DEF = [
+  ['reps', 'REPETICIONES', () => settings.exercise === 'hang' ? 0 : stats.reps, r => r.ex === 'hang' ? 0 : r.reps, v => `${v} repeticiones`],
+  ['hold', 'TIEMPO COLGADO', () => settings.exercise === 'hang' ? Math.floor(stats.hold) : 0, r => r.ex === 'hang' ? r.reps : 0, v => mmss(v)],
+  ['time', 'TIEMPO', () => settings.toFail ? Math.floor(stats.time) : 0, r => r.fail ? r.time : 0, v => `${mmss(v)} aguantando`], // (al fallo: lo que aguantas)
+  ['score', 'PUNTOS', () => score, r => r.score, v => `${v} puntos`],
+  ['combo', 'COMBO', () => stats.bestCombo, r => r.combo, v => `combo ×${v}`],
+  ['perfect', 'PERFECTAS', () => stats.perfect, r => r.perfect, v => `${v} perfectas`],
+  ['dist', 'DISTANCIA', () => settings.mode === 'arcs' ? Math.floor(ARX.dist || 0) : settings.mode === 'trek' ? Math.floor(TREK.dist || 0) : 0, r => r.dist, v => `${v} m`]];
+const REC = { run: null, best: {}, got: {} };
+function recLive() {
+  if (state !== 'play' || typeof stats === 'undefined' || SES.active) return;
+  if (REC.run !== stats) { // una ronda nueva: tus marcas de este modo y ejercicio (al fallo o no)
+    REC.run = stats; REC.got = {}; REC.best = {}; const H = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && !!r.fail === !!settings.toFail);
+    for (const [k, , , old] of REC_DEF) REC.best[k] = H.reduce((a, r) => Math.max(a, +old(r) || 0), 0);
+  }
+  for (const [k, name, now, , txt] of REC_DEF) { const v = now(), b = REC.best[k]; if (!REC.got[k] && b > 0 && v > b) { REC.got[k] = true; trophy(`¡RÉCORD DE ${name}!`, `${txt(v)}${settings.toFail ? ' al fallo' : ''} · antes, ${txt(b)}`); cheer('¡NUEVO RÉCORD!', '#ffd166', 1.6); } }
 }
 
 /* ---------- Al acabar cada ronda ---------- */
@@ -15825,7 +15919,7 @@ function ghostStep(dt) {
   if (!ghostOn() || !['play', 'rest'].includes(state)) return;
   GH.tT += dt; if (GH.tT >= 2) { GH.tT -= 2; GH.tl.push(ghostNow()); if (GH.tl.length % 2 === 0) boardDirty = true; }
   const B = GH.best, n = ghostNow();
-  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); trophy('¡NUEVO RÉCORD!', `Tu mejor ronda de ${EX_SHORT[settings.exercise] || EX_NAMES[settings.exercise]}`); SND.combo(); hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
+  if (B && B.n > 0 && !GH.beat && n > B.n) { GH.beat = true; cheer('¡NUEVO RÉCORD!', '#ffd166', 2.2); SND.combo(); /* (el aviso grande, el de los récords: 73_career) */ hapticBoth(0.6, 120); fx.sparks(head.p.clone().addScaledVector(fwd(), 1.2), 40, [1, 0.82, 0.3], 3, 0.05); boardDirty = true; }
 }
 // Para el marcador: dónde ibas en tu mejor ronda en este momento (g), lo que llevas ahora (n) y tu récord (best)
 function ghostAt() {
@@ -16456,7 +16550,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); pageNav(); pageHelp(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

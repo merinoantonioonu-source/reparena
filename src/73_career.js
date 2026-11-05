@@ -96,6 +96,28 @@ function misLive() {
   M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
 }
 
+/* ---------- Récords, en plena ronda ---------- */
+// Al empezar cada ronda se miran tus mejores marcas de este modo y ejercicio (las de «Al fallo», aparte) y, en cuanto
+// superas una, sale su propio aviso grande (una vez por ronda cada una). Solo si ya tenías marca: la primera vez, no.
+// En las sesiones, no (cada bloque es un trozo). La oleada al fallo tiene el suyo (startWave)
+const REC_DEF = [
+  ['reps', 'REPETICIONES', () => settings.exercise === 'hang' ? 0 : stats.reps, r => r.ex === 'hang' ? 0 : r.reps, v => `${v} repeticiones`],
+  ['hold', 'TIEMPO COLGADO', () => settings.exercise === 'hang' ? Math.floor(stats.hold) : 0, r => r.ex === 'hang' ? r.reps : 0, v => mmss(v)],
+  ['time', 'TIEMPO', () => settings.toFail ? Math.floor(stats.time) : 0, r => r.fail ? r.time : 0, v => `${mmss(v)} aguantando`], // (al fallo: lo que aguantas)
+  ['score', 'PUNTOS', () => score, r => r.score, v => `${v} puntos`],
+  ['combo', 'COMBO', () => stats.bestCombo, r => r.combo, v => `combo ×${v}`],
+  ['perfect', 'PERFECTAS', () => stats.perfect, r => r.perfect, v => `${v} perfectas`],
+  ['dist', 'DISTANCIA', () => settings.mode === 'arcs' ? Math.floor(ARX.dist || 0) : settings.mode === 'trek' ? Math.floor(TREK.dist || 0) : 0, r => r.dist, v => `${v} m`]];
+const REC = { run: null, best: {}, got: {} };
+function recLive() {
+  if (state !== 'play' || typeof stats === 'undefined' || SES.active) return;
+  if (REC.run !== stats) { // una ronda nueva: tus marcas de este modo y ejercicio (al fallo o no)
+    REC.run = stats; REC.got = {}; REC.best = {}; const H = (store(HIST_KEY) || []).filter(r => r.ex === settings.exercise && r.mode === settings.mode && !!r.fail === !!settings.toFail);
+    for (const [k, , , old] of REC_DEF) REC.best[k] = H.reduce((a, r) => Math.max(a, +old(r) || 0), 0);
+  }
+  for (const [k, name, now, , txt] of REC_DEF) { const v = now(), b = REC.best[k]; if (!REC.got[k] && b > 0 && v > b) { REC.got[k] = true; trophy(`¡RÉCORD DE ${name}!`, `${txt(v)}${settings.toFail ? ' al fallo' : ''} · antes, ${txt(b)}`); cheer('¡NUEVO RÉCORD!', '#ffd166', 1.6); } }
+}
+
 /* ---------- Al acabar cada ronda ---------- */
 // o: lo de la ronda (repeticiones, perfectas, minutos, combo, si ganaste y los golpes recibidos). Lo ganado se va
 // juntando en CR.gain hasta que lo enseña el resumen (en una sesión, el de la sesión entera)

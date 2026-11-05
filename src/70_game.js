@@ -2716,7 +2716,7 @@ function saveRun(win) {
   const reps = settings.exercise === 'hang' ? Math.round(stats.hold) : stats.reps; // en colgado se guardan segundos
   if (runSaved || !reps) return; runSaved = true;
   const h = store(HIST_KEY) || [];
-  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, date: Date.now() });
+  h.push({ ex: settings.exercise, mode: settings.mode, reps, perfect: stats.perfect, kills: stats.kills, win, ...(settings.toFail ? { fail: waveIdx + 1 } : {}), time: Math.round(stats.time), work: Math.round(stats.work), kcal: Math.round(runStatsKcal() * 10) / 10, score, combo: stats.bestCombo, ...(settings.mode === 'arcs' || settings.mode === 'trek' ? { dist: Math.floor(settings.mode === 'arcs' ? ARX.dist || 0 : TREK.dist || 0) } : {}), date: Date.now() }); // (puntos, combo y metros: para los récords)
   store(HIST_KEY, h.slice(-400)); boardDayRefresh();
   careerRun({ reps, perfect: stats.perfect, mins: stats.time / 60, combo: stats.bestCombo, win, taken: stats.taken, falls: stats.falls, mode: settings.mode, ex: settings.exercise, hang: settings.exercise === 'hang' }); // (experiencia, misiones y campaña: 73_career)
 }

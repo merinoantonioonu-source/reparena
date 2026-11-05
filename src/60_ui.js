@@ -873,7 +873,7 @@ function drawTrophy(o) {
 function trophyStep(dt, n) {
   // la meta del día, al alcanzarla en plena ronda (si ya la tenías al empezar, no)
   if (!GAME_STATES.includes(state)) TROPHY.met = null;
-  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); /* (las misiones, en cuanto se cumplen: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
+  else if ((TROPHY.dayT = (TROPHY.dayT || 0) - dt) <= 0) { TROPHY.dayT = 1; misLive(); recLive(); /* (las misiones y los récords, en cuanto se cumplen o se baten: 73_career) */ const met = boardDay().time >= settings.goalMin * 60; if (TROPHY.met !== null && met && !TROPHY.met) trophy('¡META DIARIA!', `${settings.goalMin} min entrenados hoy`); TROPHY.met = met; }
   const m = TROPHY.p.mesh;
   if (TROPHY.t <= 0) {
     if (!(xrActive || preview)) TROPHY.q.length = 0; // (sin gafas ni prueba, no se guardan para luego)
@@ -1142,6 +1142,7 @@ function drawBoard() {
   if (!nLives()) { c.font = `52px ${FD}`; c.fillStyle = BC.teal; c.fillText('∞', RX + 4, 56); }
   else if (nLives() <= 8) { let s = ''; for (let i = 0; i < nLives(); i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
   else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
+  drawPulse(c, RX + 4, 118); // (tu pulso, si hay pulsómetro: 57_pulse)
   // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
   // medio, tus repeticiones (en colgado, los segundos)
   const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);
