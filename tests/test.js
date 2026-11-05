@@ -801,20 +801,19 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       s => !T.st || !T.ch ? `deberían salir el arroyo y el desfiladero (${!!T.st}, ${!!T.ch})` : !T.st.done || RA.TREK.dist < T.st.exit - 0.01 ? 'el arroyo debería cruzarse con zancadas laterales hasta la otra orilla' : !T.ch.done || RA.TREK.dist < T.ch.exit - 0.01 ? 'el desfiladero debería cruzarse saltando hasta la otra orilla' : !T.ch.fell || s.taken !== 1 ? `si tardas en saltar, el pilar debería hundirse contigo (una vida, una vez: ${s.taken})` : T.ch.pillars.filter(p => p.userData.sink).length !== T.ch.pillars.length ? 'los pilares que dejas deberían hundirse' : '', true);
     log(`trek stream & chasm: stream ${T.st && T.st.got}/${T.st && T.st.need} · chasm ${T.ch && T.ch.got}/${T.ch && T.ch.need} fell ${T.ch && T.ch.fell} · ${RA.TREK.dist.toFixed(1)} m`); }
   // Travesía: los bandidos. Un golpe sin esquivar quita una vida; esquivando (agachado ante el gancho, a un lado ante el
-  // directo) se quedan aturdidos y entonces los puñetazos los tumban; sin esquivar, te los paran
-  { const T = { o: null, first: 1, blocked: 0 }; const sv = { ...RA.settings }; RA.TREK_BAND.bare = true;
+  // directo) le queda un golpe menos; cuando se los has esquivado todos, cae agotado (sin puñetazos)
+  { const T = { o: null, first: 1 }; const sv = { ...RA.settings }; RA.TREK_BAND.bare = true;
     await runConfig('Travesía: bandidos', { ...base, mode: 'trek', exercise: 'squat', waves: 3, repsWave: 60, repsInc: 0, rest: 0, lives: 3 }, t => {
       RA.TREK.nextChase = 1e9; const O = RA.TREK.obs, h = RA.TREK.halt, K = RA.PV.keys;
-      if (!T.o) { RA.TREK.nObs = 2; const o = O.find(o => o.kind === 'bandit'); if (o) { T.o = o; RA.TREK.nObs = 0; } }
-      if (!h || h.kind !== 'bandit') { RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; K.KeyA = K.KeyD = K.KeyF = false; return; }
+      if (!T.o) { RA.TREK.nObs = 2; const o = O.find(o => o.kind === 'bandit'); if (o) { T.o = o; o.hp0 = o.bandits.reduce((a, b) => a + b.hp, 0); RA.TREK.nObs = 0; } }
+      if (!h || h.kind !== 'bandit') { RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; K.KeyA = K.KeyD = false; return; }
       const B = h.bandits.find(b => b.st !== 'down' && b.st !== 'gone'); if (!B) return;
       const dx = RA.HL.x - (B.x0 === undefined ? RA.HL.x : B.x0);
       if (B.st === 'wind' && !T.first) { RA.PV.crouch = B.atk === 'hook'; K.KeyD = B.atk === 'jab' && Math.abs(dx) < 0.32; K.KeyA = false; }
       else if (B.st === 'wind') { RA.PV.crouch = false; K.KeyA = K.KeyD = false; } // (el primer golpe, sin esquivar)
       else { if (B.st === 'guard' && T.first && h.hits) T.first = 0; RA.PV.crouch = false; K.KeyD = false; K.KeyA = dx > 0.05; }
-      if (B.st === 'guard' && !T.first && !T.blocked) { K.KeyF = !K.KeyF; if (!K.KeyF) T.blocked = 1; } else K.KeyF = (B.st === 'stun' || B.st === 'hurt') ? Math.floor(t * 8) % 2 === 0 : false;
-    }, 200, s => !T.o ? 'deberían salir los bandidos' : !T.o.done ? `deberían caer todos (${T.o.bandits.map(b => b.st + ':' + b.hp).join(', ')})` : T.o.bandits.some(b => b.st !== 'down' && b.st !== 'gone') ? 'han ganado sin derribarlos' : s.taken !== 1 ? `el golpe sin esquivar debería quitar una vida, y los esquivados ninguna (${s.taken})` : !(T.o.dodges >= T.o.bandits.length) ? `cada uno debería caer tras esquivarle (${T.o.dodges} esquivas)` : '', true);
-    log(`trek bandits: ${T.o && T.o.bandits.length} · dodges ${T.o && T.o.dodges} · punches ${T.o && T.o.punches} · hit ${T.o && T.o.hits} · ${T.o && T.o.bandits.map(b => b.st).join(',')}`);
+    }, 200, s => !T.o ? 'deberían salir los bandidos' : !T.o.done ? `deberían caer todos (${T.o.bandits.map(b => b.st + ':' + b.hp).join(', ')})` : T.o.bandits.some(b => b.st !== 'down' && b.st !== 'gone') ? 'han ganado sin derribarlos' : s.taken !== 1 ? `el golpe sin esquivar debería quitar una vida, y los esquivados ninguna (${s.taken})` : T.o.dodges !== T.o.hp0 ? `cada uno debería caer tras esquivarle todos sus golpes (${T.o.dodges} esquivas de ${T.o.hp0})` : '', true);
+    log(`trek bandits: ${T.o && T.o.bandits.length} · dodges ${T.o && T.o.dodges} · hit ${T.o && T.o.hits} · ${T.o && T.o.bandits.map(b => b.st).join(',')}`);
     RA.TREK_BAND.bare = false; for (const k in sv) RA.setSetting(k, sv[k]); }
   // Travesía: si no avanzas, los lobos te alcanzan y muerden (una vida)
   { let chased = 0; await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);

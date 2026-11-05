@@ -80,9 +80,10 @@ No las cambies sin preguntarle.
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
   una gema), el derrumbe (la roca se aparta embistiéndola con zancadas), el arroyo sinuoso (de piedra en piedra con
-  saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (B con C:
-  esquivar su golpe —agacharse ante el gancho, apartarse ante el directo, con aviso largo y el golpe a cámara lenta— los
-  aturde, y entonces se les tumba a puñetazos; con la cabeza del personaje base y sin contorno). Lobos que te persiguen: si vas más despacio,
+  saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
+  esquivar: cada uno lanza 3 o 4 golpes seguidos —agacharse ante el gancho, apartarse ante el directo, con aviso largo y
+  el golpe a cámara lenta— y, si se los esquivas todos, cae agotado; nada de puñetazos, que con el retraso de las manos en
+  las gafas no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen: si vas más despacio,
   te alcanzan y muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
@@ -91,9 +92,9 @@ No las cambies sin preguntarle.
 - El agua, realista (no una mancha azul): ondas que el viento eriza a rachas, reflejo del cielo y destellos; en el río,
   corriente con espuma y estelas en las piedras.
 - Fondos realistas (fotos de Poly Haven en `models/fondos/`, ver su `LEEME.md`): en la Travesía, uno por tramo; en los
-  demás modos, «Fondo realista» (Opciones → Entorno, 18 para elegir: paisajes abiertos, bosques, ciudades, playas). En los
-  abiertos, al fondo con el bosque de cómic delante; en los de suelo cercano, la foto entera y su suelo proyectado. En
-  Arcos, con fondo, sin compuertas: avanzas por el paisaje (el de la Travesía en los abiertos).
+  demás modos, «Fondo realista» (Opciones → Entorno, 7 para elegir). Solo paisajes abiertos, al fondo con el bosque de cómic
+  delante: los de bosque por dentro, ciudad y playa se quitaron (lo cercano se veía plano, de cartón). En Arcos, con
+  fondo, sin compuertas: avanzas por el paisaje de la Travesía.
 - Su caricatura no habla de rayos: cada repetición empuja por el sendero.
 
 **Repeticiones y disparo**
