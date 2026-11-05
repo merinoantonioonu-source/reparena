@@ -2473,7 +2473,7 @@ function lobbyMenu() {
   const rr = roomRows(lobbyMenu), roomBad = rr.some(r => r.t === 'text' && r.color === '#ffd166'); // la habitación no vale o falta colocarla
   const rows = [
     { t: 'title', text: '', big: { label: ses ? (SES.blocks.length ? 'EMPEZAR SESIÓN' : 'SESIONES') : 'EMPEZAR', onPress: start } },
-    { t: 'btns', h: 0.085, items: statTiles() },
+    { t: 'btns', h: 0.1, items: goalTiles() }, // (las metas de hoy, bajo EMPEZAR: 73_career)
     ...box('Modo', MODE_BOX, [{ t: 'btns', h: 0.06, items: modes }]),
     ...(ses ? sesPreviewRows() : [...box(`Ejercicio · ${MODE_NAMES[settings.mode]}`, EX_COL, exR), ...box('Dificultad', DIFF_COL, lobbyDiffRows(again).filter(r => r.t !== 'field' || fieldVisible(FIELD[r.key])))]),
     ...(roomBad ? [{ t: 'text', text: 'La habitación no está lista: mira Opciones → Entorno', color: '#ffd166' }] : []),
@@ -2481,6 +2481,7 @@ function lobbyMenu() {
     { t: 'btns', h: 0.052, items: [{ label: 'Opciones  ▸', flex: 3, accent: MC.set, onPress: () => optionsMenu() }, { label: 'Salir', style: 'danger', onPress: exitAll }] }];
   const m = openMenu(rows);
   m.rebuild = again; demoAttach(m); // al lado, la caricatura del ejercicio elegido
+  goalSide(m); goalsIntro(); // (a la izquierda, la columna «HOY»; al entrar, la carátula de las metas: 73_career)
 }
 // Opciones: todo lo que no está en el principal, en pestañas con su color (rivales y armas, progreso, sonido, entorno y
 // ajustes); «Volver» deja el principal en el mismo sitio
@@ -2601,7 +2602,7 @@ function warmQueue() {
   for (const k in ROBOT_KIND) { const K = ROBOT_KIND[k], R = RIGS[K.rig]; if (R && R.instance && (!K.beast3d || BEAST.kinds[K.beast3d])) add('r:' + K.rig, () => R.instance(MAT_ROBOT)); }
   for (const k in FLYER_KIND) { const K = FLYER_KIND[k]; if (K.beast) { if (BEAST.kinds[K.beast]) add('f:' + K.beast, () => beastFlyer(K.beast)); } else if (RIGS[K.rig]) add('f:' + k, () => RIGS[K.rig].instance(k === 'hornet' ? MAT_STINGER : MAT_DRONE)); }
   if (RIGS.spider) add('spider', () => RIGS.spider.instance({ main: M.chitinSkin, pat: M.abdomenSkin, gloss: M.glossSkin, glow: M.glowSkin }));
-  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(amebaGeo, waterRingMat(0x3cf0c6)));
+  add('bubble', () => new THREE.Mesh(bubbleGeo, bubbleMat())); add('ameba', () => new THREE.Mesh(neonGeo, neonRingMat(0x3cf0c6)));
 }
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
 // tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)

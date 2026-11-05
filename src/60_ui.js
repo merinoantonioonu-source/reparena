@@ -955,7 +955,7 @@ function updateWarn(dt) {
 function updateViewPanels(dt) {
   fixvStep(); updateWarn(dt); updateChargeFloor(dt);
   const n = GAME_STATES.includes(state) ? collectThreats() : 0;
-  trophyStep(dt, n);
+  trophyStep(dt, n); goalsStep(dt); // (la carátula de las metas de hoy: 73_career)
   if (center.mesh.visible) {
     const C = HUD.center, slots = menu && !menu.wrist ? [[0, 0.3]] : C.slots; // con el atril abierto, por encima para no taparlo
     const L = lazyAt(LZ.center, hudSlot(C, slots, n, dt), hudQ(), dt);

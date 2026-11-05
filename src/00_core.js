@@ -368,7 +368,7 @@ function setSetting(key, v) {
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
   'tchArrive', 'tchHands', 'jumpHeight', 'arcJumpH', 'arcHurdles', 'arcBurpee', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
-  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
+  'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'hrMax', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
 const isBasic = f => devRowOk(f) ? devEye().includes(f.key) : f.g === 'ejercicio' ? !FINE_EX.includes(f.key) : BASIC.has(f.key);
