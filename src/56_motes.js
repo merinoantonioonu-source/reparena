@@ -45,7 +45,7 @@ const MOTES = (() => {
 const _moteNight = new THREE.Color(0xc8ff6a), _moteDay = new THREE.Color(0xffe58a);
 function motesStep(dt, t) {
   const on = !!settings.motes && !arMode && state !== 'idle' && (preview || xrActive); MOTES.visible = on; if (!on) return;
-  const U = MOTES.material.uniforms, night = forestOn() || (!natureOn() && !(typeof islandOn === 'function' && islandOn()) && !comicOn()) || (typeof TREK_PANO !== 'undefined' && TREK_PANO.cur === 'shanghai');
+  const U = MOTES.material.uniforms, night = forestOn() || (!natureOn() && !(typeof islandOn === 'function' && islandOn()) && !comicOn());
   U.uTime.value = t; U.uHead.value.copy(HL);
   U.uScroll.value = settings.mode === 'trek' ? TREK.dist : (typeof arcScenic === 'function' && arcScenic() && typeof ARX !== 'undefined') ? ARX.dist || 0 : 0;
   U.uColor.value.copy(night ? _moteNight : _moteDay); U.uGain.value = night ? 1.1 : 1.5;

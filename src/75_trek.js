@@ -251,7 +251,7 @@ const TREK_SHADOW = (() => { const c = mkCanvas(128), x = c.getContext('2d'), g 
 const trekLegs = () => ['squat', 'lunge', 'frontsq'].includes(settings.exercise);
 // los retos de cada ejercicio: nunca el mismo movimiento que te hace avanzar (la roca se embiste con zancadas: no con ellas)
 // (el arroyo y el desfiladero se cruzan saltando: no con la sentadilla con salto)
-// (los bandidos, con todos: se les gana esquivando y a puñetazos)
+// (los bandidos, con todos: se les gana esquivando)
 const trekKinds = () => { const ex = settings.exercise; return ex === 'lunge' ? ['log', 'chest', 'stream', 'bandit', 'chasm'] : trekLegs() ? ['log', 'chest', 'stream', 'bandit', 'rock', 'chasm'] : ex === 'jsquat' ? ['chest', 'rock', 'bandit'] : ['branch', 'chest', 'stream', 'bandit', 'rock', 'chasm']; };
 // el movimiento que rompe las cadenas del cofre: saltos (si avanzas con las piernas), zancadas (con la sentadilla con salto) o sentadillas (con curl)
 const trekChainMove = () => trekLegs() ? 'jump' : settings.exercise === 'jsquat' ? 'lunge' : 'squat';
@@ -293,7 +293,7 @@ function trekObsMesh(o) {
     o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'bandit') { // los bandidos, plantados en el sendero, uno detrás de otro
     const n = waveIdx >= 4 ? 3 : waveIdx >= 2 ? 2 : 1;
-    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.7 : 0.15), z: -i * 1.3, st: 'wait', t: 0, hp: Math.min(4, 2 + Math.floor(waveIdx / 3)), skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
+    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.7 : 0.15), z: -i * 1.3, st: 'wait', t: 0, hp: waveIdx >= 2 ? 4 : 3, /* (los golpes que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
     o.warn = glowSprite(0xff3b5c, 0.8, 0); g.add(o.warn); trekShadow(g, 2.4, 3.4, 0);
   } else { // el derrumbe: una roca grande atravesada en el sendero
     o.box = new THREE.Group(); g.add(o.box); trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
@@ -471,10 +471,10 @@ const TREK_GEMS = 'reparena3-gems';
 /* ---------- Bandidos que cortan el paso ---------- */
 // El explorador con capucha (Modular Character Outfits, de Quaternius), con dos ropas y las animaciones de anims.glb (su
 // esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan un golpe a la
-// cabeza. Un gancho (de lado) se esquiva agachándote; un directo (de frente), apartándote a un lado. Si lo esquivas, se
-// queda aturdido un momento y entonces sí le entran tus puñetazos (la mano deprisa hacia su cuerpo); si no, te da (una
-// vida). Sin esquivar antes, te los para. Con los que tenga de aguante, cae. Más bandidos, más aguante y menos aviso en
-// cada tramo y con el rango. Si en 75 s no acabas, se van (sin premio)
+// cabeza. Un gancho (de lado) se esquiva agachándote; un directo (de frente), apartándote a un lado. Cada uno lanza 3
+// golpes seguidos (4 desde el tercer tramo): si se los esquivas todos, cae agotado; el que no esquivas te da (una vida) y
+// tiene que volver a intentarlo. Sin puñetazos: con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más
+// bandidos y menos aviso en cada tramo y con el rango. Si en 75 s no acabas, se van (sin premio)
 const TREK_BAND = { scene: null, clips: {}, loading: false, failed: false, bare: false, mats: null };
 const TREK_BAND_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Dance_Loop', 'Punch_Jab', 'Punch_Cross', 'Melee_Hook', 'Hit_Chest', 'Hit_Head', 'Death01'];
 function trekBandLoad() {
@@ -544,40 +544,17 @@ function trekBandFight(o, dt, t) {
     if (!B.played && B.t >= B.win - hitAt) { B.played = true; trekBandPlay(B, clip, true); if (B.cur) B.cur.timeScale = D.slow; }
     if (B.t >= B.win) { // el golpe llega: ¿lo has esquivado?
       const ok = B.atk === 'hook' ? calibRef - HL.y > 0.2 : Math.abs(HL.x - B.x0) > 0.2, p = arena.localToWorld(_tbw.set(B.x0, calibRef - 0.1, HL.z)); SND.whoosh(p, 'arc');
-      if (ok) { B.st = 'stun'; B.t = 0; B.stun = D.stun; trekBandPlay(B, 'Hit_Head', true); say('¡AHORA! ¡Pégale!', '#ffd166', 1.2); hapticBoth(0.3, 40); score += 80; boardDirty = true; o.dodges = (o.dodges || 0) + 1; }
+      if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; // (esquivado: le queda un golpe menos)
+        if (B.hp <= 0) { B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); cheer('¡Bandido agotado!', '#3cf0c6', 1.2); say('¡Agotado! Cae al suelo', '#3cf0c6', 1.2); SND.explosion(o.mesh.localToWorld(_tbh.set(B.x, 0.5, B.z)), false); }
+        else { B.st = 'stun'; B.t = 0; B.stun = D.stun; trekBandPlay(B, 'Hit_Head', true); say(`¡Esquivado! Le quedan ${B.hp}`, '#ffd166', 0.9); } }
       else { B.st = 'guard'; B.t = 0; B.gap = rand(1.2, 1.8); trekBandPlay(B, 'Idle_Loop'); hurtPlayer({ silent: true }); comicHit(head.p.clone()); say(B.atk === 'hook' ? '¡Te ha dado! Agáchate antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); o.hits = (o.hits || 0) + 1; }
     }
-  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.6, 1.0); trekBandPlay(B, 'Idle_Loop'); }
-  else if (B.st === 'hurt' && B.t > 0.45) { B.st = 'stun'; B.t = Math.max(0, B.stun - 0.9); trekBandPlay(B, 'Idle_Loop'); } // (tras el golpe, aún un poco aturdido)
-  // tus puñetazos: la mano deprisa hacia su cuerpo
-  const P = trekPunch(dt, o.mesh.localToWorld(_tbh.set(B.x, 1.25, B.z)));
-  if (P) {
-    if (B.st === 'stun' || B.st === 'hurt') { B.hp--; score += 60; boardDirty = true; fx.sparks(P.clone(), 16, [1, 0.85, 0.5], 2.5, 0.035); comicHit(P); SND.squish(P); haptic(trekPunch.side, 0.9, 60); o.punches = (o.punches || 0) + 1;
-      if (B.hp <= 0) { B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); cheer('¡Bandido derribado!', '#3cf0c6', 1.2); SND.explosion(P, false); }
-      else { B.st = 'hurt'; B.t = 0; trekBandPlay(B, 'Hit_Chest', true); } }
-    else if (B.st === 'guard' || B.st === 'wind') { fx.sparks(P.clone(), 6, [0.8, 0.8, 0.9], 1.2, 0.02); SND.metalHit(P, false); haptic(trekPunch.side, 0.4, 30); if ((o.blockT || 0) < t) { o.blockT = t + 2; say('Te lo para: esquiva primero', '#ffd166', 1.2); } }
-  }
-  // el aviso rojo mientras prepara el golpe; dorado mientras está aturdido
-  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(B.st === 'wind' ? 0xff3b5c : 0xffd166); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : B.st === 'stun' || B.st === 'hurt' ? 0.45 : 0;
+  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.4, 0.8); trekBandPlay(B, 'Idle_Loop'); } // (tras esquivarle, se tambalea un momento y vuelve a la carga)
+  // el aviso rojo mientras prepara el golpe; dorado mientras se tambalea
+  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(B.st === 'wind' ? 0xff3b5c : 0xffd166); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : B.st === 'stun' ? 0.45 : 0;
 }
-// menos aviso y menos rato aturdido en cada tramo y con el rango, poco a poco
-const trekBandDiff = () => ({ wind: Math.max(1.15, 1.9 - 0.06 * waveIdx - 0.04 * rankIdx()), stun: Math.max(1.8, 2.8 - 0.1 * waveIdx), slow: 0.6 }); // (slow: el golpe, a cámara lenta: a su velocidad no daba tiempo)
-// Un puñetazo: la mano (o la pesa o el mando) que va deprisa respecto a la cabeza (agacharse no cuenta) y llega a menos de
-// 45 cm del cuerpo, yendo hacia él; cada mano, uno cada PUNCH_CD. Devuelve dónde dio (o nada)
-const TPU = { left: { last: new V3(), hl: new V3(), ok: false, cd: 0 }, right: { last: new V3(), hl: new V3(), ok: false, cd: 0 } };
-function trekPunch(dt, body) {
-  if (!renderer.xr.isPresenting) { if (PV.keys.KeyF) { if (!PV.fHeld) { PV.fHeld = true; trekPunch.side = 'right'; return body.clone(); } } else PV.fHeld = false; } // (en el ordenador, la tecla F)
-  for (const s of ['left', 'right']) {
-    const h = hands[s], P = TPU[s]; P.cd -= dt;
-    if (!h.ok || !(dt > 0)) { P.ok = false; continue; }
-    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
-    _tbv.subVectors(h.wrist, P.last).sub(_tbw.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
-    const sp = _tbv.length(); if (sp < PUNCH_V || P.cd > 0) continue;
-    const d = _tbw.subVectors(body, h.wrist), dl = d.length(); if (dl > 0.45 || (dl > 0.05 && d.dot(_tbv) / (dl * sp) < 0.3)) continue;
-    P.cd = PUNCH_CD; trekPunch.side = s; return h.wrist.clone().lerp(body, 0.5);
-  }
-  return null;
-}
+// menos aviso en cada tramo y con el rango, poco a poco
+const trekBandDiff = () => ({ wind: Math.max(1.15, 1.9 - 0.06 * waveIdx - 0.04 * rankIdx()), stun: 0.7, slow: 0.6 }); // (slow: el golpe, a cámara lenta: a su velocidad no daba tiempo)
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
@@ -638,7 +615,7 @@ function trekChaseStep(dt, t) {
 }
 function trekStep(dt, t) {
   const sc = arcScenic(), on = (trekOn() || sc) && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
-  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn() && !sc && !panoGround();
+  TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn() && !sc;
   trekPath.visible = TREK_DECK.visible = trekOn();
   if (!trekOn()) { panoStep(dt); if (sc) arcScenicStep(t); return; } aldLoad(); trekBandLoad(); // (la aldea y los bandidos, desde que eliges la Travesía)
   TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
@@ -687,36 +664,28 @@ function trekDrop(o) { TREK.group.remove(o.mesh); o.mesh.traverse(m => { if (m.i
 // sendero (las montañas no se mueven). Al cambiar de tramo, una se funde con la otra. Si no hay foto, el cielo de siempre
 const TREK_PANO = { tex: {}, fog: {}, lum: {}, miss: {}, cur: null, a: null, b: null };
 // Las fotos (Poly Haven, CC0) y la columna de cada una que queda de frente al empezar (u: lo mejor de la foto, delante).
-// En Arcos se elige una en «Fondo realista»; la Travesía usa la de cada tramo
+// En los demás modos se elige una en «Fondo realista»; la Travesía usa la de cada tramo. Solo paisajes abiertos: el bosque
+// de cómic (o, en Arcos, el paisaje de la Travesía) delante y la foto al fondo (b: el tramo de la Travesía que le va). Las
+// de bosque por dentro, ciudad y playa se quitaron: con los árboles y las casas pegados, se veían planos, de cartón
 const PANOS = {
-  // paisaje abierto: el bosque de cómic (o, en Arcos, el paisaje de la Travesía) delante y la foto al fondo; b: el tramo de la Travesía que le va
   aldea: { u: 0.45, label: 'Prado con los Alpes', b: 1 }, bosque: { u: 0.82, label: 'Pradera y montaña', b: 0 }, montana: { u: 0.55, label: 'Montaña y valle', b: 0 }, cumbre: { u: 0.62, label: 'Cumbre sobre el mar', b: 0 },
-  lago: { u: 0.25, label: 'Colinas con nubes', b: 2 }, atardecer: { u: 0.6, label: 'Colinas al atardecer', b: 3 }, ocaso: { u: 0.59, label: 'Ocaso junto al lago', b: 2 },
-  // con su suelo: la foto entera, también el suelo que pisas
-  pinar: { u: 0.5, label: 'Pinar con niebla', ground: true }, soleado: { u: 0.5, label: 'Bosque soleado', ground: true }, otono: { u: 0.5, label: 'Bosque en otoño', ground: true },
-  musgo: { u: 0.3, label: 'Bosque con musgo y arroyo', ground: true }, nevado: { u: 0.38, label: 'Bosque nevado', ground: true }, girasoles: { u: 0.5, label: 'Campo de girasoles', ground: true },
-  berlin: { u: 0.7, label: 'Berlín: Potsdamer Platz', ground: true }, shanghai: { u: 0.55, label: 'Shanghái de noche', ground: true }, venecia: { u: 0.6, label: 'Venecia al atardecer', ground: true },
-  mondello: { u: 0.55, label: 'Playa de Mondello', ground: true }, amanecer: { u: 0.62, label: 'Amanecer en la playa', ground: true } };
-const panoGround = () => { const p = PANOS[TREK_PANO.cur]; return !!(p && p.ground && TREK_PANO.a && TREK_PANO.a.material.opacity > 0.5); };
+  lago: { u: 0.25, label: 'Colinas con nubes', b: 2 }, atardecer: { u: 0.6, label: 'Colinas al atardecer', b: 3 }, ocaso: { u: 0.59, label: 'Ocaso junto al lago', b: 2 } };
 // Arcos con un paisaje abierto: avanzas por él (el de la Travesía, sin sus retos), sin compuertas
-const arcScenic = () => settings.mode === 'arcs' && PANOS[settings.pano] && !PANOS[settings.pano].ground && !arMode && natureOn();
+const arcScenic = () => settings.mode === 'arcs' && !!PANOS[settings.pano] && !arMode && natureOn();
 // la foto de ahora: en la Travesía, la del tramo; en Arcos (en el bosque), la elegida; si no, ninguna
 const panoWant = () => trekOn() ? TREK_BIOMES[TREK.biome].pano : PANOS[settings.pano] && typeof natureOn === 'function' && natureOn() ? settings.pano : null;
-// La foto en la tarjeta gráfica: cada punto del cielo toma el color de su dirección en la foto (equirrectangular). En las
-// de suelo cercano (bosques por dentro, ciudades, playas: tipo «suelo»), lo que miras por debajo del horizonte se proyecta
-// sobre el suelo del juego desde donde se hizo la foto (a 1,7 m): pisas la plaza o la arena de la foto, y al moverte o
-// agacharte el suelo se ve en su sitio. Sin mipmaps (la foto se ve siempre a su tamaño o más grande: así no sale la costura)
+// La foto en la tarjeta gráfica: cada punto del cielo toma el color de su dirección en la foto (equirrectangular). Sin
+// mipmaps (la foto se ve siempre a su tamaño o más grande: así no sale la costura)
 const PANO_VS = `varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const PANO_FS = `uniform sampler2D map; uniform float opacity, uYaw, uGround, uH; uniform vec3 uC; varying vec3 vW;
+const PANO_FS = `uniform sampler2D map; uniform float opacity, uYaw; varying vec3 vW;
   void main() {
-    vec3 d = normalize(vW - cameraPosition), dir = d;
-    if (uGround > 0.5 && d.y < -0.002) { vec3 p = cameraPosition + d * ((uC.y - cameraPosition.y) / d.y), q = p - vec3(uC.x, uC.y + uH, uC.z); if (length(q.xz) < 90.0) dir = normalize(q); }
+    vec3 dir = normalize(vW - cameraPosition);
     float c = cos(-uYaw), s = sin(-uYaw); vec3 l = vec3(dir.x * c + dir.z * s, dir.y, -dir.x * s + dir.z * c);
     vec2 uv = vec2(fract(atan(l.z, l.x) / 6.2831853), 1.0 - acos(clamp(l.y, -1.0, 1.0)) / 3.1415927);
     gl_FragColor = vec4(texture2D(map, uv).rgb, opacity);
   }`;
 function trekPanoMesh() {
-  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: null }, opacity: { value: 0 }, uYaw: { value: 0 }, uGround: { value: 0 }, uH: { value: 1.7 }, uC: { value: new THREE.Vector3() } }, vertexShader: PANO_VS, fragmentShader: PANO_FS, side: THREE.BackSide, transparent: true, depthWrite: false });
+  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: null }, opacity: { value: 0 }, uYaw: { value: 0 } }, vertexShader: PANO_VS, fragmentShader: PANO_FS, side: THREE.BackSide, transparent: true, depthWrite: false });
   const m = new THREE.Mesh(new THREE.SphereGeometry(130, 32, 16), mat);
   Object.defineProperty(mat, 'map', { get: () => mat.uniforms.map.value, set: v => { mat.uniforms.map.value = v; } }); // (como un material normal: .map y .opacity)
   Object.defineProperty(mat, 'opacity', { get: () => mat.uniforms.opacity.value, set: v => { mat.uniforms.opacity.value = v; } });
@@ -734,7 +703,7 @@ function trekPanoStep(dt) {
   const P = TREK_PANO, n = panoWant(); if (n) trekPanoLoad(n);
   if (!P.a) { if (!n) return null; P.a = trekPanoMesh(); P.b = trekPanoMesh(); }
   const t = n && P.tex[n], ready = !!t && t !== 'loading';
-  if (ready && P.cur !== n) { const old = P.a; P.a = P.b; P.b = old; P.a.material.map = t; P.a.material.opacity = 0; P.a.material.needsUpdate = true; P.cur = n; P.a.userData.yaw = TAU * ((PANOS[n] ? PANOS[n].u : 0.75) - 0.75); P.a.userData.ground = !!(PANOS[n] && PANOS[n].ground) && !trekOn(); }
+  if (ready && P.cur !== n) { const old = P.a; P.a = P.b; P.b = old; P.a.material.map = t; P.a.material.opacity = 0; P.a.material.needsUpdate = true; P.cur = n; P.a.userData.yaw = TAU * ((PANOS[n] ? PANOS[n].u : 0.75) - 0.75); }
   if (!n) P.cur = null; // (la nueva, delante, empieza transparente; panoU: la columna de la foto que queda de frente al empezar)
   P.a.material.opacity = ready ? Math.min(1, P.a.material.opacity + dt * 0.5) : Math.max(0, P.a.material.opacity - dt);
   if (P.a.material.opacity >= 1 && P.b.material.map) { // (la de antes, ya tapada: fuera de la memoria de vídeo; cada foto ocupa unos 40 MB)
@@ -742,17 +711,14 @@ function trekPanoStep(dt) {
     P.b.material.map = null; P.b.material.needsUpdate = true; }
   P.b.material.opacity = P.a.material.opacity >= 1 ? 0 : P.b.material.opacity; P.a.renderOrder = -8; P.b.renderOrder = -9;
   const on = !!n || P.a.material.opacity > 0.001;
-  for (const m of [P.a, P.b]) { m.visible = on && m.material.opacity > 0.001 && !!m.material.map; m.position.copy(natSky.position); const U = m.material.uniforms; U.uYaw.value = (trekOn() ? TF.th : 0) + (m.userData.yaw || 0); U.uGround.value = m.userData.ground ? 1 : 0; U.uC.value.setFromMatrixPosition(arena.matrixWorld); }
+  for (const m of [P.a, P.b]) { m.visible = on && m.material.opacity > 0.001 && !!m.material.map; m.position.copy(natSky.position); const U = m.material.uniforms; U.uYaw.value = (trekOn() ? TF.th : 0) + (m.userData.yaw || 0); }
   natSky.visible = !(n && P.a.visible && P.a.material.opacity >= 1);
   return ready ? P.fog[n] : null;
 }
 // En los demás modos, con «Fondo realista» (Opciones → Entorno): la foto detrás, la niebla del color de su horizonte y la
-// luz según lo clara que es (de noche, más oscura); en las de suelo cercano, sin el césped ni las plantas del bosque (el
-// suelo es el de la foto) y con las sombras sobre él. Sin foto, todo como antes
-const PANO_SHADOW = (() => { const m = new THREE.Mesh(new THREE.CircleGeometry(40, 48), new THREE.ShadowMaterial({ opacity: 0.35 })); m.rotation.x = -Math.PI / 2; m.position.y = 0.003; m.receiveShadow = true; m.visible = false; m.userData.noInk = true; NAT.group.add(m); return m; })();
+// luz según lo clara que es. Sin foto, todo como antes
 function panoStep(dt) {
-  const P = TREK_PANO; if (!P.a && !panoWant()) return; const pf = trekPanoStep(dt), f = scene.fog, g = panoGround();
-  natGround.visible = !g; PANO_SHADOW.visible = g;
+  const P = TREK_PANO; if (!P.a && !panoWant()) return; const pf = trekPanoStep(dt), f = scene.fog;
   if (pf && f && natureOn()) { if (!f.base) f.base = f.color.clone(); if (!P.fog0) P.fog0 = f.base.clone(); f.base.lerp(pf, Math.min(1, dt * 0.6)); renderer.setClearColor(f.base, 1); }
   else if (!pf && P.fog0 && f && f.base) { f.base.copy(P.fog0); P.fog0 = null; } // (sin foto, vuelve su niebla)
   if (pf) { if (!P.l0) P.l0 = [hemi.intensity, keyLight.intensity]; const k = clamp(0.3 + (P.lum[P.cur] || 0.5) * 1.3, 0.45, 1.05); hemi.intensity += (P.l0[0] * k - hemi.intensity) * Math.min(1, dt * 2); keyLight.intensity += (P.l0[1] * k - keyLight.intensity) * Math.min(1, dt * 2); }
