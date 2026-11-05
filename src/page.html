@@ -236,6 +236,16 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfav:hover{opacity:.9}
 .spfav.on{color:var(--gold);opacity:1}
 .spfav:focus-visible{outline:2px solid var(--gold);opacity:1}
+.spplay{flex:none;width:26px;height:26px;margin-top:-3px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--teal);font-size:11px;line-height:24px;text-align:center;cursor:pointer}
+.spplay:hover{border-color:var(--teal)}
+.spplay.on{background:var(--teal);border-color:var(--teal);color:#0b0717}
+.spplay:focus-visible{outline:2px solid var(--gold)}
+.spfilt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:4px 0 6px;font-size:.88rem}
+.spfilt label{display:inline-flex;align-items:center;gap:6px}
+.spfilt .rng{display:inline-flex;gap:10px;white-space:nowrap}
+.spfilt select,.spfilt input{padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.85rem}
+.spfilt input{width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
+.spfilt small{color:var(--muted)}
 .spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
 .spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
 .spx:hover,.spx:focus-visible{opacity:1;color:var(--fg);background:var(--panel)}
@@ -537,7 +547,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
     <p class="spnow" id="spNow"></p>
     <div class="splists">
       <h3>Tus listas para entrenar</h3>
-      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Junto a cada canción sale su <b>compás (BPM)</b>: se busca solo (en Deezer y, si no lo sabe, en ReccoBeats) y sale en gris («≈124»); si está mal, escribe otro encima o usa <b>×2</b> / <b>÷2</b> (a veces dan el doble o la mitad). Cuando suena, en Toques y en Combate el juego va a ese ritmo (con «Ritmo de cada canción», en Sonido ▸; el que escribas tú, siempre). En el juego también se guarda: marca el ritmo «Al compás» y pulsa «Guardar … BPM para esta canción». Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
+      <p class="note">Marca una o varias listas: al pulsar Play en el juego suenan ellas (varias, mezcladas) en vez de lo último que sonaba. Con <b>Abrir ▸</b> entras en una lista (o en tus canciones que te gustan, las sueltas) y ves solo sus canciones para elegir las que quieras; con <b>← Tus listas</b> sales y puedes elegir más de otras. Las elegidas suenan en el orden en que las marcaste y en bucle. Con la <b>★</b> de una canción la marcas como favorita: al abrir cualquier lista, tus favoritas salen las primeras (también en la música de cada bloque y en el juego). Con <b>▶</b> escuchas una canción aquí mismo (con <b>■</b> la paras); con <b>Compás</b>, arriba de la lista, ves solo las de un tramo de BPM o las que no tienen compás (para escribírselo). Junto a cada canción sale su <b>compás (BPM)</b>: se busca solo (en Deezer y, si no lo sabe, en ReccoBeats) y sale en gris («≈124»); si está mal, escribe otro encima o usa <b>×2</b> / <b>÷2</b> (a veces dan el doble o la mitad). Cuando suena, en Toques y en Combate el juego va a ese ritmo (con «Ritmo de cada canción», en Sonido ▸; el que escribas tú, siempre). En el juego también se guarda: marca el ritmo «Al compás» y pulsa «Guardar … BPM para esta canción». Si no marcas nada, sigue lo que estuviera sonando. Solo salen tus listas y las colaborativas: de las de otros usuarios Spotify no deja ver las canciones.</p>
       <div class="actions"><button class="btn small" id="btnSpLists">Cargar mis listas</button></div>
       <div class="splist" id="spLists"></div>
     </div>

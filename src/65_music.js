@@ -96,7 +96,8 @@ function spPlayerInit() {
     p.addListener('account_error', () => fail('Para que suene en las gafas hace falta Spotify Premium'));
     p.addListener('initialization_error', () => fail('Este navegador no puede reproducir Spotify: sonará en otro reproductor tuyo'));
     p.addListener('playback_error', () => {});
-    p.addListener('player_state_changed', s => { if (s && SP.st && spHereNow()) { SP.st.is_playing = !s.paused; } if (s && s.track_window && s.track_window.current_track && s.track_window.current_track.id !== SP.tempoId) SP.pollT = Math.min(SP.pollT, 0.5); });
+    p.addListener('player_state_changed', s => { const cur = s && s.track_window && s.track_window.current_track; if (SP.prev && Date.now() - (SP.prevT || 0) > 1500 && (!s || s.paused || !cur || cur.uri !== SP.prev)) { SP.prev = null; spPrevRefresh(); } // (la que escuchabas desde la página acabó o se paró)
+ if (s && SP.st && spHereNow()) { SP.st.is_playing = !s.paused; } if (s && s.track_window && s.track_window.current_track && s.track_window.current_track.id !== SP.tempoId) SP.pollT = Math.min(SP.pollT, 0.5); });
     SPP.player = p; p.connect();
   };
   const sc = document.createElement('script'); sc.src = 'https://sdk.scdn.co/spotify-player.js'; sc.async = true;
@@ -368,8 +369,8 @@ async function spBpmRun() {
 // Lo encontrado, a la vista (sin redibujar mientras escribes un compás)
 function spBpmShow() {
   clearTimeout(BPMQ.t); BPMQ.t = setTimeout(() => {
-    const a = typeof document !== 'undefined' && document.activeElement; if (a && a.classList && a.classList.contains('spbpm')) { spBpmShow(); return; }
-    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (menu && menu.spTrk && menu.rebuild) menu.rebuild();
+    const a = typeof document !== 'undefined' && document.activeElement; if (a && (a.classList && a.classList.contains('spbpm') || a.dataset && a.dataset.bf !== undefined)) { spBpmShow(); return; }
+    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (typeof exSongsPage === 'function' && EXS.list) exSongsPage(); if (menu && menu.spTrk && menu.rebuild) menu.rebuild();
   }, 600);
 }
 // Compás propio de cada canción: lo guardas tú (en la página, junto a cada canción, o en el juego, «Guardar el ritmo para
@@ -535,7 +536,7 @@ function spInitPage() {
     catch (e) { spStatus(/insufficient|scope|403/i.test(e.message) ? 'Vuelve a pulsar Conectar con Spotify: hace falta el permiso para leer tus listas.' : spErrText(e), true); }
   });
   $('#btnSpOff').addEventListener('click', () => { SP.cfg = { clientId: SP.cfg.clientId }; SP.st = null; SP.err = ''; spSave(); spStatus('Desconectado.'); spPage(); });
-  spPage(); spListsPage();
+  spPage(); spListsPage(); spSongsPageInit();
   spHandleRedirect();
   spPlayerInit();
 }
@@ -559,6 +560,46 @@ function spBpmCell(t) {
 // en el juego, junto al nombre: « · 128 BPM» (el tuyo) o « · ≈124 BPM» (encontrado)
 const spBpmTag = uri => { const k = spTrackBpm(uri); return k.b ? ` · ${k.src === 'own' ? '' : '≈'}${k.b} BPM` : ''; };
 const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
+// Escuchar una canción desde la página: ▶ la pone (en el reproductor de esta página si está listo; si no, en tu
+// dispositivo de Spotify activo) y ■ la para. Solo una a la vez; al acabar o al pararla desde fuera, vuelve el ▶
+const spPlayBtn = t => { const on = SP.prev === t.uri; return `<button type="button" class="spplay${on ? ' on' : ''}" data-play="${escSp(t.uri)}" aria-pressed="${on}" aria-label="${on ? 'Parar' : 'Escuchar'} ${escSp(t.name)}" title="${on ? 'Parar' : 'Escuchar aquí'}">${on ? '■' : '▶'}</button>`; };
+function spPrevRefresh() { spListsPage(); if (typeof exSongsPage === 'function') exSongsPage(); if (typeof renderSession === 'function') renderSession(); }
+async function spPreview(uri) {
+  if (!spConnected()) { spStatus('Primero pulsa Conectar con Spotify.', true); return; }
+  spPlayerUnlock(); // (el navegador solo deja sonar tras un toque: este)
+  try {
+    if (SP.prev === uri) { SP.prev = null; spPrevRefresh(); await spApi('PUT', '/me/player/pause' + spQ()); return; }
+    if (!spHereOk() && SPP.state !== 'error') { spPlayerInit(); for (let i = 0; i < 12 && !spHereOk() && SPP.state !== 'error'; i++) await spWait(200); } // (el reproductor de la página tarda un poco en arrancar)
+    let dev = spHereOk() ? SPP.id : spDev();
+    if (!dev) { const d = await spApi('GET', '/me/player/devices'), L = (d && d.devices) || []; dev = (L.find(x => x.is_active) || L[0] || {}).id; } // (aún sin saber cuál: el activo o el primero)
+    if (!dev) throw new Error('NO_DEVICE');
+    await spApi('PUT', '/me/player/play?device_id=' + encodeURIComponent(dev), { uris: [uri] });
+    try { await spApi('PUT', '/me/player/repeat?state=off&device_id=' + encodeURIComponent(dev)); } catch (e) { /* da igual */ }
+    SP.prev = uri; SP.prevT = Date.now(); SP.started = false; SP.block = null; spPrevRefresh(); // (al jugar, Play vuelve a tus listas)
+    spStatus(spHereOk() ? 'Suena en esta página.' : 'Suena en tu dispositivo de Spotify (esta página no puede reproducir).');
+  } catch (e) { SP.prev = null; spPrevRefresh(); spStatus(e.message === 'NO_DEVICE' ? 'No hay dónde sonar: abre Spotify en algún dispositivo (o usa un navegador que pueda reproducirlo).' : 'No se pudo poner: ' + spErrText(e), true); }
+}
+// Filtro por compás de las listas de canciones de la página (tus listas, las de cada ejercicio y las de cada bloque):
+// todas, las de un tramo de BPM o las que no tienen compás (para escribírselo). El mismo en las tres, y se recuerda
+const spBf = () => { const f = SP.cfg.bf || {}; return { mode: ['bpm', 'none'].includes(f.mode) ? f.mode : 'all', lo: f.lo > 0 ? f.lo : 0, hi: f.hi > 0 ? f.hi : 0 }; };
+function spBpmFilt(T) {
+  const f = spBf(); if (f.mode === 'all') return T;
+  return T.filter(t => { const b = spTrackBpm(t.uri).b; return f.mode === 'none' ? !b : b > 0 && (!f.lo || b >= f.lo) && (!f.hi || b <= f.hi); });
+}
+function spBpmFiltBar(T, shown) {
+  const f = spBf(), o = (v, l) => `<option value="${v}"${f.mode === v ? ' selected' : ''}>${l}</option>`;
+  return `<div class="spfilt"><label>Compás <select data-bf="mode" aria-label="Filtrar por compás">${o('all', 'Todas')}${o('bpm', 'Con BPM')}${o('none', 'Sin BPM')}</select></label>${f.mode === 'bpm' ? `<span class="rng"><label>de <input type="number" data-bf="lo" min="${SP_BPM_MIN}" max="${SP_BPM_TOP}" step="1" inputmode="numeric" placeholder="mín." value="${f.lo || ''}" aria-label="Desde (BPM)"></label><label>a <input type="number" data-bf="hi" min="${SP_BPM_MIN}" max="${SP_BPM_TOP}" step="1" inputmode="numeric" placeholder="máx." value="${f.hi || ''}" aria-label="Hasta (BPM)"> BPM</label></span>` : ''}<small>${shown === T.length ? `${T.length} canciones` : `${shown} de ${T.length}`}</small></div>`;
+}
+function spBfSet(el) {
+  const f = spBf(), k = el.dataset.bf; if (k === 'mode') f.mode = el.value; else { const v = Math.round(+el.value); f[k] = v >= SP_BPM_MIN && v <= SP_BPM_TOP ? v : 0; }
+  if (f.lo && f.hi && f.lo > f.hi) [f.lo, f.hi] = [f.hi, f.lo]; SP.cfg.bf = f; spSave(); spPrevRefresh();
+}
+// lo que no hay en ningún sitio más: ▶/■ y el filtro, para las tres listas de la página a la vez
+function spSongsPageInit() {
+  if (typeof document === 'undefined' || !document.addEventListener) return;
+  document.addEventListener('click', ev => { const b = ev.target && ev.target.closest && ev.target.closest('button[data-play]'); if (b) spPreview(b.dataset.play); });
+  document.addEventListener('change', ev => { const el = ev.target; if (el && el.dataset && el.dataset.bf !== undefined) spBfSet(el); });
+}
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
@@ -567,7 +608,8 @@ function spListsPage() {
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
     const F = spFavs(); if (T) spBpmPrefetch(T); // (las favoritas, primero; ★ las marca; los compases que falten, se buscan)
-    h += T ? (T.length ? `<div class="sptracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
+    const V = T ? spBpmFilt(spFavFirst(T)) : null; // (filtradas por compás)
+    h += T ? (T.length ? spBpmFiltBar(T, V.length) + `<div class="sptracks">${V.map(t => `<div class="sptrk">${spPlayBtn(t)}${spFavBtn(t.uri, F)}<label><input type="checkbox" data-trk="${escSp(t.uri)}" ${on.has(t.uri) ? 'checked' : ''}><span>${escSp(t.name)}<small> — ${escSp(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>') : `<p class="status">${escSp(SP.trkErr || 'Cargando sus canciones…')}</p>`;
   } else { // tus listas (y las canciones que te gustan): la casilla pone la lista entera; «Abrir» enseña sus canciones
     const L = SP.mine ? spPickable() : spLists();
     h += L.map(l => `<div class="sprow">${l.liked ? `<span class="lname">${escSp(l.name)}</span>` : `<label><input type="checkbox" data-id="${l.id}" ${chosen.has(l.id) ? 'checked' : ''}><span>${escSp(l.name)}</span></label>`}<button class="btn tiny" data-sp="open" data-id="${l.id}">Abrir ▸</button></div>`).join('');
@@ -575,7 +617,7 @@ function spListsPage() {
   htmlKeep(host, h, open || ''); // (sin volver arriba de la lista cada vez que llega un compás)
   if (!host.querySelectorAll || host.dataset.wired) return; host.dataset.wired = '1';
   host.addEventListener('change', ev => {
-    const el = ev.target;
+    const el = ev.target; if (el.dataset.bf !== undefined) return; // (el filtro: spSongsPageInit)
     if (el.dataset.bpm !== undefined) { spSongBpmSet(el.dataset.bpm, el.value); renderSession(); return; }
     if (el.dataset.id) { const on2 = new Set([...host.querySelectorAll('input[data-id]:checked')].map(x => x.dataset.id)), all2 = SP.mine || spLists(); SP.cfg.lists = all2.filter(l => on2.has(l.id) || (!host.querySelector(`input[data-id="${l.id}"]`) && spLists().some(x => x.id === l.id))).map(l => ({ id: l.id, name: l.name, uri: l.uri })); }
     else if (el.dataset.trk) { const T = (SP.trk && SP.trk[SP.openList]) || [], t = T.find(x => x.uri === el.dataset.trk); if (!t) return; const P2 = spPicks(); SP.cfg.picks = el.checked ? (P2.some(x => x.uri === t.uri) || P2.length >= 100 ? P2 : P2.concat({ uri: t.uri, name: t.name, by: t.by })) : P2.filter(x => x.uri !== t.uri); spListsPage(); }
