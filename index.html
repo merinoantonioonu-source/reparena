@@ -417,7 +417,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Eliges los enemigos: robots que vienen andando (en flexiones, arañas que salen del suelo), drones y avispones gigantes que vuelan, o una mezcla. Y la puntería: automática, para pensar solo en el ejercicio, o apuntando tú con las manos (cada repetición carga las dos; lanza el rayo llevando la mano atrás y adelante deprisa hacia el enemigo) o la mirada.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-arcs" value="arcs">
         <span class="tag">Sentadillas y saltos</span><b>Arcos</b>
-        <small>Arcos de energía avanzan hacia ti a distintas alturas: agáchate a tiempo para pasar por debajo. Y vallas a ras de suelo que hay que saltar. También mazas de pinchos que se balancean o giran, y arcos tan bajos que hay que pasarlos en plancha (llegan avisados y más despacio).</small></label>
+        <small>Arcos de energía avanzan hacia ti a distintas alturas: agáchate a tiempo para pasar por debajo. Y vallas a ras de suelo que hay que saltar, a veces en ráfagas de tres o cuatro, o detrás de un arco de plancha (un burpee). También mazas de pinchos que se balancean o giran, y arcos tan bajos que hay que pasarlos en plancha (llegan avisados y más despacio).</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-bars" value="bars">
         <span class="tag">Barra de dominadas o paralelas</span><b>Barras</b>
         <small>Revienta con la cabeza las pompas o los bichos que esperan donde llegará tu cabeza al subir. Bajo la barra de dominadas hay un charco con tentáculos: no te sueltes.</small></label>
@@ -848,6 +848,7 @@ const SCHEMA = [
   { key: 'rest', g: 'partida', label: 'Descanso entre oleadas', short: 'Descanso', type: 'num', min: 0, max: 300, step: 5, def: 20, unit: 's' },
 
   { key: 'squatDepth', g: 'ejercicio', label: 'Profundidad de la sentadilla', short: 'Prof. sentadilla', type: 'num', min: 8, max: 70, step: 1, def: 26, unit: 'cm', ex: ['squat', 'thruster', 'frontsq', 'jsquat', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'stand', hint: 'Cuánto debe bajar la cabeza para que la repetición cuente.' },
+  { key: 'arcJumpH', g: 'ejercicio', label: 'Altura del salto de las vallas', short: 'Salto vallas', type: 'num', min: 2, max: 30, step: 1, def: 6, unit: 'cm', modes: ['arcs'], cond: () => settings.arcJump > 0 || settings.arcHurdles > 0 || settings.arcBurpee > 0, hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie al pasar la valla: con 6 cm basta un saltito ágil (para encadenar muchos); súbelo para saltos de verdad. Aparte del salto de Toques.' },
   { key: 'pushDepth', g: 'ejercicio', label: 'Bajada en la flexión', short: 'Bajada flexión', type: 'num', min: 5, max: 35, step: 1, def: 13, unit: 'cm', ex: ['pushup', 'inchworm', 'plank1', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'floor' },
   { key: 'pikeDepth', g: 'ejercicio', label: 'Bajada en la flexión en pica', short: 'Bajada pica', type: 'num', min: 8, max: 45, step: 1, def: 22, unit: 'cm', ex: ['pike'], hint: 'Cuánto debe bajar la cabeza desde arriba (los brazos estirados, la cadera alta) hasta casi tocar el suelo entre las manos.' },
   { key: 'iwReach', g: 'ejercicio', label: 'De los pies a las manos en la plancha (inchworm)', short: 'Plancha', type: 'num', min: 0, max: 200, step: 5, def: 0, unit: 'cm', zero: 'según tu altura', ex: ['inchworm'], hint: 'Dónde salen las dos últimas huellas, las de la flexión, contando desde tus pies. 0 = según tu altura.' },
@@ -904,7 +905,7 @@ const SCHEMA = [
   { key: 'tchPushLo', g: 'toques', label: 'Flexiones: altura mínima de las amebas', short: 'Ameba más baja', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más cerca del suelo que puede llegar una ameba (altura de su centro sobre el suelo). 0 = según la «Bajada en la flexión».' },
   { key: 'tchPushHi', g: 'toques', label: 'Flexiones: altura máxima de las amebas', short: 'Ameba más alta', type: 'num', min: 0, max: 80, step: 1, def: 0, unit: 'cm', zero: 'según la bajada', modes: ['touch'], ex: ['pushup'], hint: 'Lo más alto que puede llegar una ameba. Siempre queda algo por debajo de tu cabeza en plancha, para que haya que bajar. 0 = según la «Bajada en la flexión».' },
   { key: 'tchRing', g: 'toques', label: 'Tamaño del hueco de las amebas', short: 'Amebas', type: 'num', min: 8, max: 30, step: 1, def: 15, unit: 'cm', modes: ['touch'], hint: 'Radio del hueco por el que pasa la cabeza (en flexiones, algo menos).' },
-  { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch', 'arcs'], cond: () => settings.mode === 'arcs' ? settings.arcJump > 0 : ['jump', 'combo'].includes(settings.exercise) && (settings.exercise !== 'combo' || settings.comboBase === 'stand'), hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie (en Arcos, al pasar la valla).' },
+  { key: 'jumpHeight', g: 'toques', label: 'Altura del salto', short: 'Salto', type: 'num', min: 3, max: 40, step: 1, def: 10, unit: 'cm', modes: ['touch'], cond: () => ['jump', 'combo'].includes(settings.exercise) && (settings.exercise !== 'combo' || settings.comboBase === 'stand'), hint: 'Cuánto tiene que subir la cabeza por encima de tu altura de pie para tocar la ameba alta (las vallas de Arcos tienen la suya).' },
   { key: 'abMin', g: 'toques', label: 'Tronco elevado: mínimo', short: 'Ángulo mín.', type: 'num', min: 10, max: 70, step: 5, def: 25, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: 'Ángulo del tronco con el suelo al que llegan los aros más bajos.' },
   { key: 'abMax', g: 'toques', label: 'Tronco elevado: máximo', short: 'Ángulo máx.', type: 'num', min: 20, max: 85, step: 5, def: 55, unit: '°', modes: ['touch'], ex: ['abs', 'combo'], cond: () => settings.exercise !== 'combo' || settings.comboBase === 'abs', hint: '90° sería sentarse del todo.' },
   { key: 'absMoves', g: 'toques', label: 'Movimientos (abdominales)', short: 'Movimientos', type: 'multi', opts: [['crunch', 'Abdominal'], ['twist', 'Oblicuo'], ['side', 'Lateral'], ['knee', 'Rodillas']], def: 'crunch,twist,knee', modes: ['touch'], ex: ['abs'], hint: 'Abdominal: ameba de frente · Oblicuo: ameba girada · Lateral: diamantes que llegan por los lados, a ras de suelo junto a la cadera; con los hombros despegados, inclina el tronco hacia ese lado y tócalo con esa mano (como tocarse los talones) · Rodillas: diamante junto a las rodillas. Solo Lateral: todo son abdominales laterales.' },
@@ -953,7 +954,7 @@ const SCHEMA = [
   { key: 'arcLow', g: 'arcos', label: 'Arcos de semipuente (mano al suelo)', short: 'Semipuente', type: 'num', min: 0, max: 100, step: 5, def: 0, unit: '%', modes: ['arcs'], relayout: true, hint: 'Inclinados tan bajos que hay que apartarse hacia el lado alto y bajar hasta apoyar una mano en el suelo (un semipuente lateral): trabajan las piernas, el costado y el brazo de apoyo. Llegan algo más despacio, con un aviso y la huella de la mano en el suelo; el lado, como los inclinados («Inclinados: hacia la derecha»).' },
   { key: 'arcLowH', g: 'arcos', label: 'Altura de la cabeza en el semipuente', short: 'Altura semipuente', type: 'num', min: 40, max: 110, step: 5, def: 75, unit: 'cm', modes: ['arcs'], cond: () => settings.arcLow > 0, hint: 'A qué altura del suelo tienen que quedar tus ojos en el lado alto para pasar por debajo. Menos = más abajo (con la mano bien apoyada).' },
   { key: 'arcTiltW', g: 'arcos', label: 'Separación entre los extremos (inclinados)', short: 'Separación', type: 'num', min: 140, max: 320, step: 10, def: 200, unit: 'cm', modes: ['arcs'], cond: () => settings.arcTilt > 0, hint: 'El ancho del arco inclinado. Más ancho deja ir más lejos hacia el lado alto (sube el desplazamiento lateral posible) y la barra baja más por el otro lado. Necesita sitio libre a los lados.' },
-  { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos la altura del salto (Ajustes → Toques) por encima de tu altura de pie justo cuando pasa la valla.' },
+  { key: 'arcJump', g: 'arcos', label: 'Vallas bajas (saltar)', short: 'Vallas', type: 'num', min: 0, max: 100, step: 5, def: 20, unit: '%', modes: ['arcs'], relayout: true, hint: 'Parte de los obstáculos que llegan a ras de suelo: hay que saltarlos. Cuenta el salto si la cabeza sube deprisa al menos «Altura del salto de las vallas» (en Tu cuerpo) por encima de tu altura de pie justo cuando pasa la valla.' },
   { key: 'arcBeat', g: 'arcos', label: 'Arcos al compás de la música', short: 'Al compás', type: 'toggle', def: 1, modes: ['arcs'], hint: 'Con ritmo (el de cada canción de Spotify o uno marcado en Sonido): cada arco llega a ti justo en un pulso, los huecos entre arcos se cuentan en pulsos y las barras laten al compás. Sin ritmo, como siempre.' },
   { key: 'arcBpmSpeed', g: 'arcos', label: 'Velocidad según la canción', short: 'Velocidad canción', type: 'toggle', def: 1, modes: ['arcs'], cond: () => !!settings.arcBeat, hint: 'Con ritmo, los arcos vienen algo más deprisa con canciones rápidas y algo más despacio con las lentas (del 80 % al 125 % de la velocidad del rango; 120 BPM, igual).' },
   { key: 'arcPhrases', g: 'arcos', label: 'Frases intensas y respiros', short: 'Frases', type: 'toggle', def: 1, modes: ['arcs'], cond: () => !!settings.arcBeat, hint: 'Con ritmo, cada 32 pulsos se alternan una frase intensa (los obstáculos, más seguidos; se anuncia «¡Sube la música!») y otra de respiro.' },
@@ -965,8 +966,10 @@ const SCHEMA = [
   { key: 'arcMaceDrop', g: 'arcos', label: 'Bajada de la maza', short: 'Bajada maza', type: 'num', min: 0, max: 50, step: 5, def: 20, unit: 'cm', modes: ['arcs'], cond: () => settings.arcMace > 0, hint: 'Cuánto por debajo de lo alto de tu cabeza pasa la bola en lo más bajo. Con 20 cm, para pasar por debajo hay que agacharse unos 50 cm (una sentadilla de verdad); si no, apártate a un lado.' },
   { key: 'arcMaceRound', g: 'arcos', label: 'Mazas que giran en círculo', short: 'Mazas en círculo', type: 'num', min: 0, max: 100, step: 10, def: 50, unit: '%', modes: ['arcs'], cond: () => settings.arcMace > 0, hint: 'Las demás se balancean de lado a lado; estas dan vueltas (hacia los lados y hacia ti y hacia atrás) a la misma altura, como un tiovivo: hay que agacharse o colarse cuando la bola está al otro lado.' },
   { key: 'arcPlank', g: 'arcos', label: 'Arcos de plancha (al suelo)', short: 'Plancha', type: 'num', min: 0, max: 100, step: 5, def: 10, unit: '%', modes: ['arcs'], relayout: true, hint: 'Un arco muy bajo, casi a ras de suelo: baja las manos al suelo, echa los pies atrás hasta quedar en plancha mientras pasa y vuelve a ponerte de pie (como un burpee, sin el salto). Llega avisado y con tiempo antes y después.' },
-  { key: 'arcPlankSpeed', g: 'arcos', label: 'Velocidad del arco de plancha', short: 'Vel. plancha', type: 'num', min: 1, max: 15, step: 0.5, def: 3.5, unit: 'km/h', modes: ['arcs'], cond: () => settings.arcPlank > 0, hint: 'Llega más despacio que los demás (da tiempo a bajar al suelo): la de los arcos normales está en «Velocidad de los arcos». Los que vienen detrás esperan a que pase.' },
-  { key: 'arcPlankH', g: 'arcos', label: 'Altura del arco de plancha', short: 'Altura plancha', type: 'num', min: 40, max: 90, step: 5, def: 60, unit: 'cm', modes: ['arcs'], cond: () => settings.arcPlank > 0, hint: 'A qué altura del suelo pasa la barra. Tu cabeza tiene que quedar por debajo (en plancha suele estar a unos 35–45 cm).' },
+  { key: 'arcHurdles', g: 'arcos', label: 'Ráfagas de vallas', short: 'Ráfagas vallas', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], relayout: true, hint: 'Tres o cuatro vallas seguidas (con música, al compás): salto, salto, salto. Cardio puro; con «Altura del salto de las vallas» baja, se encadenan saltitos ágiles.' },
+  { key: 'arcBurpee', g: 'arcos', label: 'Burpees (plancha y valla)', short: 'Burpees', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], relayout: true, hint: 'Un arco de plancha y, justo detrás, una valla: al suelo en plancha, arriba de un salto y a saltar la valla. Un burpee entero.' },
+  { key: 'arcPlankSpeed', g: 'arcos', label: 'Velocidad del arco de plancha', short: 'Vel. plancha', type: 'num', min: 1, max: 15, step: 0.5, def: 3.5, unit: 'km/h', modes: ['arcs'], cond: () => settings.arcPlank > 0 || settings.arcBurpee > 0, hint: 'Llega más despacio que los demás (da tiempo a bajar al suelo): la de los arcos normales está en «Velocidad de los arcos». Los que vienen detrás esperan a que pase.' },
+  { key: 'arcPlankH', g: 'arcos', label: 'Altura del arco de plancha', short: 'Altura plancha', type: 'num', min: 40, max: 90, step: 5, def: 60, unit: 'cm', modes: ['arcs'], cond: () => settings.arcPlank > 0 || settings.arcBurpee > 0, hint: 'A qué altura del suelo pasa la barra. Tu cabeza tiene que quedar por debajo (en plancha suele estar a unos 35–45 cm).' },
   { key: 'arcOrbSwing', g: 'arcos', label: 'Vuelo de los orbes', short: 'Vuelo orbes', type: 'num', min: 0, max: 100, step: 10, def: 60, unit: '%', modes: ['arcs'], cond: () => settings.arcOrbs > 0, hint: 'Cuánto se tuercen al venir: con 0 llegan rectos; cuanto más, más cruzan en diagonal de un lado a otro de la pista (y más cambian de rumbo y de altura), y hay que moverse para cazarlos sin saber del todo por dónde llegarán.' },
   { key: 'arcOrbs', g: 'arcos', label: 'Orbes para recoger', short: 'Orbes', type: 'num', min: 0, max: 100, step: 10, def: 40, unit: '%', modes: ['arcs'], hint: 'Entre arco y arco llegan orbes dorados: recógelos con la cabeza o con las manos (100 puntos; 200 en fiebre). Si se escapan, no pasa nada.' },
   { key: 'arcOrbHigh', g: 'arcos', label: 'Orbes altos', type: 'num', min: 0, max: 60, step: 5, def: 15, unit: '%', modes: ['arcs'], cond: () => settings.arcOrbs > 0, hint: 'Por encima de la cabeza: hay que estirar el brazo o saltar para cogerlos.' },
@@ -1124,7 +1127,7 @@ function setSetting(key, v) {
 }
 // Menú sencillo: solo lo básico de cada grupo (en Ejercicio, todo menos lo de afinar)
 const BASIC = new Set(['rank', 'toFail', 'lives', 'waves', 'repsWave', 'hangTime', 'rest', 'foeKind', 'foesGate', 'foesHatch', 'foesFly', 'aim', 'walkTime', 'flySpeed', 'maxAlive', 'pistol',
-  'tchArrive', 'tchHands', 'jumpHeight', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
+  'tchArrive', 'tchHands', 'jumpHeight', 'arcJumpH', 'arcHurdles', 'arcBurpee', 'comboBase', 'comboStand', 'comboFloor', 'comboAbs', 'arcMin', 'arcMax', 'arcRate', 'arcMaxGap', 'arcSpeed', 'arcJump', 'arcMace', 'arcPlank', 'barTarget', 'barArrive', 'hangPit', 'trekSpeed', 'trekCurves', 'doorH', 'dipH',
   'sword', 'swordKind', 'swordHand', 'padHands', 'menuLevel', 'menuWhere', 'xrHz', 'quality', 'look', 'exSort', 'goalMin', 'weight', 'volume', 'ambient', 'bpm', 'scenery', 'pano', 'motes', 'depth', 'board']);
 const FINE_EX = ['thrUp', 'splDrop', 'supArms', 'perfectTime'];
 // lo que marca la dificultad lo elige el desarrollador (el ojo de su tabla, 67_dev); lo demás, como siempre
@@ -1369,7 +1372,7 @@ function updateSummary() {
   if (isCombat()) speed = [foesHas('robots') ? `Los robots tardan ${settings.walkTime} s en alcanzarte.` : '', foesHas('flyers') ? `Los voladores van a ${fmtNum(settings.flySpeed)} km/h.` : '', autoAim() ? 'Disparo automático.' : 'Apuntas tú.'].filter(Boolean).join(' ');
   else if (settings.mode === 'touch') speed = `Cada objetivo tarda ${fmtNum(settings.tchArrive)} s en llegar y espera ${fmtNum(settings.tchWindow)} s${settings.bpm ? `, al ritmo de ${settings.bpm} BPM` : ''}.`;
   else if (settings.mode === 'bars') speed = hang ? `Si te sueltas, caes al charco.` : `Cada objetivo tarda ${fmtNum(settings.barArrive)} s en llegar a donde subirá tu cabeza.`;
-  else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm${settings.arcJump ? `; el ${settings.arcJump} % son vallas que hay que saltar (${settings.jumpHeight} cm)` : ''}.`;
+  else speed = `${settings.arcRate} arcos por minuto a ${fmtNum(settings.arcSpeed)} km/h, bajando entre ${Math.min(settings.arcMin, settings.arcMax)} y ${Math.max(settings.arcMin, settings.arcMax)} cm${settings.arcJump ? `; el ${settings.arcJump} % son vallas que hay que saltar (${settings.arcJumpH} cm)` : ''}.`;
   $('#estimate').innerHTML = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}: ${nWaves() ? `${nWaves()} oleadas` : `oleadas sin fin${settings.toFail ? ', al fallo' : ''} (cuento las 5 primeras)`} suman <strong>${total}</strong> ${hang ? 'segundos colgado' : settings.mode === 'touch' ? 'objetivos' : 'repeticiones'}${settings.exercise === 'curl' || settings.exercise === 'press' ? ' entre los dos brazos' : ''}, unos <strong>${Math.max(1, mins)} min</strong> con descansos. ${speed}`;
 }
 /* ---------- Progreso: días seguidos, tiempo entrenado y calorías ---------- */
@@ -1767,8 +1770,9 @@ const SND = {
     noise(o, { t: 0.25, type: 'lowpass', f: 400, to: 120, a: 0.2, d: 1.4, gain: 0.35 });
   },
   whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
-  thunder(dist = 1) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
+  thunder(dist = 1, force = false) { if (ambMute() && !force) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla (salvo el que marca algo: force) */
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
+    if (force) noise(o, { type: 'highpass', f: 1600, a: 0.002, d: 0.3, gain: 0.7 }); // (cerca: el chasquido del rayo antes del retumbo)
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
   },
@@ -2519,7 +2523,7 @@ const env = new THREE.Group(); scene.add(env);
 // Tormenta de la fiebre de los Arcos (71_arcs): todos los cielos se enrojecen y oscurecen, con relámpagos rojos. Los
 // valores (cuánta tormenta, el relámpago y el paso de las nubes) se comparten entre los cielos (fortaleza, bosque,
 // naturaleza, isla y cómic); la niebla toma el mismo tono
-const STORM = { k: { value: 0 }, f: { value: 0 }, t: { value: 0 } }, STORM_FOG = new THREE.Color(0x3a0806);
+const STORM = { k: { value: 0 }, f: { value: 0 }, t: { value: 0 } }, STORM_FOG = new THREE.Color(0x5c0a06);
 function stormSky(mat) {
   Object.assign(mat.uniforms, { uStorm: STORM.k, uStormF: STORM.f, uStormT: STORM.t });
   mat.fragmentShader = `uniform float uStorm; uniform float uStormF; uniform float uStormT;
@@ -2530,8 +2534,8 @@ function stormSky(mat) {
         vec3 sd = normalize(vP); float sh = sd.y, stL = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
         vec2 su = sd.xz / (max(sh, 0.0) + 0.25) * 1.6 + vec2(uStormT * 0.06, uStormT * 0.025);
         float cl = smoothstep(0.35, 0.8, stN(su) * 0.6 + stN(su * 2.3 + 3.1) * 0.4) * smoothstep(-0.05, 0.2, sh);
-        vec3 stC = mix(vec3(0.2, 0.016, 0.008), vec3(0.035, 0.005, 0.005), cl) + vec3(0.45, 0.05, 0.02) * smoothstep(0.3, -0.05, sh) + vec3(0.25, 0.03, 0.015) * stL;
-        stC += uStormF * vec3(1.0, 0.35, 0.22) * (0.2 + (1.0 - cl) * 0.6) * smoothstep(-0.1, 0.3, sh);
+        vec3 stC = mix(vec3(0.34, 0.025, 0.01), vec3(0.06, 0.006, 0.005), cl) + vec3(0.75, 0.07, 0.02) * smoothstep(0.35, -0.05, sh) + vec3(0.3, 0.03, 0.015) * stL;
+        stC += uStormF * vec3(1.0, 0.3, 0.2) * (0.25 + (1.0 - cl) * 0.7) * smoothstep(-0.1, 0.3, sh);
         gl_FragColor.rgb = mix(gl_FragColor.rgb, stC, uStorm);
       }
     }`);
@@ -7175,7 +7179,7 @@ function drawBoard() {
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
   // Travesía: los metros recorridos, la velocidad de ahora y el paisaje
-  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
+  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }
@@ -10669,6 +10673,8 @@ function handPrintTex(side) {
   x.save(); x.translate(-17, 16); x.rotate(-0.95); x.beginPath(); rp(-4.8, -26, 9.6, 28, 4.8); x.fill(); x.restore(); x.restore(); // el pulgar, hacia dentro
   return (HPRINT[side] = texFrom(c));
 }
+// lo que tiene que subir la cabeza al pasar una valla (su ajuste propio, aparte del salto de Toques)
+const arcJumpNeed = () => (settings.arcJumpH || 6) / 100;
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
   // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
@@ -10688,7 +10694,7 @@ class Arc {
     else if (tl) tilt = Math.sign(tilt) * Math.min(Math.abs(tilt), Math.atan(Math.max(0.05, top - drop - 0.15) / (shift + hw)));
     this.hw = hw; if (tl) this.leanX = Math.sign(tilt) * shift;
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.low = low; this.maxUp = -1; this.fast = false;
-    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(arcJumpNeed() + 0.08, 0.1, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump, hw); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     // inclinados: por el lado bajo, del suelo a la barra, una pared de energía que pasa un poco del centro. Agacharse en el
     // centro no vale: hay que apartarse al menos «Apartarse en los inclinados» hacia el lado alto (y bajar sobre esa pierna)
@@ -10720,7 +10726,7 @@ class Arc {
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
     // de semipuente: la huella de la mano en el suelo, en el lado alto, más allá de donde va la cabeza (late mientras llega)
     if (this.print) { const d = HL.z - this.z, a = this.judged ? Math.max(0, this.print.material.opacity - dt * 2) : d < 9 ? Math.min(1, (9 - d) / 2) * (0.65 + 0.35 * Math.sin(t * 9)) : 0; this.print.material.opacity = a; this.print.visible = a > 0.01; this.print.position.set(this.leanX + Math.sign(this.leanX) * 0.3, 0.008, HL.z - 0.1); }
-    const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
+    const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = arcJumpNeed();
     const sideBad = this.sideMin && Math.sign(this.tilt) * HL.x < this.sideMin; // (en la pared del lado bajo)
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : sideBad || HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
     if (this.sideMat) this.sideMat.opacity = danger && sideBad ? 0.8 + 0.2 * Math.sin(t * 30) : 0.9;
@@ -10740,7 +10746,7 @@ class Arc {
     const hp = arena.localToWorld(tmpA.set(HL.x, this.barAt(HL.x), HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.jump) {
-      const need = settings.jumpHeight / 100;
+      const need = arcJumpNeed();
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
       const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
@@ -10838,7 +10844,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever || settings.mode === 'trek' && TREK.turbo ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre o en el turbo de la Travesía, el doble; y las mejoras y el relámpago, 79_perks)
   if (combo > 0 && combo % 10 === 0) { cheer(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -11748,6 +11754,8 @@ function buildWave(i) {
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
       if (Math.random() * 100 < settings.arcPlank) { list.push({ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }); continue; } // al suelo, en plancha
+      if (Math.random() * 100 < (settings.arcBurpee || 0) / 3) { list.push(...arxBurpee()); n++; continue; } // burpee: plancha y valla (cuentan dos)
+      if (Math.random() * 100 < (settings.arcHurdles || 0) / 3) { const h = arxHurdles(); list.push(...h); n += h.length - 1; continue; } // ráfaga de vallas
       if (Math.random() * 100 < settings.arcLow) { list.push({ kind: 'single', drop: 0, tilt: 1, hp: 1, low: true }); continue; } // de semipuente: el lado lo reparte arcRight, como en los inclinados
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
@@ -11809,15 +11817,15 @@ function spawnFromQueue() {
     if (spec.kind === 'combo') { arcs.push(new ArcObs(spec.with)); arcs.push(new Arc(spec.drop, 0, true, 0)); } // a la vez: apártate (o métete en el hueco) y agáchate
     else if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
     else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
-      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 2.5;
-      bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
+      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + (spec.burpee ? 1.6 : 2.5); // (en el burpee, la valla llega enseguida: arriba de un salto)
+      if (spec.burpee) bigNotice('¡BURPEE!', 'Al suelo en plancha… ¡y arriba a saltar la valla!', '#ffd166'); else bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
     else if (spec.low) { // de semipuente: más despacio y con su aviso; los de detrás esperan a que pase (y 1,5 s para levantarte)
       const a = new Arc(spec.drop, 0, false, spec.tilt || 1, false, 0, false, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 1.5;
       bigNotice('¡MANO AL SUELO!', `Apártate a la ${a.tilt > 0 ? 'derecha' : 'izquierda'} y apóyate en una mano`, '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
-    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
+    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); if (spec.note) { bigNotice(spec.note[0], spec.note[1], '#3cf0c6'); SND.horn(); } }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
     if (Math.random() * 100 < settings.arcOrbs) ARX.orbT = spawnInterval * (spec.gap || 1) * 0.5; // un orbe a medio camino
     return;
@@ -12591,7 +12599,7 @@ function arxReset() {
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); arxFeverStart(); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
 function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
@@ -12638,6 +12646,8 @@ function arxPatterns(total) {
     [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
     [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
     [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]], // al suelo, en plancha (y tiempo para levantarte)
+    [(settings.arcHurdles || 0) / 20, () => arxHurdles()], // ráfaga de vallas: tres o cuatro saltos seguidos
+    [(settings.arcBurpee || 0) / 20, () => arxBurpee()], // burpee: al suelo en plancha y, enseguida, a saltar la valla
     [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]], // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
     // combinaciones: dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez,
     // agáchate) o tres muy seguidos (con ritmo, a un pulso uno de otro)
@@ -12655,6 +12665,10 @@ function arxPatterns(total) {
   return out;
 }
 
+// Ráfaga de vallas: 3 o 4 seguidas (con ritmo, a uno o dos pulsos una de otra), con su aviso
+function arxHurdles() { const n = Math.random() < 0.5 ? 3 : 4, l = []; for (let k = 0; k < n; k++) l.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: k < n - 1 ? 0.4 : 1.4 }); l[0].note = ['¡RÁFAGA DE VALLAS!', `${n} saltos seguidos`]; return l; }
+// Burpee: el arco de plancha y, en cuanto pasa, una valla (sale con poco tiempo para levantarte: arriba de un salto)
+const arxBurpee = () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 0.1, burpee: true }, { kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 1.6 }];
 // Antes de un arco de plancha o de semipuente, tiempo para bajar al suelo (el anterior deja un hueco largo)
 function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' || o.low) && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, o.low ? 1.5 : 1.8); }); return list; }
 
@@ -12853,21 +12867,33 @@ const ARX_TINT = new THREE.HemisphereLight(0x3cf0c6, 0x000000, 0); scene.add(ARX
 const _tintC = new THREE.Color(0x3cf0c6), _tintT = new THREE.Color();
 let arxScroll = 0;
 function arxFeverLook(on) { orbFeverLook(on); }
-// En la fiebre, tormenta: el cielo se pone rojo y oscuro (en todos los entornos), la niebla también, y caen relámpagos rojos
-// cada pocos segundos (el trueno, uno de cada dos, para no tapar la música)
+// En la fiebre, tormenta: el cielo se pone rojo y oscuro (en todos los entornos), la niebla, roja y más cerrada, y caen
+// relámpagos rojos cada pocos segundos (el trueno, uno de cada dos, para no tapar la música)
 let stormT = 0, stormN = 0;
+// y todo lo que ves, teñido de rojo: un velo alrededor de la cabeza, por debajo de los paneles y los avisos (no los tapa),
+// que se enciende más con cada relámpago (en realidad mixta, poco: es tu habitación)
+const ARX_VEIL = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 10), new THREE.MeshBasicMaterial({ color: 0xff1a08, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false, toneMapped: false }));
+ARX_VEIL.renderOrder = RO.menu - 3; ARX_VEIL.visible = false; ARX_VEIL.userData.noInk = true; scene.add(ARX_VEIL);
+// Al empezar la fiebre: un relámpago enorme y un trueno cercano, también con música (es un aviso, no ambiente), y el
+// rojo de golpe, sin esperar a que entre poco a poco
+function arxFeverStart() {
+  STORM.f.value = 1.8; STORM.k.value = Math.max(STORM.k.value, 0.75); stormT = rand(1.6, 2.4); stormN = 1;
+  SND.thunder(0.2, true); hapticBoth(0.7, 260);
+}
 function arxStorm(dt, on) {
   STORM.k.value += ((on ? 1 : 0) - STORM.k.value) * Math.min(1, dt * (on ? 1.6 : 0.8)); STORM.t.value += dt * (1 + STORM.k.value * 2);
-  if (on) { stormT -= dt; if (stormT <= 0) { stormT = rand(2.2, 4.5); STORM.f.value = 1; if (stormN++ % 2 === 0 && !arMode) setTimeout(() => SND.thunder(rand(0.4, 1.2)), 250); } }
+  if (on) { stormT -= dt; if (stormT <= 0) { stormT = rand(1.6, 3.4); STORM.f.value = 1.2; if (stormN++ % 2 === 0 && !arMode) setTimeout(() => SND.thunder(rand(0.4, 1.2)), 250); } }
   STORM.f.value = Math.max(0, STORM.f.value - dt * 3) * (STORM.f.value > 0.5 && Math.random() < 0.2 ? 0.4 : 1); // (con parpadeo)
-  const f = scene.fog; if (f) { if (!f.base) f.base = f.color.clone(); f.color.copy(f.base).lerp(STORM_FOG, STORM.k.value * 0.85); }
+  const va = STORM.k.value * ((arMode ? 0.07 : 0.17) + Math.min(1, STORM.f.value) * 0.2); ARX_VEIL.material.opacity = va; ARX_VEIL.visible = va > 0.004; if (ARX_VEIL.visible) ARX_VEIL.position.copy(head.p);
+  const f = scene.fog; if (f) { if (!f.base) f.base = f.color.clone(); f.color.copy(f.base).lerp(STORM_FOG, STORM.k.value);
+    if (f.density !== undefined) { if (STORM.k.value > 0.001) { if (f.d0 === undefined) f.d0 = f.density; f.density = f.d0 * (1 + 1.2 * STORM.k.value); } else if (f.d0 !== undefined) { f.density = f.d0; f.d0 = undefined; } } } // (más cerrada: el mundo, rojo)
 }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
   // el color de la racha, con suavidad
   _tintT.setHex(ARX.fever ? 0xff2414 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
   const bp = arxBeatP() ? (arxBeatGlow() - 0.7) * (arxPhrase() === 'hot' ? 1.6 : 1) : 0; // (0 a 0,6, en cada pulso; en la frase intensa, más)
-  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 2.2 : 1) * (1 + bp * 0.5) + STORM.f.value * 0.9 : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp || STORM.f.value > 0.3 ? 12 : 3));
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 3.4 : 1) * (1 + bp * 0.5) + STORM.f.value * 0.9 : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp || STORM.f.value > 0.3 ? 12 : 3));
   arxStorm(dt, on && ARX.fever);
   if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;
@@ -14589,11 +14615,39 @@ function trekRep(opts) {
   const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
   const ki = trekLegs() || settings.exercise === 'jsquat' ? clamp(depth / Math.max(0.05, req), 0.6, 1.6) : 1;
   TREK.minY = 9; TREK.kc = kc; TREK.ki = ki;
-  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
+  // el turbo: TREK_TURBO_N seguidas a buen ritmo (y bien hondas) lo encienden; una floja lo apaga
+  if (kc * ki >= 1.05) { TREK.tg = (TREK.tg || 0) + 1; if (!TREK.turbo && TREK.tg >= TREK_TURBO_N) trekTurbo(true); else if (!TREK.turbo && TREK.tg >= 2) hapticBoth(0.15 + 0.08 * TREK.tg, 40); }
+  else { TREK.tg = 0; if (TREK.turbo) trekTurbo(false, 'Fin del turbo: más ritmo'); }
+  TREK.idle = 0;
+  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K * (TREK.turbo ? TREK_TURBO_V : 1); TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
   if (kc * ki > 1.45) cheer('¡A TOPE!', '#8fdc5a', 0.9); else if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (ki < 0.75) say('Baja más: irás más deprisa', '#ffd166', 1.0); else say('¡Bien!', '#ffffff', 0.7, false);
   if (opts.perfect) SND.perfect();
 }
 const _tkh = new V3();
+
+/* ---------- Turbo por racha ---------- */
+// Seis repeticiones seguidas a buen ritmo (cada una en menos de unos 2,3 s y, con las piernas, tan honda como pide el
+// ejercicio) encienden el turbo: un 20 % más deprisa, los puntos de cada repetición al doble y estelas de viento que pasan
+// a tu lado. Lo apagan una repetición floja, 3 s sin ninguna o chocar con un tronco o una rama; en las paradas espera
+const TREK_TURBO_N = 6, TREK_TURBO_V = 1.2;
+function trekTurbo(on, why) {
+  if (!!TREK.turbo === on) return; TREK.turbo = on; boardDirty = true;
+  if (on) { cheer('¡TURBO! Puntos ×2', '#c8ff3a', 1.8); SND.combo(); hapticBoth(0.8, 200); }
+  else { TREK.tg = 0; if (why && state === 'play') cheer(why, '#a49fc8', 1.2); }
+}
+// las estelas: varillas finas de luz que corren hacia atrás a tu alrededor (líneas no: en las gafas, de un píxel, ni se veían)
+const TREK_WIND = (() => {
+  const N = 44, m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.018, 0.018, 1), new THREE.MeshBasicMaterial({ color: 0xe4ffa8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }), N), seed = [];
+  for (let i = 0; i < N; i++) seed.push({ x: (Math.random() < 0.5 ? 1 : -1) * rand(0.7, 3.2), y: rand(0.15, 2.6), z: rand(-14, 4), l: rand(0.8, 2.2), k: rand(0.7, 1.3) });
+  m.frustumCulled = false; m.visible = false; m.userData.noInk = true; m.userData.seed = seed; arena.add(m); return m;
+})();
+const _twm = new THREE.Matrix4();
+function trekWindStep(dt) {
+  const M = TREK_WIND.material, want = trekOn() && TREK.turbo && state === 'play' ? 0.7 : 0; M.opacity += (want - M.opacity) * Math.min(1, dt * 3); TREK_WIND.visible = M.opacity > 0.01; if (!TREK_WIND.visible) return;
+  const S = TREK_WIND.userData.seed, v = Math.max(1, TREK.v) * 3.2;
+  S.forEach((s, i) => { s.z += v * s.k * dt; if (s.z > 4) { s.z = rand(-16, -10); s.y = rand(0.15, 2.6); } _twm.makeScale(1, 1, s.l).setPosition(HL.x + s.x, s.y, HL.z + s.z - s.l / 2); TREK_WIND.setMatrixAt(i, _twm); });
+  TREK_WIND.instanceMatrix.needsUpdate = true;
+}
 
 /* ---------- Paradas: el cofre con cadenas y la roca del derrumbe ---------- */
 // Ante el cofre o la roca te paras; lo que te mueve ahora es otro movimiento, contado por la cabeza:
@@ -14834,6 +14888,8 @@ function trekStep(dt, t) {
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
   if (TREK.halt) { TREK.v = 0; TREK.push = 0; } // (parado ante el cofre o la roca)
+  if (state === 'play' && !TREK.halt && (TREK.idle = (TREK.idle || 0) + dt) > 3) trekTurbo(false, 'Fin del turbo: no pares'); // (3 s sin repeticiones)
+  if (state !== 'play' && state !== 'paused') trekTurbo(false); trekWindStep(dt);
   let step = state === 'paused' ? 0 : TREK.v * dt;
   if (TREK.glide > 0 && state !== 'paused') { const g = Math.min(TREK.glide, dt * 1.8); TREK.glide -= g; step += g; } // (el paso a la piedra o el pilar siguiente)
   TREK.dist += step;
@@ -14853,10 +14909,10 @@ function trekStep(dt, t) {
     if (o.kind === 'log') { // saltarlo: mientras pasa bajo ti cuenta lo más alto que llegaste
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Salta!', '#ffd166', 1.2);
       if (Math.abs(z - HL.z) < 0.45) o.maxUp = Math.max(o.maxUp, head.p.y - calibRef);
-      if (z >= HL.z + 0.45) { o.judged = true; if (o.maxUp < settings.jumpHeight / 100) { TREK.v *= 0.2; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, 0.2, z)), false); hapticBoth(0.8, 120); say('¡Salta el tronco!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 150; SND.whoosh(arena.localToWorld(_tkh.set(0, 0.2, z)), 'arc'); cheer('¡Saltado!', '#3cf0c6', 0.9); } boardDirty = true; }
+      if (z >= HL.z + 0.45) { o.judged = true; if (o.maxUp < settings.jumpHeight / 100) { TREK.v *= 0.2; combo = 0; TREK.hits++; trekTurbo(false); SND.metalHit(arena.localToWorld(_tkh.set(0, 0.2, z)), false); hapticBoth(0.8, 120); say('¡Salta el tronco!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 150; SND.whoosh(arena.localToWorld(_tkh.set(0, 0.2, z)), 'arc'); cheer('¡Saltado!', '#3cf0c6', 0.9); } boardDirty = true; }
     } else if (o.kind === 'branch') {
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
-      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
+      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; trekTurbo(false); SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
     } else if (!o.done && o.at - TREK.dist <= (o.stop || 1.7) && TREK.halt !== o) { // (el cofre, la roca, el arroyo o el desfiladero, delante: te paras)
       TREK.halt = o; o.got = 0; o.haltT = 0; TREK.v = 0; TREK.glide = 0; TREK.dist = o.at - (o.stop || 1.7); TMV.st = 'up'; TMV.x0 = HL.x; TMV.z0 = HL.z; trekHaltSay(o, true);
       if (o.len && TREK.chase) trekChaseEnd(o.kind === 'stream' ? 'Los lobos no cruzan el agua' : 'Los lobos se quedan al borde', '#3cf0c6'); // (no te siguen)
@@ -14958,7 +15014,7 @@ function trekLight(dt) {
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
   trekWolfLoad(); trekBandLoad(); aldLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
-  TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, turbo: false, tg: 0, idle: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0; TREK.hop = null; NAT.group.position.y = 0; TREK.group.position.y = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }
@@ -16001,7 +16057,7 @@ function previewInput(dt) {
     const lx = PV.crouch && !PV.noLean && nx && (nx.leanX !== undefined || nx.tilt) ? (nx.leanX !== undefined ? nx.leanX : Math.sign(nx.tilt) * settings.arcShift / 100) : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
-    if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
+    if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + arcJumpNeed() + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
     else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
     else if (nx && nx.low) { target = PV.crouch && !PV.noLow ? settings.arcLowH / 100 - 0.06 : PV.baseY; PV.jumping = false; } // de semipuente: Espacio te baja hasta la mano en el suelo (PV.noLow: solo como un inclinado normal)
     else if (nx && nx.kind === 'mace') { target = PV.crouch ? PV.baseY - (settings.arcMaceDrop / 100 + 0.38) : PV.baseY; PV.jumping = false; } // la maza: Espacio, por debajo de la bola

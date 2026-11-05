@@ -1084,6 +1084,8 @@ function handPrintTex(side) {
   x.save(); x.translate(-17, 16); x.rotate(-0.95); x.beginPath(); rp(-4.8, -26, 9.6, 28, 4.8); x.fill(); x.restore(); x.restore(); // el pulgar, hacia dentro
   return (HPRINT[side] = texFrom(c));
 }
+// lo que tiene que subir la cabeza al pasar una valla (su ajuste propio, aparte del salto de Toques)
+const arcJumpNeed = () => (settings.arcJumpH || 6) / 100;
 class Arc {
   // jump: valla baja que llega a ras de suelo y hay que saltar
   // plank: arco casi a ras de suelo, para pasarlo en plancha (como un burpee sin el salto)
@@ -1103,7 +1105,7 @@ class Arc {
     else if (tl) tilt = Math.sign(tilt) * Math.min(Math.abs(tilt), Math.atan(Math.max(0.05, top - drop - 0.15) / (shift + hw)));
     this.hw = hw; if (tl) this.leanX = Math.sign(tilt) * shift;
     this.drop = drop; this.tilt = tilt; this.jump = jump; this.plank = plank; this.low = low; this.maxUp = -1; this.fast = false;
-    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(settings.jumpHeight / 100 + 0.08, 0.12, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
+    this.barY = plank ? clamp(settings.arcPlankH / 100, 0.4, 0.9) : jump ? clamp(arcJumpNeed() + 0.08, 0.1, 0.45) : low ? need - Math.tan(Math.abs(tilt)) * shift : Math.max(0.4, top - drop - Math.tan(Math.abs(tilt)) * shift);
     this.o = makeArcObj(this.barY, H, spin ? 0 : tilt, jump, hw); this.z = -arenaDepth() + 0.9 - offset; this.o.grp.position.set(0, 0, this.z); arena.add(this.o.grp);
     // inclinados: por el lado bajo, del suelo a la barra, una pared de energía que pasa un poco del centro. Agacharse en el
     // centro no vale: hay que apartarse al menos «Apartarse en los inclinados» hacia el lado alto (y bajar sobre esa pierna)
@@ -1135,7 +1137,7 @@ class Arc {
     if (this.o.saws) for (const sw of this.o.saws) sw.rotation.z -= dt * 22; // las sierras giran
     // de semipuente: la huella de la mano en el suelo, en el lado alto, más allá de donde va la cabeza (late mientras llega)
     if (this.print) { const d = HL.z - this.z, a = this.judged ? Math.max(0, this.print.material.opacity - dt * 2) : d < 9 ? Math.min(1, (9 - d) / 2) * (0.65 + 0.35 * Math.sin(t * 9)) : 0; this.print.material.opacity = a; this.print.visible = a > 0.01; this.print.position.set(this.leanX + Math.sign(this.leanX) * 0.3, 0.008, HL.z - 0.1); }
-    const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = settings.jumpHeight / 100;
+    const hz = HL.z, inLane = Math.abs(HL.x) < this.hw, up = head.p.y - calibRef, need = arcJumpNeed();
     const sideBad = this.sideMin && Math.sign(this.tilt) * HL.x < this.sideMin; // (en la pared del lado bajo)
     const danger = !this.judged && this.z < hz && this.z > hz - 2.4 && (this.jump ? up < need : sideBad || HL.y + HEAD_TOP > this.barAt(HL.x) - 0.02);
     if (this.sideMat) this.sideMat.opacity = danger && sideBad ? 0.8 + 0.2 * Math.sin(t * 30) : 0.9;
@@ -1155,7 +1157,7 @@ class Arc {
     const hp = arena.localToWorld(tmpA.set(HL.x, this.barAt(HL.x), HL.z - 0.1));
     if (!this.checked) { say('Quédate en el carril', '#ff8a3d', 1.2); return; }
     if (this.jump) {
-      const need = settings.jumpHeight / 100;
+      const need = arcJumpNeed();
       if (this.maxUp < need || !this.fast) { fx.electric(hp, 24); SND.zap(hp); hurtPlayer(this); arxHit(); say(this.maxUp >= need ? '¡Salta, no te estires!' : '¡Salta!', '#ff3b5c', 1.3); return; }
       const perfect = this.maxUp >= need + 0.06; SND.whoosh(hp, 'arc'); registerRep(perfect, false); arxClean();
       say(perfect ? '¡PERFECTA!' : '¡Saltado!', perfect ? '#3cf0c6' : '#ffffff', 0.9, false); if (perfect) SND.perfect();
@@ -1253,7 +1255,7 @@ function onKilled(e) {
 function registerRep(perfect, fire = true, side) {
   stats.reps++; waveDone++; if (perfect) stats.perfect++;
   combo++; stats.bestCombo = Math.max(stats.bestCombo, combo);
-  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre, el doble; y las mejoras y el relámpago, 79_perks)
+  score += Math.round(50 * (perfect ? 2 : 1) * (1 + combo * 0.1) * (settings.mode === 'arcs' && ARX.fever || settings.mode === 'trek' && TREK.turbo ? 2 : 1) * perkPtsK(perfect)); perkOnRep(perfect); // (en fiebre o en el turbo de la Travesía, el doble; y las mejoras y el relámpago, 79_perks)
   if (combo > 0 && combo % 10 === 0) { cheer(`COMBO ×${combo}`, '#ffd166', 1.5); SND.combo(); }
   boardDirty = true;
 }
@@ -2163,6 +2165,8 @@ function buildWave(i) {
       if (Math.random() * 100 < settings.arcJump) { list.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1 }); continue; } // valla baja
       if (Math.random() * 100 < settings.arcMace) { list.push({ kind: 'mace', drop: 0, tilt: 0, hp: 1 }); continue; } // la maza
       if (Math.random() * 100 < settings.arcPlank) { list.push({ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }); continue; } // al suelo, en plancha
+      if (Math.random() * 100 < (settings.arcBurpee || 0) / 3) { list.push(...arxBurpee()); n++; continue; } // burpee: plancha y valla (cuentan dos)
+      if (Math.random() * 100 < (settings.arcHurdles || 0) / 3) { const h = arxHurdles(); list.push(...h); n += h.length - 1; continue; } // ráfaga de vallas
       if (Math.random() * 100 < settings.arcLow) { list.push({ kind: 'single', drop: 0, tilt: 1, hp: 1, low: true }); continue; } // de semipuente: el lado lo reparte arcRight, como en los inclinados
       const tilt = Math.random() * 100 < settings.arcTilt ? 1 : 0;
       list.push({ kind: Math.random() * 100 < settings.arcDouble ? 'double' : 'single', drop: rand(lo, hi), tilt, hp: 1 });
@@ -2224,15 +2228,15 @@ function spawnFromQueue() {
     if (spec.kind === 'combo') { arcs.push(new ArcObs(spec.with)); arcs.push(new Arc(spec.drop, 0, true, 0)); } // a la vez: apártate (o métete en el hueco) y agáchate
     else if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
     else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
-      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 2.5;
-      bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
+      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + (spec.burpee ? 1.6 : 2.5); // (en el burpee, la valla llega enseguida: arriba de un salto)
+      if (spec.burpee) bigNotice('¡BURPEE!', 'Al suelo en plancha… ¡y arriba a saltar la valla!', '#ffd166'); else bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));
     else if (spec.low) { // de semipuente: más despacio y con su aviso; los de detrás esperan a que pase (y 1,5 s para levantarte)
       const a = new Arc(spec.drop, 0, false, spec.tilt || 1, false, 0, false, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + 1.5;
       bigNotice('¡MANO AL SUELO!', `Apártate a la ${a.tilt > 0 ? 'derecha' : 'izquierda'} y apóyate en una mano`, '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
-    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); }
+    else { arcs.push(new Arc(spec.drop, 0, false, spec.tilt || 0, spec.kind === 'jump')); if (spec.kind === 'double') arcs.push(new Arc(spec.drop, 1.0, true, spec.tilt || 0)); if (spec.note) { bigNotice(spec.note[0], spec.note[1], '#3cf0c6'); SND.horn(); } }
     ARX.nextGap = spec.gap || 0; // la coreografía marca el hueco hasta el siguiente
     if (Math.random() * 100 < settings.arcOrbs) ARX.orbT = spawnInterval * (spec.gap || 1) * 0.5; // un orbe a medio camino
     return;

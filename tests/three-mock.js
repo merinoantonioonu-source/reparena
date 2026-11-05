@@ -91,6 +91,7 @@ class Matrix4 {
   clone() { return new Matrix4().copy(this); }
   fromArray(a, o = 0) { for (let i = 0; i < 16; i++) this.elements[i] = a[i + o]; return this; }
   makeScale(x, y, z) { this.identity(); this.elements[0] = x; this.elements[5] = y; this.elements[10] = z; return this; }
+  setPosition(x, y, z) { if (x && x.isVector3) { z = x.z; y = x.y; x = x.x; } this.elements[12] = x; this.elements[13] = y; this.elements[14] = z; return this; }
   makeRotationFromQuaternion(q) { return this.compose(new Vector3(), q, new Vector3(1, 1, 1)); }
   makeBasis(x, y, z) { this.identity(); const te = this.elements; te[0] = x.x; te[1] = x.y; te[2] = x.z; te[4] = y.x; te[5] = y.y; te[6] = y.z; te[8] = z.x; te[9] = z.y; te[10] = z.z; return this; }
   compose(p, q, s) {

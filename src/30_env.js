@@ -34,7 +34,7 @@ const env = new THREE.Group(); scene.add(env);
 // Tormenta de la fiebre de los Arcos (71_arcs): todos los cielos se enrojecen y oscurecen, con relámpagos rojos. Los
 // valores (cuánta tormenta, el relámpago y el paso de las nubes) se comparten entre los cielos (fortaleza, bosque,
 // naturaleza, isla y cómic); la niebla toma el mismo tono
-const STORM = { k: { value: 0 }, f: { value: 0 }, t: { value: 0 } }, STORM_FOG = new THREE.Color(0x3a0806);
+const STORM = { k: { value: 0 }, f: { value: 0 }, t: { value: 0 } }, STORM_FOG = new THREE.Color(0x5c0a06);
 function stormSky(mat) {
   Object.assign(mat.uniforms, { uStorm: STORM.k, uStormF: STORM.f, uStormT: STORM.t });
   mat.fragmentShader = `uniform float uStorm; uniform float uStormF; uniform float uStormT;
@@ -45,8 +45,8 @@ function stormSky(mat) {
         vec3 sd = normalize(vP); float sh = sd.y, stL = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
         vec2 su = sd.xz / (max(sh, 0.0) + 0.25) * 1.6 + vec2(uStormT * 0.06, uStormT * 0.025);
         float cl = smoothstep(0.35, 0.8, stN(su) * 0.6 + stN(su * 2.3 + 3.1) * 0.4) * smoothstep(-0.05, 0.2, sh);
-        vec3 stC = mix(vec3(0.2, 0.016, 0.008), vec3(0.035, 0.005, 0.005), cl) + vec3(0.45, 0.05, 0.02) * smoothstep(0.3, -0.05, sh) + vec3(0.25, 0.03, 0.015) * stL;
-        stC += uStormF * vec3(1.0, 0.35, 0.22) * (0.2 + (1.0 - cl) * 0.6) * smoothstep(-0.1, 0.3, sh);
+        vec3 stC = mix(vec3(0.34, 0.025, 0.01), vec3(0.06, 0.006, 0.005), cl) + vec3(0.75, 0.07, 0.02) * smoothstep(0.35, -0.05, sh) + vec3(0.3, 0.03, 0.015) * stL;
+        stC += uStormF * vec3(1.0, 0.3, 0.2) * (0.25 + (1.0 - cl) * 0.7) * smoothstep(-0.1, 0.3, sh);
         gl_FragColor.rgb = mix(gl_FragColor.rgb, stC, uStorm);
       }
     }`);

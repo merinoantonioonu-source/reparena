@@ -291,8 +291,9 @@ const SND = {
     noise(o, { t: 0.25, type: 'lowpass', f: 400, to: 120, a: 0.2, d: 1.4, gain: 0.35 });
   },
   whoosh(pos, who) { if (!sndOK()) return; const o = sout(pos, { rev: 0.2, gain: 0.8, ref: 0.8 }); noise(o, { type: 'bandpass', f: 500, to: 2500, q: 1.2, a: 0.12, d: 0.35, gain: 0.4 }); },
-  thunder(dist = 1) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
+  thunder(dist = 1, force = false) { if (ambMute() && !force) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla (salvo el que marca algo: force) */
     if (!sndOK()) return; const o = sout(null, { rev: 0.9, gain: 0.9 });
+    if (force) noise(o, { type: 'highpass', f: 1600, a: 0.002, d: 0.3, gain: 0.7 }); // (cerca: el chasquido del rayo antes del retumbo)
     noise(o, { brown: true, t: 0.3 * dist, f: 500, to: 50, a: 0.05, d: 3.8, gain: 0.9 });
     for (let i = 0; i < 10; i++) noise(o, { t: 0.3 * dist + Math.random() * 0.5, type: 'bandpass', f: 600, q: 0.7, d: 0.15, gain: 0.25 });
   },
