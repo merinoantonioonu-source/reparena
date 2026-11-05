@@ -73,7 +73,9 @@ No las cambies sin preguntarle.
 **Travesía** (`src/75_trek.js`)
 - Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. La velocidad sale del
   ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Más deprisa que al
-  principio (es una prueba física: hasta 2 m/s por la «Velocidad de avance», de 60 a 200 %, 130 % de serie), sobre una plataforma quieta bajo los pies. El
+  principio (es una prueba física: hasta 2 m/s por la «Velocidad de avance», de 60 a 200 %, 130 % de serie; con el turbo, un 20 % más), sobre una plataforma quieta bajo los pies.
+  Turbo por racha: seis repeticiones seguidas a buen ritmo lo encienden (más deprisa, puntos ×2, estelas de viento); una floja,
+  3 s sin ninguna o chocar lo apagan. El
   sendero serpentea (el mundo gira despacio a tu alrededor; «Sendero con curvas» lo quita si marea). Detrás, siempre paisaje.
 - Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
@@ -144,9 +146,12 @@ No las cambies sin preguntarle.
 - Entre oleadas: fundido leve (sin que desaparezca la escena) y panel grande con la oleada que empieza y los puntos;
   mientras se ve, no sale nada (ni enemigos ni orbes).
 - Arcos: el arco de plancha llega más despacio (velocidad propia), con un aviso grande delante y sin que lo adelante nada.
-- Arcos: la fiebre se ve en rojo (columnas de luz, pista y arena) y con tormenta roja en el cielo de todos los entornos
-  (nubarrones, niebla roja y relámpagos); con música, el compás se ve (♪ y destellos en cada pulso).
+- Arcos: la fiebre se ve muy roja (columnas de luz, pista y arena) y con tormenta roja en el cielo de todos los entornos
+  (nubarrones, niebla roja y cerrada, relámpagos); empieza de golpe con un relámpago enorme y un trueno, también con música,
+  y un velo rojo tiñe toda la vista (por debajo de los paneles). Con música, el compás se ve (♪ y destellos en cada pulso).
 - Arcos va **«Al fallo» de serie** (reto de aguante).
+- Arcos: las vallas tienen su propia altura del salto (6 cm de serie, en «Tu cuerpo (recorridos)», a la vista del jugador),
+  aparte de la de Toques. Hay ráfagas de vallas (3 o 4 seguidas) y burpees (arco de plancha y, enseguida, una valla).
 - Arcos inclinados: agacharse en el centro no vale; hay que apartarse hacia el lado alto (pared de energía bajo el lado
   bajo hasta pasado el centro) y bajar sobre esa pierna.
 - Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos).

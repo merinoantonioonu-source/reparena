@@ -1176,7 +1176,7 @@ function drawBoard() {
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
   // Travesía: los metros recorridos, la velocidad de ahora y el paisaje
-  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
+  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }

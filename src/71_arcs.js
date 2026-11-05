@@ -22,7 +22,7 @@ function arxReset() {
 // Bien pasado (sin que te dé): suma a la racha; con 10 seguidos, fiebre
 function arxClean() {
   ARX.streak++;
-  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
+  if (settings.arcFever && !ARX.fever && ARX.streak >= 10) { ARX.fever = true; ARX.feverN++; arxFeverLook(true); arxFeverStart(); cheer(ARX.feverN > 1 ? `¡FIEBRE ${ARX.feverN}! Más deprisa · ×2` : '¡MODO FIEBRE! Puntos ×2', '#ff4fa3', 1.8); SND.combo(); }
 }
 function arxHit() { if (ARX.fever) cheer('Fin de la fiebre', '#a49fc8', 1.2); ARX.streak = 0; ARX.fever = false; arxFeverLook(false); }
 
@@ -69,6 +69,8 @@ function arxPatterns(total) {
     [settings.arcNew / 20, () => [{ kind: arxNewKind(), drop: rand(lo, hi), tilt: 0, hp: 1, gap: 1.3 }]],
     [settings.arcMace / 25, () => [{ kind: 'mace', drop: 0, tilt: 0, hp: 1, gap: 1.4 }]], // la maza
     [settings.arcPlank / 25, () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 2.4 }]], // al suelo, en plancha (y tiempo para levantarte)
+    [(settings.arcHurdles || 0) / 20, () => arxHurdles()], // ráfaga de vallas: tres o cuatro saltos seguidos
+    [(settings.arcBurpee || 0) / 20, () => arxBurpee()], // burpee: al suelo en plancha y, enseguida, a saltar la valla
     [settings.arcLow / 25, () => [{ kind: 'single', drop: 0, tilt: Math.random() * 100 < settings.arcRight ? 1 : -1, hp: 1, gap: 1.8, low: true }]], // de semipuente: la mano al suelo, del lado de «Inclinados: hacia la derecha»
     // combinaciones: dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez,
     // agáchate) o tres muy seguidos (con ritmo, a un pulso uno de otro)
@@ -86,6 +88,10 @@ function arxPatterns(total) {
   return out;
 }
 
+// Ráfaga de vallas: 3 o 4 seguidas (con ritmo, a uno o dos pulsos una de otra), con su aviso
+function arxHurdles() { const n = Math.random() < 0.5 ? 3 : 4, l = []; for (let k = 0; k < n; k++) l.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: k < n - 1 ? 0.4 : 1.4 }); l[0].note = ['¡RÁFAGA DE VALLAS!', `${n} saltos seguidos`]; return l; }
+// Burpee: el arco de plancha y, en cuanto pasa, una valla (sale con poco tiempo para levantarte: arriba de un salto)
+const arxBurpee = () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 0.1, burpee: true }, { kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 1.6 }];
 // Antes de un arco de plancha o de semipuente, tiempo para bajar al suelo (el anterior deja un hueco largo)
 function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' || o.low) && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, o.low ? 1.5 : 1.8); }); return list; }
 
@@ -284,21 +290,33 @@ const ARX_TINT = new THREE.HemisphereLight(0x3cf0c6, 0x000000, 0); scene.add(ARX
 const _tintC = new THREE.Color(0x3cf0c6), _tintT = new THREE.Color();
 let arxScroll = 0;
 function arxFeverLook(on) { orbFeverLook(on); }
-// En la fiebre, tormenta: el cielo se pone rojo y oscuro (en todos los entornos), la niebla también, y caen relámpagos rojos
-// cada pocos segundos (el trueno, uno de cada dos, para no tapar la música)
+// En la fiebre, tormenta: el cielo se pone rojo y oscuro (en todos los entornos), la niebla, roja y más cerrada, y caen
+// relámpagos rojos cada pocos segundos (el trueno, uno de cada dos, para no tapar la música)
 let stormT = 0, stormN = 0;
+// y todo lo que ves, teñido de rojo: un velo alrededor de la cabeza, por debajo de los paneles y los avisos (no los tapa),
+// que se enciende más con cada relámpago (en realidad mixta, poco: es tu habitación)
+const ARX_VEIL = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 10), new THREE.MeshBasicMaterial({ color: 0xff1a08, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.BackSide, fog: false, toneMapped: false }));
+ARX_VEIL.renderOrder = RO.menu - 3; ARX_VEIL.visible = false; ARX_VEIL.userData.noInk = true; scene.add(ARX_VEIL);
+// Al empezar la fiebre: un relámpago enorme y un trueno cercano, también con música (es un aviso, no ambiente), y el
+// rojo de golpe, sin esperar a que entre poco a poco
+function arxFeverStart() {
+  STORM.f.value = 1.8; STORM.k.value = Math.max(STORM.k.value, 0.75); stormT = rand(1.6, 2.4); stormN = 1;
+  SND.thunder(0.2, true); hapticBoth(0.7, 260);
+}
 function arxStorm(dt, on) {
   STORM.k.value += ((on ? 1 : 0) - STORM.k.value) * Math.min(1, dt * (on ? 1.6 : 0.8)); STORM.t.value += dt * (1 + STORM.k.value * 2);
-  if (on) { stormT -= dt; if (stormT <= 0) { stormT = rand(2.2, 4.5); STORM.f.value = 1; if (stormN++ % 2 === 0 && !arMode) setTimeout(() => SND.thunder(rand(0.4, 1.2)), 250); } }
+  if (on) { stormT -= dt; if (stormT <= 0) { stormT = rand(1.6, 3.4); STORM.f.value = 1.2; if (stormN++ % 2 === 0 && !arMode) setTimeout(() => SND.thunder(rand(0.4, 1.2)), 250); } }
   STORM.f.value = Math.max(0, STORM.f.value - dt * 3) * (STORM.f.value > 0.5 && Math.random() < 0.2 ? 0.4 : 1); // (con parpadeo)
-  const f = scene.fog; if (f) { if (!f.base) f.base = f.color.clone(); f.color.copy(f.base).lerp(STORM_FOG, STORM.k.value * 0.85); }
+  const va = STORM.k.value * ((arMode ? 0.07 : 0.17) + Math.min(1, STORM.f.value) * 0.2); ARX_VEIL.material.opacity = va; ARX_VEIL.visible = va > 0.004; if (ARX_VEIL.visible) ARX_VEIL.position.copy(head.p);
+  const f = scene.fog; if (f) { if (!f.base) f.base = f.color.clone(); f.color.copy(f.base).lerp(STORM_FOG, STORM.k.value);
+    if (f.density !== undefined) { if (STORM.k.value > 0.001) { if (f.d0 === undefined) f.d0 = f.density; f.density = f.d0 * (1 + 1.2 * STORM.k.value); } else if (f.d0 !== undefined) { f.density = f.d0; f.d0 = undefined; } } } // (más cerrada: el mundo, rojo)
 }
 function arxDeco(dt, t) {
   const on = settings.mode === 'arcs' && !isFloor() && ['ready', 'play', 'rest'].includes(state), mv = on && !!settings.arcMove; ARX_DECO.visible = mv;
   // el color de la racha, con suavidad
   _tintT.setHex(ARX.fever ? 0xff2414 : ARX.streak >= 5 ? 0xffd166 : 0x3cf0c6); _tintC.lerp(_tintT, Math.min(1, dt * 3));
   const bp = arxBeatP() ? (arxBeatGlow() - 0.7) * (arxPhrase() === 'hot' ? 1.6 : 1) : 0; // (0 a 0,6, en cada pulso; en la frase intensa, más)
-  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 2.2 : 1) * (1 + bp * 0.5) + STORM.f.value * 0.9 : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp || STORM.f.value > 0.3 ? 12 : 3));
+  ARX_TINT.color.copy(_tintC); ARX_TINT.intensity += ((on ? (arMode ? 0.12 : 0.28) * (ARX.fever ? 3.4 : 1) * (1 + bp * 0.5) + STORM.f.value * 0.9 : 0) - ARX_TINT.intensity) * Math.min(1, dt * (bp || STORM.f.value > 0.3 ? 12 : 3));
   arxStorm(dt, on && ARX.fever);
   if (!mv) return;
   if (state === 'play') arxScroll += arxSpeed() * dt;

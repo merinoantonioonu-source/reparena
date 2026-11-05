@@ -134,7 +134,7 @@ function previewInput(dt) {
     const lx = PV.crouch && !PV.noLean && nx && (nx.leanX !== undefined || nx.tilt) ? (nx.leanX !== undefined ? nx.leanX : Math.sign(nx.tilt) * settings.arcShift / 100) : 0, w = arena.localToWorld(_pvw.set(lx, 0, HL.z));
     camera.position.x += clamp(w.x - camera.position.x, -1.2 * dt, 1.2 * dt); camera.position.z += clamp(w.z - camera.position.z, -1.2 * dt, 1.2 * dt);
     // vallas: si lo próximo es una valla no se agacha, y salta cuando la tiene debajo (PV.noJump: no salta)
-    if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + settings.jumpHeight / 100 + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
+    if (nx && nx.jump) { const d = HL.z - nx.z; target = PV.crouch && !PV.noJump && d < 0.55 && d > -0.45 ? PV.baseY + arcJumpNeed() + 0.08 : PV.baseY; PV.jumping = target > PV.baseY; }
     else if (nx && nx.plank) { target = PV.crouch ? 0.36 : PV.baseY; PV.jumping = false; } // arco de plancha: Espacio te tumba en plancha
     else if (nx && nx.low) { target = PV.crouch && !PV.noLow ? settings.arcLowH / 100 - 0.06 : PV.baseY; PV.jumping = false; } // de semipuente: Espacio te baja hasta la mano en el suelo (PV.noLow: solo como un inclinado normal)
     else if (nx && nx.kind === 'mace') { target = PV.crouch ? PV.baseY - (settings.arcMaceDrop / 100 + 0.38) : PV.baseY; PV.jumping = false; } // la maza: Espacio, por debajo de la bola

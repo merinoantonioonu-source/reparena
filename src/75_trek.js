@@ -380,11 +380,39 @@ function trekRep(opts) {
   const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
   const ki = trekLegs() || settings.exercise === 'jsquat' ? clamp(depth / Math.max(0.05, req), 0.6, 1.6) : 1;
   TREK.minY = 9; TREK.kc = kc; TREK.ki = ki;
-  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
+  // el turbo: TREK_TURBO_N seguidas a buen ritmo (y bien hondas) lo encienden; una floja lo apaga
+  if (kc * ki >= 1.05) { TREK.tg = (TREK.tg || 0) + 1; if (!TREK.turbo && TREK.tg >= TREK_TURBO_N) trekTurbo(true); else if (!TREK.turbo && TREK.tg >= 2) hapticBoth(0.15 + 0.08 * TREK.tg, 40); }
+  else { TREK.tg = 0; if (TREK.turbo) trekTurbo(false, 'Fin del turbo: más ritmo'); }
+  TREK.idle = 0;
+  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K * (TREK.turbo ? TREK_TURBO_V : 1); TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
   if (kc * ki > 1.45) cheer('¡A TOPE!', '#8fdc5a', 0.9); else if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (ki < 0.75) say('Baja más: irás más deprisa', '#ffd166', 1.0); else say('¡Bien!', '#ffffff', 0.7, false);
   if (opts.perfect) SND.perfect();
 }
 const _tkh = new V3();
+
+/* ---------- Turbo por racha ---------- */
+// Seis repeticiones seguidas a buen ritmo (cada una en menos de unos 2,3 s y, con las piernas, tan honda como pide el
+// ejercicio) encienden el turbo: un 20 % más deprisa, los puntos de cada repetición al doble y estelas de viento que pasan
+// a tu lado. Lo apagan una repetición floja, 3 s sin ninguna o chocar con un tronco o una rama; en las paradas espera
+const TREK_TURBO_N = 6, TREK_TURBO_V = 1.2;
+function trekTurbo(on, why) {
+  if (!!TREK.turbo === on) return; TREK.turbo = on; boardDirty = true;
+  if (on) { cheer('¡TURBO! Puntos ×2', '#c8ff3a', 1.8); SND.combo(); hapticBoth(0.8, 200); }
+  else { TREK.tg = 0; if (why && state === 'play') cheer(why, '#a49fc8', 1.2); }
+}
+// las estelas: varillas finas de luz que corren hacia atrás a tu alrededor (líneas no: en las gafas, de un píxel, ni se veían)
+const TREK_WIND = (() => {
+  const N = 44, m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.018, 0.018, 1), new THREE.MeshBasicMaterial({ color: 0xe4ffa8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }), N), seed = [];
+  for (let i = 0; i < N; i++) seed.push({ x: (Math.random() < 0.5 ? 1 : -1) * rand(0.7, 3.2), y: rand(0.15, 2.6), z: rand(-14, 4), l: rand(0.8, 2.2), k: rand(0.7, 1.3) });
+  m.frustumCulled = false; m.visible = false; m.userData.noInk = true; m.userData.seed = seed; arena.add(m); return m;
+})();
+const _twm = new THREE.Matrix4();
+function trekWindStep(dt) {
+  const M = TREK_WIND.material, want = trekOn() && TREK.turbo && state === 'play' ? 0.7 : 0; M.opacity += (want - M.opacity) * Math.min(1, dt * 3); TREK_WIND.visible = M.opacity > 0.01; if (!TREK_WIND.visible) return;
+  const S = TREK_WIND.userData.seed, v = Math.max(1, TREK.v) * 3.2;
+  S.forEach((s, i) => { s.z += v * s.k * dt; if (s.z > 4) { s.z = rand(-16, -10); s.y = rand(0.15, 2.6); } _twm.makeScale(1, 1, s.l).setPosition(HL.x + s.x, s.y, HL.z + s.z - s.l / 2); TREK_WIND.setMatrixAt(i, _twm); });
+  TREK_WIND.instanceMatrix.needsUpdate = true;
+}
 
 /* ---------- Paradas: el cofre con cadenas y la roca del derrumbe ---------- */
 // Ante el cofre o la roca te paras; lo que te mueve ahora es otro movimiento, contado por la cabeza:
@@ -625,6 +653,8 @@ function trekStep(dt, t) {
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
   if (TREK.halt) { TREK.v = 0; TREK.push = 0; } // (parado ante el cofre o la roca)
+  if (state === 'play' && !TREK.halt && (TREK.idle = (TREK.idle || 0) + dt) > 3) trekTurbo(false, 'Fin del turbo: no pares'); // (3 s sin repeticiones)
+  if (state !== 'play' && state !== 'paused') trekTurbo(false); trekWindStep(dt);
   let step = state === 'paused' ? 0 : TREK.v * dt;
   if (TREK.glide > 0 && state !== 'paused') { const g = Math.min(TREK.glide, dt * 1.8); TREK.glide -= g; step += g; } // (el paso a la piedra o el pilar siguiente)
   TREK.dist += step;
@@ -644,10 +674,10 @@ function trekStep(dt, t) {
     if (o.kind === 'log') { // saltarlo: mientras pasa bajo ti cuenta lo más alto que llegaste
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Salta!', '#ffd166', 1.2);
       if (Math.abs(z - HL.z) < 0.45) o.maxUp = Math.max(o.maxUp, head.p.y - calibRef);
-      if (z >= HL.z + 0.45) { o.judged = true; if (o.maxUp < settings.jumpHeight / 100) { TREK.v *= 0.2; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, 0.2, z)), false); hapticBoth(0.8, 120); say('¡Salta el tronco!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 150; SND.whoosh(arena.localToWorld(_tkh.set(0, 0.2, z)), 'arc'); cheer('¡Saltado!', '#3cf0c6', 0.9); } boardDirty = true; }
+      if (z >= HL.z + 0.45) { o.judged = true; if (o.maxUp < settings.jumpHeight / 100) { TREK.v *= 0.2; combo = 0; TREK.hits++; trekTurbo(false); SND.metalHit(arena.localToWorld(_tkh.set(0, 0.2, z)), false); hapticBoth(0.8, 120); say('¡Salta el tronco!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 150; SND.whoosh(arena.localToWorld(_tkh.set(0, 0.2, z)), 'arc'); cheer('¡Saltado!', '#3cf0c6', 0.9); } boardDirty = true; }
     } else if (o.kind === 'branch') {
       if (z - HL.z > -4 && z - HL.z < -3.9 + step) say('¡Agáchate!', '#ffd166', 1.2);
-      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
+      if (z >= HL.z - 0.1) { o.judged = true; if (HL.y + HEAD_TOP > o.y) { TREK.v = 0; combo = 0; TREK.hits++; trekTurbo(false); SND.metalHit(arena.localToWorld(_tkh.set(0, o.y, z)), false); hapticBoth(0.8, 120); say('¡Agáchate bajo las ramas!', '#ff8a3d', 1.6); } else { TREK.ducked++; score += 120; SND.whoosh(arena.localToWorld(_tkh.set(0, o.y, z)), 'arc'); cheer('¡Esquivada!', '#3cf0c6', 0.9); } boardDirty = true; }
     } else if (!o.done && o.at - TREK.dist <= (o.stop || 1.7) && TREK.halt !== o) { // (el cofre, la roca, el arroyo o el desfiladero, delante: te paras)
       TREK.halt = o; o.got = 0; o.haltT = 0; TREK.v = 0; TREK.glide = 0; TREK.dist = o.at - (o.stop || 1.7); TMV.st = 'up'; TMV.x0 = HL.x; TMV.z0 = HL.z; trekHaltSay(o, true);
       if (o.len && TREK.chase) trekChaseEnd(o.kind === 'stream' ? 'Los lobos no cruzan el agua' : 'Los lobos se quedan al borde', '#3cf0c6'); // (no te siguen)
@@ -749,7 +779,7 @@ function trekLight(dt) {
 // Al empezar una ronda: desde el principio del sendero, en el bosque
 function trekReset() {
   trekWolfLoad(); trekBandLoad(); aldLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
-  TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
+  TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, turbo: false, tg: 0, idle: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0; TREK.hop = null; NAT.group.position.y = 0; TREK.group.position.y = 0;
   natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
 }
