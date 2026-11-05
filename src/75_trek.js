@@ -540,8 +540,11 @@ function trekBandFight(o, dt, t) {
     B.st = 'wind'; B.t = 0; B.atk = Math.random() < 0.5 ? 'hook' : 'jab'; B.x0 = HL.x; B.win = D.wind; B.played = false;
     say(B.atk === 'hook' ? '¡GANCHO! ¡Agáchate!' : '¡DIRECTO! ¡Apártate!', '#ff3b5c', B.win + 0.3); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8); }
   else if (B.st === 'wind') {
-    const clip = B.atk === 'hook' ? 'Melee_Hook' : 'Punch_Jab', hitAt = (BEAST_PUNCH[clip] || [0.2, 0.3])[1] / D.slow;
-    if (!B.played && B.t >= B.win - hitAt) { B.played = true; trekBandPlay(B, clip, true); if (B.cur) B.cur.timeScale = D.slow; }
+    // el golpe, llevado a mano: recoge el brazo despacio (WU s) y lo lanza también despacio (ST s), igual el gancho que el
+    // directo (a su velocidad, el directo se veía en un tercio de segundo: no daba tiempo a reaccionar)
+    const clip = B.atk === 'hook' ? 'Melee_Hook' : 'Punch_Jab', P = BEAST_PUNCH[clip] || [0.2, 0.3], t0 = B.win - D.wu - D.st;
+    if (!B.played && B.t >= t0) { B.played = true; trekBandPlay(B, clip, true); if (B.cur) B.cur.paused = true; }
+    if (B.played && B.cur && B.cur.paused) { const k = B.t - t0; B.cur.time = k < D.wu ? P[0] * smooth(clamp(k / D.wu, 0, 1)) : lerp(P[0], P[1], clamp((k - D.wu) / D.st, 0, 1)); }
     if (B.t >= B.win) { // el golpe llega: ¿lo has esquivado?
       const ok = B.atk === 'hook' ? calibRef - HL.y > 0.2 : Math.abs(HL.x - B.x0) > 0.2, p = arena.localToWorld(_tbw.set(B.x0, calibRef - 0.1, HL.z)); SND.whoosh(p, 'arc');
       if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; // (esquivado: le queda un golpe menos)
@@ -549,12 +552,12 @@ function trekBandFight(o, dt, t) {
         else { B.st = 'stun'; B.t = 0; B.stun = D.stun; trekBandPlay(B, 'Hit_Head', true); say(`¡Esquivado! Le quedan ${B.hp}`, '#ffd166', 0.9); } }
       else { B.st = 'guard'; B.t = 0; B.gap = rand(1.2, 1.8); trekBandPlay(B, 'Idle_Loop'); hurtPlayer({ silent: true }); comicHit(head.p.clone()); say(B.atk === 'hook' ? '¡Te ha dado! Agáchate antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); o.hits = (o.hits || 0) + 1; }
     }
-  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.4, 0.8); trekBandPlay(B, 'Idle_Loop'); } // (tras esquivarle, se tambalea un momento y vuelve a la carga)
+  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.8, 1.2); trekBandPlay(B, 'Idle_Loop'); } // (tras esquivarle, se tambalea un momento y vuelve a la carga)
   // el aviso rojo mientras prepara el golpe; dorado mientras se tambalea
   o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(B.st === 'wind' ? 0xff3b5c : 0xffd166); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : B.st === 'stun' ? 0.45 : 0;
 }
 // menos aviso en cada tramo y con el rango, poco a poco
-const trekBandDiff = () => ({ wind: Math.max(1.15, 1.9 - 0.06 * waveIdx - 0.04 * rankIdx()), stun: 0.7, slow: 0.6 }); // (slow: el golpe, a cámara lenta: a su velocidad no daba tiempo)
+const trekBandDiff = () => ({ wind: Math.max(1.6, 2.1 - 0.05 * waveIdx - 0.03 * rankIdx()), stun: 0.7, wu: 0.75, st: 0.45 }); // (wu y st: lo que dura, siempre igual, el brazo atrás y el golpe)
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
