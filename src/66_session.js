@@ -236,7 +236,7 @@ function sesMusicHTML(b, i) {
     const l = L.find(x => x.id === SES.mList) || { name: '' }, T = SP.trk && SP.trk[SES.mList];
     h += `<div class="spin"><button type="button" class="btn small" data-a="mback">← Tus listas</button><b>${escS(l.name)}</b></div>`;
     if (!T) h += `<p class="status">${escS(SES.mErr || 'Cargando sus canciones…')}</p>`;
-    else { const F = spFavs(); spBpmPrefetch(T); h += T.length ? `<div class="tracks">${spFavFirst(T).map(t => `<div class="sptrk">${spFavBtn(t.uri, F)}<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>'; } // (tus favoritas, primero, con su compás)
+    else { const F = spFavs(), V = spBpmFilt(spFavFirst(T)); spBpmPrefetch(T); h += T.length ? spBpmFiltBar(T, V.length) + `<div class="tracks">${V.map(t => `<div class="sptrk">${spPlayBtn(t)}${spFavBtn(t.uri, F)}<label><input type="checkbox" data-m="trk" data-uri="${escS(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escS(t.name)}<small> — ${escS(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>` : '<p class="hint">Aquí no hay canciones que se puedan poner.</p>'; } // (tus favoritas, primero, con su compás)
   }
   return h + '</div>';
 }
@@ -363,6 +363,7 @@ function sesInitPage() {
   const host = $('#sesList');
   sesDragInit(host);
   host.addEventListener('change', ev => {
+    if (ev.target.dataset && ev.target.dataset.bf !== undefined) return; // (el filtro por compás: spSongsPageInit)
     if (ev.target.closest && ev.target.closest('.sesmusic')) { sesMusicChange(ev.target); return; }
     if (ev.target.closest && ev.target.closest('.sesset')) { sesSetChange(ev.target); return; }
     const row = ev.target.closest && ev.target.closest('.sesrow'); if (!row) return;

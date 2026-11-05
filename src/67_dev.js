@@ -151,15 +151,17 @@ function exSongsHTML() {
   else {
     const l = L.find(z => z.id === EXS.list) || { name: '' }, T = SP.trk && SP.trk[EXS.list];
     h += `<div class="spin"><button type="button" class="btn small" data-a="sback">← Tus listas</button><b>${escD(l.name)}</b></div>`;
-    h += !T ? `<p class="status">${escD(EXS.err || 'Cargando sus canciones…')}</p>` : `<div class="tracks">${T.map(t => `<div class="sptrk"><label><input type="checkbox" data-s="trk" data-uri="${escD(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escD(t.name)}<small> — ${escD(t.by)}</small></span></label></div>`).join('')}</div>`;
+    h += !T ? `<p class="status">${escD(EXS.err || 'Cargando sus canciones…')}</p>` : (() => { const V = spBpmFilt(T); spBpmPrefetch(T); return spBpmFiltBar(T, V.length) + `<div class="tracks">${V.map(t => `<div class="sptrk">${spPlayBtn(t)}<label><input type="checkbox" data-s="trk" data-uri="${escD(t.uri)}"${on.has(t.uri) ? ' checked' : ''}><span>${escD(t.name)}<small> — ${escD(t.by)}</small></span></label>${spBpmCell(t)}</div>`).join('')}</div>`; })();
   }
   return h;
 }
-function exSongsPage() { const box = typeof document !== 'undefined' && $('#exSongs'); if (box) box.innerHTML = exSongsHTML(); }
+function exSongsPage() { const box = typeof document !== 'undefined' && $('#exSongs'); if (box) htmlKeep(box, exSongsHTML(), EXS.list || ''); } // (sin volver arriba de la lista cada vez que llega un compás)
 function exSongsInitPage() {
   const box = $('#exSongs'); if (!box) return;
   box.addEventListener('change', ev => {
-    const el = ev.target, d = el.dataset || {}; if (d.s !== 'trk') return;
+    const el = ev.target, d = el.dataset || {};
+    if (d.bpm !== undefined) { spSongBpmSet(d.bpm, el.value); exSongsPage(); return; } // (su compás, escrito)
+    if (d.s !== 'trk') return;
     const T = (SP.trk && SP.trk[EXS.list]) || [], tr = T.find(z => z.uri === d.uri); if (!tr) return;
     const sel = exSongs(); exSongsSet(el.checked ? (sel.some(z => z.uri === tr.uri) ? sel : sel.concat(tr)) : sel.filter(z => z.uri !== tr.uri)); exSongsPage();
   });
@@ -168,6 +170,7 @@ function exSongsInitPage() {
     if (d.a === 'sload') spMyLists().then(l => { SP.mine = l; EXS.err = ''; exSongsPage(); }).catch(e => { EXS.err = 'No se pudieron cargar tus listas: ' + spErrText(e); exSongsPage(); });
     else if (d.a === 'slist') { EXS.list = d.id; EXS.err = ''; exSongsPage(); if (!(SP.trk && SP.trk[d.id])) spListTracks(d.id).then(() => exSongsPage()).catch(e => { EXS.err = spErrText(e); exSongsPage(); }); }
     else if (d.a === 'sback') { EXS.list = ''; exSongsPage(); }
+    else if (d.a === 'bpmx') { spBpmScale(d.u, +d.bpmx); exSongsPage(); }
     else if (d.a === 'srm') { const l = exSongs(); l.splice(+d.k, 1); exSongsSet(l); exSongsPage(); }
     else if (d.a === 'sclear') { exSongsSet([]); exSongsPage(); }
   });
