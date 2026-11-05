@@ -185,7 +185,7 @@ const gates = [makeGate(), makeGate(), makeGate()];
 const liveGates = () => { const l = gates.filter(g => g.on); return l.length ? l : gates; };
 
 // Agujeros del suelo para las arañas (flexiones y plancha): a unos 2 m, lejos de las manos, para verlas venir
-const hatchPos = [[-0.75, -1.85], [0.75, -1.85], [-1.6, -1.15], [1.6, -1.15]], hatchSide = [[-1.75, -0.55], [1.75, -0.55], [-1.7, 0.35], [1.7, 0.35]];
+const hatchPos = [[-0.75, -1.85], [0.75, -1.85], [-1.6, -1.15], [1.6, -1.15]], hatchSide = [[-0.95, -1.8], [0.95, -1.8], [-1.45, -1.25], [1.45, -1.25]]; // (plancha con un brazo: delante y a los lados, a la vista sin girar la cara)
 const hatches = hatchPos.map(([x, z]) => {
   const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
   const k = new Kit();
@@ -231,7 +231,7 @@ function layoutArena() {
   });
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
-  const hp = oneArm() ? hatchSide : hatchPos; // en la plancha, dos a cada lado
+  const hp = oneArm() ? hatchSide : hatchPos; // en la plancha con un brazo, dos a cada lado, por delante
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
