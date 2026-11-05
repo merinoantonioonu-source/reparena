@@ -978,7 +978,7 @@ const SCHEMA = [
   { key: 'arcCombo', g: 'arcos', label: 'Combinaciones (dos a la vez o muy seguidos)', short: 'Combinaciones', type: 'num', min: 0, max: 60, step: 5, def: 10, unit: '%', modes: ['arcs'], hint: 'A veces llegan dos a la vez (un láser o unas paredes con un arco: apártate o métete en el hueco y, a la vez, agáchate) o tres muy seguidos (con música, a un pulso uno de otro). Más esfuerzo y más coordinación.' },
   { key: 'arcDouble', g: 'arcos', label: 'Arcos dobles (aguantar abajo)', short: 'Arcos dobles', type: 'num', min: 0, max: 100, step: 5, def: 15, unit: '%', modes: ['arcs'] },
 
-  { key: 'trekSpeed', g: 'travesia', label: 'Velocidad de avance', short: 'Velocidad', type: 'num', min: 60, max: 200, step: 10, def: 130, unit: '%', modes: ['trek'], hint: 'Cuánto te empuja cada repetición por el sendero. Al 100 %, una sentadilla honda y a buen ritmo te lleva a 5,4 km/h; al 200 %, al doble. Los lobos se adaptan.' },
+  { key: 'trekSpeed', g: 'travesia', label: 'Velocidad de avance', short: 'Velocidad', type: 'num', min: 60, max: 200, step: 10, def: 130, unit: '%', modes: ['trek'], hint: 'Cuánto te empuja cada repetición por el sendero. Al 100 %, una sentadilla normal a buen ritmo te lleva a unos 4 km/h, y honda y rápida, hasta 7,2 km/h; al 200 %, al doble. Los lobos se adaptan.' },
   { key: 'trekCurves', g: 'travesia', label: 'Sendero con curvas', short: 'Curvas', type: 'toggle', def: 1, modes: ['trek'], hint: 'El sendero serpentea y el paisaje gira despacio a tu alrededor. Si te mareas, quítalo y el sendero irá recto.' },
   { key: 'barTarget', g: 'barras', label: 'Qué revientas con la cabeza', short: 'Objetivos', type: 'choice', opts: [['bubbles', 'Pompas'], ['bugs', 'Bichos']], def: 'bubbles', modes: ['bars'], noEx: ['hang'], hint: 'Pompas que llegan flotando desde delante, o avispas monstruo que acuden zumbando hasta donde llegará tu cabeza y amagan con picarte.' },
   { key: 'barArrive', g: 'barras', label: 'Tiempo que tarda un objetivo en llegar', short: 'Tiempo llegada', type: 'num', min: 1, max: 20, step: 0.5, def: 4, unit: 's', modes: ['bars'], noEx: ['hang'] },
@@ -2671,7 +2671,7 @@ const gates = [makeGate(), makeGate(), makeGate()];
 const liveGates = () => { const l = gates.filter(g => g.on); return l.length ? l : gates; };
 
 // Agujeros del suelo para las arañas (flexiones y plancha): a unos 2 m, lejos de las manos, para verlas venir
-const hatchPos = [[-0.75, -1.85], [0.75, -1.85], [-1.6, -1.15], [1.6, -1.15]], hatchSide = [[-1.75, -0.55], [1.75, -0.55], [-1.7, 0.35], [1.7, 0.35]];
+const hatchPos = [[-0.75, -1.85], [0.75, -1.85], [-1.6, -1.15], [1.6, -1.15]], hatchSide = [[-0.95, -1.8], [0.95, -1.8], [-1.45, -1.25], [1.45, -1.25]]; // (plancha con un brazo: delante y a los lados, a la vista sin girar la cara)
 const hatches = hatchPos.map(([x, z]) => {
   const g = new THREE.Group(); g.position.set(x, 0, z); arena.add(g);
   const k = new Kit();
@@ -2717,7 +2717,7 @@ function layoutArena() {
   });
   const mg = gates[1].on ? gates[1] : liveGates()[0], mr = mg.g.rotation.y;
   gateLight.position.set(mg.x - Math.sin(mr) * 0.6, 1.6 * mg.scale, mg.z - Math.cos(mr) * 0.6);
-  const hp = oneArm() ? hatchSide : hatchPos; // en la plancha, dos a cada lado
+  const hp = oneArm() ? hatchSide : hatchPos; // en la plancha con un brazo, dos a cada lado, por delante
   // colocadas a mano: las tuyas (si pusiste menos de cuatro, sobran); con el escaneo: en suelo libre
   const mh = plan && plan.hatches && plan.hatches.length ? plan.hatches : null, taken = [];
   hatches.forEach((h, i) => { h.on = !mh || i < mh.length; [h.x, h.z] = mh && h.on ? [mh[i].x, mh[i].z] : plan && !mh ? roomHatch(plan, hp[i][0], hp[i][1], taken) : hp[i]; taken.push([h.x, h.z]); h.g.position.set(h.x, 0, h.z); h.g.visible = push && settings.mode !== 'arcs' && h.on; });
@@ -14217,7 +14217,7 @@ function tempoRows(back) {
 // El paisaje son trozos de 24 m (TREK_CH) con los modelos del Stylized Nature MegaKit (los del bosque, 34_nature) en
 // instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
 // mueven: corre su textura
-const TREK_VMAX = 1.5, TREK_CH = 24, TREK_N = 5, TREK_PATH = 96; // (5 trozos: siempre hay al menos 12 m de paisaje detrás)
+const TREK_VMAX = 2, TREK_CH = 24, TREK_N = 5, TREK_PATH = 96; // (5 trozos: siempre hay al menos 12 m de paisaje detrás)
 const TREK = { group: new THREE.Group(), nextChase: 30, keys: 0, halt: null, chase: null, v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
 TREK.group.visible = false; arena.add(TREK.group);
 const trekOn = () => settings.mode === 'trek';
@@ -14590,7 +14590,7 @@ function trekRep(opts) {
   const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
   const ki = trekLegs() || settings.exercise === 'jsquat' ? clamp(depth / Math.max(0.05, req), 0.6, 1.6) : 1;
   TREK.minY = 9; TREK.kc = kc; TREK.ki = ki;
-  const K = trekK(); TREK.want = clamp(0.8 * kc * ki * (opts.perfect ? 1.1 : 1), 0.3, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3);
+  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
   if (kc * ki > 1.45) cheer('¡A TOPE!', '#8fdc5a', 0.9); else if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (ki < 0.75) say('Baja más: irás más deprisa', '#ffd166', 1.0); else say('¡Bien!', '#ffffff', 0.7, false);
   if (opts.perfect) SND.perfect();
 }
@@ -14814,7 +14814,7 @@ function trekWolfLoad() {
   TREK_WOLF.loading = true;
   new THREE.GLTFLoader().load('models/animales/lobo.glb', g => { TREK_WOLF.scene = g.scene; TREK_WOLF.clips = g.animations; TREK_WOLF.loading = false; }, undefined, e => { TREK_WOLF.failed = true; TREK_WOLF.loading = false; console.log('No se pudo cargar el lobo:', e && e.message); });
 }
-const trekWolfV = () => Math.min(1.3, 0.72 + 0.07 * waveIdx + 0.03 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
+const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
 function trekChaseStart() {

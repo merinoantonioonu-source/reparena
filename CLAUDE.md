@@ -72,8 +72,8 @@ No las cambies sin preguntarle.
 
 **Travesía** (`src/75_trek.js`)
 - Siempre en Cómic. Cada repetición empuja por un sendero del bosque; sin repeticiones, te paras. La velocidad sale del
-  ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Despacio (como mucho
-  1,5 m/s por la «Velocidad de avance», de 60 a 200 %, 130 % de serie), sobre una plataforma quieta bajo los pies. El
+  ritmo de las repeticiones y de lo hondo que se baja (más rápido e intenso, más deprisa). Más deprisa que al
+  principio (es una prueba física: hasta 2 m/s por la «Velocidad de avance», de 60 a 200 %, 130 % de serie), sobre una plataforma quieta bajo los pies. El
   sendero serpentea (el mundo gira despacio a tu alrededor; «Sendero con curvas» lo quita si marea). Detrás, siempre paisaje.
 - Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la

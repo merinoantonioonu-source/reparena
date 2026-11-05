@@ -7,7 +7,7 @@
 // El paisaje son trozos de 24 m (TREK_CH) con los modelos del Stylized Nature MegaKit (los del bosque, 34_nature) en
 // instancias; cuando uno queda detrás, pasa al frente con el paisaje del tramo que toca. El suelo y el sendero no se
 // mueven: corre su textura
-const TREK_VMAX = 1.5, TREK_CH = 24, TREK_N = 5, TREK_PATH = 96; // (5 trozos: siempre hay al menos 12 m de paisaje detrás)
+const TREK_VMAX = 2, TREK_CH = 24, TREK_N = 5, TREK_PATH = 96; // (5 trozos: siempre hay al menos 12 m de paisaje detrás)
 const TREK = { group: new THREE.Group(), nextChase: 30, keys: 0, halt: null, chase: null, v: 0, dist: 0, biome: 0, slots: [], cache: {}, obs: [], next: 0, got: 0, ducked: 0, hits: 0, light: null };
 TREK.group.visible = false; arena.add(TREK.group);
 const trekOn = () => settings.mode === 'trek';
@@ -380,7 +380,7 @@ function trekRep(opts) {
   const req = (settings.exercise === 'lunge' ? dv('lungeDepth') : dv('squatDepth')) / 100, depth = calibRef - TREK.minY;
   const ki = trekLegs() || settings.exercise === 'jsquat' ? clamp(depth / Math.max(0.05, req), 0.6, 1.6) : 1;
   TREK.minY = 9; TREK.kc = kc; TREK.ki = ki;
-  const K = trekK(); TREK.want = clamp(0.8 * kc * ki * (opts.perfect ? 1.1 : 1), 0.3, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3);
+  const K = trekK(); TREK.want = clamp(1.1 * kc * ki * (opts.perfect ? 1.1 : 1), 0.5, TREK_VMAX) * K; TREK.push = clamp(gap * 1.3, 1.6, 3); // (más deprisa que antes: es una prueba física, no un paseo)
   if (kc * ki > 1.45) cheer('¡A TOPE!', '#8fdc5a', 0.9); else if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (ki < 0.75) say('Baja más: irás más deprisa', '#ffd166', 1.0); else say('¡Bien!', '#ffffff', 0.7, false);
   if (opts.perfect) SND.perfect();
 }
@@ -604,7 +604,7 @@ function trekWolfLoad() {
   TREK_WOLF.loading = true;
   new THREE.GLTFLoader().load('models/animales/lobo.glb', g => { TREK_WOLF.scene = g.scene; TREK_WOLF.clips = g.animations; TREK_WOLF.loading = false; }, undefined, e => { TREK_WOLF.failed = true; TREK_WOLF.loading = false; console.log('No se pudo cargar el lobo:', e && e.message); });
 }
-const trekWolfV = () => Math.min(1.3, 0.72 + 0.07 * waveIdx + 0.03 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
+const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
 function trekChaseStart() {
