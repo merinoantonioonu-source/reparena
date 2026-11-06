@@ -226,7 +226,7 @@ const escS = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;'
 function sesMusicHTML(b, i) {
   const sel = b.music || [], on = new Set(sel.map(t => t.uri));
   let h = `<div class="sesmusic" data-i="${i}"><p class="note">Canciones del bloque ${i + 1}: suenan en este orden, en bucle, mientras dura el bloque (de una o de varias listas; hasta ${MUSIC_MAX}).</p>`;
-  h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${k + 1}. ${escS(t.name)}<button class="btn tiny" data-a="mrm" data-k="${k}" aria-label="Quitar ${escS(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
+  h += sel.length ? `<div class="chips">${sel.map((t, k) => spChip(t, k, sel.length, { attr: 'data-a', rm: 'mrm', up: 'mup', dn: 'mdn' })).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba, en Música) para elegir canciones.</p></div>';
   if (!SP.mine) return h + `<p class="status">${escS(SES.mErr || 'Cargando tus listas…')}</p></div>`;
   // tus listas (y las que te gustan), como botones de las líneas que haga falta; al abrir una, solo sus canciones
@@ -261,6 +261,7 @@ function sesMusicClick(btn) {
   if (btn.dataset.a === 'fav') { spFavToggle(btn.dataset.fav); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'bpmx') { spBpmScale(btn.dataset.u, +btn.dataset.bpmx); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
+  else if (btn.dataset.a === 'mup' || btn.dataset.a === 'mdn') b.music = spMove(b.music, +btn.dataset.k, btn.dataset.a === 'mup' ? -1 : 1); // (cambiarla de sitio)
   else if (btn.dataset.a === 'mclear') delete b.music;
   saveSession(); renderSession();
 }

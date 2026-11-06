@@ -59,7 +59,8 @@ const MIS = {
   clean: { kind: 'q', n: () => 1, txt: () => 'Gana una ronda sin que te golpeen' },
   mode: { kind: 'var', n: () => 1, txt: m => `Juega una ronda en ${MODE_NAMES[m.arg] || m.arg}` },
   ex: { kind: 'var', n: () => 1, txt: m => `Haz una ronda de ${(EX_NAMES[m.arg] || m.arg).toLowerCase()}` },
-  star: { kind: 'var', n: () => 1, txt: () => 'Gana una estrella nueva en la campaña' }
+  set: { kind: 'var', n: L => 25 + 3 * Math.min(L, 10), txt: m => `Haz ${m.n} repeticiones en una sola ronda` }, // (antes, una estrella de la campaña: muy poco de entrenar para un escudo)
+  star: { kind: 'var', n: () => 1, txt: () => 'Gana una estrella nueva en la campaña' } // (ya no sale: solo para las misiones guardadas de antes)
 };
 const MIS_XP = 40, CHEST_XP = 100, STAR_XP = 15, WIN_XP = 20;
 function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = (h + 0x6D2B79F5) | 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -67,17 +68,17 @@ function misAdd(list, o) {
   for (const m of list) {
     if (m.t === 'reps') m.got += o.reps || 0; else if (m.t === 'mins') m.got += o.mins || 0; else if (m.t === 'perfect') m.got += o.perfect || 0;
     else if (m.t === 'combo') m.got = Math.max(m.got, o.combo || 0); else if (m.t === 'clean') { if (o.win && !o.taken) m.got = 1; }
-    else if (m.t === 'mode') { if (o.mode === m.arg) m.got = 1; } else if (m.t === 'ex') { if (o.ex === m.arg) m.got = 1; } else if (m.t === 'star') m.got += o.stars || 0;
+    else if (m.t === 'mode') { if (o.mode === m.arg) m.got = 1; } else if (m.t === 'ex') { if (o.ex === m.arg) m.got = 1; } else if (m.t === 'set') { if (!o.hang) m.got = Math.max(m.got, o.reps || 0); } else if (m.t === 'star') m.got += o.stars || 0;
   }
 }
 function misToday(now = Date.now()) {
-  const day = dayKey(now); if (CR.mis && CR.mis.day === day) return CR.mis;
+  const day = dayKey(now); if (CR.mis && CR.mis.day === day) { for (const m of CR.mis.list) if (m.t === 'star' && !m.done) Object.assign(m, { t: 'set', n: MIS.set.n(lvlOf().n), got: 0 }); return CR.mis; } // (la de la estrella de hoy, ya cambiada)
   shieldCheck(now); // (un día nuevo: ¿hace falta un escudo?)
   const R = seeded('reparena' + day), pickR = a => a[Math.floor(R() * a.length) % a.length], L = lvlOf().n, h = store(HIST_KEY) || [];
   // variedad: el modo que menos has jugado esta semana, o un ejercicio que ya conoces y llevas días sin hacer
   const week = h.filter(r => r.date > now - 7 * DAY_MS), modes = ['combat', 'arcs', 'touch', ...(h.some(r => r.mode === 'bars') ? ['bars'] : [])].sort((a, b) => week.filter(r => r.mode === a).length - week.filter(r => r.mode === b).length);
   const recent = new Set(h.filter(r => r.date > now - 3 * DAY_MS).map(r => r.ex)), exs = [...new Set(h.map(r => r.ex))].filter(x => EX_NAMES[x] && !recent.has(x) && Object.keys(MODE_NAMES).some(m => exOk(m, x)));
-  let t3 = pickR(['mode', 'ex', 'star']); if (t3 === 'ex' && !exs.length) t3 = 'mode';
+  let t3 = pickR(['mode', 'ex', 'set', 'set']); if (t3 === 'ex' && !exs.length) t3 = 'set'; // (de entrenar: un modo, un ejercicio o muchas repeticiones seguidas en una ronda)
   const list = [pickR(['reps', 'reps', 'mins']), pickR(['perfect', 'combo', 'clean']), t3].map(t => ({ t, n: MIS[t].n(L), got: 0, done: false, ...(t === 'mode' ? { arg: pickR(modes.slice(0, 2)) } : t === 'ex' ? { arg: pickR(exs) } : {}) }));
   for (const r of h.filter(r => dayKey(r.date) === day)) misAdd(list, { reps: r.ex === 'hang' ? 0 : r.reps, perfect: r.perfect, mins: (r.time || 0) / 60, mode: r.mode, ex: r.ex, win: r.win, taken: 1 });
   let xp = 0; list.forEach(m => { if (m.got >= m.n) { m.done = true; xp += MIS_XP; } }); CR.xp += xp; // (lo cumplido antes de salir, también)
@@ -92,8 +93,8 @@ let misRun = null;
 function misLive() {
   if (state !== 'play' || typeof stats === 'undefined') return; const M = misToday();
   if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
-  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
-  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo, set: settings.exercise === 'hang' ? 0 : stats.reps };
+  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' || m.t === 'set' ? Math.max(m.got, live[m.t]) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
 }
 
 /* ---------- Récords, en plena ronda ---------- */
@@ -310,7 +311,7 @@ function careerHTML() {
 //  3) en el menú principal, bajo EMPEZAR, la franja: las tres metas (con su barra) y la racha con sus escudos, en teclas
 //     que llevan a Progreso → Misiones
 const misGot = m => Math.min(m.n, m.t === 'mins' ? Math.floor(m.got) : m.got);
-const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, star: () => 'Estrella nueva' };
+const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, set: m => `${m.n} en una ronda`, star: () => 'Estrella nueva' };
 const misShort = m => (MIS_SHORT[m.t] || (x => MIS[x.t].txt(x)))(m);
 // una meta: el círculo (con ✓ si está), su texto, la barra y lo que llevas; tc: el color de la letra
 function drawGoal(c, m, x, y, w, h, tc, long) {

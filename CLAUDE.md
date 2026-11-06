@@ -81,11 +81,12 @@ No las cambies sin preguntarle.
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
-  una gema), el derrumbe (la roca se aparta embistiéndola con zancadas), el arroyo sinuoso (de piedra en piedra con
+  una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: cada
+  embestida la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
   saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
   esquivar: cada uno lanza 3 o 4 golpes seguidos —agacharse ante el gancho, apartarse ante el directo, con aviso largo y
   el golpe a cámara lenta— y, si se los esquivas todos, cae agotado; nada de puñetazos, que con el retraso de las manos en
-  las gafas no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen: si vas más despacio,
+  las gafas no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen, a tu lado y algo por delante (a la vista): si vas más despacio,
   te alcanzan y muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
@@ -98,6 +99,9 @@ No las cambies sin preguntarle.
   delante: los de bosque por dentro, ciudad y playa se quitaron (lo cercano se veía plano, de cartón). En Arcos, con
   fondo, sin compuertas: avanzas por el paisaje de la Travesía.
 - Su caricatura no habla de rayos: cada repetición empuja por el sendero.
+- Los cofres (también el de Combate) dicen al aparecer qué hay dentro y, al abrirlos, sale un aviso grande con lo que has
+  conseguido y lo que falta para el premio siguiente; el de la Travesía, abierto, se esfuma con humo (no se aparta).
+- El césped del suelo gira y corre con el mundo (en las curvas, lo apoyado no patina sobre la hierba).
 
 **Repeticiones y disparo**
 - Cada repetición (sentadilla, zancada…) carga **un disparo por mano**, como mucho uno por mano y sin acumular.
@@ -150,6 +154,7 @@ No las cambies sin preguntarle.
   (nubarrones, niebla roja y cerrada, relámpagos); empieza de golpe con un relámpago enorme y un trueno, también con música,
   y un velo rojo tiñe toda la vista (por debajo de los paneles). Con música, el compás se ve (♪ y destellos en cada pulso).
 - Arcos va **«Al fallo» de serie** (reto de aguante).
+- Arcos: entre dos vallas seguidas, al menos 1,1 s (si no, había que volar).
 - Arcos: las vallas tienen su propia altura del salto (6 cm de serie, en «Tu cuerpo (recorridos)», a la vista del jugador),
   aparte de la de Toques. Hay ráfagas de vallas (3 o 4 seguidas) y burpees (arco de plancha y, enseguida, una valla).
 - Arcos inclinados: agacharse en el centro no vale; hay que apartarse hacia el lado alto (pared de energía bajo el lado
@@ -180,8 +185,8 @@ No las cambies sin preguntarle.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
-- La diana (la única, líneas de enfoque): rayas cortas que se mueven (giran despacio y corren hacia fuera). Las demás se
-  quitaron.
+- La diana (la única, líneas de enfoque): rayas que se mueven (giran, corren hacia fuera y ondulan), gruesas y con el centro
+  claro, en un marco de al menos 32 cm (en los voladores pequeños apenas se veían). Las demás se quitaron.
 - Cada ajuste con explicación lleva una tecla «?» que enseña su explicación al lado del menú.
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
   - Por defecto (VR), a un lado (izquierda o derecha, configurable), el doble de grande y siempre a la vista, por fuera de

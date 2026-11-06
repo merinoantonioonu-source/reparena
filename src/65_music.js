@@ -370,7 +370,7 @@ async function spBpmRun() {
 function spBpmShow() {
   clearTimeout(BPMQ.t); BPMQ.t = setTimeout(() => {
     const a = typeof document !== 'undefined' && document.activeElement; if (a && (a.classList && a.classList.contains('spbpm') || a.dataset && a.dataset.bf !== undefined)) { spBpmShow(); return; }
-    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (typeof exSongsPage === 'function' && EXS.list) exSongsPage(); if (menu && menu.spTrk && menu.rebuild) menu.rebuild();
+    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (typeof exSongsPage === 'function') exSongsPage(); if (menu && (menu.spTrk || menu.spPicks) && menu.rebuild) menu.rebuild();
   }, 600);
 }
 // Compás propio de cada canción: lo guardas tú (en la página, junto a cada canción, o en el juego, «Guardar el ritmo para
@@ -434,7 +434,7 @@ function musicRows() {
 // Elegir en el juego cualquiera de tus listas (de 8 en 8) y, dentro, ponerla entera, al azar o desde una canción
 function spListMenu(back, page = 0) {
   const again = p => spListMenu(back, p), rows = [{ t: 'title', text: 'TUS LISTAS' }];
-  if (spPicks().length) rows.push({ t: 'btns', items: [{ label: `▶ Tus canciones elegidas (${spPicks().length})`, style: 'primary', onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }] });
+  if (spPicks().length) rows.push({ t: 'btns', items: [{ label: `▶ Tus canciones elegidas (${spPicks().length})`, style: 'primary', flex: 1.6, onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }, { label: 'Ordenar  ▸', accent: '#a68bff', onPress: () => spPicksMenu(() => again(page)) }] });
   if (!SP.mine) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando tus listas…', color: SP.loadErr ? '#ff8a3d' : '#ffd166' });
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
@@ -445,6 +445,17 @@ function spListMenu(back, page = 0) {
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spList = true;
+}
+// En las gafas: tus canciones elegidas, cada una con su compás, ▲ ▼ para cambiarla de sitio y ✕ para quitarla (de 6 en 6)
+function spPicksMenu(back, page = 0) {
+  const again = p => spPicksMenu(back, p), P = spPicks(), N = 6, pages = Math.max(1, Math.ceil(P.length / N)), p = clamp(page, 0, pages - 1), rows = [{ t: 'title', text: 'TUS CANCIONES ELEGIDAS' }];
+  spBpmPrefetch(P); const set = L => { SP.cfg.picks = L; SP.started = false; spSave(); spListsPage(); again(p); };
+  rows.push({ t: 'text', text: P.length ? 'Suenan en este orden y en bucle. ▲ ▼: cambiar de sitio' : 'No tienes canciones elegidas: márcalas en una lista (aquí o en la página)', color: '#a49fc8' });
+  P.slice(p * N, p * N + N).forEach((t, i) => { const k = p * N + i;
+    rows.push({ t: 'btns', items: [{ label: `${k + 1}. ${t.name} · ${spBpmShort(t.uri)}`, flex: 4.2, style: 'ghost', onPress: () => {} }, { label: '▲', onPress: () => set(spMove(P, k, -1)) }, { label: '▼', onPress: () => set(spMove(P, k, 1)) }, { label: '✕', style: 'danger', onPress: () => set(P.filter((_, j) => j !== k)) }] }); });
+  if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  rows.push({ t: 'btns', items: [{ label: '▶ Ponerlas', style: 'primary', onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }, { label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(p); m.spPicks = true;
 }
 function spTrackMenu(l, back, page = 0) {
   const again = p => spTrackMenu(l, back, p), T = SP.trk && SP.trk[l.id], rows = [{ t: 'title', text: l.name }];
@@ -559,6 +570,15 @@ function spBpmCell(t) {
 }
 // en el juego, junto al nombre: « · 128 BPM» (el tuyo) o « · ≈124 BPM» (encontrado)
 const spBpmTag = uri => { const k = spTrackBpm(uri); return k.b ? ` · ${k.src === 'own' ? '' : '≈'}${k.b} BPM` : ''; };
+// Una canción elegida, en su ficha: su número, su nombre, su compás y ◀ ▶ para moverla de sitio (y ✕ para quitarla).
+// A: el atributo de los botones de esa lista y los nombres de sus acciones (rm, up, dn)
+const spBpmShort = uri => { const k = spTrackBpm(uri); return k.b ? `${k.src === 'own' ? '' : '≈'}${k.b} BPM` : 'sin BPM'; };
+function spChip(t, k, n, A) {
+  const e = escSp, b = (act, lab, dis, aria) => `<button type="button" class="btn tiny${dis ? ' off' : ''}" ${A.attr}="${act}" data-k="${k}"${dis ? ' disabled' : ''} aria-label="${e(aria)}">${lab}</button>`;
+  return `<span class="chip">${k + 1}. ${e(t.name)}<small class="chbpm">${spBpmShort(t.uri)}</small>${b(A.up, '◀', k === 0, `Antes: ${t.name}`)}${b(A.dn, '▶', k === n - 1, `Después: ${t.name}`)}${b(A.rm, '✕', false, `Quitar ${t.name}`)}</span>`;
+}
+// mover una canción de una lista: d = −1 (antes) o +1 (después)
+function spMove(list, k, d) { const j = k + d; if (j < 0 || j >= list.length) return list; const L = list.slice(); [L[k], L[j]] = [L[j], L[k]]; return L; }
 const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 // Escuchar una canción desde la página: ▶ la pone (en el reproductor de esta página si está listo; si no, en tu
 // dispositivo de Spotify activo) y ■ la para. Solo una a la vez; al acabar o al pararla desde fuera, vuelve el ▶
@@ -603,7 +623,7 @@ function spSongsPageInit() {
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
-  let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle.<div class="chips">${P.map((t, k) => `<span class="chip">${k + 1}. ${escSp(t.name)}<button class="btn tiny" data-sp="rm" data-k="${k}" aria-label="Quitar ${escSp(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
+  let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle (con ◀ ▶ las cambias de sitio).<div class="chips">${P.map((t, k) => spChip(t, k, P.length, { attr: 'data-sp', rm: 'rm', up: 'up', dn: 'dn' })).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
@@ -631,6 +651,7 @@ function spListsPage() {
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
     if (b.dataset.sp === 'back') { SP.openList = null; spListsPage(); return; }
     if (b.dataset.sp === 'rm') SP.cfg.picks = spPicks().filter((_, k) => k !== +b.dataset.k); else if (b.dataset.sp === 'clear') SP.cfg.picks = [];
+    else if (b.dataset.sp === 'up' || b.dataset.sp === 'dn') SP.cfg.picks = spMove(spPicks(), +b.dataset.k, b.dataset.sp === 'up' ? -1 : 1);
     SP.started = false; spSave(); spListsPage(); spMenuSync();
   });
 }
