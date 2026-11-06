@@ -293,7 +293,7 @@ function trekObsMesh(o) {
     o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'bandit') { // los bandidos, plantados en el sendero, uno detrás de otro
     const n = waveIdx >= 4 ? 3 : waveIdx >= 2 ? 2 : 1;
-    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.7 : 0.15), z: -i * 1.3, st: 'wait', t: 0, hp: waveIdx >= 2 ? 4 : 3, /* (los golpes que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
+    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
     o.warn = glowSprite(0xff3b5c, 0.8, 0); g.add(o.warn); trekShadow(g, 2.4, 3.4, 0);
   } else { // el derrumbe: una roca grande atravesada en el sendero
     o.box = new THREE.Group(); g.add(o.box); const n = trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
@@ -434,7 +434,7 @@ function trekMoveStep() {
   return false;
 }
 function trekHaltSay(o, first) {
-  if (o.kind === 'bandit') { say(first ? `¡Bandidos! Esquiva sus golpes y pégales` : '¡Esquiva y pega!', '#ff8a3d', first ? 2.4 : 1.2); return; }
+  if (o.kind === 'bandit') { say(first ? '¡Bandidos! Esquiva sus piedras: agáchate, salta o apártate' : '¡Esquiva sus piedras!', '#ff8a3d', first ? 2.6 : 1.2); return; }
   const [one, many] = TREK_MOVE[o.move], left = o.need - (o.got || 0), n = `${left} ${left === 1 ? one : many}`;
   say(o.kind === 'chest' ? (first ? `¡Un cofre! Rompe sus cadenas: ${n}. Dentro, una llave: con 3, el tesoro (+1500)` : `¡Rompe las cadenas: ${n}!`) : o.kind === 'stream' ? `${first ? 'Cruza el arroyo: ' : ''}¡salta a la piedra de la ${o.sides[o.got] < 0 ? 'izquierda' : 'derecha'}!` : o.kind === 'chasm' ? (first ? `¡Desfiladero! Salta de roca en roca: ${n}` : `¡Salta! Quedan ${left}`) : `¡Embiste la roca: ${n}!`, '#ffd166', first ? 2.4 : 1.4);
 }
@@ -532,13 +532,13 @@ const TREK_GEMS = 'reparena3-gems';
 
 /* ---------- Bandidos que cortan el paso ---------- */
 // El explorador con capucha (Modular Character Outfits, de Quaternius), con dos ropas y las animaciones de anims.glb (su
-// esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan un golpe a la
-// cabeza. Un gancho (de lado) se esquiva agachándote; un directo (de frente), apartándote a un lado. Cada uno lanza 3
-// golpes seguidos (4 desde el tercer tramo): si se los esquivas todos, cae agotado; el que no esquivas te da (una vida) y
-// tiene que volver a intentarlo. Sin puñetazos: con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más
-// bandidos y menos aviso en cada tramo y con el rango. Si en 75 s no acabas, se van (sin premio)
+// esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan piedras. La alta
+// se esquiva agachándote; la baja (rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
+// esquivadas (6 desde el tercer tramo), se rinde y huye; la que no esquivas te da (una vida) y no cuenta. Sin puñetazos:
+// con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más bandidos y piedras más rápidas en cada tramo y
+// con el rango. Si en 90 s no acabas, se van (sin premio)
 const TREK_BAND = { scene: null, clips: {}, loading: false, failed: false, bare: false, mats: null };
-const TREK_BAND_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Dance_Loop', 'Punch_Jab', 'Punch_Cross', 'Melee_Hook', 'Hit_Chest', 'Hit_Head', 'Death01'];
+const TREK_BAND_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Dance_Loop', 'OverhandThrow', 'Hit_Chest', 'Hit_Head', 'Death01'];
 function trekBandLoad() {
   if (TREK_BAND.scene || TREK_BAND.loading || TREK_BAND.failed) return;
   if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { TREK_BAND.failed = true; return; }
@@ -591,35 +591,66 @@ const _tkl = { x: 0, z: 0 };
 function trekLoc(o, x, z) { const p = o.mesh.position, a = -o.mesh.rotation.y, dx = x - p.x, dz = z - p.z; _tkl.x = dx * Math.cos(a) + dz * Math.sin(a); _tkl.z = -dx * Math.sin(a) + dz * Math.cos(a); return _tkl; }
 // el sitio del combate: a 1,1 m delante de tu cabeza (el gancho se agacha: más cerca, quedaba bajo la vista) (en el grupo de la parada)
 const _tbw = new V3(), _tbv = new V3(), _tbh = new V3();
+// El combate (opción A del usuario: sin golpes, que con el retraso de las manos no daba tiempo): el bandido se planta a
+// unos 4,5 m y te lanza piedras que ves volar más de un segundo. La alta, a la cabeza: agáchate; la baja, a las
+// espinillas: salta; la que va al cuerpo: apártate a un lado. Cada una esquivada le quita aguante; con 5 (6 desde el
+// tercer tramo) se rinde y huye. La que te da, una vida. Lanza con su animación de lanzar, llevada a mano (despacio)
+const TREK_STONE_TXT = { high: ['¡PIEDRA ALTA!', '¡Agáchate!'], low: ['¡PIEDRA BAJA!', '¡Salta!'], body: ['¡AL CUERPO!', '¡Apártate!'] };
 function trekBandFight(o, dt, t) {
   if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
-  o.haltT += dt; const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone'); if (!B) { trekHaltEnd(o, true); return; }
-  if (o.haltT > 75) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
-  const L = trekLoc(o, HL.x, HL.z), fz = L.z - 1.1, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
+  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if (!o.stones2 || !o.stones2.length) trekHaltEnd(o, true); return; }
+  if (o.haltT > 90) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
+  const L = trekLoc(o, HL.x, HL.z), fz = L.z - 4.5, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
   if (B.st === 'wait') { B.st = 'come'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); }
-  if (B.st === 'come') { const dx = L.x - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.3); trekBandPlay(B, 'Idle_Loop'); } }
-  else if (B.st === 'guard' && B.t > B.gap) { // prepara el golpe: un gancho (agáchate) o un directo (apártate)
-    B.st = 'wind'; B.t = 0; B.atk = Math.random() < 0.5 ? 'hook' : 'jab'; B.x0 = HL.x; B.win = D.wind; B.played = false;
-    say(B.atk === 'hook' ? '¡GANCHO! ¡Agáchate!' : '¡DIRECTO! ¡Apártate!', '#ff3b5c', B.win + 0.3); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8); }
-  else if (B.st === 'wind') {
-    // el golpe, llevado a mano: recoge el brazo despacio (WU s) y lo lanza también despacio (ST s), igual el gancho que el
-    // directo (a su velocidad, el directo se veía en un tercio de segundo: no daba tiempo a reaccionar)
-    const clip = B.atk === 'hook' ? 'Melee_Hook' : 'Punch_Jab', P = BEAST_PUNCH[clip] || [0.2, 0.3], t0 = B.win - D.wu - D.st;
-    if (!B.played && B.t >= t0) { B.played = true; trekBandPlay(B, clip, true); if (B.cur) B.cur.paused = true; }
-    if (B.played && B.cur && B.cur.paused) { const k = B.t - t0; B.cur.time = k < D.wu ? P[0] * smooth(clamp(k / D.wu, 0, 1)) : lerp(P[0], P[1], clamp((k - D.wu) / D.st, 0, 1)); }
-    if (B.t >= B.win) { // el golpe llega: ¿lo has esquivado?
-      const ok = B.atk === 'hook' ? calibRef - HL.y > 0.2 : Math.abs(HL.x - B.x0) > 0.2, p = arena.localToWorld(_tbw.set(B.x0, calibRef - 0.1, HL.z)); SND.whoosh(p, 'arc');
-      if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; // (esquivado: le queda un golpe menos)
-        if (B.hp <= 0) { B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); cheer('¡Bandido agotado!', '#3cf0c6', 1.2); say('¡Agotado! Cae al suelo', '#3cf0c6', 1.2); SND.explosion(o.mesh.localToWorld(_tbh.set(B.x, 0.5, B.z)), false); }
-        else { B.st = 'stun'; B.t = 0; B.stun = D.stun; trekBandPlay(B, 'Hit_Head', true); say(`¡Esquivado! Le quedan ${B.hp}`, '#ffd166', 0.9); } }
-      else { B.st = 'guard'; B.t = 0; B.gap = rand(1.2, 1.8); trekBandPlay(B, 'Idle_Loop'); hurtPlayer({ silent: true }); comicHit(head.p.clone()); say(B.atk === 'hook' ? '¡Te ha dado! Agáchate antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); o.hits = (o.hits || 0) + 1; }
-    }
-  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.8, 1.2); trekBandPlay(B, 'Idle_Loop'); } // (tras esquivarle, se tambalea un momento y vuelve a la carga)
-  // el aviso rojo mientras prepara el golpe; dorado mientras se tambalea
-  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(B.st === 'wind' ? 0xff3b5c : 0xffd166); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : B.st === 'stun' ? 0.45 : 0;
+  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.1); trekBandPlay(B, 'Idle_Loop'); } }
+  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo
+    B.st = 'wind'; B.t = 0; B.atk = pick(['high', 'low', 'body']); B.played = false; const [a, b] = TREK_STONE_TXT[B.atk];
+    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.2); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8);
+    trekBandPlay(B, 'OverhandThrow', true); if (B.cur) { B.cur.paused = true; B.cur.time = 0; } }
+  else if (B.st === 'wind') { // echa el brazo atrás despacio y suelta la piedra
+    const P = BEAST_PUNCH.OverhandThrow || [0.25, 0.35]; if (B.cur && B.cur.paused) B.cur.time = P[1] * smooth(clamp(B.t / D.wu, 0, 1));
+    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.timeScale = 0.6; } trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } }
+  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done)) { B.st = 'guard'; B.t = 0; B.gap = rand(0.9, 1.4); trekBandPlay(B, 'Idle_Loop'); }
+  // el aviso rojo sobre él mientras prepara el lanzamiento
+  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(0xff3b5c); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : 0;
 }
-// menos aviso en cada tramo y con el rango, poco a poco
-const trekBandDiff = () => ({ wind: Math.max(1.6, 2.1 - 0.05 * waveIdx - 0.03 * rankIdx()), stun: 0.7, wu: 0.75, st: 0.45 }); // (wu y st: lo que dura, siempre igual, el brazo atrás y el golpe)
+// la piedra: de su mano a donde estás (a la cabeza, a las espinillas o al pecho), en un arco que se ve venir
+function trekStoneThrow(o, B, L, D) {
+  const m = new THREE.Group(); trekRock(m, 0, 0.11); m.children.forEach(c => { c.castShadow = true; }); o.mesh.add(m);
+  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.22 : calibRef - 0.5, from = new V3(B.x + 0.15, 1.7, B.z + 0.2), to = new V3(L.x, y, L.z);
+  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow);
+  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0 });
+  SND.whoosh(o.mesh.localToWorld(_tbw.copy(from)), 'arc');
+}
+function trekStoneStep(o, dt) {
+  for (const q of o.stones2 || []) {
+    q.t += dt; const k = q.t / q.dur;
+    if (!q.done) {
+      const h = q.atk === 'low' ? 0.35 : 0.7; q.m.position.lerpVectors(q.from, q.to, Math.min(1, k)); q.m.position.y += h * Math.sin(Math.PI * Math.min(1, k)); q.m.rotation.x += dt * 9; q.m.rotation.z += dt * 6;
+      if (k > 1 - 0.45 / q.dur) q.up = Math.max(q.up, head.p.y - calibRef); // (el salto, en el último medio segundo)
+      if (k >= 1) { q.done = true; trekStoneJudge(o, q); }
+    } else { // esquivada: sigue de largo y se va; si te dio, cae a tus pies y se apaga
+      q.after += dt; if (q.ok) q.m.position.add(_tbh.set((q.to.x - q.from.x) / q.dur, -0.6, (q.to.z - q.from.z) / q.dur).multiplyScalar(dt)); else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
+      if (q.after > 0.8) { o.mesh.remove(q.m); q.gone = true; }
+    }
+  }
+  if (o.stones2) o.stones2 = o.stones2.filter(q => !q.gone);
+}
+// ¿la has esquivado? Alta: agachado (la cabeza 20 cm por debajo de tu altura de pie); baja: has saltado al pasar
+// (la cabeza, «Altura del salto» por encima); al cuerpo: apartado 20 cm a un lado
+function trekStoneJudge(o, q) {
+  const B = q.by, ok = q.atk === 'high' ? calibRef - HL.y > 0.2 : q.atk === 'low' ? q.up > settings.jumpHeight / 100 : Math.abs(HL.x - q.x0) > 0.2; q.ok = ok;
+  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone();
+  if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; SND.whoosh(p, 'arc');
+    if (B.hp <= 0) { B.st = 'leave'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Se rinde y huye!', '#3cf0c6', 1.4); score += 200; }
+    else say(`¡Esquivada! Le quedan ${B.hp}`, '#ffd166', 0.9); }
+  else { hurtPlayer({ silent: true }); comicHit(head.p.clone()); fx.dust(p, 8, 0.2); SND.metalHit(p, false); o.hits = (o.hits || 0) + 1;
+    say(q.atk === 'high' ? '¡Te ha dado! Agáchate antes' : q.atk === 'low' ? '¡Te ha dado! Salta antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); }
+}
+// ¿hay una piedra baja en el aire? (en «Probar en el ordenador», soltar Espacio entonces es saltar)
+const trekStoneLow = () => { const o = TREK.halt; return !!(o && o.stones2 && o.stones2.some(q => !q.done && q.atk === 'low')); };
+// menos tiempo de vuelo en cada tramo y con el rango, poco a poco; el brazo atrás, siempre igual
+const trekBandDiff = () => ({ fly: Math.max(1.15, 1.75 - 0.05 * waveIdx - 0.03 * rankIdx()), wu: 0.9 });
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {

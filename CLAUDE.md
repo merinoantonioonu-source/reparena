@@ -84,9 +84,9 @@ No las cambies sin preguntarle.
   una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: cada
   embestida la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
   saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
-  esquivar: cada uno lanza 3 o 4 golpes seguidos —agacharse ante el gancho, apartarse ante el directo, con aviso largo y
-  el golpe a cámara lenta— y, si se los esquivas todos, cae agotado; nada de puñetazos, que con el retraso de las manos en
-  las gafas no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen, a tu lado y algo por delante (a la vista): si vas más despacio,
+  esquivar: lanzan piedras con aviso largo —la alta, agacharse; la baja, saltar; la que va al cuerpo, apartarse— y, con 5
+  esquivadas (6 desde el tercer tramo), se rinden y huyen; nada de puñetazos, que con el retraso de las manos en las gafas
+  no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen, a tu lado y algo por delante (a la vista): si vas más despacio,
   te alcanzan y muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
@@ -118,7 +118,8 @@ No las cambies sin preguntarle.
   porque no aportaba nada.
 - Cargas ×2/×3/×4 aguantando la postura más dura, como en la sentadilla: fondos (abajo, codos a 90°), elevación frontal
   (arriba), antebrazos (la barra escurrida), dominadas y remo (arriba; al bajar, onda que con ×4 revienta también a los
-  cercanos). La plancha con un brazo, no: una flexión entera (bajada y tiempo de Flexiones) deja el brazo siguiente a ×4.
+  cercanos) y la plancha con un brazo (una flexión aguantada abajo carga ×2/×3/×4, con la bola a la vista; el brazo que se
+  levanta después lanza esa carga).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.

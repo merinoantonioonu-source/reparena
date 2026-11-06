@@ -1838,13 +1838,14 @@ function runDetectors(t, dt) {
     // se queda entre PL_FLOOR (el suelo de las gafas es y = 0): si las gafas veían un instante la mano de apoyo por debajo
     // del suelo, esa altura se quedaba tan baja que la mano parecía levantada para siempre, y la otra ya no disparaba
     const floorOf = d => clamp(d.floor, PL_FLOOR[0], PL_FLOOR[1]), lifted = s => hands[s].ok && hands[s].wrist.y > floorOf(P[s]) + LIFT;
-    // una flexión entera (como en Flexiones: bajar la cabeza «Bajada en la flexión» sin prisa, al menos «Duración mínima de
-    // una PERFECTA») deja el próximo brazo cargado al máximo (×4). Con un brazo levantado no se mide
+    // una flexión (bajar la cabeza «Bajada en la flexión») aguantada abajo carga, como la sentadilla: ×2, ×3 y ×4 según
+    // lo que aguantes (la bola se ve crecer); al subir, el próximo brazo que levantes lanza esa carga. Con un brazo
+    // levantado no se mide (y si lo levantas aún abajo, se lleva lo cargado)
     const Q = DET.plp, req = dv('pushDepth') / 100;
-    if (P.left.state === 'up' || P.right.state === 'up') { Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
-    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', defer: () => {
-      if (t - Q.t0 >= pt) { P.boost = 4; onPower(4); say('¡Cargado al máximo! Levanta un brazo', '#ff3cf0', 1.4); }
-      else say('Más despacio: así la flexión no carga', '#ff8a3d', 1.4);
+    if (P.left.state === 'up' || P.right.state === 'up') { if (Q.state === 'down' && Q.charged && Q.pow > 1) P.boost = Math.max(P.boost || 0, Q.pow); Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
+    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', power: true, defer: o => {
+      if (o.pow > 1) { P.boost = Math.max(P.boost || 0, o.pow); say(`¡Carga ×${P.boost}! Levanta un brazo`, '#' + POW_COL[P.boost - 1].toString(16).padStart(6, '0'), 1.4); }
+      else say('Aguanta abajo en la flexión para cargar', '#ff8a3d', 1.4);
     } });
     for (const side of ['left', 'right']) {
       const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';

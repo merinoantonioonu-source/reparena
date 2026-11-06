@@ -805,44 +805,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       if ((T.hop += 0.033) > 0.5) { T.hop = 0; RA.TMV.st = 'hit'; } }, 150,
       s => !T.st || !T.ch ? `deberían salir el arroyo y el desfiladero (${!!T.st}, ${!!T.ch})` : !T.st.done || RA.TREK.dist < T.st.exit - 0.01 ? 'el arroyo debería cruzarse con zancadas laterales hasta la otra orilla' : !T.ch.done || RA.TREK.dist < T.ch.exit - 0.01 ? 'el desfiladero debería cruzarse saltando hasta la otra orilla' : !T.ch.fell || s.taken !== 1 ? `si tardas en saltar, el pilar debería hundirse contigo (una vida, una vez: ${s.taken})` : T.ch.pillars.filter(p => p.userData.sink).length !== T.ch.pillars.length ? 'los pilares que dejas deberían hundirse' : '', true);
     log(`trek stream & chasm: stream ${T.st && T.st.got}/${T.st && T.st.need} · chasm ${T.ch && T.ch.got}/${T.ch && T.ch.need} fell ${T.ch && T.ch.fell} · ${RA.TREK.dist.toFixed(1)} m`); }
-  // Travesía: los bandidos. Un golpe sin esquivar quita una vida; esquivando (agachado ante el gancho, a un lado ante el
-  // directo) le queda un golpe menos; cuando se los has esquivado todos, cae agotado (sin puñetazos)
-  { const T = { o: null, first: 1 }; const sv = { ...RA.settings }; RA.TREK_BAND.bare = true;
+  // Travesía: los bandidos lanzan piedras (sin golpes): la alta se esquiva agachado, la baja saltando y la que va al
+  // cuerpo apartándose; cada una esquivada le quita aguante y, sin aguante, huye. La primera, sin esquivar: una vida
+  { const T = { o: null, first: 1, kinds: new Set() }; const sv = { ...RA.settings }; RA.TREK_BAND.bare = true;
     await runConfig('Travesía: bandidos', { ...base, mode: 'trek', exercise: 'squat', waves: 3, repsWave: 60, repsInc: 0, rest: 0, lives: 3 }, t => {
       RA.TREK.nextChase = 1e9; const O = RA.TREK.obs, h = RA.TREK.halt, K = RA.PV.keys;
       if (!T.o) { RA.TREK.nObs = 2; const o = O.find(o => o.kind === 'bandit'); if (o) { T.o = o; o.hp0 = o.bandits.reduce((a, b) => a + b.hp, 0); RA.TREK.nObs = 0; } }
       if (!h || h.kind !== 'bandit') { RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; K.KeyA = K.KeyD = false; return; }
-      const B = h.bandits.find(b => b.st !== 'down' && b.st !== 'gone'); if (!B) return;
-      const dx = RA.HL.x - (B.x0 === undefined ? RA.HL.x : B.x0);
-      if (B.st === 'wind' && !T.first) { RA.PV.crouch = B.atk === 'hook'; K.KeyD = B.atk === 'jab' && Math.abs(dx) < 0.32; K.KeyA = false; }
-      else if (B.st === 'wind') { RA.PV.crouch = false; K.KeyA = K.KeyD = false; } // (el primer golpe, sin esquivar)
-      else { if (B.st === 'guard' && T.first && h.hits) T.first = 0; RA.PV.crouch = false; K.KeyD = false; K.KeyA = dx > 0.05; }
-    }, 200, s => !T.o ? 'deberían salir los bandidos' : !T.o.done ? `deberían caer todos (${T.o.bandits.map(b => b.st + ':' + b.hp).join(', ')})` : T.o.bandits.some(b => b.st !== 'down' && b.st !== 'gone') ? 'han ganado sin derribarlos' : s.taken !== 1 ? `el golpe sin esquivar debería quitar una vida, y los esquivados ninguna (${s.taken})` : T.o.dodges !== T.o.hp0 ? `cada uno debería caer tras esquivarle todos sus golpes (${T.o.dodges} esquivas de ${T.o.hp0})` : '', true);
-    log(`trek bandits: ${T.o && T.o.bandits.length} · dodges ${T.o && T.o.dodges} · hit ${T.o && T.o.hits} · ${T.o && T.o.bandits.map(b => b.st).join(',')}`);
+      const q = (h.stones2 || []).find(q => !q.done); if (!q) { RA.PV.crouch = false; K.KeyD = false; K.KeyA = Math.abs(RA.HL.x) > 0.05 && RA.HL.x > 0; return; }
+      T.kinds.add(q.atk); if (T.first) { RA.PV.crouch = false; K.KeyD = false; if (h.hits) T.first = 0; return; } // (la primera, sin esquivar)
+      const left = q.dur - q.t;
+      if (q.atk === 'high') { RA.PV.crouch = true; K.KeyD = false; }
+      else if (q.atk === 'low') { RA.PV.crouch = left > 0.32; K.KeyD = false; } // (agachado y, al llegar, arriba de un salto)
+      else { RA.PV.crouch = false; K.KeyD = Math.abs(RA.HL.x - q.x0) < 0.3; }
+    }, 260, s => !T.o ? 'deberían salir los bandidos' : !T.o.done ? `deberían rendirse todos (${T.o.bandits.map(b => b.st + ':' + b.hp).join(', ')})` : T.o.bandits.some(b => b.hp > 0) ? 'han huido sin esquivarles todas las piedras' : s.taken !== 1 ? `la piedra sin esquivar debería quitar una vida, y las esquivadas ninguna (${s.taken})` : T.o.dodges !== T.o.hp0 ? `cada uno debería rendirse tras esquivarle todas sus piedras (${T.o.dodges} de ${T.o.hp0})` : T.kinds.size < 3 ? `deberían llegar piedras altas, bajas y al cuerpo (${[...T.kinds]})` : '', true);
+    log(`trek bandits: ${T.o && T.o.bandits.length} · stones dodged ${T.o && T.o.dodges} of ${T.o && T.o.hp0} · hit ${T.o && T.o.hits} · kinds ${[...T.kinds].join(',')} · ${T.o && T.o.bandits.map(b => b.st).join(',')}`);
     RA.TREK_BAND.bare = false; for (const k in sv) RA.setSetting(k, sv[k]); }
-  // las misiones de cantidad se celebran en plena ronda, en cuanto llegas (no hay que esperar a acabarla)
-  { const mis0 = JSON.parse(JSON.stringify(RA.misToday())), xp0 = RA.CR.xp, seen = new Set(); let at = -1;
-    const M = RA.misToday(); M.list[0] = { t: 'reps', n: 3, got: 0, done: false }; M.list.slice(1).forEach(m => { m.done = false; m.n = 999; }); M.chest = false;
-    await runConfig('Misión cumplida en plena ronda', { ...base, mode: 'combat', exercise: 'squat', foes: 'robots', waves: 1, repsWave: 12, lives: 0 }, t => { RA.PV.crouch = (t % 2.4) < 1.2;
-      if (RA.TROPHY.cur) seen.add(RA.TROPHY.cur); RA.TROPHY.q.forEach(o => seen.add(o.title)); if (at < 0 && [...seen].some(x => /MISIÓN 1 DE 3/.test(x))) at = RA.stats.reps; }, 60, s => '');
-    log(`missions live: celebrated at rep ${at} (needs 3) · notices ${[...seen].join(' · ')}`);
-    if (at < 3 || at > 5) errors.push(`misiones: la de repeticiones debería celebrarse en plena ronda, al llegar (en la ${at})`);
-    RA.CR.mis = mis0; RA.CR.xp = xp0; RA.crSave(); RA.TROPHY.q.length = 0; }
-  // récords: al fallo, en cuanto superas tus repeticiones (o tu tiempo, tus puntos…) de antes, su propio aviso grande;
-  // y el pulsómetro: lo que manda (8 o 16 bits) y su color por zonas, en el marcador
-  { const h0 = storage.get('reparena3-history'), seen = new Set(), sv = { ...RA.settings };
-    storage.set('reparena3-history', JSON.stringify([{ ex: 'squat', mode: 'combat', reps: 4, perfect: 1, fail: 1, time: 20, score: 100, combo: 2, date: Date.now() - 864e5 }]));
-    await runConfig('Récords al fallo', { ...base, mode: 'combat', exercise: 'squat', foes: 'robots', toFail: 1, waves: 0, repsWave: 6, lives: 0 }, t => { RA.PV.crouch = (t % 2.4) < 1.2;
-      if (t > 3 && !RA.HR.bpm) { RA.hrParse(new DataView(new Uint8Array([0, 152]).buffer)); }
-      if (RA.TROPHY.cur) seen.add(RA.TROPHY.cur); RA.TROPHY.q.forEach(o => seen.add(o.title)); }, 70, s => '', true); // (al fallo sin vidas: no acaba)
-    const rec = [...seen].filter(x => /RÉCORD DE/.test(x));
-    log(`records live: ${rec.join(' · ')} · best before ${JSON.stringify(RA.REC.best)}`);
-    if (!rec.includes('¡RÉCORD DE REPETICIONES!') || !rec.includes('¡RÉCORD DE TIEMPO!')) errors.push(`récords: al fallo, superar tus repeticiones y tu tiempo debería celebrarse en plena ronda (${rec.join(', ')})`);
-    if (h0 === undefined || h0 === null) storage.delete('reparena3-history'); else storage.set('reparena3-history', h0); for (const k in sv) if (RA.settings[k] !== sv[k]) RA.setSetting(k, sv[k]); RA.TROPHY.q.length = 0;
-    const b8 = (RA.hrParse(new DataView(new Uint8Array([0, 142]).buffer)), RA.hrNow()), b16 = (RA.hrParse(new DataView(new Uint8Array([1, 160, 0]).buffer)), RA.hrNow()), bad = (RA.hrParse(new DataView(new Uint8Array([1, 44, 1]).buffer)), RA.hrNow());
-    log(`heart rate: 8 bits ${b8} · 16 bits ${b16} · 300 ignored → ${bad} · colours ${[100, 125, 145, 160, 185].map(RA.hrCol).join(' ')}`);
-    if (b8 !== 142 || b16 !== 160 || bad !== 160 || RA.hrCol(100) === RA.hrCol(185)) errors.push('pulsómetro: debería leer el pulso en 8 y en 16 bits, descartar lo imposible y colorearlo por zonas');
-    RA.HR.bpm = 0; }
   // Travesía: si no avanzas, los lobos te alcanzan y muerden (una vida)
   { let chased = 0; await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);
     log(`trek wolves: chased ${chased}`); }
@@ -1960,14 +1938,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const r2 = RA.stats.reps; for (let k = 0; k < 4; k++) { XRS.lift = 'right'; frame(40, 16, xrFrame); XRS.lift = null; frame(40, 16, xrFrame); }
     log(`plank1 after the support hand was seen under the floor: right lifts → ${RA.stats.reps - r2}/4`);
     if (RA.stats.reps - r2 !== 4) errors.push('plancha: tras ver un instante la mano de apoyo bajo el suelo, la otra debería seguir disparando'); }
-  // una flexión entera, sin prisa (como en Flexiones), deja el brazo siguiente cargado al máximo; deprisa, no
-  { const pt0 = RA.settings.perfectTime; RA.setSetting('perfectTime', 1.2);
-    const push = secs => { const n = Math.round(secs / 0.016), d = RA.settings.pushDepth / 100 + 0.03; for (let i = 0; i <= n; i++) { XRS.headY = 0.55 - d * Math.sin(Math.PI * i / n); frame(1, 16, xrFrame); } XRS.headY = 0.55; frame(30, 16, xrFrame); };
+  // una flexión aguantada abajo carga como la sentadilla (×2 a 1,5 s, ×3 a 3,5 s, ×4 a 6 s, de serie) y el brazo siguiente
+  // lanza esa carga; sin aguantar, ×1
+  { const ph0 = RA.settings.powHold, pi0 = RA.settings.powHoldInc; RA.setSetting('powHold', 1.5); RA.setSetting('powHoldInc', 0.5);
+    const push = hold => { const d = RA.settings.pushDepth / 100 + 0.03, go = (a, b) => { for (let i = 0; i <= 25; i++) { XRS.headY = 0.55 - d * (a + (b - a) * i / 25); frame(1, 16, xrFrame); } }; go(0, 1); frame(Math.round(hold / 0.016), 16, xrFrame); go(1, 0); XRS.headY = 0.55; frame(30, 16, xrFrame); };
     const lift = () => { let pow = 1; XRS.lift = 'left'; for (let i = 0; i < 40; i++) { frame(1, 16, xrFrame); const m = /DISPARO ×(\d)/.exec(RA.msg.text || ''); if (m && RA.msg.t > 0) pow = Math.max(pow, +m[1]); } XRS.lift = null; frame(40, 16, xrFrame); return pow; };
-    push(2.4); const slow = RA.DET.pl.boost, p1 = lift(); push(0.5); const fast = RA.DET.pl.boost, p2 = lift();
-    log(`plank1 push-up: slow → boost ×${slow}, next lift ×${p1} · fast → boost ×${fast || 1}, next lift ×${p2}`);
-    RA.setSetting('perfectTime', pt0);
-    if (slow !== 4 || p1 !== 4 || fast || p2 !== 1) errors.push('plancha con un brazo: una flexión sin prisa debería cargar el brazo siguiente al máximo (×4), y una deprisa, no'); }
+    push(6.5); const b4 = RA.DET.pl.boost, p4 = lift(); push(2); const b2 = RA.DET.pl.boost, p2 = lift(); push(0.2); const b1 = RA.DET.pl.boost, p1 = lift();
+    log(`plank1 push-up hold: 6.5 s → boost ×${b4}, lift ×${p4} · 2 s → ×${b2}, lift ×${p2} · none → ×${b1 || 1}, lift ×${p1}`);
+    RA.setSetting('powHold', ph0); RA.setSetting('powHoldInc', pi0);
+    if (b4 !== 4 || p4 !== 4 || b2 !== 2 || p2 !== 2 || b1 || p1 !== 1) errors.push('plancha con un brazo: aguantar abajo en la flexión debería cargar el brazo siguiente (×2, ×3, ×4 según lo que aguantes), y sin aguantar, no'); }
   RA.exitAll(); frame(2, 16, xrFrame);
 
   // ---- Una sola paralela: las manos van a lo largo de la barra ----

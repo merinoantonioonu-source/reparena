@@ -148,6 +148,8 @@ function previewInput(dt) {
   }
   // sentadilla con salto: al soltar Espacio, sube de golpe por encima de tu altura de pie (PV.noJump: no salta)
   if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
+  // Travesía: con una piedra baja del bandido en el aire, soltar Espacio es saltar (75_trek)
+  if (settings.mode === 'trek' && GAME_STATES.includes(state) && trekStoneLow()) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jumpHeight / 100 + 0.08; }
   // el cofre del descanso: igual, un salto (79_perks); al irse, deja de saltar
   const cj = chestWaits(); if (cj || PV.chestJ) { PV.jumping = cj && !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; PV.chestJ = cj; if (PV.jumping) target = PV.baseY + 0.2; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);
