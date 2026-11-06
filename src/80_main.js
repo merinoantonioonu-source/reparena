@@ -8,7 +8,7 @@ function readXR(frame, t = 0) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = h.virt = false; h.J.forEach(j => j.ok = false); }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.tipSm = h.pinch = h.rayOk = h.trig = h.btnMenu = h.virt = false; h.J.forEach(j => j.ok = false); }
   for (const src of frame.session.inputSources) {
     const h = hands[src.handedness]; if (!h) continue;
     if (src.targetRaySpace) { const rp = frame.getPose(src.targetRaySpace, ref); if (rp) { const o = rp.transform.orientation; h.rayOk = true; h.rayO.copy(rp.transform.position); h.rayQ.set(o.x, o.y, o.z, o.w); h.rayD.set(0, 0, -1).applyQuaternion(h.rayQ); } }
@@ -24,7 +24,7 @@ function readXR(frame, t = 0) {
       handSmooth(h, t);
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
-      if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
+      if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
       h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
@@ -164,7 +164,7 @@ function previewInput(dt) {
   const iw = ex === 'inchworm' && GAME_STATES.includes(state) && state !== 'calib' ? iwSim(dt) : null; // inchworm: Espacio hace la repetición entera
   camera.updateMatrixWorld();
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.tipSm = h.pinch = h.rayOk = false; }
   if (iw) for (const s of ['left', 'right']) { const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(iw[s]); }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
@@ -298,7 +298,7 @@ renderer.setAnimationLoop((time, frame) => {
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
   updateListener(head.p, head.q);
-  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
+  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip, s: hands[s].tipSm ? hands[s].tipS : hands[s].tip }); // (s: la que se ve, sin temblor)
   gameStep(dt, t);
   updateFX(dt); updateBolts(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);

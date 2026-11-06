@@ -86,8 +86,10 @@ No las cambies sin preguntarle.
   saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
   esquivar: lanzan piedras con aviso largo —la alta, agacharse; la baja, saltar; la que va al cuerpo, apartarse— y, con 5
   esquivadas (6 desde el tercer tramo), se rinden y huyen; nada de puñetazos, que con el retraso de las manos en las gafas
-  no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te persiguen, a tu lado y algo por delante (a la vista): si vas más despacio,
-  te alcanzan y muerden. Sin enjambres.
+  no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te cortan el paso: salen a lo lejos, delante y a un
+  lado (siempre a la vista: flecha roja encima, que se ve a través de rocas y árboles), y corren en diagonal a un punto del
+  sendero por delante de ti; si llegas antes (hay que acelerar: algo más deprisa que ellos), cruzan por detrás y se quedan
+  atrás; si llegan antes, muerden. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
 - El marcador, siempre flotando a un lado (nada de columnas que vayan contigo).
@@ -219,7 +221,9 @@ No las cambies sin preguntarle.
 - **Cada menú sale donde estaba el anterior**: «Traer menú», «Volver», «Menú principal» y el resumen no se alejan.
 - Los botones de los menús se pulsan con **las dos manos** (el botón MENÚ de la muñeca izquierda, con la derecha). Las
   teclas son **sólidas**: al llegar al fondo, la mano que se ve se queda apoyada en ella y no la atraviesa; el panel
-  también (el fondo y los huecos entre teclas).
+  también (el fondo y los huecos entre teclas). Y tienen **imán** (opción B elegida): la iluminada sigue iluminada hasta que
+  el dedo sale de ella más de 1 cm, la mano que se ve se acerca a ella y, al tocarla, se queda clavada donde tocó; decide la
+  punta suavizada (la que se ve) y el barrido de lado se juzga por el movimiento de ~0,1 s, no por un fotograma.
 - Tras pulsar un botón, hay que **retirar el dedo** antes de que cuente otra pulsación, para que no se toquen dos
   opciones ni el menú siguiente.
 - Menús compactos y al alcance de la mano:
