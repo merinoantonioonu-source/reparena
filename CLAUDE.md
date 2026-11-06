@@ -133,6 +133,10 @@ No las cambies sin preguntarle.
 - Arcos de semipuente (`arcLow`): inclinados tan bajos que hay que apartarse al lado alto y bajar hasta apoyar una mano en
   el suelo; llegan más despacio, con aviso grande y la huella de la mano en el suelo.
 - El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
+- Manos perdidas (solo manos desnudas): la que iba deprisa sigue su gesto un instante (`h.est = 'pred'`) y, con «Manos
+  con el cuerpo» (Ajustes → Menú, de serie) y si el navegador da el cuerpo, la perdida se coloca en la muñeca del
+  cuerpo con su última forma y las puntas celestes (`h.est = 'body'`). Una mano con `h.est` no pulsa menús ni coloca
+  barras: lo que necesite la mano de verdad tiene que saltársela; al volver a verla, `h.back` (ese fotograma).
 - Mandos como manos: con mandos se ven manos en todo el juego (en la partida, con pistolas o espada, el arma). En
   sentadillas y zancadas: gatillo + agarre = puño; el rayo se lanza
   apuntando con la mano y con el gatillo. Con mando, la puntería por defecto es «con las manos».

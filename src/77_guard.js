@@ -217,7 +217,7 @@ function punchStep(dt) {
   PUNCH.t += dt;
   for (const s of ['left', 'right']) {
     const h = hands[s], P = PUNCH[s]; P.cd -= dt;
-    if (!h.ok) { P.ok = false; continue; }
+    if (!h.ok || h.back) { P.ok = false; if (!h.ok) continue; } // (al volver tras una mano calculada, el salto no es un puñetazo)
     if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
     _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
     const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;

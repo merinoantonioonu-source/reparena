@@ -21,7 +21,7 @@ function readXR(frame, t = 0) {
         if (filled) for (let i = 0; i < 25; i++) { const J = h.J[i]; _jm.fromArray(poseBuf, i * 16); _jm.decompose(J.p, J.q, _js); J.r = radBuf[i] || 0.008; J.ok = true; }
       }
       if (!filled) spaces.forEach((sp, i) => { const jp = sp && frame.getJointPose(sp, ref), J = h.J[i]; if (jp) { const p = jp.transform.position, o = jp.transform.orientation; J.p.set(p.x, p.y, p.z); J.q.set(o.x, o.y, o.z, o.w); J.r = jp.radius || 0.008; J.ok = true; } });
-      handSmooth(h, t);
+      if (h.J[0].ok) handSmooth(h, t); // (perdida, el filtro se queda como estaba: si handRescue la coloca, sigue desde ahí sin saltos)
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
@@ -33,7 +33,73 @@ function readXR(frame, t = 0) {
       h.grip = !!(B[1] && B[1].pressed); if (h.ok && padHandsOn() && !(swordSides().includes(src.handedness) && GAME_STATES.includes(state))) padHand(h, src.handedness, t); // (mandos como manos, 40_models)
     }
   }
+  handRescue(frame, ref, t); // (la mano perdida: sigue su gesto o la coloca el cuerpo)
   anchorsFrame(frame, ref); roomFrame(frame, ref, t);
+}
+
+/* ---------- Manos perdidas: el gesto sigue y, si el navegador da el cuerpo, la mano también ---------- */
+// Las gafas pierden una mano a menudo (deprisa, fuera de la vista de las cámaras, pegada a la cara o tapada por la otra).
+// Dos ayudas, solo con las manos desnudas (con mandos, nada):
+//  · si iba deprisa, sigue su camino con la velocidad que llevaba, frenando, durante HRS.pred s: el puñetazo, la sacudida
+//    o el toque que se pierde a medias se termina igual (h.est = 'pred')
+//  · si el navegador da el seguimiento del cuerpo («body-tracking»: en las Quest sale en frame.body aunque no lo diga) y
+//    está puesto «Manos con el cuerpo», la mano perdida se coloca donde el cuerpo dice que está su muñeca, con la última
+//    forma que se le vio (los dedos, quietos), como el «modo de movimiento amplio» de las apps instaladas (h.est = 'body').
+//    El giro y la distancia entre la muñeca del cuerpo y la de la mano se aprenden mientras se ven las dos. Lo que se mueve
+//    el cuerpo pasa tal cual (una sacudida sigue contando), pero el salto inicial se recoge despacio (HRS.glide m/s, menos
+//    que una sacudida: colocarse no lanza nada). El primer fotograma en que las cámaras la vuelven a ver, h.back (el salto
+//    hasta la de verdad no cuenta como sacudida ni puñetazo)
+const HRS = { pred: 0.15, vmin: 0.9, k: 5, glide: 0.6 };
+const BODY = { asked: false, seen: 0, used: 0, now: false }; // (now: el navegador da el cuerpo en este fotograma; used: segundos con alguna mano colocada por él)
+const _hrB = new V3(), _hrBQ = new Q4(), _hrQi = new Q4(), _hrP = new V3(), _hrQ = new Q4(), _hrT = new V3(), _hrTQ = new Q4();
+const mkRescue = () => ({ rel: Array.from({ length: 25 }, () => ({ p: new V3(), q: new Q4(), r: 0.008 })), has: false, v: new V3(), lastP: new V3(), lastQ: new Q4(), lostT: 0, offP: new V3(), offQ: new Q4(), cal: false, outP: new V3(), outQ: new Q4(), tgt: new V3(), mode: null, t: -1 });
+// la muñeca de ese lado según el cuerpo (en las coordenadas de la partida), si el navegador la da
+function bodyWrist(frame, ref, side, outP, outQ) {
+  const b = frame.body; if (!b) return false;
+  const n = side + '-hand-wrist', sp = b[n] || (typeof b.get === 'function' ? b.get(n) : null); if (!sp) return false;
+  let pose = null; try { pose = frame.getPose(sp, ref); } catch (e) { pose = null; } if (!pose) return false;
+  const p = pose.transform.position, o = pose.transform.orientation; outP.set(p.x, p.y, p.z); outQ.set(o.x, o.y, o.z, o.w); return true;
+}
+function handRescue(frame, ref, t) {
+  let any = false, usedT = 0;
+  for (const s of ['left', 'right']) {
+    const h = hands[s], R = h.R || (h.R = mkRescue()), dt = R.t < 0 ? 0 : clamp(t - R.t, 0, 0.1); R.t = t; h.est = null; h.back = false;
+    const body = !!settings.bodyHands && bodyWrist(frame, ref, s, _hrB, _hrBQ); if (body) { BODY.seen++; any = true; }
+    if (h.ok && h.isHand) { // la ven las cámaras: su forma (respecto a la muñeca), su velocidad y su sitio respecto a la muñeca del cuerpo
+      const W = h.J[0]; _hrQi.copy(W.q).invert();
+      for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; if (!J.ok) continue; r.p.copy(J.p).sub(W.p).applyQuaternion(_hrQi); r.q.copy(_hrQi).multiply(J.q); r.r = J.r; }
+      R.has = true; if (h.F) R.v.lerp(t - h.F.tRaw < 0.06 ? _hrT.set(h.F.v[0], h.F.v[1], h.F.v[2]) : _hrT.set(0, 0, 0), 0.6); R.lastP.copy(W.p); R.lastQ.copy(W.q); R.lostT = 0; // (si las gafas repiten la misma postura un rato, está parada: sin velocidad)
+      h.back = R.mode === 'body'; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto, no: va por el mismo camino)
+      if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
+      continue;
+    }
+    if (h.ok || !h.isHand || !R.has) { R.mode = null; continue; } // (con mandos, o sin una mano vista antes, nada)
+    R.lostT += dt; let mode = null;
+    if (R.v.length() > HRS.vmin && R.lostT < HRS.pred) { _hrP.copy(R.lastP).addScaledVector(R.v, (1 - Math.exp(-HRS.k * R.lostT)) / HRS.k); _hrQ.copy(R.lastQ); mode = 'pred'; }
+    else if (body) { _hrQ.copy(_hrBQ).multiply(R.offQ); _hrP.copy(R.offP).applyQuaternion(_hrBQ).add(_hrB); mode = 'body'; }
+    if (!mode) { R.mode = null; continue; }
+    if (mode === 'pred') { R.outP.copy(_hrP); R.outQ.copy(_hrQ); }
+    else {
+      if (R.mode !== 'body') { if (!R.mode) { if (R.lostT < 0.3) { R.outP.copy(R.lastP); R.outQ.copy(R.lastQ); } else { R.outP.copy(_hrP); R.outQ.copy(_hrQ); } } R.tgt.copy(_hrP); } // (desde donde se la veía —quieta, aún se pinta 0,3 s— o desde donde acabó el gesto; si hace rato que no se ve, aparece ya en su sitio)
+      R.outP.add(_hrT.subVectors(_hrP, R.tgt)); R.tgt.copy(_hrP); // lo que se mueve el cuerpo, tal cual
+      _hrT.subVectors(_hrP, R.outP); const l = _hrT.length(), mx = HRS.glide * dt; if (l > mx) _hrT.multiplyScalar(mx / l); R.outP.add(_hrT); // y el salto, despacio
+      R.outQ.slerp(_hrQ, 1 - Math.exp(-8 * dt));
+    }
+    R.mode = mode;
+    for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; J.p.copy(r.p).applyQuaternion(R.outQ).add(R.outP); J.q.copy(R.outQ).multiply(r.q); J.r = r.r; J.ok = true; }
+    handSmooth(h, t);
+    const T = h.J[9]; h.ok = true; h.wrist.copy(R.outP); h.wristQ.copy(R.outQ); h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; h.pinch = h.trig = false; h.est = mode;
+    if (mode === 'body') usedT = dt;
+  }
+  BODY.now = any; BODY.used += usedT;
+}
+// Si el navegador da el cuerpo, al calibrar se lee «manos y cuerpo detectados» (en vez de «manos detectadas»); al salir de
+// las gafas, la página dice si lo dio y cuánto rato colocó manos (para contármelo)
+function bodySessionStart() { Object.assign(BODY, { asked: !!settings.bodyHands, seen: 0, used: 0, now: false }); for (const s of ['left', 'right']) hands[s].R = null; }
+function bodySessionEnd() {
+  for (const s of ['left', 'right']) { const h = hands[s]; h.est = null; h.back = false; h.R = null; } BODY.now = false;
+  if (!BODY.asked || typeof document === 'undefined') return; const st = $('#xrStatus'); if (!st) return;
+  st.textContent = BODY.seen ? `Última sesión: el navegador dio el seguimiento del cuerpo; las manos perdidas se colocaron con él ${BODY.used ? 'durante ' + Math.max(1, Math.round(BODY.used)) + ' s' : '(no hizo falta)'}.` : 'Última sesión: el navegador no dio el seguimiento del cuerpo (las manos perdidas solo siguieron su gesto un instante).';
 }
 
 // Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
@@ -69,24 +135,25 @@ function handSmooth(h, t) {
 // estaba al perderse (abajo, junto al cuerpo y fuera de las cámaras; por encima de la cabeza; o delante, a la vista, donde
 // la tapan el puño, la otra mano o la pesa) y cuánto tardan las gafas en volver a verla. Sale en el resumen (modo
 // desarrollador), para ver en la partida de verdad de dónde vienen los cortes
-const TRK_MIN = 0.1, mkTrk = () => ({ obs: 0, seen: 0, n: 0, low: 0, high: 0, front: 0, sum: 0, max: 0, cur: 0, where: '', lastY: 0 });
+const TRK_MIN = 0.1, mkTrk = () => ({ obs: 0, seen: 0, n: 0, low: 0, high: 0, front: 0, sum: 0, max: 0, cur: 0, where: '', lastY: 0, body: 0, pred: 0 });
 const TRK = { left: mkTrk(), right: mkTrk(), bar: null };
 function trkReset() { TRK.left = mkTrk(); TRK.right = mkTrk(); TRK.bar = { n: 0, none: 0, clasp: 0, dis: 0, max: 0, reps: 0 }; }
 function trkStep(dt) {
   if (!xrActive || preview || !['ready', 'play', 'rest'].includes(state)) return;
   for (const s of ['left', 'right']) {
     const h = hands[s], T = TRK[s]; if (!h.isHand) continue; T.obs += dt;
-    if (h.ok) {
+    if (h.ok && !h.est) {
       if (T.cur >= TRK_MIN) { T.n++; T[T.where]++; T.sum += T.cur; T.max = Math.max(T.max, T.cur); }
       T.cur = 0; T.seen += dt; T.lastY = h.wrist.y - head.p.y; continue;
     }
+    if (h.est) T[h.est] += dt; // (perdida para las cámaras, pero la colocó el cuerpo o siguió su gesto)
     if (!T.cur) T.where = T.lastY < -0.6 ? 'low' : T.lastY > 0.08 ? 'high' : 'front';
     T.cur += dt;
   }
 }
 function trkLine() {
   const f = s => { const T = TRK[s]; if (T.obs < 5) return null; const pct = Math.round(100 * T.seen / T.obs), avg = T.n ? T.sum / T.n : 0, n1 = v => v.toFixed(1).replace('.', ',');
-    return `${s === 'left' ? 'izq.' : 'der.'} vista ${pct} %${T.n ? ` · ${T.n} ${T.n === 1 ? 'corte' : 'cortes'} (${T.low} abajo, ${T.front} delante, ${T.high} arriba) · vuelve en ${n1(avg)} s (máx. ${n1(T.max)})` : ' · sin cortes'}`; };
+    return `${s === 'left' ? 'izq.' : 'der.'} vista ${pct} %${T.n ? ` · ${T.n} ${T.n === 1 ? 'corte' : 'cortes'} (${T.low} abajo, ${T.front} delante, ${T.high} arriba) · vuelve en ${n1(avg)} s (máx. ${n1(T.max)})` : ' · sin cortes'}${T.body > 0.5 ? ` · la colocó el cuerpo ${Math.round(100 * T.body / T.obs)} %` : ''}`; };
   const L = f('left'), R = f('right'), B = TRK.bar, pc = v => Math.round(100 * v / Math.max(1, B.n)) + ' %';
   // con barra o kettlebell: cuánto se usaron las dos juntas, en cuánto no hubo ninguna que valiera o no coincidían, y el
   // recorrido más alto que se vio (lo que pide, al lado)
@@ -298,7 +365,7 @@ renderer.setAnimationLoop((time, frame) => {
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
   updateListener(head.p, head.q);
-  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip, s: hands[s].tipSm ? hands[s].tipS : hands[s].tip }); // (s: la que se ve, sin temblor)
+  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk && !hands[s].est) fingers.push({ side: s, p: hands[s].tip, s: hands[s].tipSm ? hands[s].tipS : hands[s].tip }); // (s: la que se ve, sin temblor)
   gameStep(dt, t);
   updateFX(dt); updateBolts(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
@@ -435,11 +502,11 @@ async function startXR(ar) {
   audioInit(); ensureRigs(); spPlayerUnlock(); // con el gesto de entrar, el reproductor de Spotify ya puede sonar
   try {
     const useAR = ar || XRSUP.ar;
-    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : [])] }); // el escaneo, solo si se va a usar
+    const session = await navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'anchors', 'bounded-floor', ...(settings.roomMode !== 'off' ? ['plane-detection', 'mesh-detection'] : []), ...(settings.bodyHands ? ['body-tracking'] : [])] }); // el escaneo, solo si se va a usar; el cuerpo, para las manos perdidas
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     qualSessionStart(session); await renderer.xr.setSession(session);
-    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); warmQueue();
-    session.addEventListener('end', () => { GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); warmQueue(); bodySessionStart();
+    session.addEventListener('end', () => { bodySessionEnd(); GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
