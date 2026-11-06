@@ -2302,10 +2302,14 @@ TX.halo = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), g = 
 TX.atlas = (() => { // 0 brillo · 1 humo · 2 fuego · 3 chispa
   const c = mkCanvas(256), x = c.getContext('2d'), R = rng(5);
   let g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.6)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  // el humo y el fuego, cada uno en su propio lienzo y luego al atlas: el recorte redondo («destination-in») borra todo lo
+  // que queda fuera de lo que se pinta, y hecho sobre el atlas entero se llevaba por delante el brillo y el humo (salían
+  // transparentes: no se veían ni el humo, ni el polvo, ni los destellos, ni las estelas)
   for (const [ox, soft] of [[128, 0.12], [0, 0.22]]) {
-    const oy = ox ? 0 : 128;
-    for (let i = 0; i < 40; i++) { const px = ox + 64 + (R() - 0.5) * 60, py = oy + 64 + (R() - 0.5) * 60, rr = 12 + R() * 26; const gg = x.createRadialGradient(px, py, 0, px, py, rr); gg.addColorStop(0, `rgba(255,255,255,${soft + R() * soft})`); gg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gg; x.beginPath(); x.arc(px, py, rr, 0, TAU); x.fill(); }
-    x.globalCompositeOperation = 'destination-in'; const m = x.createRadialGradient(ox + 64, oy + 64, 10, ox + 64, oy + 64, 63); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = m; x.fillRect(ox, oy, 128, 128); x.globalCompositeOperation = 'source-over';
+    const oy = ox ? 0 : 128, tc = mkCanvas(128), y = tc.getContext('2d');
+    for (let i = 0; i < 40; i++) { const px = 64 + (R() - 0.5) * 60, py = 64 + (R() - 0.5) * 60, rr = 12 + R() * 26; const gg = y.createRadialGradient(px, py, 0, px, py, rr); gg.addColorStop(0, `rgba(255,255,255,${soft + R() * soft})`); gg.addColorStop(1, 'rgba(255,255,255,0)'); y.fillStyle = gg; y.beginPath(); y.arc(px, py, rr, 0, TAU); y.fill(); }
+    y.globalCompositeOperation = 'destination-in'; const m = y.createRadialGradient(64, 64, 10, 64, 64, 63); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); y.fillStyle = m; y.fillRect(0, 0, 128, 128);
+    x.drawImage(tc, ox, oy);
   }
   g = x.createRadialGradient(192, 192, 0, 192, 192, 30); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(128, 128, 128, 128);
   const t = texFrom(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
@@ -5584,6 +5588,10 @@ const fx = {
   bigSmoke(pos) { PNORM.add({ pos: pos.clone().add(rv(1.5)), v: new V3(rand(0.2, 0.6), rand(1.2, 2.2), rand(-0.3, 0.3)), life: rand(10, 16), c0: [0.12, 0.09, 0.08], c1: [0.06, 0.05, 0.05], a: 0.5, s0: 5, s1: 18, tile: 1, rotV: rand(-0.1, 0.1), fin: 0.1 }); },
   steam(pos, side) { PNORM.add({ pos: pos.clone(), v: new V3(side * rand(0.8, 1.8), rand(0.2, 0.8), rand(0.1, 0.6)), life: rand(1.0, 1.6), c0: [0.75, 0.76, 0.8], c1: [0.5, 0.5, 0.55], a: 0.4, s0: 0.25, s1: 1.4, tile: 1, rotV: rand(-1, 1), fin: 0.1, drag: 1.5 }); },
   sparks(pos, n, color = [1, 0.6, 0.2], speed = 3, size = 0.05) { for (let i = 0; i < n; i++) PADD.add({ pos: pos.clone(), v: rUp(1.2).multiplyScalar(speed * rand(0.3, 1.2)), life: rand(0.3, 0.9), c0: [1, 0.95, 0.8], c1: color, s0: size * rand(0.6, 1.2), s1: size * 0.3, tile: 3, g: 6, floor: true, fin: 0.01 }); },
+  // la nube de polvo que levanta algo al pasar (la onda del inchworm): espesa y de color tierra, algo más oscura que la arena
+  // (clara se perdía sobre el suelo claro), sale hacia fuera (dx, dz) a sp m/s, sube un poco, se hincha y se queda flotando
+  // (dust es el polvillo de una piedra al caer: pequeño y tenue, no se veía)
+  dustCloud(pos, dx, dz, size = 0.3, sp = 1) { PNORM.add({ pos: pos.clone(), v: new V3(dx * sp * rand(0.6, 1.2), rand(0.2, 0.5), dz * sp * rand(0.6, 1.2)), life: rand(1.4, 2.3), c0: [0.58, 0.48, 0.38], c1: [0.47, 0.42, 0.37], a: 0.95, s0: size, s1: size * 2.6, tile: 1, drag: 1.8, rotV: rand(-0.6, 0.6), fin: 0.12 }); },
   dust(pos, n, size = 0.25) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone().add(new V3(rand(-0.1, 0.1), 0.03, rand(-0.1, 0.1))), v: new V3(rand(-0.6, 0.6), rand(0.05, 0.3), rand(-0.6, 0.6)), life: rand(0.8, 1.5), c0: [0.32, 0.29, 0.26], c1: [0.2, 0.19, 0.18], a: 0.35, s0: size * 0.5, s1: size * 1.6, tile: 1, drag: 2.5, fin: 0.1 }); },
   droplets(pos, n, color = [0.4, 1, 0.85], speed = 1.5, size = 0.03) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1.4).multiplyScalar(speed * rand(0.3, 1.1)), life: rand(0.5, 1.0), c0: color, c1: [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5], a: 0.85, s0: size * rand(0.6, 1.2), s1: size * 0.5, tile: 0, g: 6, floor: true, fin: 0.01 }); },
   ichor(pos, n, s = 1) { for (let i = 0; i < n; i++) PNORM.add({ pos: pos.clone(), v: rUp(1).multiplyScalar(rand(0.3, 1.2) * s), life: rand(0.5, 1.0), c0: [0.32, 0.36, 0.06], c1: [0.12, 0.14, 0.02], a: 0.9, s0: 0.02 * s, s1: 0.035 * s, tile: 0, g: 5, floor: true, fin: 0.01 }); },
@@ -11451,7 +11459,7 @@ function iwWaveMake() {
 function iwWave(pow = 1) {
   if (!IWW.g) iwWaveMake();
   IWW.pow = pow; IWW.m = 0.85 + 0.2 * (pow - 1); // (alcance: ×1, 85 %; ×4, 145 %)
-  IWW.t = 0; IWW.dust = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
+  IWW.t = 0; IWW.dust = 0; IWW.cloud = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
   const c = IWW.g.position.clone().add(_iww.set(0, 0.15, 0)); fx.glow(c, [0.2, 1, 0.95], 1.2 + 0.3 * pow, 0.3); fx.glow(c, [1, 0.25, 0.85], 0.7 + 0.2 * pow, 0.22); fx.dust(IWW.g.position, 8 + 4 * pow, 0.3);
   SND.shock(IWW.g.position); hapticBoth(1, 160 + 40 * pow);
   const dmg = POW_DMG[pow - 1] || 0, reach = 3.2 * IWW.m + 0.3; let n = 0;
@@ -11472,16 +11480,19 @@ function iwWaveStep(dt) {
   IWW.wall.scale.set(R1 * 0.97, hW, R1 * 0.97); IWW.wall.position.y = hW / 2; IWW.wall.material.opacity = 0.85 * Math.pow(1 - Math.min(1, k), 1.5);
   IWW.wall2.scale.set(R2 * 0.98, hW * 0.7, R2 * 0.98); IWW.wall2.position.y = hW * 0.35; IWW.wall2.material.opacity = 0.6 * Math.pow(1 - k2, 1.5) * (k2 > 0 ? 1 : 0);
   const f = Math.min(1, IWW.t / 0.3); IWW.flash.scale.setScalar(0.3 + f * 1.6 * IWW.m); IWW.flash.material.opacity = 1 - f;
-  // el polvo que levanta el frente a su paso: una tanda cada 0,07 s mientras avanza, alrededor del frente (polvo gris que
-  // queda flotando, chispas de color y alguna piedrecita)
-  const step = 0.07; if (k < 0.85 && IWW.t >= IWW.dust * step) {
-    const n = 14 + 4 * IWW.pow, c = IWW.g.position, off = Math.random();
-    for (let i = 0; i < n; i++) {
-      const a = (i + off) / n * TAU, x = c.x + Math.sin(a) * R1, z = c.z + Math.cos(a) * R1;
-      if (i % 2 === 0) fx.dust(_iww.set(x, 0.03, z), 1, 0.18 + 0.05 * IWW.pow);
-      fx.sparks(_iww.set(x, 0.04, z), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03);
-    }
+  // el polvo que levanta el frente a su paso: chispas de color cada 0,07 s y, cada 0,1 s (pasado medio metro: pegado a ti
+  // tapaba la vista), nubes de polvo claras y espesas que el frente empuja hacia fuera, suben un poco, se hinchan y quedan
+  // flotando (antes eran motas pequeñas, oscuras y medio enterradas en el suelo: no se veían). Con más fuerza, más polvo
+  const c = IWW.g.position;
+  if (k < 0.85 && IWW.t >= IWW.dust * 0.07) {
+    const n = 14 + 4 * IWW.pow, off = Math.random();
+    for (let i = 0; i < n; i++) { const a = (i + off) / n * TAU; fx.sparks(_iww.set(c.x + Math.sin(a) * R1, 0.04, c.z + Math.cos(a) * R1), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03); }
     IWW.dust++;
+  }
+  if (k < 0.85 && R1 > 0.6 && IWW.t >= (IWW.cloud || 0) * 0.1) {
+    const nd = Math.round(5 + IWW.pow + R1), s = 0.26 + 0.04 * IWW.pow, off = Math.random();
+    for (let i = 0; i < nd; i++) { const a = (i + off + Math.random() * 0.5) / nd * TAU, sx = Math.sin(a), cz = Math.cos(a); fx.dustCloud(_iww.set(c.x + sx * R1, s * 0.5, c.z + cz * R1), sx, cz, s * rand(0.8, 1.2), 0.9 + 0.3 * IWW.pow); }
+    IWW.cloud = (IWW.cloud || 0) + 1;
   }
   if (k >= 1) { IWW.t = -1; IWW.g.visible = false; }
 }

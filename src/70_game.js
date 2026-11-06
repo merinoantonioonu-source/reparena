@@ -1662,7 +1662,7 @@ function iwWaveMake() {
 function iwWave(pow = 1) {
   if (!IWW.g) iwWaveMake();
   IWW.pow = pow; IWW.m = 0.85 + 0.2 * (pow - 1); // (alcance: ×1, 85 %; ×4, 145 %)
-  IWW.t = 0; IWW.dust = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
+  IWW.t = 0; IWW.dust = 0; IWW.cloud = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
   const c = IWW.g.position.clone().add(_iww.set(0, 0.15, 0)); fx.glow(c, [0.2, 1, 0.95], 1.2 + 0.3 * pow, 0.3); fx.glow(c, [1, 0.25, 0.85], 0.7 + 0.2 * pow, 0.22); fx.dust(IWW.g.position, 8 + 4 * pow, 0.3);
   SND.shock(IWW.g.position); hapticBoth(1, 160 + 40 * pow);
   const dmg = POW_DMG[pow - 1] || 0, reach = 3.2 * IWW.m + 0.3; let n = 0;
@@ -1683,16 +1683,19 @@ function iwWaveStep(dt) {
   IWW.wall.scale.set(R1 * 0.97, hW, R1 * 0.97); IWW.wall.position.y = hW / 2; IWW.wall.material.opacity = 0.85 * Math.pow(1 - Math.min(1, k), 1.5);
   IWW.wall2.scale.set(R2 * 0.98, hW * 0.7, R2 * 0.98); IWW.wall2.position.y = hW * 0.35; IWW.wall2.material.opacity = 0.6 * Math.pow(1 - k2, 1.5) * (k2 > 0 ? 1 : 0);
   const f = Math.min(1, IWW.t / 0.3); IWW.flash.scale.setScalar(0.3 + f * 1.6 * IWW.m); IWW.flash.material.opacity = 1 - f;
-  // el polvo que levanta el frente a su paso: una tanda cada 0,07 s mientras avanza, alrededor del frente (polvo gris que
-  // queda flotando, chispas de color y alguna piedrecita)
-  const step = 0.07; if (k < 0.85 && IWW.t >= IWW.dust * step) {
-    const n = 14 + 4 * IWW.pow, c = IWW.g.position, off = Math.random();
-    for (let i = 0; i < n; i++) {
-      const a = (i + off) / n * TAU, x = c.x + Math.sin(a) * R1, z = c.z + Math.cos(a) * R1;
-      if (i % 2 === 0) fx.dust(_iww.set(x, 0.03, z), 1, 0.18 + 0.05 * IWW.pow);
-      fx.sparks(_iww.set(x, 0.04, z), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03);
-    }
+  // el polvo que levanta el frente a su paso: chispas de color cada 0,07 s y, cada 0,1 s (pasado medio metro: pegado a ti
+  // tapaba la vista), nubes de polvo claras y espesas que el frente empuja hacia fuera, suben un poco, se hinchan y quedan
+  // flotando (antes eran motas pequeñas, oscuras y medio enterradas en el suelo: no se veían). Con más fuerza, más polvo
+  const c = IWW.g.position;
+  if (k < 0.85 && IWW.t >= IWW.dust * 0.07) {
+    const n = 14 + 4 * IWW.pow, off = Math.random();
+    for (let i = 0; i < n; i++) { const a = (i + off) / n * TAU; fx.sparks(_iww.set(c.x + Math.sin(a) * R1, 0.04, c.z + Math.cos(a) * R1), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03); }
     IWW.dust++;
+  }
+  if (k < 0.85 && R1 > 0.6 && IWW.t >= (IWW.cloud || 0) * 0.1) {
+    const nd = Math.round(5 + IWW.pow + R1), s = 0.26 + 0.04 * IWW.pow, off = Math.random();
+    for (let i = 0; i < nd; i++) { const a = (i + off + Math.random() * 0.5) / nd * TAU, sx = Math.sin(a), cz = Math.cos(a); fx.dustCloud(_iww.set(c.x + sx * R1, s * 0.5, c.z + cz * R1), sx, cz, s * rand(0.8, 1.2), 0.9 + 0.3 * IWW.pow); }
+    IWW.cloud = (IWW.cloud || 0) + 1;
   }
   if (k >= 1) { IWW.t = -1; IWW.g.visible = false; }
 }
