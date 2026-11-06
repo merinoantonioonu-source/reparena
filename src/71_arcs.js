@@ -88,6 +88,8 @@ function arxPatterns(total) {
   return out;
 }
 
+// entre dos vallas seguidas, al menos 1,1 s (antes, con ritmo rápido, llegaban a medio segundo: había que volar)
+const ARX_JUMP_GAP = 1.1;
 // Ráfaga de vallas: 3 o 4 seguidas (con ritmo, a uno o dos pulsos una de otra), con su aviso
 function arxHurdles() { const n = Math.random() < 0.5 ? 3 : 4, l = []; for (let k = 0; k < n; k++) l.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: k < n - 1 ? 0.4 : 1.4 }); l[0].note = ['¡RÁFAGA DE VALLAS!', `${n} saltos seguidos`]; return l; }
 // Burpee: el arco de plancha y, en cuanto pasa, una valla (sale con poco tiempo para levantarte: arriba de un salto)

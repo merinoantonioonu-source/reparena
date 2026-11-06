@@ -143,7 +143,7 @@ const escD = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;'
 function exSongsHTML() {
   const x = settings.exercise, sel = exSongs(x), on = new Set(sel.map(t => t.uri)), mine = !!EXS.t[x];
   let h = `<p class="note">Canciones de <b>${escD(EX_NAMES[x])}</b> (el ejercicio elegido arriba): suenan al azar al empezar una ronda de este ejercicio, en cualquier modo (las sesiones llevan las suyas). Sin ninguna, suena lo de siempre.${sel.length && !mine ? ' Ahora, las que vienen de serie.' : ''}</p>`;
-  h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${escD(t.name)}<button class="btn tiny" data-a="srm" data-k="${k}" aria-label="Quitar ${escD(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="sclear">Quitar todas</button></div>` : '';
+  h += sel.length ? `<div class="chips">${sel.map((t, k) => spChip(t, k, sel.length, { attr: 'data-a', rm: 'srm', up: 'sup', dn: 'sdn' })).join('')}<button class="btn small" data-a="sclear">Quitar todas</button></div>` : '';
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba) para elegirlas.</p>';
   if (!SP.mine) return h + `<div class="actions"><button type="button" class="btn small" data-a="sload">Elegir canciones</button></div><p class="status">${escD(EXS.err)}</p>`;
   const L = spPickable();
@@ -172,6 +172,7 @@ function exSongsInitPage() {
     else if (d.a === 'sback') { EXS.list = ''; exSongsPage(); }
     else if (d.a === 'bpmx') { spBpmScale(d.u, +d.bpmx); exSongsPage(); }
     else if (d.a === 'srm') { const l = exSongs(); l.splice(+d.k, 1); exSongsSet(l); exSongsPage(); }
+    else if (d.a === 'sup' || d.a === 'sdn') { exSongsSet(spMove(exSongs(), +d.k, d.a === 'sup' ? -1 : 1)); exSongsPage(); } // (cambiarla de sitio)
     else if (d.a === 'sclear') { exSongsSet([]); exSongsPage(); }
   });
   exSongsPage();

@@ -74,6 +74,15 @@ void main() { float ndv = abs(dot(normalize(vN), normalize(vV))), core = pow(ndv
   vec3 c = mix(uColor * 0.9, vec3(1.0), core * 0.75 + run * 0.35) * (1.0 + uPulse * 0.4);
   gl_FragColor = vec4(c, uOpacity); }`;
 const chevGeo = (() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, -0.1, 0, -0.09, 0.06, 0, 0, 0.015, 0, 0, -0.1, 0, 0, 0.015, 0, 0.09, 0.06, 0]), 3)); return g; })(); // (una flecha de dos triángulos, la punta hacia el centro)
+// un filamento: una línea quebrada que sale del tubo hacia fuera (o, si está a tu alcance, a veces hacia el hueco), en
+// las coordenadas del aro (radio 0,88)
+function neonZap(lines, near) {
+  for (const l of lines) {
+    const P = l.geometry.attributes.position, n = P.count, a = Math.random() * TAU, inw = near && Math.random() < 0.35, r0 = inw ? 0.8 : 0.96, r1 = inw ? rand(0.3, 0.6) : r0 + rand(0.15, 0.5);
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), r = r0 + (r1 - r0) * t, b = a + (Math.random() - 0.5) * 0.35 * t, j = (Math.random() - 0.5) * 0.06 * Math.sin(t * Math.PI); P.setXYZ(i, Math.cos(b) * (r + j), Math.sin(b) * (r + j), (Math.random() - 0.5) * 0.12 * t); }
+    P.needsUpdate = true; l.visible = Math.random() < 0.85;
+  }
+}
 const neonRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: NEON_VS, fragmentShader: NEON_FS, transparent: true, toneMapped: false });
 
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
@@ -191,6 +200,10 @@ class TouchTarget {
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
       this.root.quaternion.setFromUnitVectors(_tz, this.n); this.q0 = this.root.quaternion.clone();
+      // filamentos eléctricos que saltan del tubo (y, a tu alcance, hacia el hueco) y su zumbido mientras llega
+      this.filMat = new THREE.LineBasicMaterial({ color: new THREE.Color(col).lerp(new THREE.Color(0xffffff), 0.55), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      this.fil = []; for (let k = 0; k < 6; k++) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 3), 3)); const l = new THREE.Line(g, this.filMat); l.frustumCulled = false; l.userData.noInk = true; this.ring.add(l); this.fil.push(l); }
+      this.filT = 0; this.rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255]; this.hum = humLoop(this.root.position.clone());
     } else if (this.part === 'cut') { // bloque metálico con aristas que brillan y una flecha: corta en su dirección
       this.mat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
       this.box = new THREE.Mesh(cutGeo, this.mat); this.box.castShadow = true; this.root.add(this.box);
@@ -301,6 +314,9 @@ class TouchTarget {
       U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
       if (this.mode !== 'pass' && this.mode !== 'burst') { this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25; this.glowMat.opacity = (near ? 0.32 : 0.22) + pulse * 0.2; }
+      if (this.mode !== 'pass' && this.mode !== 'burst') { if ((this.filT -= dt) <= 0) { this.filT = rand(0.04, 0.09); neonZap(this.fil, near); } this.filMat.opacity = 0.55 + 0.45 * Math.random(); this.glowMat.opacity += 0.1 * Math.random(); // (los filamentos cambian de forma sin parar; el brillo parpadea)
+        if (Math.random() < dt * (near ? 14 : 7)) { const a = Math.random() * TAU; fx.sparks(this.ring.localToWorld(_ta.set(Math.cos(a) * 0.95, Math.sin(a) * 0.95, 0)), 2, this.rgb, 0.9, 0.022); } // (chispas que se desprenden del borde)
+        if (this.hum) this.hum.set(arena.localToWorld(_tb.copy(this.root.position))); }
       this.chev.rotation.z -= dt * (near ? 2.2 : 1.1); this.glowMat.color.copy(U.uColor.value); // (las flechas giran; más deprisa cuando está a tu alcance)
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
@@ -325,7 +341,7 @@ class TouchTarget {
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
-      SND.pop(c, !!this.hold); SND.zap(c); // (el aro de neón estalla en chispas de su color, con un destello)
+      SND.pop(c, !!this.hold); SND.zap(c); SND.shock(c); fx.electric(c, 22); if (this.hum) { this.hum.stop(); this.hum = null; } this.fil.forEach(l => l.visible = false); // (el aro de neón estalla: descarga eléctrica, chispas de su color y un destello)
       fx.sparks(c, 46, rgb, 2.8, 0.035); fx.sparks(c, 18, [1, 1, 1], 1.8, 0.02); fx.glow(c, rgb, 0.7, 0.2);
       this.mode = 'burst'; this.popT = 0; return;
     }
@@ -352,13 +368,14 @@ class TouchTarget {
   }
   miss() {
     if (this.judged) return; this.judged = true; this.mode = 'pass'; this.popT = 0;
+    if (this.fil) this.fil.forEach(l => l.visible = false); if (this.hum) { this.hum.stop(); this.hum = null; } // (fallado: se apaga)
     this.dir = this.pos.clone().sub(this.from).normalize(); if (this.ring) this.mat.uniforms.uColor.value.setHex(0xff3b5c); else this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
     fx.sparks(this.center(new V3()), 8, [1, 0.25, 0.3], 1, 0.02);
     if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido de la ameba!' : this.part === 'head' ? '¡Mete la cabeza en la ameba!' : this.part === 'cut' ? '¡Corta el bloque con la espada!' : `¡Toca el diamante con la ${HAND_NAME[this.hand]}!`, '#ff3b5c', 1.1); }
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
-    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); }
+    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); this.filMat.dispose(); this.fil.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
     this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose(); if (this.box) { this.shellMat.dispose(); this.arrowMat.dispose(); }
   }
 }

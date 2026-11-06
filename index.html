@@ -246,6 +246,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .spfilt select,.spfilt input{padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:.85rem}
 .spfilt input{width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
 .spfilt small{color:var(--muted)}
+.chip .chbpm{margin:0 2px 0 6px;color:var(--muted);font-size:.78em;font-variant-numeric:tabular-nums}
+.chip .btn.tiny.off{opacity:.3}
 .hrnow{margin-left:8px;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
 .spbpmc{flex:none;display:inline-flex;align-items:center;gap:2px;min-width:8.2em}
 .spx{padding:0 4px;border:0;border-radius:5px;background:none;color:var(--muted);font:inherit;font-size:.72rem;line-height:1.6;cursor:pointer;opacity:.7}
@@ -437,7 +439,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Vienen hacia ti aros de neón con flechas que giran (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
         <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
-        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar golpe tras golpe hasta que caen agotados… y lobos detrás.</small></label>
+        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar las piedras (agáchate, salta o apártate) hasta que se rinden y huyen… y lobos detrás.</small></label>
     </div>
     <p class="modeInfo" id="modeInfo"></p>
   </section>
@@ -635,18 +637,18 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li>Calibración: quédate quieto 2 segundos en la posición inicial (de pie, o en plancha para flexiones).</li>
       <li><strong>Realidad mixta en tu habitación (escala de habitación):</strong> con la habitación escaneada en las Quest 3 (Ajustes → Espacio físico → Configuración del espacio) y el permiso del juego, las compuertas se abren en tus paredes donde el camino hasta ti está libre de muebles, el marcador se cuelga en una pared, las trampillas salen en suelo libre y las paredes y los muebles tapan lo que pasa por detrás. Si la habitación no cumple los requisitos, el menú principal te dice por qué y te deja <b>colocarla a mano</b> con un asistente de cuatro pasos (tu sitio, las compuertas, las trampillas y el marcador): mira al suelo donde quieras cada cosa, verás su silueta y un cartel que te dice si se puede dejar ahí, y pellizca o pulsa «Colocar aquí». Las trampillas y el marcador también se pueden poner solos. Se recuerda entre sesiones. Se elige en Entorno ▸ → Habitación, o aquí en Entorno y vista → Escala de habitación (Según el escaneo, Colocada a mano o No). Si algo no se ve cuando carga contra ti, activa «Ver lo escaneado» para comprobar que paredes y muebles coinciden con los reales, o apaga «Que paredes y muebles tapen lo virtual».</li>
       <li><strong>Barras:</strong> pulsa Colocar barra (o Colocar paralelas) en el menú. El menú se oculta: ve al aparato, agárralo con las dos manos por encima de la cabeza (en las paralelas, tumbado debajo con los brazos estirados) y quédate quieto 5 segundos. Después vuelve el menú con los ajustes finos: altura, ancho, mover 1 cm y girar 1°. Para cancelar, el botón de la muñeca izquierda. Las Quest recuerdan la posición para la próxima vez. Para estos ejercicios es mejor la realidad mixta, porque ves la barra y el marco de la puerta de verdad.</li>
-      <li><strong>Cargas aguantando:</strong> como abajo en la sentadilla, aguantar la postura más dura carga el disparo (×2, ×3, ×4) en los fondos (abajo, con los codos a 90°), la elevación frontal (arriba, los brazos al frente), los antebrazos (la barra escurrida al máximo) y, en Barras, las dominadas y el remo (arriba): al bajar sale una onda que, con ×4, revienta también a los que esperan cerca. En la plancha con un brazo, una flexión entera y sin prisa deja el brazo siguiente cargado al máximo.</li>
+      <li><strong>Cargas aguantando:</strong> como abajo en la sentadilla, aguantar la postura más dura carga el disparo (×2, ×3, ×4) en los fondos (abajo, con los codos a 90°), la elevación frontal (arriba, los brazos al frente), los antebrazos (la barra escurrida al máximo) y, en Barras, las dominadas y el remo (arriba): al bajar sale una onda que, con ×4, revienta también a los que esperan cerca. En la plancha con un brazo, igual en la flexión: aguantar abajo carga (×2, ×3, ×4) y el brazo que levantes después lanza esa carga.</li>
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
-      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales los golpes (agáchate ante el gancho, apártate ante el directo) hasta que caigan agotados; y no dejes que te alcancen los lobos. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
+      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales las piedras (agáchate ante la alta, salta la baja, apártate de la que va al cuerpo) hasta que se rindan y huyan; y no dejes que te alcancen los lobos. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
       <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
       <li><strong>Para que no aburra</strong> (Ajustes → Partida): en Combate, como mucho cada tres oleadas y si te la ganas (3 golpes o menos en ellas), eliges <b>1 de 3 mejoras</b> para el resto de la ronda (escudo, escarcha, onda, corazón, doble o nada, combo de hierro o calma): la oleada siguiente espera a que elijas. En el rosco del marcador, una muesca blanca marca dónde ibas en <b>tu mejor ronda</b>: si la pasas, la punta se pone dorada. Y hay <b>sorpresas</b>: un enemigo dorado que vale el triple, un relámpago de 20 s con todo al doble (el borde del marcador se consume como una mecha) y, en algunos descansos, un cofre en el suelo, a tu derecha, que se abre <b>saltando</b>. Con ritmo de música, el relámpago llega al empezar una frase de la canción, con cuenta atrás al compás (Sonido ▸ → La música manda).</li>
       <li><strong>Progreso:</strong> arriba, en «Hoy», ves lo que llevas entrenado hoy frente a tu meta diaria (Ajustes → Tu meta), tus repeticiones, calorías y perfectas comparadas con ayer, tu racha y los últimos 7 días. Al terminar cada ronda ves el tiempo y las calorías estimadas (según el ejercicio y tu peso), y abajo, en tu historial, la mejor racha, el tiempo y las calorías de la semana y del total.</li>
       <li><strong>Tu nivel:</strong> cada repetición te da experiencia (las perfectas, el doble; ganar la ronda, 20 más) y al subir de nivel cambia tu título (de Novato a Leyenda) y desbloqueas colores para tus manos y para el rayo normal. Solo se ven: no dan más cargas ni más daño. Se eligen en Progreso → Nivel.</li>
-      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o una estrella de la campaña). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más, un <b>escudo de racha</b> (como mucho tres) y, si queda alguno, un color antes de tiempo. Si un día no entrenas, al volver se gasta un escudo solo y tu racha sigue. Las ves en «Hoy» y en Progreso → Misiones.</li>
+      <li><strong>Misiones del día:</strong> cada día, tres nuevas: una de cantidad (repeticiones o minutos), una de calidad (perfectas, combo o ganar sin que te golpeen) y una de variedad (otro modo, un ejercicio que llevas días sin hacer o muchas repeticiones en una sola ronda). Cada una da 40 de experiencia y, con las tres, se abre el cofre del día: 100 más, un <b>escudo de racha</b> (como mucho tres) y, si queda alguno, un color antes de tiempo. Si un día no entrenas, al volver se gasta un escudo solo y tu racha sigue. Las ves en «Hoy» y en Progreso → Misiones.</li>
       <li><strong>Campaña:</strong> para cada modo y ejercicio, 35 niveles en 7 regiones, una por rango (de recluta a general), cada una en su entorno; el quinto nivel de cada región, con jefe. Ganar abre el siguiente y da de 1 a 3 estrellas (la mitad de perfectas, dos; tres cuartos y sin golpes, tres). Se juega desde Progreso → Campaña; los ajustes del nivel no tocan los tuyos.</li>
       <li><strong>Tu semana:</strong> en el resumen de cada ronda ves la experiencia ganada, los minutos de los últimos 7 días frente a tu meta y tu mejor ronda con ese ejercicio en ese modo, para saber si te has superado.</li>
       <li>Repetición lenta y profunda = <strong>PERFECTA</strong>: doble daño (con puntería automática) o explosión en área (apuntando tú) en Combate, y bonificación en Arcos.</li>
@@ -884,8 +886,8 @@ const SCHEMA = [
   { key: 'supRange', g: 'ejercicio', label: 'Elevación del tronco en el superman', short: 'Elevación', type: 'num', min: 4, max: 35, step: 1, def: 8, unit: 'cm', ex: ['superman'], hint: 'Cuánto debe subir la cabeza desde tumbado boca abajo. Si no dispara, bájalo: el juego te dice cuánto subiste.' },
   { key: 'supArms', g: 'ejercicio', label: 'Comprobar los brazos estirados', short: 'Brazos estirados', type: 'choice', opts: [['yes', 'Sí'], ['no', 'No']], def: 'yes', ex: ['superman'], hint: 'Con Sí, el tiempo arriba se para si recoges las manos junto a la cabeza.' },
   { key: 'supHold', g: 'ejercicio', label: 'Segundos arriba para disparar', short: 'Segundos arriba', type: 'num', min: 0.5, max: 10, step: 0.5, def: 2, unit: 's', ex: ['superman'], hint: 'Tienes que mantener el tronco elevado, con los brazos estirados, este tiempo.' },
-  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
-  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam', 'plank1'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
+  { key: 'powHold', g: 'ejercicio', label: 'Carga: aguantar para ×2', short: 'Aguantar ×2', type: 'num', min: 0.5, max: 6, step: 0.1, def: 1.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Segundos que hay que aguantar en la postura perfecta (abajo en la sentadilla, arriba en el curl…) para que el disparo pase de ×1 a ×2.' },
+  { key: 'powHoldInc', g: 'ejercicio', label: 'Carga: más tiempo por cada nivel', short: 'Más por nivel', type: 'num', min: 0, max: 4, step: 0.1, def: 0.5, unit: 's', modes: ['combat', 'bars'], noEx: ['hang', 'superman', 'splank', 'inchworm', 'jump', 'slam'], hint: 'Cada nivel siguiente pide aguantar esto más que el anterior. Con 1,5 s y 0,5 s: ×2 a los 1,5 s, ×3 a los 3,5 s (2 s más) y ×4 a los 6 s (2,5 s más). Con 0, todos los niveles piden lo mismo.' },
   { key: 'deepDrop', g: 'ejercicio', label: 'Recarga profunda: bajada extra', short: 'Recarga profunda', type: 'num', min: 0, max: 40, step: 1, def: 0, unit: 'cm', zero: 'No', modes: ['combat'], ex: DEEP_EX, hint: 'Si bajas esto más de lo que pide el ejercicio, el disparo se carga al máximo (×4) al instante, sin tener que aguantar abajo. 0 (de serie): sin recarga profunda; la carga solo sube aguantando en la postura perfecta.' },
   { key: 'perfectTime', g: 'ejercicio', noEx: ['hang', 'superman'], cond: () => settings.mode !== 'touch', label: 'Duración mínima de una PERFECTA', short: 'Tiempo PERFECTA', type: 'num', min: 0, max: 6, step: 0.1, def: 1.2, unit: 's', hint: '0 = solo cuenta la profundidad. En curl se exige la mitad.' },
 
@@ -8413,7 +8415,7 @@ async function spBpmRun() {
 function spBpmShow() {
   clearTimeout(BPMQ.t); BPMQ.t = setTimeout(() => {
     const a = typeof document !== 'undefined' && document.activeElement; if (a && (a.classList && a.classList.contains('spbpm') || a.dataset && a.dataset.bf !== undefined)) { spBpmShow(); return; }
-    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (typeof exSongsPage === 'function' && EXS.list) exSongsPage(); if (menu && menu.spTrk && menu.rebuild) menu.rebuild();
+    spListsPage(); if (SES.musicOpen >= 0) renderSession(); if (typeof exSongsPage === 'function') exSongsPage(); if (menu && (menu.spTrk || menu.spPicks) && menu.rebuild) menu.rebuild();
   }, 600);
 }
 // Compás propio de cada canción: lo guardas tú (en la página, junto a cada canción, o en el juego, «Guardar el ritmo para
@@ -8477,7 +8479,7 @@ function musicRows() {
 // Elegir en el juego cualquiera de tus listas (de 8 en 8) y, dentro, ponerla entera, al azar o desde una canción
 function spListMenu(back, page = 0) {
   const again = p => spListMenu(back, p), rows = [{ t: 'title', text: 'TUS LISTAS' }];
-  if (spPicks().length) rows.push({ t: 'btns', items: [{ label: `▶ Tus canciones elegidas (${spPicks().length})`, style: 'primary', onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }] });
+  if (spPicks().length) rows.push({ t: 'btns', items: [{ label: `▶ Tus canciones elegidas (${spPicks().length})`, style: 'primary', flex: 1.6, onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }, { label: 'Ordenar  ▸', accent: '#a68bff', onPress: () => spPicksMenu(() => again(page)) }] });
   if (!SP.mine) { rows.push({ t: 'text', text: SP.loadErr || 'Cargando tus listas…', color: SP.loadErr ? '#ff8a3d' : '#ffd166' });
     if (SP.loadErr) rows.push({ t: 'btns', items: [{ label: 'Reintentar', onPress: () => { SP.loadErr = ''; again(page); } }] });
     else if (!SP.loading) { SP.loading = true; spMyLists().then(l => { SP.mine = l; SP.loadErr = ''; }).catch(e => { SP.loadErr = spErrText(e); }).finally(() => { SP.loading = false; if (menu && menu.spList) again(page); }); } }
@@ -8488,6 +8490,17 @@ function spListMenu(back, page = 0) {
   }
   rows.push({ t: 'btns', items: [{ label: 'Volver', onPress: back }] });
   const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(page); m.spList = true;
+}
+// En las gafas: tus canciones elegidas, cada una con su compás, ▲ ▼ para cambiarla de sitio y ✕ para quitarla (de 6 en 6)
+function spPicksMenu(back, page = 0) {
+  const again = p => spPicksMenu(back, p), P = spPicks(), N = 6, pages = Math.max(1, Math.ceil(P.length / N)), p = clamp(page, 0, pages - 1), rows = [{ t: 'title', text: 'TUS CANCIONES ELEGIDAS' }];
+  spBpmPrefetch(P); const set = L => { SP.cfg.picks = L; SP.started = false; spSave(); spListsPage(); again(p); };
+  rows.push({ t: 'text', text: P.length ? 'Suenan en este orden y en bucle. ▲ ▼: cambiar de sitio' : 'No tienes canciones elegidas: márcalas en una lista (aquí o en la página)', color: '#a49fc8' });
+  P.slice(p * N, p * N + N).forEach((t, i) => { const k = p * N + i;
+    rows.push({ t: 'btns', items: [{ label: `${k + 1}. ${t.name} · ${spBpmShort(t.uri)}`, flex: 4.2, style: 'ghost', onPress: () => {} }, { label: '▲', onPress: () => set(spMove(P, k, -1)) }, { label: '▼', onPress: () => set(spMove(P, k, 1)) }, { label: '✕', style: 'danger', onPress: () => set(P.filter((_, j) => j !== k)) }] }); });
+  if (pages > 1) rows.push({ t: 'btns', items: [{ label: '◀', onPress: () => again(p - 1) }, { label: `${p + 1} / ${pages}`, style: 'ghost', onPress: () => {} }, { label: '▶', onPress: () => again(p + 1) }] });
+  rows.push({ t: 'btns', items: [{ label: '▶ Ponerlas', style: 'primary', onPress: () => spDo(async () => { await spPlayTracks(spPicks()); SP.block = null; }) }, { label: 'Volver', onPress: back }] });
+  const m = openMenu(rows, { accent: MC.sound }); m.rebuild = () => again(p); m.spPicks = true;
 }
 function spTrackMenu(l, back, page = 0) {
   const again = p => spTrackMenu(l, back, p), T = SP.trk && SP.trk[l.id], rows = [{ t: 'title', text: l.name }];
@@ -8602,6 +8615,15 @@ function spBpmCell(t) {
 }
 // en el juego, junto al nombre: « · 128 BPM» (el tuyo) o « · ≈124 BPM» (encontrado)
 const spBpmTag = uri => { const k = spTrackBpm(uri); return k.b ? ` · ${k.src === 'own' ? '' : '≈'}${k.b} BPM` : ''; };
+// Una canción elegida, en su ficha: su número, su nombre, su compás y ◀ ▶ para moverla de sitio (y ✕ para quitarla).
+// A: el atributo de los botones de esa lista y los nombres de sus acciones (rm, up, dn)
+const spBpmShort = uri => { const k = spTrackBpm(uri); return k.b ? `${k.src === 'own' ? '' : '≈'}${k.b} BPM` : 'sin BPM'; };
+function spChip(t, k, n, A) {
+  const e = escSp, b = (act, lab, dis, aria) => `<button type="button" class="btn tiny${dis ? ' off' : ''}" ${A.attr}="${act}" data-k="${k}"${dis ? ' disabled' : ''} aria-label="${e(aria)}">${lab}</button>`;
+  return `<span class="chip">${k + 1}. ${e(t.name)}<small class="chbpm">${spBpmShort(t.uri)}</small>${b(A.up, '◀', k === 0, `Antes: ${t.name}`)}${b(A.dn, '▶', k === n - 1, `Después: ${t.name}`)}${b(A.rm, '✕', false, `Quitar ${t.name}`)}</span>`;
+}
+// mover una canción de una lista: d = −1 (antes) o +1 (después)
+function spMove(list, k, d) { const j = k + d; if (j < 0 || j >= list.length) return list; const L = list.slice(); [L[k], L[j]] = [L[j], L[k]]; return L; }
 const spFavBtn = (uri, F) => `<button type="button" class="spfav${F.has(uri) ? ' on' : ''}" data-a="fav" data-fav="${escSp(uri)}" aria-pressed="${F.has(uri)}" aria-label="Favorita" title="${F.has(uri) ? 'Quitar de favoritas' : 'Favorita: sale la primera al abrir la lista'}">★</button>`;
 // Escuchar una canción desde la página: ▶ la pone (en el reproductor de esta página si está listo; si no, en tu
 // dispositivo de Spotify activo) y ■ la para. Solo una a la vez; al acabar o al pararla desde fuera, vuelve el ▶
@@ -8646,7 +8668,7 @@ function spSongsPageInit() {
 function spListsPage() {
   const host = $('#spLists'); if (!host) return;
   const chosen = new Set(spLists().map(l => l.id)), P = spPicks(), on = new Set(P.map(t => t.uri)), open = SP.openList;
-  let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle.<div class="chips">${P.map((t, k) => `<span class="chip">${k + 1}. ${escSp(t.name)}<button class="btn tiny" data-sp="rm" data-k="${k}" aria-label="Quitar ${escSp(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
+  let h = P.length ? `<div class="sppicks"><b>Canciones elegidas (${P.length})</b>: suenan ellas, en este orden y en bucle (con ◀ ▶ las cambias de sitio).<div class="chips">${P.map((t, k) => spChip(t, k, P.length, { attr: 'data-sp', rm: 'rm', up: 'up', dn: 'dn' })).join('')}<button class="btn small" data-sp="clear">Quitar todas</button></div></div>` : '';
   if (open) { // dentro de una lista: solo sus canciones
     const l = spPickable().find(x => x.id === open) || { name: '' }, T = SP.trk && SP.trk[open];
     h += `<div class="spin"><button class="btn small" data-sp="back">← Tus listas</button><b>${escSp(l.name)}</b></div>`;
@@ -8674,6 +8696,7 @@ function spListsPage() {
       if (!(SP.trk && SP.trk[id])) spListTracks(id).then(spListsPage).catch(e => { SP.trkErr = /NOT_YOURS|LIBRARY/.test(e.message) ? spErrText(e) : 'No se pudieron cargar sus canciones: ' + spErrText(e); spListsPage(); }); return; }
     if (b.dataset.sp === 'back') { SP.openList = null; spListsPage(); return; }
     if (b.dataset.sp === 'rm') SP.cfg.picks = spPicks().filter((_, k) => k !== +b.dataset.k); else if (b.dataset.sp === 'clear') SP.cfg.picks = [];
+    else if (b.dataset.sp === 'up' || b.dataset.sp === 'dn') SP.cfg.picks = spMove(spPicks(), +b.dataset.k, b.dataset.sp === 'up' ? -1 : 1);
     SP.started = false; spSave(); spListsPage(); spMenuSync();
   });
 }
@@ -8906,7 +8929,7 @@ const escS = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;'
 function sesMusicHTML(b, i) {
   const sel = b.music || [], on = new Set(sel.map(t => t.uri));
   let h = `<div class="sesmusic" data-i="${i}"><p class="note">Canciones del bloque ${i + 1}: suenan en este orden, en bucle, mientras dura el bloque (de una o de varias listas; hasta ${MUSIC_MAX}).</p>`;
-  h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${k + 1}. ${escS(t.name)}<button class="btn tiny" data-a="mrm" data-k="${k}" aria-label="Quitar ${escS(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
+  h += sel.length ? `<div class="chips">${sel.map((t, k) => spChip(t, k, sel.length, { attr: 'data-a', rm: 'mrm', up: 'mup', dn: 'mdn' })).join('')}<button class="btn small" data-a="mclear">Quitar todas</button></div>` : '<p class="hint">Aún sin canciones: suena lo que estuviera sonando.</p>';
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba, en Música) para elegir canciones.</p></div>';
   if (!SP.mine) return h + `<p class="status">${escS(SES.mErr || 'Cargando tus listas…')}</p></div>`;
   // tus listas (y las que te gustan), como botones de las líneas que haga falta; al abrir una, solo sus canciones
@@ -8941,6 +8964,7 @@ function sesMusicClick(btn) {
   if (btn.dataset.a === 'fav') { spFavToggle(btn.dataset.fav); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'bpmx') { spBpmScale(btn.dataset.u, +btn.dataset.bpmx); renderSession(); spListsPage(); return; }
   if (btn.dataset.a === 'mrm') { b.music.splice(+btn.dataset.k, 1); if (!b.music.length) delete b.music; }
+  else if (btn.dataset.a === 'mup' || btn.dataset.a === 'mdn') b.music = spMove(b.music, +btn.dataset.k, btn.dataset.a === 'mup' ? -1 : 1); // (cambiarla de sitio)
   else if (btn.dataset.a === 'mclear') delete b.music;
   saveSession(); renderSession();
 }
@@ -9230,7 +9254,7 @@ const escD = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;'
 function exSongsHTML() {
   const x = settings.exercise, sel = exSongs(x), on = new Set(sel.map(t => t.uri)), mine = !!EXS.t[x];
   let h = `<p class="note">Canciones de <b>${escD(EX_NAMES[x])}</b> (el ejercicio elegido arriba): suenan al azar al empezar una ronda de este ejercicio, en cualquier modo (las sesiones llevan las suyas). Sin ninguna, suena lo de siempre.${sel.length && !mine ? ' Ahora, las que vienen de serie.' : ''}</p>`;
-  h += sel.length ? `<div class="chips">${sel.map((t, k) => `<span class="chip">${escD(t.name)}<button class="btn tiny" data-a="srm" data-k="${k}" aria-label="Quitar ${escD(t.name)}">✕</button></span>`).join('')}<button class="btn small" data-a="sclear">Quitar todas</button></div>` : '';
+  h += sel.length ? `<div class="chips">${sel.map((t, k) => spChip(t, k, sel.length, { attr: 'data-a', rm: 'srm', up: 'sup', dn: 'sdn' })).join('')}<button class="btn small" data-a="sclear">Quitar todas</button></div>` : '';
   if (!spConnected()) return h + '<p class="hint">Conecta Spotify (arriba) para elegirlas.</p>';
   if (!SP.mine) return h + `<div class="actions"><button type="button" class="btn small" data-a="sload">Elegir canciones</button></div><p class="status">${escD(EXS.err)}</p>`;
   const L = spPickable();
@@ -9259,6 +9283,7 @@ function exSongsInitPage() {
     else if (d.a === 'sback') { EXS.list = ''; exSongsPage(); }
     else if (d.a === 'bpmx') { spBpmScale(d.u, +d.bpmx); exSongsPage(); }
     else if (d.a === 'srm') { const l = exSongs(); l.splice(+d.k, 1); exSongsSet(l); exSongsPage(); }
+    else if (d.a === 'sup' || d.a === 'sdn') { exSongsSet(spMove(exSongs(), +d.k, d.a === 'sup' ? -1 : 1)); exSongsPage(); } // (cambiarla de sitio)
     else if (d.a === 'sclear') { exSongsSet([]); exSongsPage(); }
   });
   exSongsPage();
@@ -11555,13 +11580,14 @@ function runDetectors(t, dt) {
     // se queda entre PL_FLOOR (el suelo de las gafas es y = 0): si las gafas veían un instante la mano de apoyo por debajo
     // del suelo, esa altura se quedaba tan baja que la mano parecía levantada para siempre, y la otra ya no disparaba
     const floorOf = d => clamp(d.floor, PL_FLOOR[0], PL_FLOOR[1]), lifted = s => hands[s].ok && hands[s].wrist.y > floorOf(P[s]) + LIFT;
-    // una flexión entera (como en Flexiones: bajar la cabeza «Bajada en la flexión» sin prisa, al menos «Duración mínima de
-    // una PERFECTA») deja el próximo brazo cargado al máximo (×4). Con un brazo levantado no se mide
+    // una flexión (bajar la cabeza «Bajada en la flexión») aguantada abajo carga, como la sentadilla: ×2, ×3 y ×4 según
+    // lo que aguantes (la bola se ve crecer); al subir, el próximo brazo que levantes lanza esa carga. Con un brazo
+    // levantado no se mide (y si lo levantas aún abajo, se lleva lo cargado)
     const Q = DET.plp, req = dv('pushDepth') / 100;
-    if (P.left.state === 'up' || P.right.state === 'up') { Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
-    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', defer: () => {
-      if (t - Q.t0 >= pt) { P.boost = 4; onPower(4); say('¡Cargado al máximo! Levanta un brazo', '#ff3cf0', 1.4); }
-      else say('Más despacio: así la flexión no carga', '#ff8a3d', 1.4);
+    if (P.left.state === 'up' || P.right.state === 'up') { if (Q.state === 'down' && Q.charged && Q.pow > 1) P.boost = Math.max(P.boost || 0, Q.pow); Q.state = 'up'; Q.ref = Math.max(Q.ref, y); Q.peak = y; }
+    else if (!pistolOn() && !swordActive()) vertDetector(Q, y, t, dt, { start: Math.min(0.05, req * 0.5), req, back: 0.035, partial: req * 0.8, perfectDur: pt, partialMsg: '¡Más abajo para cargar!', power: true, defer: o => {
+      if (o.pow > 1) { P.boost = Math.max(P.boost || 0, o.pow); say(`¡Carga ×${P.boost}! Levanta un brazo`, '#' + POW_COL[P.boost - 1].toString(16).padStart(6, '0'), 1.4); }
+      else say('Aguanta abajo en la flexión para cargar', '#ff8a3d', 1.4);
     } });
     for (const side of ['left', 'right']) {
       const h = hands[side], d = P[side], other = side === 'left' ? 'right' : 'left';
@@ -12669,7 +12695,7 @@ function gameStep(dt, t) {
     spawnTimer -= dt * perkSpawnK();
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
-    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); boardDirty = true; }
+    if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { const cur = spawnQueue[0], wasJump = settings.mode === 'arcs' && cur && cur.kind === 'jump'; spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); if (wasJump && spawnQueue[0] && spawnQueue[0].kind === 'jump') spawnTimer = Math.max(spawnTimer, ARX_JUMP_GAP); boardDirty = true; } // (dos vallas seguidas: al menos ARX_JUMP_GAP entre una y otra, para caer y volver a saltar)
     const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
@@ -12794,6 +12820,8 @@ function arxPatterns(total) {
   return out;
 }
 
+// entre dos vallas seguidas, al menos 1,1 s (antes, con ritmo rápido, llegaban a medio segundo: había que volar)
+const ARX_JUMP_GAP = 1.1;
 // Ráfaga de vallas: 3 o 4 seguidas (con ritmo, a uno o dos pulsos una de otra), con su aviso
 function arxHurdles() { const n = Math.random() < 0.5 ? 3 : 4, l = []; for (let k = 0; k < n; k++) l.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: k < n - 1 ? 0.4 : 1.4 }); l[0].note = ['¡RÁFAGA DE VALLAS!', `${n} saltos seguidos`]; return l; }
 // Burpee: el arco de plancha y, en cuanto pasa, una valla (sale con poco tiempo para levantarte: arriba de un salto)
@@ -13643,7 +13671,8 @@ const MIS = {
   clean: { kind: 'q', n: () => 1, txt: () => 'Gana una ronda sin que te golpeen' },
   mode: { kind: 'var', n: () => 1, txt: m => `Juega una ronda en ${MODE_NAMES[m.arg] || m.arg}` },
   ex: { kind: 'var', n: () => 1, txt: m => `Haz una ronda de ${(EX_NAMES[m.arg] || m.arg).toLowerCase()}` },
-  star: { kind: 'var', n: () => 1, txt: () => 'Gana una estrella nueva en la campaña' }
+  set: { kind: 'var', n: L => 25 + 3 * Math.min(L, 10), txt: m => `Haz ${m.n} repeticiones en una sola ronda` }, // (antes, una estrella de la campaña: muy poco de entrenar para un escudo)
+  star: { kind: 'var', n: () => 1, txt: () => 'Gana una estrella nueva en la campaña' } // (ya no sale: solo para las misiones guardadas de antes)
 };
 const MIS_XP = 40, CHEST_XP = 100, STAR_XP = 15, WIN_XP = 20;
 function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = (h + 0x6D2B79F5) | 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -13651,17 +13680,17 @@ function misAdd(list, o) {
   for (const m of list) {
     if (m.t === 'reps') m.got += o.reps || 0; else if (m.t === 'mins') m.got += o.mins || 0; else if (m.t === 'perfect') m.got += o.perfect || 0;
     else if (m.t === 'combo') m.got = Math.max(m.got, o.combo || 0); else if (m.t === 'clean') { if (o.win && !o.taken) m.got = 1; }
-    else if (m.t === 'mode') { if (o.mode === m.arg) m.got = 1; } else if (m.t === 'ex') { if (o.ex === m.arg) m.got = 1; } else if (m.t === 'star') m.got += o.stars || 0;
+    else if (m.t === 'mode') { if (o.mode === m.arg) m.got = 1; } else if (m.t === 'ex') { if (o.ex === m.arg) m.got = 1; } else if (m.t === 'set') { if (!o.hang) m.got = Math.max(m.got, o.reps || 0); } else if (m.t === 'star') m.got += o.stars || 0;
   }
 }
 function misToday(now = Date.now()) {
-  const day = dayKey(now); if (CR.mis && CR.mis.day === day) return CR.mis;
+  const day = dayKey(now); if (CR.mis && CR.mis.day === day) { for (const m of CR.mis.list) if (m.t === 'star' && !m.done) Object.assign(m, { t: 'set', n: MIS.set.n(lvlOf().n), got: 0 }); return CR.mis; } // (la de la estrella de hoy, ya cambiada)
   shieldCheck(now); // (un día nuevo: ¿hace falta un escudo?)
   const R = seeded('reparena' + day), pickR = a => a[Math.floor(R() * a.length) % a.length], L = lvlOf().n, h = store(HIST_KEY) || [];
   // variedad: el modo que menos has jugado esta semana, o un ejercicio que ya conoces y llevas días sin hacer
   const week = h.filter(r => r.date > now - 7 * DAY_MS), modes = ['combat', 'arcs', 'touch', ...(h.some(r => r.mode === 'bars') ? ['bars'] : [])].sort((a, b) => week.filter(r => r.mode === a).length - week.filter(r => r.mode === b).length);
   const recent = new Set(h.filter(r => r.date > now - 3 * DAY_MS).map(r => r.ex)), exs = [...new Set(h.map(r => r.ex))].filter(x => EX_NAMES[x] && !recent.has(x) && Object.keys(MODE_NAMES).some(m => exOk(m, x)));
-  let t3 = pickR(['mode', 'ex', 'star']); if (t3 === 'ex' && !exs.length) t3 = 'mode';
+  let t3 = pickR(['mode', 'ex', 'set', 'set']); if (t3 === 'ex' && !exs.length) t3 = 'set'; // (de entrenar: un modo, un ejercicio o muchas repeticiones seguidas en una ronda)
   const list = [pickR(['reps', 'reps', 'mins']), pickR(['perfect', 'combo', 'clean']), t3].map(t => ({ t, n: MIS[t].n(L), got: 0, done: false, ...(t === 'mode' ? { arg: pickR(modes.slice(0, 2)) } : t === 'ex' ? { arg: pickR(exs) } : {}) }));
   for (const r of h.filter(r => dayKey(r.date) === day)) misAdd(list, { reps: r.ex === 'hang' ? 0 : r.reps, perfect: r.perfect, mins: (r.time || 0) / 60, mode: r.mode, ex: r.ex, win: r.win, taken: 1 });
   let xp = 0; list.forEach(m => { if (m.got >= m.n) { m.done = true; xp += MIS_XP; } }); CR.xp += xp; // (lo cumplido antes de salir, también)
@@ -13676,8 +13705,8 @@ let misRun = null;
 function misLive() {
   if (state !== 'play' || typeof stats === 'undefined') return; const M = misToday();
   if (misRun !== stats) { misRun = stats; M.list.forEach(m => { if (!m.done) m.cel = false; }); } // (una ronda nueva: lo de la anterior sin acabar, no cuenta)
-  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo };
-  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' ? Math.max(m.got, live.combo) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
+  const live = { reps: settings.exercise === 'hang' ? 0 : stats.reps, mins: stats.time / 60, perfect: stats.perfect, combo: stats.bestCombo, set: settings.exercise === 'hang' ? 0 : stats.reps };
+  M.list.forEach(m => { if (m.done || m.cel || !(m.t in live)) return; if ((m.t === 'combo' || m.t === 'set' ? Math.max(m.got, live[m.t]) : m.got + live[m.t]) >= m.n) { m.cel = true; misCheer(m, M); } });
 }
 
 /* ---------- Récords, en plena ronda ---------- */
@@ -13894,7 +13923,7 @@ function careerHTML() {
 //  3) en el menú principal, bajo EMPEZAR, la franja: las tres metas (con su barra) y la racha con sus escudos, en teclas
 //     que llevan a Progreso → Misiones
 const misGot = m => Math.min(m.n, m.t === 'mins' ? Math.floor(m.got) : m.got);
-const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, star: () => 'Estrella nueva' };
+const MIS_SHORT = { reps: m => `${m.n} repeticiones`, mins: m => `${m.n} minutos`, perfect: m => `${m.n} perfectas`, combo: m => `Combo ×${m.n}`, clean: () => 'Ronda sin golpes', mode: m => `Ronda de ${MODE_NAMES[m.arg] || m.arg}`, ex: m => `Ronda de ${String(EX_SHORT[m.arg] || EX_NAMES[m.arg] || m.arg || '').toLowerCase()}`, set: m => `${m.n} en una ronda`, star: () => 'Estrella nueva' };
 const misShort = m => (MIS_SHORT[m.t] || (x => MIS[x.t].txt(x)))(m);
 // una meta: el círculo (con ✓ si está), su texto, la barra y lo que llevas; tc: el color de la letra
 function drawGoal(c, m, x, y, w, h, tc, long) {
@@ -14066,6 +14095,15 @@ void main() { float ndv = abs(dot(normalize(vN), normalize(vV))), core = pow(ndv
   vec3 c = mix(uColor * 0.9, vec3(1.0), core * 0.75 + run * 0.35) * (1.0 + uPulse * 0.4);
   gl_FragColor = vec4(c, uOpacity); }`;
 const chevGeo = (() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, -0.1, 0, -0.09, 0.06, 0, 0, 0.015, 0, 0, -0.1, 0, 0, 0.015, 0, 0.09, 0.06, 0]), 3)); return g; })(); // (una flecha de dos triángulos, la punta hacia el centro)
+// un filamento: una línea quebrada que sale del tubo hacia fuera (o, si está a tu alcance, a veces hacia el hueco), en
+// las coordenadas del aro (radio 0,88)
+function neonZap(lines, near) {
+  for (const l of lines) {
+    const P = l.geometry.attributes.position, n = P.count, a = Math.random() * TAU, inw = near && Math.random() < 0.35, r0 = inw ? 0.8 : 0.96, r1 = inw ? rand(0.3, 0.6) : r0 + rand(0.15, 0.5);
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), r = r0 + (r1 - r0) * t, b = a + (Math.random() - 0.5) * 0.35 * t, j = (Math.random() - 0.5) * 0.06 * Math.sin(t * Math.PI); P.setXYZ(i, Math.cos(b) * (r + j), Math.sin(b) * (r + j), (Math.random() - 0.5) * 0.12 * t); }
+    P.needsUpdate = true; l.visible = Math.random() < 0.85;
+  }
+}
 const neonRingMat = col => new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uAmp: { value: 1 }, uPulse: { value: 0 }, uBurst: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(col) } }, vertexShader: NEON_VS, fragmentShader: NEON_FS, transparent: true, toneMapped: false });
 
 /* ---------- Dónde aparece cada movimiento (coordenadas de la arena: tú en el origen, mirando a -Z) ---------- */
@@ -14183,6 +14221,10 @@ class TouchTarget {
       this.iconMat = new THREE.MeshBasicMaterial({ map: headIconTex, color: col, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
       const icon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.iconMat); icon.scale.setScalar(this.r * 1.1); this.root.add(icon);
       this.root.quaternion.setFromUnitVectors(_tz, this.n); this.q0 = this.root.quaternion.clone();
+      // filamentos eléctricos que saltan del tubo (y, a tu alcance, hacia el hueco) y su zumbido mientras llega
+      this.filMat = new THREE.LineBasicMaterial({ color: new THREE.Color(col).lerp(new THREE.Color(0xffffff), 0.55), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      this.fil = []; for (let k = 0; k < 6; k++) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 3), 3)); const l = new THREE.Line(g, this.filMat); l.frustumCulled = false; l.userData.noInk = true; this.ring.add(l); this.fil.push(l); }
+      this.filT = 0; this.rgb = [((col >> 16) & 255) / 255, ((col >> 8) & 255) / 255, (col & 255) / 255]; this.hum = humLoop(this.root.position.clone());
     } else if (this.part === 'cut') { // bloque metálico con aristas que brillan y una flecha: corta en su dirección
       this.mat = std({ color: 0x23202c, metalness: 0.8, roughness: 0.35, envMapIntensity: 1.2 });
       this.box = new THREE.Mesh(cutGeo, this.mat); this.box.castShadow = true; this.root.add(this.box);
@@ -14293,6 +14335,9 @@ class TouchTarget {
       U.uTime.value = t + this.ph; U.uAmp.value += ((near ? 2.6 : 2.2) - U.uAmp.value) * Math.min(1, dt * 4); U.uPulse.value = pulse;
       if (this.mode === 'hold') { const k = this.held / this.hold; U.uColor.value.setRGB(0.24 + 0.76 * k, 0.94 + 0.06 * k, 0.78 + 0.22 * k); }
       if (this.mode !== 'pass' && this.mode !== 'burst') { this.haloMat.opacity = (near ? 0.5 : 0.32) + pulse * 0.25; this.glowMat.opacity = (near ? 0.32 : 0.22) + pulse * 0.2; }
+      if (this.mode !== 'pass' && this.mode !== 'burst') { if ((this.filT -= dt) <= 0) { this.filT = rand(0.04, 0.09); neonZap(this.fil, near); } this.filMat.opacity = 0.55 + 0.45 * Math.random(); this.glowMat.opacity += 0.1 * Math.random(); // (los filamentos cambian de forma sin parar; el brillo parpadea)
+        if (Math.random() < dt * (near ? 14 : 7)) { const a = Math.random() * TAU; fx.sparks(this.ring.localToWorld(_ta.set(Math.cos(a) * 0.95, Math.sin(a) * 0.95, 0)), 2, this.rgb, 0.9, 0.022); } // (chispas que se desprenden del borde)
+        if (this.hum) this.hum.set(arena.localToWorld(_tb.copy(this.root.position))); }
       this.chev.rotation.z -= dt * (near ? 2.2 : 1.1); this.glowMat.color.copy(U.uColor.value); // (las flechas giran; más deprisa cuando está a tu alcance)
     } else if (this.box) {
       const w = this.mode === 'wait' ? 0.06 * Math.sin(t * 9) : 0; this.box.scale.setScalar(1 + pulse * 0.15 + w);
@@ -14317,7 +14362,7 @@ class TouchTarget {
     if (this.part === 'head') {
       // hay que volver a la postura de partida antes de la siguiente ameba
       Object.assign(TCH.headArm, { armed: false, hitY: HL.y, d: this.pos.y - TCH.ref, dx: this.pos.x });
-      SND.pop(c, !!this.hold); SND.zap(c); // (el aro de neón estalla en chispas de su color, con un destello)
+      SND.pop(c, !!this.hold); SND.zap(c); SND.shock(c); fx.electric(c, 22); if (this.hum) { this.hum.stop(); this.hum = null; } this.fil.forEach(l => l.visible = false); // (el aro de neón estalla: descarga eléctrica, chispas de su color y un destello)
       fx.sparks(c, 46, rgb, 2.8, 0.035); fx.sparks(c, 18, [1, 1, 1], 1.8, 0.02); fx.glow(c, rgb, 0.7, 0.2);
       this.mode = 'burst'; this.popT = 0; return;
     }
@@ -14344,13 +14389,14 @@ class TouchTarget {
   }
   miss() {
     if (this.judged) return; this.judged = true; this.mode = 'pass'; this.popT = 0;
+    if (this.fil) this.fil.forEach(l => l.visible = false); if (this.hum) { this.hum.stop(); this.hum = null; } // (fallado: se apaga)
     this.dir = this.pos.clone().sub(this.from).normalize(); if (this.ring) this.mat.uniforms.uColor.value.setHex(0xff3b5c); else this.mat.color.setHex(0xff3b5c); if (this.haloMat) this.haloMat.color.setHex(0xff3b5c);
     fx.sparks(this.center(new V3()), 8, [1, 0.25, 0.3], 1, 0.02);
     if (state === 'play' || state === 'rest') { hurtPlayer({ silent: true }); say(this.hold ? '¡Has salido de la ameba!' : this.part === 'head' ? '¡Mete la cabeza en la ameba!' : this.part === 'cut' ? '¡Corta el bloque con la espada!' : `¡Toca el diamante con la ${HAND_NAME[this.hand]}!`, '#ff3b5c', 1.1); }
   }
   dispose() {
     this.alive = false; arena.remove(this.root);
-    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); }
+    if (this.ring) { this.haloMat.dispose(); this.iconMat.dispose(); this.halo.geometry.dispose(); this.glowMat.dispose(); this.chevMat.dispose(); this.filMat.dispose(); this.fil.forEach(l => l.geometry.dispose()); if (this.hum) { this.hum.stop(); this.hum = null; } }
     this.mat.dispose(); if (this.icon) this.icon.material.dispose(); if (this.glow) this.glow.material.dispose(); if (this.box) { this.shellMat.dispose(); this.arrowMat.dispose(); }
   }
 }
@@ -14720,7 +14766,7 @@ const TREK_MOVE = { jump: ['salto', 'saltos'], lunge: ['zancada', 'zancadas'], s
 function trekShadow(g, w, d, x = 0) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), TREK_SHADOW); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.012, 0); g.add(m); }
 // una pieza de la isla pirata (cofre cerrado, cofre con oro), si ya se cargó
 function trekPart(g, n, s) { for (const p of (typeof ISL !== 'undefined' && ISL.parts[n]) || []) { const m = new THREE.Mesh(p.geo, p.mat); m.scale.setScalar(s); g.add(m); } }
-function trekRock(g, x, s) { const n = `Rock_Medium_${1 + Math.floor(Math.random() * 3)}`; for (const p of NAT.parts[n] || []) { const m = new THREE.Mesh(p.geo, p.mat); m.position.x = x; m.scale.setScalar(s); m.rotation.y = Math.random() * TAU; g.add(m); } }
+function trekRock(g, x, s) { const n = `Rock_Medium_${1 + Math.floor(Math.random() * 3)}`; for (const p of NAT.parts[n] || []) { const m = new THREE.Mesh(p.geo, p.mat); m.position.x = x; m.scale.setScalar(s); m.rotation.y = Math.random() * TAU; g.add(m); } return n; }
 function trekObsMesh(o) {
   const g = new THREE.Group();
   if (o.kind === 'branch') { // una rama gruesa apoyada en dos rocas grandes, a la altura que obliga a agacharse
@@ -14754,10 +14800,11 @@ function trekObsMesh(o) {
     o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'bandit') { // los bandidos, plantados en el sendero, uno detrás de otro
     const n = waveIdx >= 4 ? 3 : waveIdx >= 2 ? 2 : 1;
-    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.7 : 0.15), z: -i * 1.3, st: 'wait', t: 0, hp: waveIdx >= 2 ? 4 : 3, /* (los golpes que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
+    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
     o.warn = glowSprite(0xff3b5c, 0.8, 0); g.add(o.warn); trekShadow(g, 2.4, 3.4, 0);
   } else { // el derrumbe: una roca grande atravesada en el sendero
-    o.box = new THREE.Group(); g.add(o.box); trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
+    o.box = new THREE.Group(); g.add(o.box); const n = trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
+    o.rr = trekRockBox(n).w * 1.5 * 0.6; o.stop = o.rr + 1.05; // (te paras a un metro de su cara: medida, no a ojo)
   }
   TREK.group.add(g); return g;
 }
@@ -14894,9 +14941,9 @@ function trekMoveStep() {
   return false;
 }
 function trekHaltSay(o, first) {
-  if (o.kind === 'bandit') { say(first ? `¡Bandidos! Esquiva sus golpes y pégales` : '¡Esquiva y pega!', '#ff8a3d', first ? 2.4 : 1.2); return; }
+  if (o.kind === 'bandit') { say(first ? '¡Bandidos! Esquiva sus piedras: agáchate, salta o apártate' : '¡Esquiva sus piedras!', '#ff8a3d', first ? 2.6 : 1.2); return; }
   const [one, many] = TREK_MOVE[o.move], left = o.need - (o.got || 0), n = `${left} ${left === 1 ? one : many}`;
-  say(o.kind === 'chest' ? `¡Rompe las cadenas: ${n}!` : o.kind === 'stream' ? `${first ? 'Cruza el arroyo: ' : ''}¡salta a la piedra de la ${o.sides[o.got] < 0 ? 'izquierda' : 'derecha'}!` : o.kind === 'chasm' ? (first ? `¡Desfiladero! Salta de roca en roca: ${n}` : `¡Salta! Quedan ${left}`) : `¡Embiste la roca: ${n}!`, '#ffd166', first ? 2.4 : 1.4);
+  say(o.kind === 'chest' ? (first ? `¡Un cofre! Rompe sus cadenas: ${n}. Dentro, una llave: con 3, el tesoro (+1500)` : `¡Rompe las cadenas: ${n}!`) : o.kind === 'stream' ? `${first ? 'Cruza el arroyo: ' : ''}¡salta a la piedra de la ${o.sides[o.got] < 0 ? 'izquierda' : 'derecha'}!` : o.kind === 'chasm' ? (first ? `¡Desfiladero! Salta de roca en roca: ${n}` : `¡Salta! Quedan ${left}`) : `¡Embiste la roca: ${n}!`, '#ffd166', first ? 2.4 : 1.4);
 }
 // en el desfiladero, cuánto aguanta cada pilar contigo encima antes de hundirse (menos en cada tramo y con el rango)
 const trekCrumbleT = () => Math.max(2.6, 5.5 - 0.3 * waveIdx - 0.15 * rankIdx());
@@ -14910,6 +14957,9 @@ function trekHop(o, ok) {
 }
 // La sensación de saltar: mientras vas de una piedra (o un pilar) a la siguiente, el mundo baja y vuelve a subir (hasta
 // 22 cm), como si el salto te elevara; la plataforma bajo tus pies se queda contigo
+// El césped, pegado al mundo: corre bajo tus pies y, en las curvas, gira con el paisaje (si solo corría hacia atrás, lo
+// apoyado en el suelo —el cofre, la roca— parecía patinar sobre la hierba al girar el sendero). Un azulejo cada 3,5 m
+function trekGround() { const g = natGround, T = g.material.map; g.rotation.order = 'YXZ'; g.rotation.y = TF.th; T.offset.set(TF.x / 3.5, -TF.z / 3.5); }
 function trekHopStep(dt) {
   const H = TREK.hop; let y = 0;
   if (H) { H.t += dt; const k = H.t / H.dur; if (k >= 1) TREK.hop = null; else y = -0.22 * Math.sin(Math.PI * k); }
@@ -14932,13 +14982,41 @@ function trekHaltStep(dt, t) {
     if (o.haltT > 40 && o.got === 0 && TREK.halt === o) { say(o.kind === 'stream' ? 'Vadeas el arroyo' : 'Rodeas el desfiladero', '#a49fc8', 1.6); trekHaltEnd(o, false); }
     return;
   }
+  if (o.kind === 'rock') trekRockSolid(o, dt, t); // (sólida: tiembla al embestirla y nunca se entra en ella)
   if (trekMoveStep()) {
     o.got++; score += 60; boardDirty = true; hapticBoth(0.5, 60);
     if (o.kind === 'chest') { const cut = Math.ceil(o.links.length * o.got / o.need); o.links.forEach((l, i) => { if (i < cut && l.visible) { l.visible = false; } }); SND.metalHit(wp, true); fx.sparks(wp.clone(), 24, [1, 0.85, 0.5], 2.2, 0.03); }
-    else { o.box.position.z -= 0.22; o.box.rotation.x -= 0.25; SND.metalHit(wp, false); fx.smoke(new V3(wp.x, 0.2, wp.z), 0.6, 0.5, 2); }
+    else { o.shake = 0.45; SND.step(wp, true); SND.metalHit(wp, false); fx.dust(o.mesh.localToWorld(_tkh.set(0, 0.15, o.rr || 1)), 8, 0.3); fx.smoke(new V3(wp.x, 0.2, wp.z), 0.4, 0.4, 1.4); } // (tiembla y retumba; se rompe en la última)
     if (o.got >= o.need) trekHaltEnd(o, true); else trekHaltSay(o);
   }
   if (o.haltT > 40 && TREK.halt === o) { say(o.kind === 'chest' ? 'Dejas el cofre atrás' : 'Rodeas la roca', '#a49fc8', 1.6); trekHaltEnd(o, false); }
+}
+// La roca del derrumbe es sólida: en cada embestida tiembla (y retumba); si la cabeza se acerca a menos de 30 cm de su
+// cara, la roca no deja meterse en ella: se queda delante, como si la empujaras. En la última, se hace añicos
+function trekRockSolid(o, dt, t) {
+  if (o.shake > 0) { o.shake -= dt; const k = Math.max(0, o.shake / 0.45); o.box.position.x = Math.sin(t * 70) * 0.06 * k; o.box.rotation.z = Math.sin(t * 53) * 0.05 * k; o.box.rotation.x = Math.sin(t * 61) * 0.03 * k; }
+  const L = trekLoc(o, HL.x, HL.z), gap = L.z - (o.rr || 1), z = gap < 0.3 ? gap - 0.3 : 0; o.box.position.z += (z - o.box.position.z) * (z < o.box.position.z ? 1 : Math.min(1, dt * 3));
+}
+// los añicos: trozos de la misma roca (la del Stylized Nature, pequeña) que salen despedidos, caen y se apagan
+function trekRockBurst(o) {
+  o.box.visible = false; const c = o.mesh.localToWorld(_tkh.set(0, 0.7, 0)).clone(); SND.explosion(c, false); SND.step(c, true); fx.smoke(c, 1.1, 0.6, 2.4); fx.dust(c, 18, 0.5); hapticBoth(0.9, 160);
+  for (let i = 0; i < 12; i++) {
+    const p = new THREE.Group(); trekRock(p, 0, rand(0.18, 0.4)); p.position.set(rand(-0.5, 0.5), rand(0.3, 1.1), rand(-0.4, (o.rr || 1) * 0.6)); o.mesh.add(p);
+    TREK.chunks.push({ m: p, o, v: new V3(rand(-2.5, 2.5), rand(2.5, 5.5), rand(-1.5, 2.2)), w: new V3(rand(-6, 6), rand(-6, 6), rand(-6, 6)), t: 0 });
+  }
+}
+// el cofre abierto se queda un momento (con el oro a la vista) y se esfuma en una nube de humo
+function trekChestVanish(dt) {
+  for (const o of TREK.obs) { if (!(o.vanish > 0)) continue; o.vanish -= dt; if (o.vanish > 0) continue;
+    const c = o.mesh.localToWorld(_tkh.set(0, 0.4, 0)).clone(); fx.smoke(c, 0.9, 0.5, 1.8, 0.75); fx.smoke(c, 0.7, 0.8, 1.4, 0.85); fx.sparks(c, 24, [1, 0.85, 0.4], 1.6, 0.03); SND.whoosh(c, 'arc');
+    o.box.visible = false; if (o.glow) o.glow.visible = false; o.mesh.children.forEach(m => { if (m.material === TREK_SHADOW) m.visible = false; }); }
+}
+function trekChunks(dt) {
+  TREK.chunks = (TREK.chunks || []).filter(c => {
+    c.t += dt; c.v.y -= 9.8 * dt; c.m.position.addScaledVector(c.v, dt); c.m.rotation.x += c.w.x * dt; c.m.rotation.y += c.w.y * dt; c.m.rotation.z += c.w.z * dt;
+    if (c.m.position.y < 0.08) { c.m.position.y = 0.08; c.v.y *= -0.35; c.v.x *= 0.6; c.v.z *= 0.6; c.w.multiplyScalar(0.6); } // (botan y se quedan)
+    if (c.t > 2.4) c.m.scale.multiplyScalar(Math.max(0, 1 - dt * 3)); const keep = c.t < 3.2 && !!c.m.parent; if (!keep && c.m.parent) c.m.parent.remove(c.m); return keep;
+  });
 }
 function trekHaltEnd(o, won) {
   TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1;
@@ -14949,23 +15027,25 @@ function trekHaltEnd(o, won) {
   if (o.kind === 'stream') { TREK.ducked++; score += 300; cheer('¡Arroyo cruzado!', '#3cf0c6', 1.4); boardDirty = true; return; }
   if (o.kind === 'chasm') { if (!o.fell) TREK.ducked++; score += o.fell ? 100 : 400; cheer(o.fell ? 'Desfiladero cruzado' : '¡Desfiladero cruzado sin caer!', '#3cf0c6', 1.6); boardDirty = true; return; }
   if (o.kind === 'chest') { // dentro, una llave (con tres, el tesoro del tramo) y una gema para tu colección
-    while (o.box.children.length) o.box.remove(o.box.children[0]); trekPart(o.box, 'Chest_Gold', 0.9); o.links.forEach(l => l.visible = false);
+    while (o.box.children.length) o.box.remove(o.box.children[0]); trekPart(o.box, 'Chest_Gold', 0.9); o.links.forEach(l => l.visible = false); o.vanish = 1.4; // (abierto un momento; luego se esfuma)
     TREK.keys++; TREK.got++; score += 400; const gems = (store(TREK_GEMS) || 0) + 1; store(TREK_GEMS, gems); SND.victory(); cheer(`¡Cofre abierto! Llave ${TREK.keys}/3 · gema ${gems}`, '#ffd166', 2.2);
-    if (TREK.keys >= 3) { TREK.keys = 0; score += 1500; trophy('¡TESORO DEL TRAMO!', 'Tres llaves: +1500 puntos'); }
-  } else { TREK.ducked++; score += 300; SND.explosion(o.mesh.localToWorld(_tkh.set(0, 0.5, 0)), false); cheer('¡Roca apartada!', '#3cf0c6', 1.4); }
+    // lo que da, en su propio aviso grande: cuánto y cuánto falta para el tesoro (las gemas, tu colección: se ven en Progreso)
+    if (TREK.keys >= 3) { TREK.keys = 0; score += 1500; trophy('¡TESORO DEL TRAMO!', `Tres llaves: +1500 puntos (y +400 del cofre). Gema nº ${gems} para tu colección`); }
+    else trophy('¡COFRE ABIERTO!', `+400 puntos y la llave ${TREK.keys} de 3: ${3 - TREK.keys === 1 ? 'una más' : 'dos más'} y abres el tesoro del tramo (+1500). Gema nº ${gems}`);
+  } else { TREK.ducked++; score += 300; trekRockBurst(o); cheer('¡Roca hecha añicos!', '#3cf0c6', 1.4); }
   boardDirty = true;
 }
 const TREK_GEMS = 'reparena3-gems';
 
 /* ---------- Bandidos que cortan el paso ---------- */
 // El explorador con capucha (Modular Character Outfits, de Quaternius), con dos ropas y las animaciones de anims.glb (su
-// esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan un golpe a la
-// cabeza. Un gancho (de lado) se esquiva agachándote; un directo (de frente), apartándote a un lado. Cada uno lanza 3
-// golpes seguidos (4 desde el tercer tramo): si se los esquivas todos, cae agotado; el que no esquivas te da (una vida) y
-// tiene que volver a intentarlo. Sin puñetazos: con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más
-// bandidos y menos aviso en cada tramo y con el rango. Si en 75 s no acabas, se van (sin premio)
+// esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan piedras. La alta
+// se esquiva agachándote; la baja (rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
+// esquivadas (6 desde el tercer tramo), se rinde y huye; la que no esquivas te da (una vida) y no cuenta. Sin puñetazos:
+// con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más bandidos y piedras más rápidas en cada tramo y
+// con el rango. Si en 90 s no acabas, se van (sin premio)
 const TREK_BAND = { scene: null, clips: {}, loading: false, failed: false, bare: false, mats: null };
-const TREK_BAND_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Dance_Loop', 'Punch_Jab', 'Punch_Cross', 'Melee_Hook', 'Hit_Chest', 'Hit_Head', 'Death01'];
+const TREK_BAND_CLIPS = ['Idle_Loop', 'Walk_Loop', 'Dance_Loop', 'OverhandThrow', 'Hit_Chest', 'Hit_Head', 'Death01'];
 function trekBandLoad() {
   if (TREK_BAND.scene || TREK_BAND.loading || TREK_BAND.failed) return;
   if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof document === 'undefined') { TREK_BAND.failed = true; return; }
@@ -15018,35 +15098,66 @@ const _tkl = { x: 0, z: 0 };
 function trekLoc(o, x, z) { const p = o.mesh.position, a = -o.mesh.rotation.y, dx = x - p.x, dz = z - p.z; _tkl.x = dx * Math.cos(a) + dz * Math.sin(a); _tkl.z = -dx * Math.sin(a) + dz * Math.cos(a); return _tkl; }
 // el sitio del combate: a 1,1 m delante de tu cabeza (el gancho se agacha: más cerca, quedaba bajo la vista) (en el grupo de la parada)
 const _tbw = new V3(), _tbv = new V3(), _tbh = new V3();
+// El combate (opción A del usuario: sin golpes, que con el retraso de las manos no daba tiempo): el bandido se planta a
+// unos 4,5 m y te lanza piedras que ves volar más de un segundo. La alta, a la cabeza: agáchate; la baja, a las
+// espinillas: salta; la que va al cuerpo: apártate a un lado. Cada una esquivada le quita aguante; con 5 (6 desde el
+// tercer tramo) se rinde y huye. La que te da, una vida. Lanza con su animación de lanzar, llevada a mano (despacio)
+const TREK_STONE_TXT = { high: ['¡PIEDRA ALTA!', '¡Agáchate!'], low: ['¡PIEDRA BAJA!', '¡Salta!'], body: ['¡AL CUERPO!', '¡Apártate!'] };
 function trekBandFight(o, dt, t) {
   if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
-  o.haltT += dt; const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone'); if (!B) { trekHaltEnd(o, true); return; }
-  if (o.haltT > 75) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
-  const L = trekLoc(o, HL.x, HL.z), fz = L.z - 1.1, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
+  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if (!o.stones2 || !o.stones2.length) trekHaltEnd(o, true); return; }
+  if (o.haltT > 90) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
+  const L = trekLoc(o, HL.x, HL.z), fz = L.z - 4.5, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
   if (B.st === 'wait') { B.st = 'come'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); }
-  if (B.st === 'come') { const dx = L.x - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.3); trekBandPlay(B, 'Idle_Loop'); } }
-  else if (B.st === 'guard' && B.t > B.gap) { // prepara el golpe: un gancho (agáchate) o un directo (apártate)
-    B.st = 'wind'; B.t = 0; B.atk = Math.random() < 0.5 ? 'hook' : 'jab'; B.x0 = HL.x; B.win = D.wind; B.played = false;
-    say(B.atk === 'hook' ? '¡GANCHO! ¡Agáchate!' : '¡DIRECTO! ¡Apártate!', '#ff3b5c', B.win + 0.3); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8); }
-  else if (B.st === 'wind') {
-    // el golpe, llevado a mano: recoge el brazo despacio (WU s) y lo lanza también despacio (ST s), igual el gancho que el
-    // directo (a su velocidad, el directo se veía en un tercio de segundo: no daba tiempo a reaccionar)
-    const clip = B.atk === 'hook' ? 'Melee_Hook' : 'Punch_Jab', P = BEAST_PUNCH[clip] || [0.2, 0.3], t0 = B.win - D.wu - D.st;
-    if (!B.played && B.t >= t0) { B.played = true; trekBandPlay(B, clip, true); if (B.cur) B.cur.paused = true; }
-    if (B.played && B.cur && B.cur.paused) { const k = B.t - t0; B.cur.time = k < D.wu ? P[0] * smooth(clamp(k / D.wu, 0, 1)) : lerp(P[0], P[1], clamp((k - D.wu) / D.st, 0, 1)); }
-    if (B.t >= B.win) { // el golpe llega: ¿lo has esquivado?
-      const ok = B.atk === 'hook' ? calibRef - HL.y > 0.2 : Math.abs(HL.x - B.x0) > 0.2, p = arena.localToWorld(_tbw.set(B.x0, calibRef - 0.1, HL.z)); SND.whoosh(p, 'arc');
-      if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; // (esquivado: le queda un golpe menos)
-        if (B.hp <= 0) { B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); cheer('¡Bandido agotado!', '#3cf0c6', 1.2); say('¡Agotado! Cae al suelo', '#3cf0c6', 1.2); SND.explosion(o.mesh.localToWorld(_tbh.set(B.x, 0.5, B.z)), false); }
-        else { B.st = 'stun'; B.t = 0; B.stun = D.stun; trekBandPlay(B, 'Hit_Head', true); say(`¡Esquivado! Le quedan ${B.hp}`, '#ffd166', 0.9); } }
-      else { B.st = 'guard'; B.t = 0; B.gap = rand(1.2, 1.8); trekBandPlay(B, 'Idle_Loop'); hurtPlayer({ silent: true }); comicHit(head.p.clone()); say(B.atk === 'hook' ? '¡Te ha dado! Agáchate antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); o.hits = (o.hits || 0) + 1; }
-    }
-  } else if (B.st === 'stun' && B.t > B.stun) { B.st = 'guard'; B.t = 0; B.gap = rand(0.8, 1.2); trekBandPlay(B, 'Idle_Loop'); } // (tras esquivarle, se tambalea un momento y vuelve a la carga)
-  // el aviso rojo mientras prepara el golpe; dorado mientras se tambalea
-  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(B.st === 'wind' ? 0xff3b5c : 0xffd166); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : B.st === 'stun' ? 0.45 : 0;
+  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.1); trekBandPlay(B, 'Idle_Loop'); } }
+  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo
+    B.st = 'wind'; B.t = 0; B.atk = pick(['high', 'low', 'body']); B.played = false; const [a, b] = TREK_STONE_TXT[B.atk];
+    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.2); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8);
+    trekBandPlay(B, 'OverhandThrow', true); if (B.cur) { B.cur.paused = true; B.cur.time = 0; } }
+  else if (B.st === 'wind') { // echa el brazo atrás despacio y suelta la piedra
+    const P = BEAST_PUNCH.OverhandThrow || [0.25, 0.35]; if (B.cur && B.cur.paused) B.cur.time = P[1] * smooth(clamp(B.t / D.wu, 0, 1));
+    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.timeScale = 0.6; } trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } }
+  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done)) { B.st = 'guard'; B.t = 0; B.gap = rand(0.9, 1.4); trekBandPlay(B, 'Idle_Loop'); }
+  // el aviso rojo sobre él mientras prepara el lanzamiento
+  o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(0xff3b5c); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : 0;
 }
-// menos aviso en cada tramo y con el rango, poco a poco
-const trekBandDiff = () => ({ wind: Math.max(1.6, 2.1 - 0.05 * waveIdx - 0.03 * rankIdx()), stun: 0.7, wu: 0.75, st: 0.45 }); // (wu y st: lo que dura, siempre igual, el brazo atrás y el golpe)
+// la piedra: de su mano a donde estás (a la cabeza, a las espinillas o al pecho), en un arco que se ve venir
+function trekStoneThrow(o, B, L, D) {
+  const m = new THREE.Group(); trekRock(m, 0, 0.11); m.children.forEach(c => { c.castShadow = true; }); o.mesh.add(m);
+  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.22 : calibRef - 0.5, from = new V3(B.x + 0.15, 1.7, B.z + 0.2), to = new V3(L.x, y, L.z);
+  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow);
+  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0 });
+  SND.whoosh(o.mesh.localToWorld(_tbw.copy(from)), 'arc');
+}
+function trekStoneStep(o, dt) {
+  for (const q of o.stones2 || []) {
+    q.t += dt; const k = q.t / q.dur;
+    if (!q.done) {
+      const h = q.atk === 'low' ? 0.35 : 0.7; q.m.position.lerpVectors(q.from, q.to, Math.min(1, k)); q.m.position.y += h * Math.sin(Math.PI * Math.min(1, k)); q.m.rotation.x += dt * 9; q.m.rotation.z += dt * 6;
+      if (k > 1 - 0.45 / q.dur) q.up = Math.max(q.up, head.p.y - calibRef); // (el salto, en el último medio segundo)
+      if (k >= 1) { q.done = true; trekStoneJudge(o, q); }
+    } else { // esquivada: sigue de largo y se va; si te dio, cae a tus pies y se apaga
+      q.after += dt; if (q.ok) q.m.position.add(_tbh.set((q.to.x - q.from.x) / q.dur, -0.6, (q.to.z - q.from.z) / q.dur).multiplyScalar(dt)); else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
+      if (q.after > 0.8) { o.mesh.remove(q.m); q.gone = true; }
+    }
+  }
+  if (o.stones2) o.stones2 = o.stones2.filter(q => !q.gone);
+}
+// ¿la has esquivado? Alta: agachado (la cabeza 20 cm por debajo de tu altura de pie); baja: has saltado al pasar
+// (la cabeza, «Altura del salto» por encima); al cuerpo: apartado 20 cm a un lado
+function trekStoneJudge(o, q) {
+  const B = q.by, ok = q.atk === 'high' ? calibRef - HL.y > 0.2 : q.atk === 'low' ? q.up > settings.jumpHeight / 100 : Math.abs(HL.x - q.x0) > 0.2; q.ok = ok;
+  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone();
+  if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; SND.whoosh(p, 'arc');
+    if (B.hp <= 0) { B.st = 'leave'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Se rinde y huye!', '#3cf0c6', 1.4); score += 200; }
+    else say(`¡Esquivada! Le quedan ${B.hp}`, '#ffd166', 0.9); }
+  else { hurtPlayer({ silent: true }); comicHit(head.p.clone()); fx.dust(p, 8, 0.2); SND.metalHit(p, false); o.hits = (o.hits || 0) + 1;
+    say(q.atk === 'high' ? '¡Te ha dado! Agáchate antes' : q.atk === 'low' ? '¡Te ha dado! Salta antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); }
+}
+// ¿hay una piedra baja en el aire? (en «Probar en el ordenador», soltar Espacio entonces es saltar)
+const trekStoneLow = () => { const o = TREK.halt; return !!(o && o.stones2 && o.stones2.some(q => !q.done && q.atk === 'low')); };
+// menos tiempo de vuelo en cada tramo y con el rango, poco a poco; el brazo atrás, siempre igual
+const trekBandDiff = () => ({ fly: Math.max(1.15, 1.75 - 0.05 * waveIdx - 0.03 * rankIdx()), wu: 0.9 });
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
@@ -15077,7 +15188,7 @@ const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
 function trekChaseStart() {
-  const n = waveIdx >= 2 ? 2 : 1, C = { gap: 7, v: trekWolfV(), wolves: [], t: 0, growl: 0 };
+  const n = waveIdx >= 2 ? 2 : 1, C = { gap: 9.5, v: trekWolfV(), wolves: [], t: 0, growl: 0 }; // (salen por detrás, a un lado, y se te van acercando)
   for (let i = 0; i < n; i++) {
     C.wolves.push({ side: n === 2 ? (i ? 1 : -1) : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 3 });
   }
@@ -15096,9 +15207,13 @@ function trekChaseStep(dt, t) {
   const C = TREK.chase; if (!C) return; if (TREK_WOLF.scene && !C.wolves[0].mesh) trekWolfMeshes(C);
   if (state === 'rest' || state === 'end') { trekChaseEnd(); return; }
   if (state === 'play' && !TREK.halt) { C.t += dt; C.gap += (TREK.v - C.v) * dt; if (C.bit) C.gap += dt * 2; } // (tras morder, se quedan atrás)
+  // Dónde van: a tu lado y algo por delante, para verlos por el rabillo del ojo (detrás no se veían). Con ventaja (gap
+  // grande) se quedan atrás, fuera de la vista; si vas más lento que ellos, se acercan por el lado hasta casi tocarte y,
+  // al morder, se echan encima. Corren hacia delante, girados un poco hacia ti cuanto más cerca
   for (const w of C.wolves) {
-    const z = HL.z + Math.max(-0.3, C.gap * 0.75 - 0.8), x = w.side * (1.5 + Math.max(0, C.gap - 2) * 0.15);
-    if (w.mesh) { w.mesh.position.set(x, 0, z + Math.sin(t * 2 + w.ph) * 0.15); if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt); }
+    const g = Math.max(0, C.gap), k = Math.min(1, g / 7), k2 = clamp((g - 7) / 7, 0, 1);
+    const x = w.side * (g <= 7 ? 0.85 + 2.15 * k : 3 + 0.5 * k2), z = HL.z + (g <= 7 ? -(0.8 + 1.2 * k) : -2 + 5.5 * k2);
+    if (w.mesh) { w.mesh.position.set(x, 0, z + Math.sin(t * 2 + w.ph) * 0.12); w.mesh.rotation.y = Math.PI + w.side * (0.15 + 0.5 * (1 - k)) * (g < 7 ? 1 : 0.3); if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt); }
   }
   if (C.gap < 3 && (C.growl -= dt) <= 0) { C.growl = 1.6; SND.hiss(arena.localToWorld(_tkh.set(C.wolves[0].side * 1.5, 0.6, HL.z + 0.5))); hapticBoth(0.25, 40); }
   if (!C.bit && C.gap <= 0.4) { C.bit = true; hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); boardDirty = true; }
@@ -15109,7 +15224,7 @@ function trekStep(dt, t) {
   const sc = arcScenic(), on = (trekOn() || sc) && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
   TREK.group.visible = on; if (typeof natPlants !== 'undefined') natPlants.visible = !trekOn() && !sc;
   trekPath.visible = TREK_DECK.visible = trekOn();
-  if (!trekOn()) { panoStep(dt); if (sc) arcScenicStep(t); return; } aldLoad(); trekBandLoad(); // (la aldea y los bandidos, desde que eliges la Travesía)
+  if (!trekOn()) { if (natGround.rotation.y) natGround.rotation.y = 0; panoStep(dt); if (sc) arcScenicStep(t); return; } aldLoad(); trekBandLoad(); // (la aldea y los bandidos, desde que eliges la Travesía)
   TREK.push = (TREK.push || 0) - dt; TREK.minY = Math.min(TREK.minY === undefined ? 9 : TREK.minY, HL.y); // (lo más bajo de la cabeza desde la repetición anterior)
   if (state === 'play' && TREK.push > 0) TREK.v += Math.sign(TREK.want - TREK.v) * Math.min(Math.abs(TREK.want - TREK.v), dt * 0.7); // (acelera y frena suave: sin tirones)
   else if (state !== 'paused') TREK.v = Math.max(0, TREK.v - dt * (state === 'play' ? 0.45 : 0.9)); // (sin repeticiones, se para; fuera del tramo, antes)
@@ -15119,8 +15234,7 @@ function trekStep(dt, t) {
   let step = state === 'paused' ? 0 : TREK.v * dt;
   if (TREK.glide > 0 && state !== 'paused') { const g = Math.min(TREK.glide, dt * 1.8); TREK.glide -= g; step += g; } // (el paso a la piedra o el pilar siguiente)
   TREK.dist += step;
-  natGround.material.map.offset.y += step / 3.5; // (el suelo corre bajo tus pies)
-  trekFrame(); trekRibbon(); trekLayout(); trekLight(dt); trekHopStep(dt);
+  trekFrame(); trekGround(); trekRibbon(); trekLayout(); trekLight(dt); trekHopStep(dt);
   TREK_WT.value = t; TREK_SUN.value.copy(keyLight.position).sub(keyLight.target.position).normalize(); // (el agua se mueve; los destellos, donde está el sol)
   // los retos: salen a 40 m y se juzgan al pasar por ti
   if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
@@ -15145,7 +15259,7 @@ function trekStep(dt, t) {
     }
   }
   trekHaltStep(dt, t); trekChaseStep(dt, t);
-  for (const o of TREK.obs) { if (!o.done || !o.box) continue; o.out = Math.min(1, (o.out || 0) + dt * 1.2); o.dx = o.side * 2.4 * smooth(o.out); if (o.kind === 'rock') o.box.rotation.z = -o.side * o.out * 2; } // (abierto o apartado, se hace a un lado)
+  trekChunks(dt); trekChestVanish(dt); // (los añicos de la roca; el cofre abierto se esfuma)
   TREK.obs = TREK.obs.filter(o => { const keep = (o.zl === undefined ? -99 : o.zl) - (o.len || 0) < HL.z + 6; if (!keep) trekDrop(o); return keep; });
   // el hueco del desfiladero que se ve (si hay uno), en las coordenadas del propio desfiladero
   const ch = TREK.obs.find(o => o.kind === 'chasm'); if (ch) { TREK_HOLE.value.set(-17, 17, -ch.len, 0); TREK_HOLE_M.value.copy(ch.mesh.matrixWorld).invert(); } else TREK_HOLE.value.set(1, -1, 0, 0);
@@ -15242,7 +15356,7 @@ function trekReset() {
   trekWolfLoad(); trekBandLoad(); aldLoad(); if (typeof islandLoad === 'function') islandLoad(); // (el lobo y el cofre de la isla, que se cargan antes de hacer falta)
   TREK.obs.forEach(trekDrop); trekChaseEnd(); TREK_HOLE.value.set(1, -1, 0, 0); Object.assign(TREK, { glide: 0, halt: null, keys: 0, nextChase: 30, v: 0, want: 0, push: 0, lastRep: 0, minY: 9, kc: 1, ki: 1, turbo: false, tg: 0, idle: 0, dist: 0, biome: 0, obs: [], next: 0, got: 0, ducked: 0, hits: 0 });
   TREK.slots = []; TREK_DUSK.value = 0; TREK.hop = null; NAT.group.position.y = 0; TREK.group.position.y = 0;
-  natGround.material.map.offset.y = 0; TREK_PATH_TEX.offset.y = 0;
+  natGround.material.map.offset.set(0, 0); natGround.rotation.y = 0; TREK_PATH_TEX.offset.y = 0; (TREK.chunks || []).forEach(c => c.m.parent && c.m.parent.remove(c.m)); TREK.chunks = [];
 }
 settingHooks.push(k => {
   if (k === 'mode' || k === '*') { if (!trekOn()) { natGround.material.map.offset.y = 0; TREK_DUSK.value = 0; NAT.group.position.y = 0; natSky.visible = true; trekPath.visible = TREK_DECK.visible = false; } }
@@ -15844,7 +15958,8 @@ const LKL_RAYS = 26;
 function lklRayTex() {
   if (LKL.ray) return LKL.ray;
   const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d');
-  c.fillStyle = '#ff3a2e'; c.beginPath(); c.moveTo(0, 7); c.lineTo(122, 1); c.quadraticCurveTo(128, 8, 122, 15); c.lineTo(0, 9); c.closePath(); c.fill(); // (en punta por dentro, gruesa por fuera)
+  c.fillStyle = '#ff3a2e'; c.beginPath(); c.moveTo(0, 6); c.lineTo(120, 0); c.quadraticCurveTo(128, 8, 120, 16); c.lineTo(0, 10); c.closePath(); c.fill(); // (en punta por dentro, gruesa por fuera)
+  c.fillStyle = '#ffd0c4'; c.beginPath(); c.moveTo(20, 7.5); c.lineTo(112, 5); c.quadraticCurveTo(117, 8, 112, 11); c.lineTo(20, 8.5); c.closePath(); c.fill(); // (con el centro claro: se ve sobre cualquier fondo)
   return (LKL.ray = new THREE.CanvasTexture(cv));
 }
 function lklRays(e) {
@@ -15854,10 +15969,12 @@ function lklRays(e) {
   g.visible = false; g.userData.isLockLine = true; g.userData.t = -1; scene.add(g); return g;
 }
 function lklRayStep(e, g, dt) {
-  const { hw, hh, t } = lklFrame(e, g, dt), L = clamp(Math.min(hw, hh) * 0.45, 0.06, 0.22), W = L * 0.3, spin = t * 0.35;
+  // más grandes y gruesas que antes (en los voladores pequeños, avispones y drones, apenas se veían): un marco de al menos
+  // 32 cm, rayas de 12 a 30 cm, y ondulan: el anillo gira y respira, y cada raya cabecea y va y viene a su ritmo
+  const F = lklFrame(e, g, dt), hw = Math.max(0.32, F.hw), hh = Math.max(0.32, F.hh), t = F.t, L = clamp(Math.min(hw, hh) * 0.6, 0.12, 0.3), W = Math.max(0.035, L * 0.4), spin = t * 0.6, br = 1 + 0.06 * Math.sin(t * 3.2);
   for (const q of g.children) {
-    const U = q.userData, k = (t * 0.8 * U.sp + U.ph) % 1, a = U.a + spin, ca = Math.cos(a), sa = Math.sin(a), out = 1.0 + 0.35 * k, len = L * Math.sin(Math.PI * k) + 0.001;
-    q.position.set(ca * hw * out, sa * hh * out, 0); q.rotation.z = Math.atan2(sa * hh, ca * hw); q.scale.set(len, W, 1);
+    const U = q.userData, k = (t * 0.9 * U.sp + U.ph) % 1, a = U.a + spin + 0.16 * Math.sin(t * 2.6 + U.a * 3), ca = Math.cos(a), sa = Math.sin(a), out = br * (1.0 + 0.4 * k) + 0.05 * Math.sin(t * 5 + U.a * 5), len = L * Math.sin(Math.PI * k) + 0.001;
+    q.position.set(ca * hw * out, sa * hh * out, 0); q.rotation.z = Math.atan2(sa * hh, ca * hw) + 0.22 * Math.sin(t * 6 + U.ph * TAU); q.scale.set(len, W * (0.8 + 0.4 * Math.sin(Math.PI * k)), 1);
   }
 }
 // Desde updateAim: este enemigo está apuntado
@@ -16113,7 +16230,7 @@ function chestStep(dt, t) {
   if (!CHEST.on) return;
   if (state !== 'rest') { chestClear(); return; }
   CHEST.t += dt; CHEST.g.scale.setScalar(Math.min(1, CHEST.t * 3));
-  if (CHEST.t >= 2.6 && CHEST.t - dt < 2.6 && !CHEST.opened) say('¡Un cofre! Salta para abrirlo', '#ffd166', 3); // (después de la mejora)
+  if (CHEST.t >= 2.6 && CHEST.t - dt < 2.6 && !CHEST.opened) say('¡Un cofre! Salta para abrirlo: dentro, una mejora, una vida o puntos', '#ffd166', 3.4); // (después de la mejora)
   CHEST.glow.material.opacity = CHEST.opened ? Math.max(0, 0.9 - CHEST.open) : 0.35 + 0.2 * Math.sin(t * 5);
   // un salto: la cabeza sube deprisa por encima de tu altura de pie
   const vy = dt > 0 ? (head.p.y - CHEST.lastY) / dt : 0; CHEST.vy += (vy - CHEST.vy) * Math.min(1, dt * 20); CHEST.lastY = head.p.y;
@@ -16125,9 +16242,10 @@ function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
   fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
   const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
-  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
-  else if (nLives() && lives < nLives()) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
-  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); }
+  // lo que da, en su propio aviso grande delante (y en el marcador): qué es y para qué sirve
+  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); trophy('¡COFRE ABIERTO!', `Mejora extra para esta ronda: ${PERKS[k].name}. ${PERKS[k].desc}`, PERKS[k].col); }
+  else if (nLives() && lives < nLives()) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); trophy('¡COFRE ABIERTO!', `+1 vida: ahora tienes ${lives}`, '#ff4fa3'); }
+  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); trophy('¡COFRE ABIERTO!', `+300 puntos (ya tienes todas las mejoras)`); }
   boardDirty = true;
 }
 
@@ -16297,6 +16415,8 @@ function previewInput(dt) {
   }
   // sentadilla con salto: al soltar Espacio, sube de golpe por encima de tu altura de pie (PV.noJump: no salta)
   if (ex === 'jsquat' && GAME_STATES.includes(state)) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jsqJump / 100 + 0.06; }
+  // Travesía: con una piedra baja del bandido en el aire, soltar Espacio es saltar (75_trek)
+  if (settings.mode === 'trek' && GAME_STATES.includes(state) && trekStoneLow()) { PV.jumping = !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; if (PV.jumping) target = PV.baseY + settings.jumpHeight / 100 + 0.08; }
   // el cofre del descanso: igual, un salto (79_perks); al irse, deja de saltar
   const cj = chestWaits(); if (cj || PV.chestJ) { PV.jumping = cj && !PV.crouch && PV.thrUp > 0.55 && !PV.noJump; PV.chestJ = cj; if (PV.jumping) target = PV.baseY + 0.2; }
   const vmax = PV.jumping ? (PV.slowJump ? 0.4 : 2.5) : 0.75; PV.y += clamp(target - PV.y, -vmax * dt, vmax * dt);

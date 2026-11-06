@@ -38,7 +38,8 @@ const LKL_RAYS = 26;
 function lklRayTex() {
   if (LKL.ray) return LKL.ray;
   const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d');
-  c.fillStyle = '#ff3a2e'; c.beginPath(); c.moveTo(0, 7); c.lineTo(122, 1); c.quadraticCurveTo(128, 8, 122, 15); c.lineTo(0, 9); c.closePath(); c.fill(); // (en punta por dentro, gruesa por fuera)
+  c.fillStyle = '#ff3a2e'; c.beginPath(); c.moveTo(0, 6); c.lineTo(120, 0); c.quadraticCurveTo(128, 8, 120, 16); c.lineTo(0, 10); c.closePath(); c.fill(); // (en punta por dentro, gruesa por fuera)
+  c.fillStyle = '#ffd0c4'; c.beginPath(); c.moveTo(20, 7.5); c.lineTo(112, 5); c.quadraticCurveTo(117, 8, 112, 11); c.lineTo(20, 8.5); c.closePath(); c.fill(); // (con el centro claro: se ve sobre cualquier fondo)
   return (LKL.ray = new THREE.CanvasTexture(cv));
 }
 function lklRays(e) {
@@ -48,10 +49,12 @@ function lklRays(e) {
   g.visible = false; g.userData.isLockLine = true; g.userData.t = -1; scene.add(g); return g;
 }
 function lklRayStep(e, g, dt) {
-  const { hw, hh, t } = lklFrame(e, g, dt), L = clamp(Math.min(hw, hh) * 0.45, 0.06, 0.22), W = L * 0.3, spin = t * 0.35;
+  // más grandes y gruesas que antes (en los voladores pequeños, avispones y drones, apenas se veían): un marco de al menos
+  // 32 cm, rayas de 12 a 30 cm, y ondulan: el anillo gira y respira, y cada raya cabecea y va y viene a su ritmo
+  const F = lklFrame(e, g, dt), hw = Math.max(0.32, F.hw), hh = Math.max(0.32, F.hh), t = F.t, L = clamp(Math.min(hw, hh) * 0.6, 0.12, 0.3), W = Math.max(0.035, L * 0.4), spin = t * 0.6, br = 1 + 0.06 * Math.sin(t * 3.2);
   for (const q of g.children) {
-    const U = q.userData, k = (t * 0.8 * U.sp + U.ph) % 1, a = U.a + spin, ca = Math.cos(a), sa = Math.sin(a), out = 1.0 + 0.35 * k, len = L * Math.sin(Math.PI * k) + 0.001;
-    q.position.set(ca * hw * out, sa * hh * out, 0); q.rotation.z = Math.atan2(sa * hh, ca * hw); q.scale.set(len, W, 1);
+    const U = q.userData, k = (t * 0.9 * U.sp + U.ph) % 1, a = U.a + spin + 0.16 * Math.sin(t * 2.6 + U.a * 3), ca = Math.cos(a), sa = Math.sin(a), out = br * (1.0 + 0.4 * k) + 0.05 * Math.sin(t * 5 + U.a * 5), len = L * Math.sin(Math.PI * k) + 0.001;
+    q.position.set(ca * hw * out, sa * hh * out, 0); q.rotation.z = Math.atan2(sa * hh, ca * hw) + 0.22 * Math.sin(t * 6 + U.ph * TAU); q.scale.set(len, W * (0.8 + 0.4 * Math.sin(Math.PI * k)), 1);
   }
 }
 // Desde updateAim: este enemigo está apuntado

@@ -236,7 +236,7 @@ function chestStep(dt, t) {
   if (!CHEST.on) return;
   if (state !== 'rest') { chestClear(); return; }
   CHEST.t += dt; CHEST.g.scale.setScalar(Math.min(1, CHEST.t * 3));
-  if (CHEST.t >= 2.6 && CHEST.t - dt < 2.6 && !CHEST.opened) say('¡Un cofre! Salta para abrirlo', '#ffd166', 3); // (después de la mejora)
+  if (CHEST.t >= 2.6 && CHEST.t - dt < 2.6 && !CHEST.opened) say('¡Un cofre! Salta para abrirlo: dentro, una mejora, una vida o puntos', '#ffd166', 3.4); // (después de la mejora)
   CHEST.glow.material.opacity = CHEST.opened ? Math.max(0, 0.9 - CHEST.open) : 0.35 + 0.2 * Math.sin(t * 5);
   // un salto: la cabeza sube deprisa por encima de tu altura de pie
   const vy = dt > 0 ? (head.p.y - CHEST.lastY) / dt : 0; CHEST.vy += (vy - CHEST.vy) * Math.min(1, dt * 20); CHEST.lastY = head.p.y;
@@ -248,9 +248,10 @@ function chestOpen() {
   CHEST.opened = true; const c = CHEST.g.getWorldPosition(new V3()).add(new V3(0, 0.35, 0));
   fx.sparks(c, 60, [1, 0.82, 0.3], 3, 0.05); fx.glow(c, [1, 0.85, 0.4], 1.2, 0.3); SND.victory(); hapticBoth(0.6, 150);
   const pool = perksOn() ? perkPool().filter(k => !(PK.offer || []).includes(k)) : [];
-  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); }
-  else if (nLives() && lives < nLives()) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); }
-  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); }
+  // lo que da, en su propio aviso grande delante (y en el marcador): qué es y para qué sirve
+  if (pool.length) { const k = pick(pool); PK.has.add(k); if (k === 'shield') PK.shield = 1; if (k === 'combo') PK.comboSave = 1; cheer(`¡Cofre! Mejora extra: ${PERKS[k].name}`, PERKS[k].col, 2.4); trophy('¡COFRE ABIERTO!', `Mejora extra para esta ronda: ${PERKS[k].name}. ${PERKS[k].desc}`, PERKS[k].col); }
+  else if (nLives() && lives < nLives()) { lives++; cheer('¡Cofre! +1 vida', '#ff4fa3', 2.2); trophy('¡COFRE ABIERTO!', `+1 vida: ahora tienes ${lives}`, '#ff4fa3'); }
+  else { score += 300; cheer('¡Cofre! +300 puntos', '#ffd166', 2.2); trophy('¡COFRE ABIERTO!', `+300 puntos (ya tienes todas las mejoras)`); }
   boardDirty = true;
 }
 
