@@ -255,13 +255,20 @@ No las cambies sin preguntarle.
   sesiones.
 
 **Página web**
-- Lo primero que se ve son los botones de entrar (realidad mixta, VR, ordenador).
-- Luego el modo y el ejercicio en fichas compactas, y después las opciones.
+- En el ordenador y en el navegador de las gafas, lo primero que se ve son los botones de entrar (realidad mixta, VR,
+  ordenador); luego el modo y el ejercicio en fichas compactas, y después las opciones.
 - El panel de la izquierda es un índice: cada apartado (`<section>` de `.main` con `id` y `data-toc`) y, debajo del que se
-  ve, sus subapartados (los `h3` a la vista); a la derecha, solo ese apartado (`pageNav`, `src/68_prefs.js`). En el móvil,
-  una barra fija arriba (icono y nombre del apartado, «☰ Apartados») que abre un panel de fichas grandes, dos por fila,
-  con icono y color (`NAV_ICO`), el apartado de ahora a todo lo ancho con sus subapartados en botones, y lo de detrás
-  oscurecido (tocarlo cierra); sin textos cortados. Un apartado nuevo: con su `id` y su `data-toc`.
+  ve, sus subapartados (los `h3` a la vista); a la derecha, solo ese apartado (`pageNav`, `src/68_prefs.js`). Un apartado
+  nuevo: con su `id` y su `data-toc` (y su fila en `APP_SECS`, `src/63_app.js`; si no, sale en «Más»).
+- **En el móvil no se juega** (el juego es solo en las Quest 3): la página es un panel de control con forma de app
+  (`src/63_app.js`, `html.app` = estrecho y fuera de las gafas), modelo C elegido por el usuario, como los Ajustes del
+  teléfono: inicio con el logotipo, lo de hoy y listas agrupadas (Entrenar, Ajustes, Tú, Ayuda) con icono de color, valor y
+  flecha; cada apartado, una pantalla con «‹ RepArena» (y la vuelta atrás del teléfono); cada ajuste, una fila (Sí/No con
+  interruptor; los demás, su valor y una pantalla con las opciones o el número, y la explicación debajo). Sin botones de
+  entrar ni índice. Los iconos, dibujos de línea del mismo estilo (`APP_I`), nada de emojis.
+- Se instala como app con su logotipo (la R rosa de la letra del juego con un rayo turquesa, elegido por el usuario):
+  `icons/logo.svg` es el original y los PNG se rehacen con `node tests/iconos.js`; `manifest.webmanifest`, a pantalla
+  completa.
 - Las estadísticas del día, con color, animación y la racha, son un incentivo para volver.
 
 Cuando una petición sea ambigua o haya varias formas razonables de hacerla, **dale al usuario propuestas** (o modelos

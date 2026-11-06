@@ -534,7 +534,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage(); appInit();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RepArena</title>
+<!-- Para instalarla en el móvil como una app, con su logotipo (icons/, rehechos con node tests/iconos.js), a pantalla completa -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#100d1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RepArena">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- En el móvil (estrecho y fuera de las gafas), la página es un panel de control con forma de app (63_app.js): se decide
+     antes de pintar, para que no salte -->
+<script>(function(){try{var q=matchMedia('(max-width: 899px)'),f=function(){document.documentElement.classList.toggle('app',q.matches&&!/OculusBrowser|Quest|Pacific/i.test(navigator.userAgent))};f();if(q.addEventListener)q.addEventListener('change',f);else if(q.addListener)q.addListener(f)}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Bungee&family=Rubik:wght@400;500;700&display=swap">
@@ -384,6 +397,115 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
 .dvbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
 .dvbar select{margin-left:4px}
 #dvText{width:100%;box-sizing:border-box;font:12px/1.3 ui-monospace,monospace;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px}
+
+/* ===== En el móvil: un panel de control con forma de app (modelo C, como los Ajustes del teléfono; 63_app.js) =====
+   html.app = estrecho y fuera de las gafas (lo pone el <head>). El inicio en listas agrupadas; cada apartado, una pantalla
+   con «‹ RepArena»; cada ajuste, una fila (interruptor, o su valor y una pantalla con las opciones). Sin botones de entrar */
+#appHome,#appBar,#appTitle,#appPick,.aF,.aIco,.aSearch{display:none}
+html.app .wrap{max-width:640px;margin:0 auto;gap:12px;align-items:stretch;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(30px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+html.app .brand,html.app .go,html.app .toc,html.app .secPager,html.app .todayMini,html.app .side .status,html.app .exHead h2,html.app .main>section>h2,html.app .todayHead,html.app .hist h2{display:none !important}
+html.app .syncAsk{top:max(12px,env(safe-area-inset-top,0px))}
+html.app input,html.app select,html.app textarea{font-size:16px} /* (con menos, el iPhone acerca la vista al escribir) */
+html.app .btn{border-radius:12px;min-height:44px}
+html.app .actions{gap:10px}
+/* el inicio */
+html.app.appHome #appHome{display:block;padding-top:max(14px,env(safe-area-inset-top,0px))}
+html.app.appHome .main>section,html.app.appHome .pick,html.app.appHome .side .demo,html.app.appHome .side .estimate{display:none !important}
+#appHome .aHead{display:flex;align-items:center;gap:12px;margin:8px 2px 0}
+#appHome .aHead img{width:44px;height:44px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#appHome h1{margin:0;font:400 1.95rem/1 var(--display);letter-spacing:.01em}#appHome h1 span{color:var(--pink)}
+.aDate{margin:8px 4px 14px;color:var(--muted);font-size:.95rem}
+.aToday{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 140% at 0% 0%,rgba(60,240,198,.13),transparent 60%),var(--panel);color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.aRingW{position:relative;width:66px;height:66px;flex:none}.aRingW svg{display:block}
+.aRingW b{position:absolute;inset:0;display:grid;place-items:center;font:400 1.2rem var(--display)}
+.aTt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.aTt b{font-size:1.05rem}.aTt small{color:var(--muted);font-size:.86rem;line-height:1.35}
+.aToday>svg{color:#6d6694;flex:none}
+.aH{margin:24px 8px 8px;font:500 .78rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.aGrp{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.aRow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:9px 14px;border:0;border-top:1px solid var(--line);background:none;color:var(--fg);font:inherit;font-size:1rem;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.aGrp>.aRow:first-child{border-top:0}
+.aRow:active{background:var(--panel2)}
+.aSq{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#140f24;flex:none;font-style:normal}
+.aL{flex:1;min-width:0;line-height:1.25}
+.aV{color:var(--muted);font-size:.95rem;text-align:right;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aRow>svg:last-child{color:#6d6694;flex:none}
+.aFoot{margin:10px 8px 0;color:var(--muted);font-size:.88rem;line-height:1.45}
+#appHome>.aFoot{margin-top:18px}
+/* cada apartado, una pantalla: arriba «‹ RepArena» (siempre a mano) y el título grande */
+html.app:not(.appHome) #appBar{max-width:none;display:flex;align-items:flex-end;position:sticky;top:0;z-index:20;height:calc(50px + env(safe-area-inset-top,0px));margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:env(safe-area-inset-top,0px) 6px 0;background:rgba(16,13,26,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.aBack{display:inline-flex;align-items:center;gap:2px;height:50px;padding:0 8px;border:0;background:none;color:var(--teal);font:500 1.05rem var(--body);cursor:pointer;-webkit-tap-highlight-color:transparent}
+html.app:not(.appHome) #appTitle{display:block;margin:2px 4px 4px}
+#appTitle h1,.aPIn h1{margin:0;font:700 1.9rem/1.15 var(--body);display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+#appTitle p{margin:4px 0 0;color:var(--muted)}
+#appBar .aHelp{width:32px;height:32px;margin:0 6px 9px auto;font-size:.9rem;flex:none}
+html.app .stats>p{grid-column:1/-1;margin:0 8px}
+html.app .profsave{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:none}
+html.app .profsave>button:first-child{grid-column:1/-1}
+html.app .profsave input{min-height:44px;border-radius:12px}
+.aBig small{font:500 1.1rem var(--body);color:var(--muted);margin-left:6px}
+html.app .main section{scroll-margin-top:calc(60px + env(safe-area-inset-top,0px))}
+/* los ajustes: grupos con su título pequeño y filas */
+html.app .groups{gap:4px}
+html.app .group h3{margin:18px 8px 8px;font:500 .78rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+html.app .group h3 .reset{border:0;background:none;padding:0;color:var(--teal);font:500 .88rem var(--body);letter-spacing:0;text-transform:none}
+html.app .group>.note{margin:0 8px 10px;color:var(--muted)}
+html.app .group .grid{display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+html.app .group .field{display:block;border-bottom:1px solid var(--line);margin-bottom:-1px}
+html.app .group .field>.lab,html.app .group .field>.labrow,html.app .group .field>.seg,html.app .group .field>.num,html.app .group .field>.zero{display:none}
+html.app .group .aF{display:flex}
+html.app .group .field>.hint{margin:0;padding:0 16px 12px;font-size:.86rem}
+.aQ{display:inline-grid;place-items:center;width:24px;height:24px;padding:0;border-radius:50%;border:0;background:#2e2750;color:var(--muted);font:700 .78rem var(--body);flex:none;cursor:pointer}
+.aSw{position:relative;width:51px;height:31px;padding:0;border:0;border-radius:16px;background:#3a3358;flex:none;cursor:pointer;transition:background .2s}
+.aSw::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.35);transition:left .2s}
+.aSw.on{background:var(--teal)}.aSw.on::after{left:22px}
+/* la pantalla de un ajuste: sus opciones con la marca, o su número; debajo, la explicación */
+html.app #appPick:not([hidden]){display:block;position:fixed;inset:0;z-index:70;overflow-y:auto;background:var(--bg);transform:translateX(100%);transition:transform .26s ease;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+html.app #appPick.on{transform:none}
+html.appPicking body{overflow:hidden}
+.aPBar{height:50px;display:flex;align-items:center;max-width:640px;margin:0 auto}.aPBar .aBack{margin-left:-10px}
+.aPIn{max-width:640px;margin:0 auto}.aPIn h1{margin:2px 4px 14px}
+.aOpt .aChk{color:var(--teal);visibility:hidden;display:grid}.aOpt.on .aChk{visibility:visible}
+.aNum{display:flex;flex-direction:column;gap:16px;padding:20px 16px;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.aBig{font:400 2.5rem/1.1 var(--display);text-align:center;color:var(--teal)}
+.aRange{width:100%;height:34px;accent-color:var(--pink)}
+.aPm{display:flex;gap:12px}.aPm button{flex:1;height:50px;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--fg);cursor:pointer}
+/* modos y ejercicios: filas con su marca (los modos, con su icono de color); los ejercicios, con buscador */
+html.app .cards.modes,html.app .cards.exs{display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+html.app .cards .card{display:grid;grid-template-columns:auto minmax(0,1fr) 24px;grid-template-areas:"ico name chk" "ico tag chk";align-items:center;column-gap:12px;row-gap:1px;min-height:58px;padding:10px 14px;border:0;border-bottom:1px solid var(--line);margin-bottom:-1px;border-radius:0;background:none;box-shadow:none !important;outline-offset:-3px}
+html.app .cards.exs .card{grid-template-columns:minmax(0,1fr) 24px;grid-template-areas:"name chk" "tag chk"}
+html.app .cards .card b{grid-area:name;font:500 1rem/1.25 var(--body) !important;letter-spacing:0}
+html.app .cards .card .tag{grid-area:tag;white-space:normal;font-size:.68rem;line-height:1.35}
+html.app .cards .card small{display:none}
+html.app .cards .card .aIco{display:grid;grid-area:ico;width:30px;height:30px;border-radius:8px;place-items:center;color:#140f24;font-style:normal}
+html.app .cards .card::after{content:'';grid-area:chk;width:24px;height:24px}
+html.app .cards .card:has(input:checked){background:rgba(60,240,198,.07)}
+html.app .cards .card:has(input:checked)::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233cf0c6' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/24px no-repeat}
+html.app .cards .card.aOff,html.app .cards.aSearching .zone{display:none}
+html.app .cards .zone{margin:0 0 -1px;padding:14px 14px 6px;border-bottom:1px solid var(--line);background:#141022;font-size:.72rem}
+html.app .aSearch{display:flex;align-items:center;gap:8px;height:44px;margin:0 0 12px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:#7f79a3}
+.aSearch input{flex:1;min-width:0;height:100%;border:0;background:none;color:var(--fg);font:inherit;outline:none}
+html.app .exHead{margin:0 0 12px}html.app #exSortBox{width:100%}
+html.app #exSortBox .field>.lab{display:none}
+html.app #exSortBox .seg{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:3px;gap:3px}
+html.app #exSortBox .seg label{border:0;border-radius:9px;padding:8px 6px;font-size:.92rem}
+html.app #exSortBox .seg label:has(input:checked){background:var(--panel2);color:var(--fg);box-shadow:0 0 0 1px var(--line)}
+html.app .modeInfo,html.app #exNote{margin:12px 8px 0;color:var(--muted);font-size:.9rem}
+/* lo elegido, con su animación y la cuenta de la ronda: debajo de los ejercicios */
+html.app .pick,html.app .side .demo,html.app .side .estimate{display:none !important}
+html.app:not(.appHome) body[data-sec="secEx"] .pick{display:flex !important;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px}
+html.app:not(.appHome) body[data-sec="secEx"] .side .demo{display:block !important}
+html.app:not(.appHome) body[data-sec="secEx"] .side .estimate{display:block !important;margin:0 8px;font-size:.9rem}
+/* el resto de cada pantalla: textos en gris, títulos pequeños, tarjetas */
+html.app .main section p{font-size:.95rem}
+html.app .main section>h3,html.app .splists h3,html.app .profiles h3,html.app .sounds h3{margin:22px 8px 8px;font:500 .78rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+html.app .today{padding:16px;border-radius:18px}
+html.app .stats{grid-template-columns:1fr 1fr}
+html.app .tablebox{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:2px 10px}
+html.app .how ul{list-style:none;padding:0;gap:10px}
+html.app .how li{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:.95rem;line-height:1.45}
+html.app .how .lede{margin:0 0 12px}
+html.app .sndlist{grid-template-columns:1fr;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:0 10px}
+html.app .sndrow:last-child{border-bottom:0}
 </style>
 </head>
 <body>
