@@ -433,7 +433,7 @@ const PLACE = { on: false, t: 0, kind: 'door', back: null, seen: false, up: fals
 const _pl1 = new V3(), _pl2 = new V3(), _pl3 = new V3(), _pl4 = new V3();
 // Punto de agarre: entre la base del dedo corazón y el nudillo (o el mando)
 function gripPoint(side, out) {
-  const h = hands[side]; if (!h.ok) return null;
+  const h = hands[side]; if (!h.ok || h.est) return null; // (colocar las barras, solo con la mano que ven las cámaras)
   if (h.isHand) { const a = h.J[10], b = h.J[11]; return a.ok && b.ok ? out.lerpVectors(a.p, b.p, 0.75) : null; }
   return out.copy(h.wrist);
 }

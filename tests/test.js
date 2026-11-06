@@ -50,7 +50,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, sndPreview, sndSetOn, shieldCheck, crSave,
+  setSetting, startXR, gloves, watch, BODY, HRS, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, sndPreview, sndSetOn, shieldCheck, crSave,
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, sesClean, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, danceP, throwK, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine, ARX_TINT, arxSpeed, QUAL, qualLevel, DAYB, TROPHY, trophy, TREK, trekRep, trekMoveStep, TMV, TREK_BAND, TREK_WOLF, demoJoints, demoPose };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -2354,6 +2354,46 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (T.n !== 1 || T.low !== 1 || Math.abs(T.sum - 0.5) > 0.05 || !/izq\. vista \d+ % · 1 corte \(1 abajo/.test(line)) errors.push('medición de las manos: debería contar el corte de la mano izquierda (abajo, medio segundo)');
     RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
 
+  // ---- Manos perdidas: B) la que iba deprisa sigue su gesto un instante; A) con el cuerpo que da el navegador, la coloca él ----
+  { const sv = { ...RA.settings }; applyCfg({ mode: 'combat', exercise: 'squat', intro: 0, lives: 0, waves: 1, repsWave: 30, bodyHands: 1 }); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    RA.beginRun(); frame(150, 16, xrFrame); const st = RA.state;
+    const H = RA.hands.right, V = (x, y, z) => new THREE.Vector3(x, y, z);
+    XRS.hands = { left: V(-0.3, 1.1, -0.25), right: V(0.3, 1.15, -0.2) }; frame(15, 16, xrFrame);
+    // B: la derecha va deprisa hacia delante (2,5 m/s) y las gafas la pierden: sigue su camino, frenando, y luego se da por perdida
+    for (let i = 0; i < 8; i++) { XRS.hands.right.z -= 0.04; frame(1, 16, xrFrame); }
+    const z0 = H.wrist.z; XRS.noRight = true; frame(4, 16, xrFrame);
+    const predDz = z0 - H.wrist.z, pred = H.ok && H.est === 'pred' && predDz > 0.04 && predDz < 0.2;
+    frame(12, 16, xrFrame); const predEnd = !H.ok && !H.est;
+    XRS.noRight = false; XRS.hands.right = V(0.3, 1.15, -0.2); frame(20, 16, xrFrame);
+    // quieta y perdida, sin el cuerpo: no se inventa nada
+    XRS.noRight = true; frame(3, 16, xrFrame); const stillLost = !H.ok && !H.est; XRS.noRight = false; frame(10, 16, xrFrame);
+    // A: el navegador da las muñecas del cuerpo (un poco desplazadas de las de las manos); mientras se ven las dos, aprende la distancia
+    XRS.body = { left: XRS.hands.left.clone().add(V(0.02, -0.01, 0.01)), right: XRS.hands.right.clone().add(V(-0.02, -0.01, 0.01)) }; frame(20, 16, xrFrame);
+    const tip0 = RA.gloves.right.tipMat.color.clone(), trk0 = RA.TRK.right.body;
+    XRS.noRight = true; frame(3, 16, xrFrame); const est = H.est, noPoke = !RA.fingers.some(f => f.side === 'right'), jump0 = H.wrist.distanceTo(XRS.hands.right);
+    for (let i = 0; i < 30; i++) { XRS.body.right.x += 0.005; frame(1, 16, xrFrame); } // el cuerpo lleva la muñeca 15 cm a la derecha
+    const err = H.wrist.distanceTo(XRS.body.right.clone().add(V(0.02, 0.01, -0.01))), tip = RA.gloves.right.tipMat.color.clone(), blue = tip.b > 0.9 && tip.b > tip0.b + 0.1, trkBody = RA.TRK.right.body - trk0;
+    // las cámaras la vuelven a ver (en otro sitio): ese fotograma, h.back (el salto no es un gesto); el siguiente, ya no
+    XRS.hands.right.x += 0.1; XRS.noRight = false; frame(1, 16, xrFrame); const back = H.back && !H.est; frame(1, 16, xrFrame); const back1 = H.back, tip1 = RA.gloves.right.tipMat.color.b;
+    frame(10, 16, xrFrame);
+    // sin «Manos con el cuerpo», el cuerpo no la coloca
+    RA.setSetting('bodyHands', 0); XRS.noRight = true; frame(3, 16, xrFrame); const off = !H.ok && !H.est; XRS.noRight = false; RA.setSetting('bodyHands', 1); frame(5, 16, xrFrame);
+    const seen = RA.BODY.seen, used = RA.BODY.used, now = RA.BODY.now;
+    // con mandos, nada de esto
+    XRS.controllers = true; frame(5, 16, xrFrame); const pads = !RA.hands.right.est && !RA.hands.left.est && !RA.hands.right.isHand; XRS.controllers = false; frame(5, 16, xrFrame);
+    log(`lost hands (${st}): fast one goes on ${pred} (${(predDz * 100).toFixed(1)} cm), then lost ${predEnd} · still one not invented ${stillLost} · body places it ${est} (start jump ${(jump0 * 100).toFixed(1)} cm, off by ${(err * 100).toFixed(1)} cm after the body moved) · light-blue tips ${blue} (b ${tip0.b.toFixed(2)} → ${tip.b.toFixed(2)} → ${tip1.toFixed(2)}) · no menu poke ${noPoke} · back flag ${back}/${back1} · setting off ${off} · body seen ${seen}, used ${used.toFixed(2)} s, now ${now} · tracking audit ${trkBody.toFixed(2)} s · controllers ${pads}`);
+    if (!pred || !predEnd) errors.push('mano perdida en plena sacudida: debería seguir su camino un instante (B) y luego darse por perdida');
+    if (!stillLost) errors.push('mano perdida quieta y sin el cuerpo: no debería inventarse');
+    if (est !== 'body' || jump0 > 0.01 || err > 0.015) errors.push('manos con el cuerpo: la mano perdida debería colocarse donde dice el cuerpo (con la distancia aprendida, sin saltar) y seguirlo');
+    if (!blue || tip1 > tip0.b + 0.05) errors.push('manos con el cuerpo: mientras la coloca el cuerpo, las puntas deberían verse celestes (y volver a su color al verla)');
+    if (!noPoke) errors.push('manos con el cuerpo: una mano calculada no debería pulsar menús');
+    if (!back || back1) errors.push('manos con el cuerpo: al volver a verla, h.back solo ese fotograma');
+    if (!off) errors.push('«Manos con el cuerpo» quitado: el cuerpo no debería colocar la mano');
+    if (!(seen > 0 && used > 0.3 && now)) errors.push('manos con el cuerpo: debería apuntar que el navegador lo da y el rato que colocó la mano');
+    if (!(trkBody > 0.3)) errors.push('medición de las manos: debería contar el rato con la mano colocada por el cuerpo');
+    if (!pads) errors.push('con mandos no debería calcularse ninguna mano');
+    XRS.body = null; XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
+
   // ---- Pistolas en XR con mandos: bláster en cada mano y el gatillo dispara ----
   applyCfg({ mode: 'flyers', exercise: 'squat', pistol: 1, lives: 0, waves: 1, repsWave: 6, rest: 0, flySpeed: 8, squatDepth: 25 });
   XRS.controllers = true; XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
@@ -2903,17 +2943,19 @@ function makeXRFrame() {
   // mandos con vibración: cada pulso queda apuntado en XRS.haptics
   const pads = Object.fromEntries(['left', 'right'].map(h => [h, { buttons: [{ pressed: false }, { pressed: false }], hapticActuators: [{ pulse(v, ms) { (XRS.haptics = XRS.haptics || []).push([h, v, ms]); return Promise.resolve(true); } }] }]));
   const ctrls = ['left', 'right'].map(h => ({ handedness: h, gripSpace: { grip: h }, targetRaySpace: { ray: h }, gamepad: pads[h] }));
+  // el seguimiento del cuerpo (XRBody, como un Map): con XRS.body = { left, right }, las muñecas que da el navegador
+  const body = new Map([['left-hand-wrist', { bodyJ: 'left' }], ['right-hand-wrist', { bodyJ: 'right' }], ['left-arm-lower', { bodyJ: 'none' }]]);
   return () => {
     const s = RA.renderer.xr.getSession(), src = XRS.controllers ? ctrls : sources; if (s) s.inputSources = src;
     pads.left.buttons[0].pressed = XRS.trig === 'left'; pads.right.buttons[0].pressed = XRS.trig === 'right';
     pads.left.buttons[1].pressed = XRS.squeeze === 'left'; pads.right.buttons[1].pressed = XRS.squeeze === 'right'; // (el botón de agarre)
     for (const h of ['left', 'right']) { while (pads[h].buttons.length < 5) pads[h].buttons.push({ pressed: false }); pads[h].buttons[4].pressed = XRS.menuBtn === h; } // (X/Y)
     return {
-      session: s || { inputSources: src },
+      session: s || { inputSources: src }, body: XRS.body ? body : undefined,
       detectedPlanes: XRS.room ? XRS.room.planes : undefined, detectedMeshes: XRS.room ? XRS.room.meshes : undefined,
       getViewerPose() { const q = XRS.headQ || { x: 0, y: 0, z: 0, w: 1 }; return { transform: { position: { x: XRS.headX || 0, y: XRS.headY, z: XRS.headZ || 0 }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } } }; },
       createAnchor(xf, space) { return Promise.resolve(E.makeAnchor({ position: { ...xf.position }, orientation: { ...xf.orientation } })); },
-      getPose(space) { if (space.room) return { transform: space.room }; if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
+      getPose(space) { if (space.bodyJ) { const p = XRS.body && XRS.body[space.bodyJ]; return p ? { transform: { position: { x: p.x, y: p.y, z: p.z }, orientation: { x: 0, y: 0, z: 0, w: 1 } } } : null; } if (space.room) return { transform: space.room }; if (space.bounded) return { transform: E.bounded.pose }; if (space.anchorPose) return { transform: space.anchorPose }; if ((space.grip || space.ray) && XRS.ctrl && XRS.ctrl[space.grip || space.ray]) { const c = XRS.ctrl[space.grip || space.ray]; return { transform: { position: { x: c.p.x, y: c.p.y, z: c.p.z }, orientation: { x: c.q.x, y: c.q.y, z: c.q.z, w: c.q.w } } }; } if (space.grip) return { transform: { position: { x: space.grip === 'left' ? -0.2 : 0.2, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; const x = space.ray === 'left' ? -0.2 : 0.2; return { transform: { position: { x, y: XRS.headY - 0.4, z: -0.3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }; },
       getJointPose(j) {
         if ((XRS.noLeft && j.side === 'left') || (XRS.noRight && j.side === 'right') || XRS.noHands) return null;
         const side = j.side === 'left' ? -1 : 1, i = HJ.indexOf(j.name);

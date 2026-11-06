@@ -691,7 +691,7 @@ watch.only = 'right'; scene.add(watch.mesh); watch.mesh.visible = false;
 const _wu = new V3(), _wh = new V3(), _wo = new V3();
 // ¿Miras la muñeca izquierda? (dorso o palma hacia la cara; con mando, el mando levantado delante)
 function wristLook(h = hands.left, lim = 0.72) {
-  if (!h.ok || state === 'idle') return false;
+  if (!h.ok || h.est || state === 'idle') return false; // (una mano calculada, perdida para las cámaras, no saca el botón)
   const d = h.wrist.distanceTo(head.p);
   if (!h.isHand) return d < 0.65 && h.wrist.y < head.p.y - 0.1;
   _wu.set(0, 1, 0).applyQuaternion(h.wristQ); _wh.copy(head.p).sub(h.wrist).normalize();
@@ -1059,7 +1059,7 @@ function drawCenter() {
     c.fillStyle = '#2f2853'; rr(c, 44, H - 66, W - 88, 22, 11); c.fill();
     c.fillStyle = '#3cf0c6'; rr(c, 44, H - 66, Math.max(22, (W - 88) * Math.min(1, calibT / 2)), 22, 11); c.fill();
     if ((holdsWeights() && settings.exercise !== 'dlrow') || oneArm() || settings.exercise === 'superman' || (aimManual() && settings.aim === 'hands' && handsFree()) || pistolOn()) {
-      const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? 'manos detectadas' : 'no veo tus manos', W - 44, 68);
+      const ok = hands.left.ok || hands.right.ok; c.font = `32px ${FB}`; c.fillStyle = ok ? '#3cf0c6' : '#ff8a3d'; c.textAlign = 'right'; c.fillText(ok ? (BODY.now ? 'manos y cuerpo detectados' : 'manos detectadas') : 'no veo tus manos', W - 44, 68); // (y el cuerpo, si el navegador lo da: «Manos con el cuerpo», 80_main)
     }
   } else {
     c.textAlign = 'center'; c.fillStyle = '#ffd166'; c.font = `56px ${FD}`; c.fillText('¡PREPÁRATE!', W / 2, 80);

@@ -1994,6 +1994,7 @@ function throwStep(dt, t) {
       continue;
     }
     const lostFor = T.lost; T.lost = 0; T.cool = Math.max(0, T.cool - dt);
+    if (h.back) { if (T.have && T.burst) throwTry(s, T.last, _thd.subVectors(T.lastR, T.from)); T.have = false; T.burst = false; T.hist.length = 0; T.gone.set(0, 0, 0); } // (vuelve a verse tras una mano colocada por el cuerpo: la sacudida que llevaba sale con lo recorrido; el salto hasta la de verdad no es otra)
     _thr.set(h.wrist.x - head.p.x, h.wrist.y, h.wrist.z - head.p.z); T.last.copy(h.wrist); T.lastR.copy(_thr);
     // vuelve a verse ya lanzada: las gafas tardan en recuperar la mano (sobre todo si estaba abajo, junto a la cadera) y la
     // sacudida puede empezar sin verla. Si en ese rato ha recorrido bastante y deprisa, cuenta como sacudida desde donde se
