@@ -439,7 +439,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
         <small>Vienen hacia ti aros de neón con flechas que giran (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
         <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
-        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar las piedras (agáchate, salta o apártate) hasta que se rinden y huyen… y lobos detrás.</small></label>
+        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar las piedras (agáchate, salta o apártate) hasta que se rinden y huyen… y lobos que te cortan el paso: acelera para pasar antes que ellos.</small></label>
     </div>
     <p class="modeInfo" id="modeInfo"></p>
   </section>
@@ -641,7 +641,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgroun
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
-      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales las piedras (agáchate ante la alta, salta la baja, apártate de la que va al cuerpo) hasta que se rindan y huyan; y no dejes que te alcancen los lobos. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
+      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales las piedras (agáchate ante la alta, salta la baja, apártate de la que va al cuerpo) hasta que se rindan y huyan; y gánales la carrera a los lobos: salen a lo lejos, delante y a un lado (con una flecha roja encima), y corren a cortarte el paso; si llegas antes, se quedan atrás. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
       <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
@@ -6088,7 +6088,7 @@ function drawPulse(c, x, y) {
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
 const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
-const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
+const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, tipS: new V3(), tipSm: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
 function fwd(q = head.q) { return new V3(0, 0, -1).applyQuaternion(q); }
@@ -6360,7 +6360,7 @@ function keyColors(rg, C, hex, hover) {
 }
 
 const fingers = [];
-const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = new V3(), _pkP = new V3();
+const _wl = new V3(), _pkL = new V3(), _pkV = new V3();
 // Pulsar con el dedo como un botón de verdad (el índice; medidas en metros reales, también en el menú de muñeca, que va
 // a escala):
 //  · el dedo tiene que llegar por delante: el botón que tiene delante (hasta POKE_HOVER) se ilumina y es el único que ese
@@ -6378,8 +6378,15 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = 
 //    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
 const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
-const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
-function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
+const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.02, POKE_GAP = 0.25, POKE_BACK = 0.02;
+// El imán (elegido por el usuario): la tecla iluminada sigue iluminada hasta que el dedo sale de ella más de POKE_STICK (así
+// el temblor no la hace saltar a la vecina, y tocar en ese margen pulsa la iluminada); a menos de POKE_MAG_Z por delante, la
+// mano que se ve se acerca a ella (hasta POKE_MAG_MAX) y, al tocarla, se queda clavada donde tocó: ni el temblor ni los
+// deslizamientos pequeños la mueven, hasta sacar el dedo o salirse POKE_SLIDE. El barrido de lado se juzga por lo que se
+// movió la punta en los últimos POKE_SWIPE_T s (y nunca por menos de POKE_SWIPE_MIN): antes se miraba la velocidad de un
+// solo fotograma, y el temblor del seguimiento de manos parecía un barrido y se perdía la pulsación
+const POKE_STICK = 0.012, POKE_MAG_Z = 0.035, POKE_MAG_MAX = 0.015, POKE_SWIPE_T = 0.06, POKE_SWIPE_MIN = 0.02;
+function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, hist: [], clock: 0, pin: null, mag: new V3() }); }
 // el panel del menú (su cara, en z = 0 del grupo): delante y dentro, el dedo queda «armado»; si sigue y lo cruza, la mano
 // que se ve se queda en la superficie hasta que salga por delante, por un lado o se hunda más de POKE_HOLD_MAX
 const _pnN = new V3();
@@ -6394,6 +6401,24 @@ function pokePanel(side, f, shown, Hd) {
   if (-z > Hd.v.length()) Hd.v.copy(_pnN.set(e[8], e[9], e[10]).normalize()).multiplyScalar(-z);
 }
 const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
+// adónde tira el imán, en las coordenadas de la tecla: dentro de ella (a 6 mm del borde) y un poco hacia el centro
+function pokeSafe(R, x, y) {
+  const w = R.w, ins = Math.min(0.006 / R.sc, w.w / 4, w.h / 4), hx = w.w / 2 - ins, hy = w.h / 2 - ins, c = 0.005 / R.sc;
+  x = clamp(x, -hx, hx); y = clamp(y, -hy, hy); return [x - Math.sign(x) * Math.min(Math.abs(x) * 0.2, c), y - Math.sign(y) * Math.min(Math.abs(y) * 0.2, c)];
+}
+// lo que hay que mover de lado la mano que se ve (en el mundo) para llevar la punta del dedo a (px, py) de la tecla
+const _pkM = new V3();
+function pokeMagTo(R, px, py, out) { const e = R.w.mesh.matrixWorld.elements, dx = px - R.l.x, dy = py - R.l.y; return out.set(e[0] * dx + e[4] * dy, e[1] * dx + e[5] * dy, e[2] * dx + e[6] * dy); }
+const pokeCap = (v, m) => { const l = v.length(); if (l > m) v.multiplyScalar(m / l); return v; };
+// ¿barrido de lado? Lo que se movió la punta (la que se ve) desde hace POKE_SWIPE_T s: de lado, más de POKE_SWIPE_MIN y más
+// del doble de lo que entró en la tecla (un toque en diagonal, al bajar la mano, sí vale)
+function pokeSwipe(S, w, fs) {
+  const H = S.hist; let o = H[0]; for (const h of H) { if (S.clock - h[0] >= POKE_SWIPE_T - 1e-6) o = h; else break; }
+  if (!o) return false;
+  const e = w.mesh.matrixWorld.elements; _pnN.set(e[8], e[9], e[10]).normalize();
+  _pkV.set(fs.x - o[1], fs.y - o[2], fs.z - o[3]); const nz = _pkV.dot(_pnN), lat = _pkV.addScaledVector(_pnN, -nz).length();
+  return lat > POKE_SWIPE_MIN && lat > 2 * Math.max(0, -nz);
+}
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
   const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
@@ -6401,7 +6426,11 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   for (const side of ['left', 'right']) {
     const f = fingers.find(x => x.side === side), S = pokeSt(key, side), Hd = POKE.hold[side][key] || (POKE.hold[side][key] = { v: new V3(), t: 0 });
     Hd.v.set(0, 0, 0); Hd.t = now;
-    if (!f) { Object.assign(S, { cand: null, push: false, done: false, has: false }); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    if (!f) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); S.hist.length = 0; S.mag.set(0, 0, 0); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    // la punta del dedo que se ve (suavizada: sin el temblor del seguimiento) decide de lado (qué tecla, deslizarse,
+    // barrer); la de las gafas, sin suavizar, cuánto se hunde (así no se retrasa la pulsación)
+    const fs = f.s || f.p;
+    S.clock += dt; S.hist.push([S.clock, fs.x, fs.y, fs.z]); while (S.hist.length > 2 && S.clock - S.hist[0][0] > 0.3) S.hist.shift();
     // la mano apoyada en la tecla: ¿sigue el dedo detrás del fondo de la que hundió? (con el menú a la vista)
     const L = POKE.lock[side], shown = !isMenu || (menu && !menu.closed && menu.group.visible && (!menu.wrist || WM.on));
     if (L && L.key === key) {
@@ -6409,54 +6438,66 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
     }
     if (isMenu) pokePanel(side, f, shown, Hd);
-    if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
-    S.prev.copy(f.p); S.has = true;
-    // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
+    // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros; ex: cuánto se sale de él)
     let best = null, cur = null, behind = false;
     for (const w of vis) {
       if (w.only && w.only !== side) continue;
       w.mesh.updateMatrixWorld(); const e = w.mesh.matrixWorld.elements, sc = Math.hypot(e[0], e[1], e[2]) || 1;
-      const l = w.mesh.worldToLocal(_pkL.copy(f.p)), z = (l.z - (w.baseZ - w.mesh.position.z)) * sc;
-      const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2)), R = { w, l: l.clone(), z, d, sc };
+      const z = (w.mesh.worldToLocal(_pkL.copy(f.p)).z - (w.baseZ - w.mesh.position.z)) * sc, l = w.mesh.worldToLocal(_pkL.copy(fs)).clone();
+      const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2)), R = { w, l, z, d, ex: Math.max(Math.abs(l.x) - w.w / 2, Math.abs(l.y) - w.h / 2) * sc, sc };
       if (d < 1 && z > 0 && z < POKE_HOVER && (!best || d < best.d - 0.05 || (d < best.d + 0.05 && z < best.z))) best = R;
       if (d < 1.1 && z <= POKE_BACK && z > -0.15) behind = true;
       if (w === S.cand) cur = R;
     }
-    if (isMenu && POKE.need[side]) { // menú recién abierto: hasta que el dedo se retire, no hace nada
-      let near = behind;
-      if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
-      if (!near) POKE.need[side] = false;
-      Object.assign(S, { cand: null, push: false, done: false }); continue;
-    }
-    if (S.push) {
-      const w = S.cand, slide = cur && (Math.abs(cur.l.x) > w.w / 2 + POKE_SLIDE / cur.sc || Math.abs(cur.l.y) > w.h / 2 + POKE_SLIDE / cur.sc);
-      if (!cur || slide) { Object.assign(S, { cand: null, push: false, done: false }); continue; } // se fue de lado: anulado
-      if (cur.z > POKE_OUT) { S.push = false; S.done = false; } // fuera, por delante: lista para otra
-      else {
-        const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
-        if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
-          const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
-          Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
-          if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
-        }
-        if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
+    _pkM.set(0, 0, 0); let pin = false;
+    st: {
+      if (isMenu && POKE.need[side]) { // menú recién abierto: hasta que el dedo se retire, no hace nada
+        let near = behind;
+        if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
+        if (!near) POKE.need[side] = false;
+        Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st;
+      }
+      if (S.push) {
+        const w = S.cand;
+        if (!cur || cur.ex > POKE_SLIDE) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st; } // se fue de lado: anulado
+        if (cur.z > POKE_OUT) { S.push = false; S.done = false; S.pin = null; } // fuera, por delante: lista para otra
         else {
-          push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
-          if (!S.done && depth >= POKE_DEPTH && S.n >= 2) {
-            // hacia dentro y no de lado: la velocidad, en los ejes del botón
-            w.mesh.matrixWorld.decompose(_pkP, _pkQ, _pkS); _pkV.copy(S.v).applyQuaternion(_pkQ.invert());
-            const lat = Math.hypot(_pkV.x, _pkV.y), into = -_pkV.z;
-            S.done = true;
-            if (!(lat > 0.35 && lat > 1.5 * Math.max(0, into)) && !press) press = { w, side };
+          const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
+          if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
+            const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
+            Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
+            if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
           }
+          if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
+          else {
+            push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
+            if (!S.done && depth >= POKE_DEPTH) { S.done = true; if (!pokeSwipe(S, w, fs) && !press) press = { w, side }; } // hacia dentro y no de lado
+            pin = !!S.pin;
+          }
+          hov.add(w); break st;
         }
-        hov.add(w); continue;
+      }
+      // la iluminada: si el dedo la toca (aunque sea en su margen), empieza a hundirla y el dedo que se ve se clava ahí
+      if (cur && cur.z <= 0 && cur.ex <= POKE_STICK && !S.push) {
+        S.push = true; S.done = false; hov.add(S.cand);
+        if (S.cand.kind === 'slider') { drags.set(S.cand, pokeU(S.cand, cur.l)); S.pin = null; } else { S.pin = cur.l.clone(); pin = true; }
+        break st;
+      }
+      // delante: la iluminada se queda hasta que el dedo sale de ella (o se aleja); si no, la que tenga delante
+      if (cur && cur.z > 0 && cur.z < POKE_HOVER + 0.02 && cur.ex <= POKE_STICK) { S.n++; hov.add(S.cand); }
+      else if (best) { if (best.w !== S.cand) { S.cand = best.w; S.n = 0; } S.n++; hov.add(best.w); cur = best; }
+      else { S.cand = null; cur = null; }
+      // el imán: cerca de la iluminada, la mano que se ve se acerca a ella
+      if (cur && cur.z < POKE_MAG_Z && cur.w.kind !== 'slider') {
+        const k = smooth(clamp((POKE_MAG_Z - cur.z) / (POKE_MAG_Z - 0.005), 0, 1)), [px, py] = pokeSafe(cur, cur.l.x, cur.l.y);
+        pokeCap(pokeMagTo(cur, px, py, _pkM).multiplyScalar(k), POKE_MAG_MAX);
       }
     }
-    // delante de un botón: ese es el candidato; si toca su superficie viniendo de delante, empieza a hundirlo
-    if (cur && cur.z <= 0 && cur.d < 1 && !S.push) { S.push = true; S.done = false; hov.add(S.cand); if (S.cand.kind === 'slider') drags.set(S.cand, pokeU(S.cand, cur.l)); continue; }
-    if (best) { if (best.w !== S.cand) { S.cand = best.w; S.n = 0; } S.n++; hov.add(best.w); }
-    else S.cand = null;
+    // hundiendo la tecla, clavado donde tocó (al momento, sin temblor); si no, el imán va y viene suave
+    if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_SLIDE)); }
+    else S.mag.lerp(_pkM, Math.min(1, dt * 18));
+    if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
+    Hd.v.add(S.mag);
   }
   for (const w of vis) {
     if (w.flashT > 0) w.flashStep(dt);
@@ -15180,10 +15221,12 @@ function trekBandAnim(o, dt, t) {
   }
 }
 
-/* ---------- Lobos que te persiguen ---------- */
-// Salen del bosque por detrás y corren junto al camino: si vas más despacio que ellos, se acercan (los ves llegar a tu lado
-// y los oyes) y, si te alcanzan, muerden (una vida). Si vas más deprisa, se quedan atrás y abandonan. Más rápidos en cada
-// tramo y con el rango, poco a poco. Mientras estás parado ante un cofre o una roca, esperan
+/* ---------- Lobos que te cortan el paso ---------- */
+// Salen a lo lejos, delante y a un lado (a la vista desde el primer momento), y corren en diagonal hacia el sendero para
+// cortarte el paso en un punto por delante de ti: es una carrera hasta ese punto. Si llegas antes (yendo un poco más
+// deprisa que ellos), cruzan el sendero por detrás de ti y te persiguen, pero se van quedando atrás y abandonan; si llegan
+// antes, se te echan encima y muerden (una vida). Más rápidos en cada tramo y con el rango, poco a poco. Parado ante un
+// cofre o una roca, esperan; el arroyo y el desfiladero no los cruzan
 const TREK_WOLF = { scene: null, clips: [], loading: false, failed: false };
 function trekWolfLoad() {
   if (TREK_WOLF.scene || TREK_WOLF.loading || TREK_WOLF.failed) return;
@@ -15194,38 +15237,73 @@ function trekWolfLoad() {
 const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
+// Dónde salen (a D m por delante y X m a un lado) y lo que hay que ir más deprisa que ellos para ganar la carrera
+const TREK_WOLF_D = 28, TREK_WOLF_X = 9, TREK_WOLF_RHO = 1.1;
+// el punto del sendero al que corren, a c m por delante de ti: yendo RHO veces más deprisa que ellos, llegaríais a la vez
+function trekCutPoint(D, X, rho) { let lo = 0, hi = D; for (let i = 0; i < 40; i++) { const c = (lo + hi) / 2; if (c > rho * Math.hypot(D - c, X)) hi = c; else lo = c; } return (lo + hi) / 2; }
 function trekChaseStart() {
-  const n = waveIdx >= 2 ? 2 : 1, C = { gap: 9.5, v: trekWolfV(), wolves: [], t: 0, growl: 0 }; // (salen por detrás, a un lado, y se te van acercando)
-  for (let i = 0; i < n; i++) {
-    C.wolves.push({ side: n === 2 ? (i ? 1 : -1) : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 3 });
+  const n = waveIdx >= 2 ? 2 : 1, side0 = Math.random() < 0.5 ? -1 : 1, C = { v: trekWolfV(), wolves: [], t: 0, growl: 0, gap: 99 };
+  for (let i = 0; i < n; i++) { // (el segundo, por el otro lado y algo más lejos: hay que aguantar el ritmo)
+    const D = TREK_WOLF_D + i * 5, X = TREK_WOLF_X + i, side = i ? -side0 : side0;
+    C.wolves.push({ side, s: TREK.dist + D, u: side * X, cs: TREK.dist + trekCutPoint(D, X, TREK_WOLF_RHO), st: 'race', hd: 0, offT: 0, ph: Math.random() * 3 });
   }
-  TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera', '#ff8a3d', 2); SND.roar(arena.localToWorld(_tkh.set(0, 0.6, HL.z + 6)), 0.7);
+  // la marca: una flecha roja sobre cada uno (una tira plana de cara a ti, como las de la diana), que se ve a través de rocas y
+// árboles (de lejos se tapaban) y siempre del mismo tamaño a la vista; se apaga al acercarse, cuando ya se ve el lobo
+  for (const w of C.wolves) { w.mark = new THREE.Mesh(TREK_WOLF.markGeo || (TREK_WOLF.markGeo = new THREE.PlaneGeometry(1, 1)), new THREE.MeshBasicMaterial({ map: trekWolfMarkTex(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false, side: THREE.DoubleSide })); w.mark.renderOrder = 45; w.mark.raycast = () => {}; TREK.group.add(w.mark); }
+  TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera y pasa antes que ellos', '#ff8a3d', 2.2);
+  const w = C.wolves[0]; trekBend(w.s, w.u, _tkq); SND.roar(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z)), 0.7);
+}
+// la flecha (▼ roja con borde claro), una sola textura para todos
+function trekWolfMarkTex() {
+  if (TREK_WOLF.markTex) return TREK_WOLF.markTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d');
+  c.beginPath(); c.moveTo(8, 12); c.lineTo(56, 12); c.lineTo(32, 54); c.closePath(); c.fillStyle = '#ff3b1c'; c.fill(); c.lineWidth = 6; c.strokeStyle = '#fff2e0'; c.stroke();
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return (TREK_WOLF.markTex = t); // (el rojo tal cual, no desvaído)
 }
 // (sus figuras, en cuanto el modelo esté cargado)
 function trekWolfMeshes(C) {
   if (!TREK_WOLF.scene) return;
   for (const w of C.wolves) {
-    if (!w.mesh) { w.mesh = THREE.SkeletonUtils.clone(TREK_WOLF.scene); w.mesh.scale.setScalar(0.33); w.mesh.rotation.y = Math.PI; TREK.group.add(w.mesh); w.mix = new THREE.AnimationMixer(w.mesh); const c = TREK_WOLF.clips.find(a => a.name === 'Gallop'); if (c) { w.act = w.mix.clipAction(c); w.act.play(); } }
+    if (!w.mesh) { w.mesh = THREE.SkeletonUtils.clone(TREK_WOLF.scene); w.mesh.scale.setScalar(0.42); /* (de su tamaño de verdad, y se ven de lejos) */ TREK.group.add(w.mesh); w.mix = new THREE.AnimationMixer(w.mesh); const c = TREK_WOLF.clips.find(a => a.name === 'Gallop'); if (c) { w.act = w.mix.clipAction(c); w.act.play(); } }
   }
 }
-function trekChaseEnd(msg, col) { const C = TREK.chase; if (!C) return; C.wolves.forEach(w => { if (w.mesh) TREK.group.remove(w.mesh); }); TREK.chase = null; TREK.nextChase = TREK.dist + rand(45, 70); if (msg) cheer(msg, col, 1.6); boardDirty = true; }
+function trekChaseEnd(msg, col) { const C = TREK.chase; if (!C) return; C.wolves.forEach(w => { if (w.mesh) TREK.group.remove(w.mesh); if (w.mark) { TREK.group.remove(w.mark); w.mark.material.dispose(); } }); TREK.chase = null; TREK.nextChase = TREK.dist + rand(45, 70); if (msg) cheer(msg, col, 1.6); boardDirty = true; }
+// el bocado: la animación de atacar, una vez, y vuelve al galope
+function trekWolfBite(w) { const c = w.mix && TREK_WOLF.clips.find(a => a.name === 'Attack'); if (!c) return; const a = w.mix.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); if (w.act) w.act.stop(); a.play(); w.atk = a; w.biteT = 0.6; }
 function trekChaseStep(dt, t) {
   if (state === 'play' && !TREK.chase && !TREK.halt && TREK.dist >= TREK.nextChase) { trekWolfLoad(); trekChaseStart(); }
   const C = TREK.chase; if (!C) return; if (TREK_WOLF.scene && !C.wolves[0].mesh) trekWolfMeshes(C);
   if (state === 'rest' || state === 'end') { trekChaseEnd(); return; }
-  if (state === 'play' && !TREK.halt) { C.t += dt; C.gap += (TREK.v - C.v) * dt; if (C.bit) C.gap += dt * 2; } // (tras morder, se quedan atrás)
-  // Dónde van: a tu lado y algo por delante, para verlos por el rabillo del ojo (detrás no se veían). Con ventaja (gap
-  // grande) se quedan atrás, fuera de la vista; si vas más lento que ellos, se acercan por el lado hasta casi tocarte y,
-  // al morder, se echan encima. Corren hacia delante, girados un poco hacia ti cuanto más cerca
+  const run = state === 'play' && !TREK.halt, su = TREK.dist, uu = HL.x; if (run) C.t += dt;
+  let near = 99;
   for (const w of C.wolves) {
-    const g = Math.max(0, C.gap), k = Math.min(1, g / 7), k2 = clamp((g - 7) / 7, 0, 1);
-    const x = w.side * (g <= 7 ? 0.85 + 2.15 * k : 3 + 0.5 * k2), z = HL.z + (g <= 7 ? -(0.8 + 1.2 * k) : -2 + 5.5 * k2);
-    if (w.mesh) { w.mesh.position.set(x, 0, z + Math.sin(t * 2 + w.ph) * 0.12); w.mesh.rotation.y = Math.PI + w.side * (0.15 + 0.5 * (1 - k)) * (g < 7 ? 1 : 0.3); if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt); }
+    if (w.st === 'gone') { if (w.mesh) w.mesh.visible = false; if (w.mark) w.mark.visible = false; continue; }
+    if (run) {
+      // la carrera: a su punto del sendero; luego, a por ti (detrás de ti, si llegaste antes); tras morder, se aparta
+      let ts = w.cs, tu = 0, v = C.v;
+      if (w.st === 'chase') { ts = su; tu = uu; } else if (w.st === 'off') { ts = w.s - 6; tu = w.side * 14; v *= 0.8; w.offT += dt; }
+      const ds = ts - w.s, du = tu - w.u, r = Math.hypot(ds, du);
+      if (r > 1e-3) { const k = Math.min(r, v * dt) / r; w.s += ds * k; w.u += du * k; w.hd = Math.atan2(du, -ds); }
+      if (w.st === 'race' && r < 0.25) w.st = 'chase';
+    }
+    const ds = w.s - su, d = Math.hypot(ds, w.u - uu);
+    if (w.st === 'race' || w.st === 'chase') {
+      near = Math.min(near, d);
+      if (run && d < 1.1) { w.st = 'off'; C.bit = true; trekWolfBite(w); hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); hapticBoth(0.9, 160); boardDirty = true; }
+      else if (ds < -12) w.st = 'gone'; // (se ha quedado atrás)
+    } else if (w.st === 'off' && (w.offT > 4 || ds < -15)) w.st = 'gone';
+    if (w.mark) { trekBend(w.s, w.u, _tkq); const k = clamp(d * 0.04, 0.3, 1.5) * (1 + 0.08 * Math.sin(t * 7 + w.ph)); w.mark.position.set(_tkq.x, 0.95 + k * 0.6, _tkq.z + HL.z); w.mark.scale.set(k, k, 1); w.mark.lookAt(head.p); w.mark.material.opacity = w.st === 'race' || w.st === 'chase' ? clamp((d - 4) / 5, 0, 1) * 0.95 : 0; w.mark.visible = w.mark.material.opacity > 0.01; } // (unos 2,3° a la vista, cerca o lejos)
+    if (w.mesh) { // en el sendero (con sus curvas), mirando hacia donde corre
+      const bend = trekBend(w.s, w.u, _tkq); w.mesh.visible = true; w.mesh.position.set(_tkq.x, 0, _tkq.z + HL.z + Math.sin(t * 2 + w.ph) * 0.05); w.mesh.rotation.y = bend + w.hd;
+      if (run && w.st !== 'off' && (w.dustT = (w.dustT || 0) - dt) <= 0) { w.dustT = 0.15; fx.smoke(arena.localToWorld(_tkh.set(_tkq.x, 0.1, _tkq.z + HL.z)), 0.22, 0.3, 1.1, 0.48); } // (el polvo que levantan: se los ve venir de lejos)
+      if (w.biteT > 0 && (w.biteT -= dt) <= 0) { if (w.atk) w.atk.stop(); if (w.act) w.act.reset().play(); } // (tras el bocado, otra vez al galope)
+      if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt);
+    }
   }
-  if (C.gap < 3 && (C.growl -= dt) <= 0) { C.growl = 1.6; SND.hiss(arena.localToWorld(_tkh.set(C.wolves[0].side * 1.5, 0.6, HL.z + 0.5))); hapticBoth(0.25, 40); }
-  if (!C.bit && C.gap <= 0.4) { C.bit = true; hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); boardDirty = true; }
-  if (C.gap >= 14) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
-  else if (C.t > 45) trekChaseEnd('Los lobos se cansan', '#a49fc8');
+  C.gap = near; // (lo que dice el marcador: el más cercano)
+  if (near < 4 && (C.growl -= dt) <= 0) { C.growl = 1.6; const w = C.wolves.find(x => x.st === 'race' || x.st === 'chase'); if (w) { trekBend(w.s, w.u, _tkq); SND.hiss(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z))); } hapticBoth(0.25, 40); }
+  if (C.wolves.every(w => w.st === 'gone')) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
+  else if (C.t > 50) trekChaseEnd('Los lobos se cansan', '#a49fc8');
 }
 function trekStep(dt, t) {
   const sc = arcScenic(), on = (trekOn() || sc) && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
@@ -16282,7 +16360,7 @@ function readXR(frame, t = 0) {
   const ref = renderer.xr.getReferenceSpace(); if (!ref) return;
   const pose = frame.getViewerPose(ref);
   if (pose) { const p = pose.transform.position, o = pose.transform.orientation; head.p.set(p.x, p.y, p.z); head.q.set(o.x, o.y, o.z, o.w); }
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = h.trig = h.btnMenu = h.virt = false; h.J.forEach(j => j.ok = false); }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.tipSm = h.pinch = h.rayOk = h.trig = h.btnMenu = h.virt = false; h.J.forEach(j => j.ok = false); }
   for (const src of frame.session.inputSources) {
     const h = hands[src.handedness]; if (!h) continue;
     if (src.targetRaySpace) { const rp = frame.getPose(src.targetRaySpace, ref); if (rp) { const o = rp.transform.orientation; h.rayOk = true; h.rayO.copy(rp.transform.position); h.rayQ.set(o.x, o.y, o.z, o.w); h.rayD.set(0, 0, -1).applyQuaternion(h.rayQ); } }
@@ -16298,7 +16376,7 @@ function readXR(frame, t = 0) {
       handSmooth(h, t);
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
-      if (T.ok) { h.tipOk = true; h.tip.copy(T.p); }
+      if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
       h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
@@ -16438,7 +16516,7 @@ function previewInput(dt) {
   const iw = ex === 'inchworm' && GAME_STATES.includes(state) && state !== 'calib' ? iwSim(dt) : null; // inchworm: Espacio hace la repetición entera
   camera.updateMatrixWorld();
   head.p.copy(camera.position); head.q.copy(camera.quaternion);
-  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.pinch = h.rayOk = false; }
+  for (const s of ['left', 'right']) { const h = hands[s]; h.ok = h.tipOk = h.tipSm = h.pinch = h.rayOk = false; }
   if (iw) for (const s of ['left', 'right']) { const h = hands[s]; h.ok = true; h.isHand = true; h.wristQ.copy(camera.quaternion); h.wrist.copy(iw[s]); }
   // H: las dos manos agarradas por encima de la cabeza (para colocar aparatos)
   // superman: los brazos estirados por delante de la cabeza
@@ -16572,7 +16650,7 @@ renderer.setAnimationLoop((time, frame) => {
   if (head.p.y > 1.1) { lastStandYaw = yawOf(head.q); if (!GAME_STATES.includes(state) && head.speed < 0.3) lastStandY += (head.p.y - lastStandY) * Math.min(1, dt * 0.8); }
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
   updateListener(head.p, head.q);
-  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip });
+  fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk) fingers.push({ side: s, p: hands[s].tip, s: hands[s].tipSm ? hands[s].tipS : hands[s].tip }); // (s: la que se ve, sin temblor)
   gameStep(dt, t);
   updateFX(dt); updateBolts(dt);
   updateAim(t); throwStep(dt, t); lockStep(t); updatePistol(dt); updateSwords(dt, t);

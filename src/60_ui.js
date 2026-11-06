@@ -2,7 +2,7 @@
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
 const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
-const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
+const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, tipS: new V3(), tipSm: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
 function fwd(q = head.q) { return new V3(0, 0, -1).applyQuaternion(q); }
@@ -274,7 +274,7 @@ function keyColors(rg, C, hex, hover) {
 }
 
 const fingers = [];
-const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = new V3(), _pkP = new V3();
+const _wl = new V3(), _pkL = new V3(), _pkV = new V3();
 // Pulsar con el dedo como un botón de verdad (el índice; medidas en metros reales, también en el menú de muñeca, que va
 // a escala):
 //  · el dedo tiene que llegar por delante: el botón que tiene delante (hasta POKE_HOVER) se ilumina y es el único que ese
@@ -292,8 +292,15 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3(), _pkQ = new Q4(), _pkS = 
 //    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
 const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
-const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.015, POKE_GAP = 0.25, POKE_BACK = 0.02;
-function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, prev: new V3(), v: new V3(), has: false }); }
+const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.02, POKE_GAP = 0.25, POKE_BACK = 0.02;
+// El imán (elegido por el usuario): la tecla iluminada sigue iluminada hasta que el dedo sale de ella más de POKE_STICK (así
+// el temblor no la hace saltar a la vecina, y tocar en ese margen pulsa la iluminada); a menos de POKE_MAG_Z por delante, la
+// mano que se ve se acerca a ella (hasta POKE_MAG_MAX) y, al tocarla, se queda clavada donde tocó: ni el temblor ni los
+// deslizamientos pequeños la mueven, hasta sacar el dedo o salirse POKE_SLIDE. El barrido de lado se juzga por lo que se
+// movió la punta en los últimos POKE_SWIPE_T s (y nunca por menos de POKE_SWIPE_MIN): antes se miraba la velocidad de un
+// solo fotograma, y el temblor del seguimiento de manos parecía un barrido y se perdía la pulsación
+const POKE_STICK = 0.012, POKE_MAG_Z = 0.035, POKE_MAG_MAX = 0.015, POKE_SWIPE_T = 0.06, POKE_SWIPE_MIN = 0.02;
+function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, hist: [], clock: 0, pin: null, mag: new V3() }); }
 // el panel del menú (su cara, en z = 0 del grupo): delante y dentro, el dedo queda «armado»; si sigue y lo cruza, la mano
 // que se ve se queda en la superficie hasta que salga por delante, por un lado o se hunda más de POKE_HOLD_MAX
 const _pnN = new V3();
@@ -308,6 +315,24 @@ function pokePanel(side, f, shown, Hd) {
   if (-z > Hd.v.length()) Hd.v.copy(_pnN.set(e[8], e[9], e[10]).normalize()).multiplyScalar(-z);
 }
 const pokeU = (w, l) => clamp((l.x + w.w / 2 - w.pad) / (w.w - 2 * w.pad), 0, 1);
+// adónde tira el imán, en las coordenadas de la tecla: dentro de ella (a 6 mm del borde) y un poco hacia el centro
+function pokeSafe(R, x, y) {
+  const w = R.w, ins = Math.min(0.006 / R.sc, w.w / 4, w.h / 4), hx = w.w / 2 - ins, hy = w.h / 2 - ins, c = 0.005 / R.sc;
+  x = clamp(x, -hx, hx); y = clamp(y, -hy, hy); return [x - Math.sign(x) * Math.min(Math.abs(x) * 0.2, c), y - Math.sign(y) * Math.min(Math.abs(y) * 0.2, c)];
+}
+// lo que hay que mover de lado la mano que se ve (en el mundo) para llevar la punta del dedo a (px, py) de la tecla
+const _pkM = new V3();
+function pokeMagTo(R, px, py, out) { const e = R.w.mesh.matrixWorld.elements, dx = px - R.l.x, dy = py - R.l.y; return out.set(e[0] * dx + e[4] * dy, e[1] * dx + e[5] * dy, e[2] * dx + e[6] * dy); }
+const pokeCap = (v, m) => { const l = v.length(); if (l > m) v.multiplyScalar(m / l); return v; };
+// ¿barrido de lado? Lo que se movió la punta (la que se ve) desde hace POKE_SWIPE_T s: de lado, más de POKE_SWIPE_MIN y más
+// del doble de lo que entró en la tecla (un toque en diagonal, al bajar la mano, sí vale)
+function pokeSwipe(S, w, fs) {
+  const H = S.hist; let o = H[0]; for (const h of H) { if (S.clock - h[0] >= POKE_SWIPE_T - 1e-6) o = h; else break; }
+  if (!o) return false;
+  const e = w.mesh.matrixWorld.elements; _pnN.set(e[8], e[9], e[10]).normalize();
+  _pkV.set(fs.x - o[1], fs.y - o[2], fs.z - o[3]); const nz = _pkV.dot(_pnN), lat = _pkV.addScaledVector(_pnN, -nz).length();
+  return lat > POKE_SWIPE_MIN && lat > 2 * Math.max(0, -nz);
+}
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
   const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
@@ -315,7 +340,11 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   for (const side of ['left', 'right']) {
     const f = fingers.find(x => x.side === side), S = pokeSt(key, side), Hd = POKE.hold[side][key] || (POKE.hold[side][key] = { v: new V3(), t: 0 });
     Hd.v.set(0, 0, 0); Hd.t = now;
-    if (!f) { Object.assign(S, { cand: null, push: false, done: false, has: false }); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    if (!f) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); S.hist.length = 0; S.mag.set(0, 0, 0); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    // la punta del dedo que se ve (suavizada: sin el temblor del seguimiento) decide de lado (qué tecla, deslizarse,
+    // barrer); la de las gafas, sin suavizar, cuánto se hunde (así no se retrasa la pulsación)
+    const fs = f.s || f.p;
+    S.clock += dt; S.hist.push([S.clock, fs.x, fs.y, fs.z]); while (S.hist.length > 2 && S.clock - S.hist[0][0] > 0.3) S.hist.shift();
     // la mano apoyada en la tecla: ¿sigue el dedo detrás del fondo de la que hundió? (con el menú a la vista)
     const L = POKE.lock[side], shown = !isMenu || (menu && !menu.closed && menu.group.visible && (!menu.wrist || WM.on));
     if (L && L.key === key) {
@@ -323,54 +352,66 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
     }
     if (isMenu) pokePanel(side, f, shown, Hd);
-    if (S.has && dt > 0) S.v.subVectors(f.p, S.prev).divideScalar(dt); else S.v.set(0, 0, 0);
-    S.prev.copy(f.p); S.has = true;
-    // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros)
+    // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros; ex: cuánto se sale de él)
     let best = null, cur = null, behind = false;
     for (const w of vis) {
       if (w.only && w.only !== side) continue;
       w.mesh.updateMatrixWorld(); const e = w.mesh.matrixWorld.elements, sc = Math.hypot(e[0], e[1], e[2]) || 1;
-      const l = w.mesh.worldToLocal(_pkL.copy(f.p)), z = (l.z - (w.baseZ - w.mesh.position.z)) * sc;
-      const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2)), R = { w, l: l.clone(), z, d, sc };
+      const z = (w.mesh.worldToLocal(_pkL.copy(f.p)).z - (w.baseZ - w.mesh.position.z)) * sc, l = w.mesh.worldToLocal(_pkL.copy(fs)).clone();
+      const d = Math.max(Math.abs(l.x) / (w.w / 2), Math.abs(l.y) / (w.h / 2)), R = { w, l, z, d, ex: Math.max(Math.abs(l.x) - w.w / 2, Math.abs(l.y) - w.h / 2) * sc, sc };
       if (d < 1 && z > 0 && z < POKE_HOVER && (!best || d < best.d - 0.05 || (d < best.d + 0.05 && z < best.z))) best = R;
       if (d < 1.1 && z <= POKE_BACK && z > -0.15) behind = true;
       if (w === S.cand) cur = R;
     }
-    if (isMenu && POKE.need[side]) { // menú recién abierto: hasta que el dedo se retire, no hace nada
-      let near = behind;
-      if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
-      if (!near) POKE.need[side] = false;
-      Object.assign(S, { cand: null, push: false, done: false }); continue;
-    }
-    if (S.push) {
-      const w = S.cand, slide = cur && (Math.abs(cur.l.x) > w.w / 2 + POKE_SLIDE / cur.sc || Math.abs(cur.l.y) > w.h / 2 + POKE_SLIDE / cur.sc);
-      if (!cur || slide) { Object.assign(S, { cand: null, push: false, done: false }); continue; } // se fue de lado: anulado
-      if (cur.z > POKE_OUT) { S.push = false; S.done = false; } // fuera, por delante: lista para otra
-      else {
-        const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
-        if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
-          const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
-          Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
-          if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
-        }
-        if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
+    _pkM.set(0, 0, 0); let pin = false;
+    st: {
+      if (isMenu && POKE.need[side]) { // menú recién abierto: hasta que el dedo se retire, no hace nada
+        let near = behind;
+        if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
+        if (!near) POKE.need[side] = false;
+        Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st;
+      }
+      if (S.push) {
+        const w = S.cand;
+        if (!cur || cur.ex > POKE_SLIDE) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st; } // se fue de lado: anulado
+        if (cur.z > POKE_OUT) { S.push = false; S.done = false; S.pin = null; } // fuera, por delante: lista para otra
         else {
-          push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
-          if (!S.done && depth >= POKE_DEPTH && S.n >= 2) {
-            // hacia dentro y no de lado: la velocidad, en los ejes del botón
-            w.mesh.matrixWorld.decompose(_pkP, _pkQ, _pkS); _pkV.copy(S.v).applyQuaternion(_pkQ.invert());
-            const lat = Math.hypot(_pkV.x, _pkV.y), into = -_pkV.z;
-            S.done = true;
-            if (!(lat > 0.35 && lat > 1.5 * Math.max(0, into)) && !press) press = { w, side };
+          const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
+          if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
+            const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
+            Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
+            if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
           }
+          if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
+          else {
+            push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
+            if (!S.done && depth >= POKE_DEPTH) { S.done = true; if (!pokeSwipe(S, w, fs) && !press) press = { w, side }; } // hacia dentro y no de lado
+            pin = !!S.pin;
+          }
+          hov.add(w); break st;
         }
-        hov.add(w); continue;
+      }
+      // la iluminada: si el dedo la toca (aunque sea en su margen), empieza a hundirla y el dedo que se ve se clava ahí
+      if (cur && cur.z <= 0 && cur.ex <= POKE_STICK && !S.push) {
+        S.push = true; S.done = false; hov.add(S.cand);
+        if (S.cand.kind === 'slider') { drags.set(S.cand, pokeU(S.cand, cur.l)); S.pin = null; } else { S.pin = cur.l.clone(); pin = true; }
+        break st;
+      }
+      // delante: la iluminada se queda hasta que el dedo sale de ella (o se aleja); si no, la que tenga delante
+      if (cur && cur.z > 0 && cur.z < POKE_HOVER + 0.02 && cur.ex <= POKE_STICK) { S.n++; hov.add(S.cand); }
+      else if (best) { if (best.w !== S.cand) { S.cand = best.w; S.n = 0; } S.n++; hov.add(best.w); cur = best; }
+      else { S.cand = null; cur = null; }
+      // el imán: cerca de la iluminada, la mano que se ve se acerca a ella
+      if (cur && cur.z < POKE_MAG_Z && cur.w.kind !== 'slider') {
+        const k = smooth(clamp((POKE_MAG_Z - cur.z) / (POKE_MAG_Z - 0.005), 0, 1)), [px, py] = pokeSafe(cur, cur.l.x, cur.l.y);
+        pokeCap(pokeMagTo(cur, px, py, _pkM).multiplyScalar(k), POKE_MAG_MAX);
       }
     }
-    // delante de un botón: ese es el candidato; si toca su superficie viniendo de delante, empieza a hundirlo
-    if (cur && cur.z <= 0 && cur.d < 1 && !S.push) { S.push = true; S.done = false; hov.add(S.cand); if (S.cand.kind === 'slider') drags.set(S.cand, pokeU(S.cand, cur.l)); continue; }
-    if (best) { if (best.w !== S.cand) { S.cand = best.w; S.n = 0; } S.n++; hov.add(best.w); }
-    else S.cand = null;
+    // hundiendo la tecla, clavado donde tocó (al momento, sin temblor); si no, el imán va y viene suave
+    if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_SLIDE)); }
+    else S.mag.lerp(_pkM, Math.min(1, dt * 18));
+    if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
+    Hd.v.add(S.mag);
   }
   for (const w of vis) {
     if (w.flashT > 0) w.flashStep(dt);

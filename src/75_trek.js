@@ -667,10 +667,12 @@ function trekBandAnim(o, dt, t) {
   }
 }
 
-/* ---------- Lobos que te persiguen ---------- */
-// Salen del bosque por detrás y corren junto al camino: si vas más despacio que ellos, se acercan (los ves llegar a tu lado
-// y los oyes) y, si te alcanzan, muerden (una vida). Si vas más deprisa, se quedan atrás y abandonan. Más rápidos en cada
-// tramo y con el rango, poco a poco. Mientras estás parado ante un cofre o una roca, esperan
+/* ---------- Lobos que te cortan el paso ---------- */
+// Salen a lo lejos, delante y a un lado (a la vista desde el primer momento), y corren en diagonal hacia el sendero para
+// cortarte el paso en un punto por delante de ti: es una carrera hasta ese punto. Si llegas antes (yendo un poco más
+// deprisa que ellos), cruzan el sendero por detrás de ti y te persiguen, pero se van quedando atrás y abandonan; si llegan
+// antes, se te echan encima y muerden (una vida). Más rápidos en cada tramo y con el rango, poco a poco. Parado ante un
+// cofre o una roca, esperan; el arroyo y el desfiladero no los cruzan
 const TREK_WOLF = { scene: null, clips: [], loading: false, failed: false };
 function trekWolfLoad() {
   if (TREK_WOLF.scene || TREK_WOLF.loading || TREK_WOLF.failed) return;
@@ -681,38 +683,73 @@ function trekWolfLoad() {
 const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
+// Dónde salen (a D m por delante y X m a un lado) y lo que hay que ir más deprisa que ellos para ganar la carrera
+const TREK_WOLF_D = 28, TREK_WOLF_X = 9, TREK_WOLF_RHO = 1.1;
+// el punto del sendero al que corren, a c m por delante de ti: yendo RHO veces más deprisa que ellos, llegaríais a la vez
+function trekCutPoint(D, X, rho) { let lo = 0, hi = D; for (let i = 0; i < 40; i++) { const c = (lo + hi) / 2; if (c > rho * Math.hypot(D - c, X)) hi = c; else lo = c; } return (lo + hi) / 2; }
 function trekChaseStart() {
-  const n = waveIdx >= 2 ? 2 : 1, C = { gap: 9.5, v: trekWolfV(), wolves: [], t: 0, growl: 0 }; // (salen por detrás, a un lado, y se te van acercando)
-  for (let i = 0; i < n; i++) {
-    C.wolves.push({ side: n === 2 ? (i ? 1 : -1) : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 3 });
+  const n = waveIdx >= 2 ? 2 : 1, side0 = Math.random() < 0.5 ? -1 : 1, C = { v: trekWolfV(), wolves: [], t: 0, growl: 0, gap: 99 };
+  for (let i = 0; i < n; i++) { // (el segundo, por el otro lado y algo más lejos: hay que aguantar el ritmo)
+    const D = TREK_WOLF_D + i * 5, X = TREK_WOLF_X + i, side = i ? -side0 : side0;
+    C.wolves.push({ side, s: TREK.dist + D, u: side * X, cs: TREK.dist + trekCutPoint(D, X, TREK_WOLF_RHO), st: 'race', hd: 0, offT: 0, ph: Math.random() * 3 });
   }
-  TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera', '#ff8a3d', 2); SND.roar(arena.localToWorld(_tkh.set(0, 0.6, HL.z + 6)), 0.7);
+  // la marca: una flecha roja sobre cada uno (una tira plana de cara a ti, como las de la diana), que se ve a través de rocas y
+// árboles (de lejos se tapaban) y siempre del mismo tamaño a la vista; se apaga al acercarse, cuando ya se ve el lobo
+  for (const w of C.wolves) { w.mark = new THREE.Mesh(TREK_WOLF.markGeo || (TREK_WOLF.markGeo = new THREE.PlaneGeometry(1, 1)), new THREE.MeshBasicMaterial({ map: trekWolfMarkTex(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false, side: THREE.DoubleSide })); w.mark.renderOrder = 45; w.mark.raycast = () => {}; TREK.group.add(w.mark); }
+  TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera y pasa antes que ellos', '#ff8a3d', 2.2);
+  const w = C.wolves[0]; trekBend(w.s, w.u, _tkq); SND.roar(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z)), 0.7);
+}
+// la flecha (▼ roja con borde claro), una sola textura para todos
+function trekWolfMarkTex() {
+  if (TREK_WOLF.markTex) return TREK_WOLF.markTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d');
+  c.beginPath(); c.moveTo(8, 12); c.lineTo(56, 12); c.lineTo(32, 54); c.closePath(); c.fillStyle = '#ff3b1c'; c.fill(); c.lineWidth = 6; c.strokeStyle = '#fff2e0'; c.stroke();
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return (TREK_WOLF.markTex = t); // (el rojo tal cual, no desvaído)
 }
 // (sus figuras, en cuanto el modelo esté cargado)
 function trekWolfMeshes(C) {
   if (!TREK_WOLF.scene) return;
   for (const w of C.wolves) {
-    if (!w.mesh) { w.mesh = THREE.SkeletonUtils.clone(TREK_WOLF.scene); w.mesh.scale.setScalar(0.33); w.mesh.rotation.y = Math.PI; TREK.group.add(w.mesh); w.mix = new THREE.AnimationMixer(w.mesh); const c = TREK_WOLF.clips.find(a => a.name === 'Gallop'); if (c) { w.act = w.mix.clipAction(c); w.act.play(); } }
+    if (!w.mesh) { w.mesh = THREE.SkeletonUtils.clone(TREK_WOLF.scene); w.mesh.scale.setScalar(0.42); /* (de su tamaño de verdad, y se ven de lejos) */ TREK.group.add(w.mesh); w.mix = new THREE.AnimationMixer(w.mesh); const c = TREK_WOLF.clips.find(a => a.name === 'Gallop'); if (c) { w.act = w.mix.clipAction(c); w.act.play(); } }
   }
 }
-function trekChaseEnd(msg, col) { const C = TREK.chase; if (!C) return; C.wolves.forEach(w => { if (w.mesh) TREK.group.remove(w.mesh); }); TREK.chase = null; TREK.nextChase = TREK.dist + rand(45, 70); if (msg) cheer(msg, col, 1.6); boardDirty = true; }
+function trekChaseEnd(msg, col) { const C = TREK.chase; if (!C) return; C.wolves.forEach(w => { if (w.mesh) TREK.group.remove(w.mesh); if (w.mark) { TREK.group.remove(w.mark); w.mark.material.dispose(); } }); TREK.chase = null; TREK.nextChase = TREK.dist + rand(45, 70); if (msg) cheer(msg, col, 1.6); boardDirty = true; }
+// el bocado: la animación de atacar, una vez, y vuelve al galope
+function trekWolfBite(w) { const c = w.mix && TREK_WOLF.clips.find(a => a.name === 'Attack'); if (!c) return; const a = w.mix.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); if (w.act) w.act.stop(); a.play(); w.atk = a; w.biteT = 0.6; }
 function trekChaseStep(dt, t) {
   if (state === 'play' && !TREK.chase && !TREK.halt && TREK.dist >= TREK.nextChase) { trekWolfLoad(); trekChaseStart(); }
   const C = TREK.chase; if (!C) return; if (TREK_WOLF.scene && !C.wolves[0].mesh) trekWolfMeshes(C);
   if (state === 'rest' || state === 'end') { trekChaseEnd(); return; }
-  if (state === 'play' && !TREK.halt) { C.t += dt; C.gap += (TREK.v - C.v) * dt; if (C.bit) C.gap += dt * 2; } // (tras morder, se quedan atrás)
-  // Dónde van: a tu lado y algo por delante, para verlos por el rabillo del ojo (detrás no se veían). Con ventaja (gap
-  // grande) se quedan atrás, fuera de la vista; si vas más lento que ellos, se acercan por el lado hasta casi tocarte y,
-  // al morder, se echan encima. Corren hacia delante, girados un poco hacia ti cuanto más cerca
+  const run = state === 'play' && !TREK.halt, su = TREK.dist, uu = HL.x; if (run) C.t += dt;
+  let near = 99;
   for (const w of C.wolves) {
-    const g = Math.max(0, C.gap), k = Math.min(1, g / 7), k2 = clamp((g - 7) / 7, 0, 1);
-    const x = w.side * (g <= 7 ? 0.85 + 2.15 * k : 3 + 0.5 * k2), z = HL.z + (g <= 7 ? -(0.8 + 1.2 * k) : -2 + 5.5 * k2);
-    if (w.mesh) { w.mesh.position.set(x, 0, z + Math.sin(t * 2 + w.ph) * 0.12); w.mesh.rotation.y = Math.PI + w.side * (0.15 + 0.5 * (1 - k)) * (g < 7 ? 1 : 0.3); if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt); }
+    if (w.st === 'gone') { if (w.mesh) w.mesh.visible = false; if (w.mark) w.mark.visible = false; continue; }
+    if (run) {
+      // la carrera: a su punto del sendero; luego, a por ti (detrás de ti, si llegaste antes); tras morder, se aparta
+      let ts = w.cs, tu = 0, v = C.v;
+      if (w.st === 'chase') { ts = su; tu = uu; } else if (w.st === 'off') { ts = w.s - 6; tu = w.side * 14; v *= 0.8; w.offT += dt; }
+      const ds = ts - w.s, du = tu - w.u, r = Math.hypot(ds, du);
+      if (r > 1e-3) { const k = Math.min(r, v * dt) / r; w.s += ds * k; w.u += du * k; w.hd = Math.atan2(du, -ds); }
+      if (w.st === 'race' && r < 0.25) w.st = 'chase';
+    }
+    const ds = w.s - su, d = Math.hypot(ds, w.u - uu);
+    if (w.st === 'race' || w.st === 'chase') {
+      near = Math.min(near, d);
+      if (run && d < 1.1) { w.st = 'off'; C.bit = true; trekWolfBite(w); hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); hapticBoth(0.9, 160); boardDirty = true; }
+      else if (ds < -12) w.st = 'gone'; // (se ha quedado atrás)
+    } else if (w.st === 'off' && (w.offT > 4 || ds < -15)) w.st = 'gone';
+    if (w.mark) { trekBend(w.s, w.u, _tkq); const k = clamp(d * 0.04, 0.3, 1.5) * (1 + 0.08 * Math.sin(t * 7 + w.ph)); w.mark.position.set(_tkq.x, 0.95 + k * 0.6, _tkq.z + HL.z); w.mark.scale.set(k, k, 1); w.mark.lookAt(head.p); w.mark.material.opacity = w.st === 'race' || w.st === 'chase' ? clamp((d - 4) / 5, 0, 1) * 0.95 : 0; w.mark.visible = w.mark.material.opacity > 0.01; } // (unos 2,3° a la vista, cerca o lejos)
+    if (w.mesh) { // en el sendero (con sus curvas), mirando hacia donde corre
+      const bend = trekBend(w.s, w.u, _tkq); w.mesh.visible = true; w.mesh.position.set(_tkq.x, 0, _tkq.z + HL.z + Math.sin(t * 2 + w.ph) * 0.05); w.mesh.rotation.y = bend + w.hd;
+      if (run && w.st !== 'off' && (w.dustT = (w.dustT || 0) - dt) <= 0) { w.dustT = 0.15; fx.smoke(arena.localToWorld(_tkh.set(_tkq.x, 0.1, _tkq.z + HL.z)), 0.22, 0.3, 1.1, 0.48); } // (el polvo que levantan: se los ve venir de lejos)
+      if (w.biteT > 0 && (w.biteT -= dt) <= 0) { if (w.atk) w.atk.stop(); if (w.act) w.act.reset().play(); } // (tras el bocado, otra vez al galope)
+      if (w.act) w.act.timeScale = TREK.halt ? 0.3 : 0.7 + C.v * 0.5; w.mix.update(dt);
+    }
   }
-  if (C.gap < 3 && (C.growl -= dt) <= 0) { C.growl = 1.6; SND.hiss(arena.localToWorld(_tkh.set(C.wolves[0].side * 1.5, 0.6, HL.z + 0.5))); hapticBoth(0.25, 40); }
-  if (!C.bit && C.gap <= 0.4) { C.bit = true; hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); boardDirty = true; }
-  if (C.gap >= 14) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
-  else if (C.t > 45) trekChaseEnd('Los lobos se cansan', '#a49fc8');
+  C.gap = near; // (lo que dice el marcador: el más cercano)
+  if (near < 4 && (C.growl -= dt) <= 0) { C.growl = 1.6; const w = C.wolves.find(x => x.st === 'race' || x.st === 'chase'); if (w) { trekBend(w.s, w.u, _tkq); SND.hiss(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z))); } hapticBoth(0.25, 40); }
+  if (C.wolves.every(w => w.st === 'gone')) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
+  else if (C.t > 50) trekChaseEnd('Los lobos se cansan', '#a49fc8');
 }
 function trekStep(dt, t) {
   const sc = arcScenic(), on = (trekOn() || sc) && NAT.ready && !arMode && ['ready', 'play', 'rest', 'paused', 'end', 'calib', 'lobby'].includes(state);
