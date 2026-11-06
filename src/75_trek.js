@@ -649,8 +649,9 @@ function trekStoneJudge(o, q) {
 }
 // ¿hay una piedra baja en el aire? (en «Probar en el ordenador», soltar Espacio entonces es saltar)
 const trekStoneLow = () => { const o = TREK.halt; return !!(o && o.stones2 && o.stones2.some(q => !q.done && q.atk === 'low')); };
-// menos tiempo de vuelo en cada tramo y con el rango, poco a poco; el brazo atrás, siempre igual
-const trekBandDiff = () => ({ fly: Math.max(1.15, 1.75 - 0.05 * waveIdx - 0.03 * rankIdx()), wu: 0.9 });
+// menos tiempo de vuelo en cada tramo y con el rango, poco a poco (de 1,4 s a 1 s: con 1,75 s se veían lentas); el brazo
+// atrás (el aviso), siempre igual
+const trekBandDiff = () => ({ fly: Math.max(1, 1.4 - 0.04 * waveIdx - 0.025 * rankIdx()), wu: 0.9 });
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
