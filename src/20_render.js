@@ -226,10 +226,14 @@ TX.halo = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'), g = 
 TX.atlas = (() => { // 0 brillo · 1 humo · 2 fuego · 3 chispa
   const c = mkCanvas(256), x = c.getContext('2d'), R = rng(5);
   let g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.6)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  // el humo y el fuego, cada uno en su propio lienzo y luego al atlas: el recorte redondo («destination-in») borra todo lo
+  // que queda fuera de lo que se pinta, y hecho sobre el atlas entero se llevaba por delante el brillo y el humo (salían
+  // transparentes: no se veían ni el humo, ni el polvo, ni los destellos, ni las estelas)
   for (const [ox, soft] of [[128, 0.12], [0, 0.22]]) {
-    const oy = ox ? 0 : 128;
-    for (let i = 0; i < 40; i++) { const px = ox + 64 + (R() - 0.5) * 60, py = oy + 64 + (R() - 0.5) * 60, rr = 12 + R() * 26; const gg = x.createRadialGradient(px, py, 0, px, py, rr); gg.addColorStop(0, `rgba(255,255,255,${soft + R() * soft})`); gg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gg; x.beginPath(); x.arc(px, py, rr, 0, TAU); x.fill(); }
-    x.globalCompositeOperation = 'destination-in'; const m = x.createRadialGradient(ox + 64, oy + 64, 10, ox + 64, oy + 64, 63); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = m; x.fillRect(ox, oy, 128, 128); x.globalCompositeOperation = 'source-over';
+    const oy = ox ? 0 : 128, tc = mkCanvas(128), y = tc.getContext('2d');
+    for (let i = 0; i < 40; i++) { const px = 64 + (R() - 0.5) * 60, py = 64 + (R() - 0.5) * 60, rr = 12 + R() * 26; const gg = y.createRadialGradient(px, py, 0, px, py, rr); gg.addColorStop(0, `rgba(255,255,255,${soft + R() * soft})`); gg.addColorStop(1, 'rgba(255,255,255,0)'); y.fillStyle = gg; y.beginPath(); y.arc(px, py, rr, 0, TAU); y.fill(); }
+    y.globalCompositeOperation = 'destination-in'; const m = y.createRadialGradient(64, 64, 10, 64, 64, 63); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); y.fillStyle = m; y.fillRect(0, 0, 128, 128);
+    x.drawImage(tc, ox, oy);
   }
   g = x.createRadialGradient(192, 192, 0, 192, 192, 30); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(128, 128, 128, 128);
   const t = texFrom(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
