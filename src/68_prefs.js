@@ -55,6 +55,7 @@ function navGo(id, sub) {
   if (go && go.scrollIntoView) go.scrollIntoView({ block: 'start' });
   if (el && el.classList) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
   if (sub && typeof document.querySelectorAll === 'function') document.querySelectorAll('.tocList ol a').forEach(a => a.classList.toggle('on', a.dataset.sub === sub));
+  if (typeof appEnter === 'function') appEnter(id, sub); // (en el móvil, el apartado es una pantalla de la app: 63_app)
 }
 // un enlace a algo de la página (#…): abre su apartado y va allí
 function navToHash(hash) {

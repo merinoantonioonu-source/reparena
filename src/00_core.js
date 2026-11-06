@@ -557,6 +557,7 @@ function syncForm() {
   if (typeof animNote === 'function') animNote();
   renderPick(); updateSummary();
   if (typeof devPage === 'function') { devPage(); exSongsPage(); } // (la tabla y las canciones, del ejercicio elegido)
+  if (typeof appSync === 'function') appSync(); // (en el móvil, las filas y el inicio de la app: 63_app)
 }
 // Página: tarjetas de ejercicios en su orden de siempre o agrupadas por zona del cuerpo (con un encabezado por zona)
 const EXCARDS = { order: null };
@@ -689,6 +690,7 @@ function renderToday(h = store(HIST_KEY) || [], now = Date.now()) {
   const mini = $('#todayMini');
   if (mini) mini.innerHTML = `<a href="#todayBox" aria-label="Hoy: ${mins} de ${settings.goalMin} minutos, ${T.reps} repeticiones, ${P.streak} días de racha. Ver el día"><span class="tmRing" style="--k:${Math.round(k * 100)}%"><i>${mins}</i></span><span class="tmS"><b>${mins} / ${settings.goalMin} min</b><small>hoy</small></span><span class="tmS"><b>${T.reps}</b><small>reps</small></span><span class="tmS"><b>${P.streak} 🔥</b><small>racha</small></span><span class="tmMore">Ver el día ↓</span></a>`;
   animateToday(host);
+  if (typeof appSoon === 'function') appSoon(); // (y lo de hoy en el inicio de la app del móvil)
 }
 // Las cifras suben desde 0, el anillo se llena y las barras crecen (sin animación si el sistema pide menos movimiento)
 function animateToday(host) {
