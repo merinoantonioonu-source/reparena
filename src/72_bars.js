@@ -199,12 +199,13 @@ const eyeWhite = std({ color: 0xf2eee6, roughness: 0.25 }), eyeIris = new THREE.
 const barGap = () => repTimeOf(settings.exercise, 'bars') * rand(0.85, 1.15);
 const frontTarget = () => enemies.find(e => e.type === 'target' && e.alive && (e.mode === 'approach' || e.mode === 'wait'));
 // Punto más alto previsto de la cabeza (coordenadas de la arena) y hueco de espera del siguiente
-// En el remo: un cuarto de la altura de la barra por debajo de ella y pasado su borde hacia tu cabeza (con una paralela,
-// al otro lado de la barra; con dos, más allá de su extremo), que es donde llega la cabeza al subir
-const _bt = new V3();
+// En el remo: casi a la altura de la barra (ROW_TOP por debajo; el usuario los quiere ahí, para obligar a subir del todo)
+// y pasado su borde hacia tu cabeza (con una paralela, al otro lado de la barra; con dos, más allá de su extremo), que es
+// donde llega la cabeza al subir
+const _bt = new V3(), ROW_TOP = 0.06, rowTopY = () => Math.max(BAR.ref + barReq() + 0.04, settings.dipH / 100 - ROW_TOP);
 function barTopPoint(out) {
   if (settings.exercise === 'row') {
-    const e = eqPose(), L = settings.dipLen / 200, l = eqLocal(e, _bt.copy(BAR.mountXZ), _bt), y = Math.max(BAR.ref + barReq() + 0.04, settings.dipH / 100 * 0.75 + 0.05); // (un poco más arriba que antes: hay que subir más)
+    const e = eqPose(), L = settings.dipLen / 200, l = eqLocal(e, _bt.copy(BAR.mountXZ), _bt), y = rowTopY();
     if (dipOne()) eqWorld(e, (Math.sign(l.x) || 1) * 0.12, y, clamp(l.z, -L, L), out); else eqWorld(e, l.x, y, (Math.sign(l.z) || 1) * (L + 0.1), out);
     return arena.worldToLocal(out);
   }

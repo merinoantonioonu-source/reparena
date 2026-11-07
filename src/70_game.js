@@ -1199,8 +1199,8 @@ function findLock(o, d) {
   return best;
 }
 // Puntería automática: el rayo sale de la mano (o del orbe de carga) hacia el enemigo más cercano
-function fireOrb(origin, dmg, perfect, pow = 1, side) {
-  const e = pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
+function fireOrb(origin, dmg, perfect, pow = 1, side, forced) {
+  const e = forced && forced.alive && forced.root ? forced : pickNearest(side), L = boltLevel(perfect, pow), col = boltRGB(L), tiny = isTiny();
   const to = e ? e.center(new V3()) : side ? arena.localToWorld(new V3(side === 'left' ? -3 : 3, 0.2, 0)) : origin.clone().addScaledVector(fwdH(), 5);
   if (e) e.pending += dmg;
   const dist = origin.distanceTo(to), lt = boltStart(origin, to, L, tiny ? 0.4 : 1, !e);
@@ -1274,7 +1274,7 @@ function onRep(opts, side) {
   if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
     const sup = settings.exercise === 'superman', origin = bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
     if (side) gloves[side].pulse = 1;
-    fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined);
+    fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined, settings.exercise === 'inchworm' ? IW.aim : null); // (en el inchworm, al que miras: iwAimStep)
   } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
     if (throwAim()) { fireOrb(bp || head.p.clone().add(tmpA.set(0, -0.25, 0)).addScaledVector(fwdH(), 0.3), dmg, opts.perfect, pow); charged = false; chargePow = 1; chargeOrb.visible = false; return; } // sin manos a la vista: al más cercano
     for (const s of aimSources()) {
@@ -1664,6 +1664,7 @@ function iwWave(pow = 1) {
   IWW.pow = pow; IWW.m = 0.85 + 0.2 * (pow - 1); // (alcance: ×1, 85 %; ×4, 145 %)
   IWW.t = 0; IWW.dust = 0; IWW.cloud = 0; IWW.g.visible = true; IWW.g.position.set(head.p.x, 0.02, head.p.z); iwWaveStep(0);
   const c = IWW.g.position.clone().add(_iww.set(0, 0.15, 0)); fx.glow(c, [0.2, 1, 0.95], 1.2 + 0.3 * pow, 0.3); fx.glow(c, [1, 0.25, 0.85], 0.7 + 0.2 * pow, 0.22); fx.dust(IWW.g.position, 8 + 4 * pow, 0.3);
+  for (let i = 0; i < 12; i++) { const a = (i + Math.random() * 0.4) / 12 * TAU, sx = Math.sin(a), cz = Math.cos(a); fx.dustCloud(_iww.set(head.p.x + sx * 0.9, 0.16, head.p.z + cz * 0.9), sx, cz, rand(0.32, 0.46), 2 + 0.4 * pow, 0.7); } // (el golpe al ponerte de pie: un anillo de polvo que sale disparado)
   SND.shock(IWW.g.position); hapticBoth(1, 160 + 40 * pow);
   const dmg = POW_DMG[pow - 1] || 0, reach = 3.2 * IWW.m + 0.3; let n = 0;
   for (const e of enemies) {
@@ -1684,17 +1685,22 @@ function iwWaveStep(dt) {
   IWW.wall2.scale.set(R2 * 0.98, hW * 0.7, R2 * 0.98); IWW.wall2.position.y = hW * 0.35; IWW.wall2.material.opacity = 0.6 * Math.pow(1 - k2, 1.5) * (k2 > 0 ? 1 : 0);
   const f = Math.min(1, IWW.t / 0.3); IWW.flash.scale.setScalar(0.3 + f * 1.6 * IWW.m); IWW.flash.material.opacity = 1 - f;
   // el polvo que levanta el frente a su paso: chispas de color cada 0,07 s y, cada 0,1 s (pasado medio metro: pegado a ti
-  // tapaba la vista), nubes de polvo claras y espesas que el frente empuja hacia fuera, suben un poco, se hinchan y quedan
-  // flotando (antes eran motas pequeñas, oscuras y medio enterradas en el suelo: no se veían). Con más fuerza, más polvo
+  // tapaba la vista), una muralla de polvo espeso que el frente empuja hacia fuera: nubes más grandes cuanto más lejos
+  // (las de cerca, menores, no tapan la vista) que se hinchan hasta el triple y, cada dos tandas, columnas que suben alto
+  // (el usuario lo quería mucho más dramático). Con más fuerza, más polvo y más grande
   const c = IWW.g.position;
   if (k < 0.85 && IWW.t >= IWW.dust * 0.07) {
     const n = 14 + 4 * IWW.pow, off = Math.random();
     for (let i = 0; i < n; i++) { const a = (i + off) / n * TAU; fx.sparks(_iww.set(c.x + Math.sin(a) * R1, 0.04, c.z + Math.cos(a) * R1), 1, i % 3 ? [0.1, 1, 0.95] : [1, 0.25, 0.85], 1.1 + 0.2 * IWW.pow, 0.03); }
     IWW.dust++;
   }
-  if (k < 0.85 && R1 > 0.6 && IWW.t >= (IWW.cloud || 0) * 0.1) {
-    const nd = Math.round(5 + IWW.pow + R1), s = 0.26 + 0.04 * IWW.pow, off = Math.random();
-    for (let i = 0; i < nd; i++) { const a = (i + off + Math.random() * 0.5) / nd * TAU, sx = Math.sin(a), cz = Math.cos(a); fx.dustCloud(_iww.set(c.x + sx * R1, s * 0.5, c.z + cz * R1), sx, cz, s * rand(0.8, 1.2), 0.9 + 0.3 * IWW.pow); }
+  if (k < 0.9 && R1 > 0.6 && IWW.t >= (IWW.cloud || 0) * 0.1) {
+    const nd = Math.round(7 + 1.5 * IWW.pow + 1.2 * R1), s = (0.3 + 0.12 * R1) * (1 + 0.1 * IWW.pow), off = Math.random(), tall = (IWW.cloud || 0) % 2 === 0 && R1 > 1.1;
+    for (let i = 0; i < nd; i++) {
+      const a = (i + off + Math.random() * 0.5) / nd * TAU, sx = Math.sin(a), cz = Math.cos(a);
+      fx.dustCloud(_iww.set(c.x + sx * R1, s * 0.45, c.z + cz * R1), sx, cz, s * rand(0.8, 1.25), 1 + 0.3 * IWW.pow);
+      if (tall && i % 2 === 0) fx.dustCloud(_iww.set(c.x + sx * R1, s * 0.8, c.z + cz * R1), sx * 0.4, cz * 0.4, s * rand(0.9, 1.3), 0.6, 2.4); // (columna que sube)
+    }
     IWW.cloud = (IWW.cloud || 0) + 1;
   }
   if (k >= 1) { IWW.t = -1; IWW.g.visible = false; }
@@ -1709,6 +1715,12 @@ function iwLayout() {
 const _iww = new V3();
 // cuánto ha avanzado la cabeza de la salida a la línea (0 a 1) y a qué distancia está de la línea
 function iwHead() { const S = IW_OFF(), z1 = S - 0.25, l = arena.worldToLocal(_iww.copy(head.p)); return { g: clamp((z1 - l.z) / Math.max(0.2, z1 - IW_LINE), 0, 1), z: l.z }; }
+// Inchworm: el rayo va al que miras (la mirada lo fija un momento, como al apuntar con la mirada) y, si no miras a ninguno,
+// al más cercano; la diana marca siempre a cuál irá (antes iba al más cercano sin marcarlo y no se sabía a quién)
+function iwAimStep(t) {
+  IW.aim = null; if (settings.exercise !== 'inchworm' || !isCombat() || !['play', 'rest', 'ready'].includes(state)) return;
+  IW.aim = gazeLockStep(t, head.p, fwd()) || pickNearest(); if (IW.aim) lockShow(IW.aim);
+}
 function iwStep(t, dt) {
   const W = DET.iw, standing = head.p.y > calibRef - 0.22, H = iwHead(); W.g = H.g;
   if (W.phase === 'stand' && !standing) { W.phase = 'out'; W.max = 0; W.t0 = t; }

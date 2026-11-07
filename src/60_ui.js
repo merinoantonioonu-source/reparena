@@ -1211,7 +1211,7 @@ function drawBoard() {
   else if (state === 'between') say1(`DESCANSO ${Math.max(0, Math.ceil(SES.wait))}`, BC.teal, 72);
   else if (msg.t > 0) { c.globalAlpha = Math.min(1, msg.t * 2); say1(msg.text, msg.color, 84); c.globalAlpha = 1; }
   else if (RUSH.on) say1('⚡ ×2', BC.gold, 120, 260);
-  else if (settings.mode === 'arcs' && (nextArcDrop || nextArcJump || nextArcPlank || nextArcMace)) say1(nextArcMace ? '¡MAZA!' : nextArcPlank ? '¡PLANCHA!' : nextArcJump ? '¡SALTA!' : nextArcTilt ? (nextArcTilt > 0 ? 'DERECHA →' : '← IZQUIERDA') : `BAJA ${Math.round(nextArcDrop * 100)} CM`, '#ff8a6a', 76, 200);
+  // (en Arcos, el marcador no anuncia lo que viene —derecha, izquierda, salta, baja…—: despistaba, y se entrenan los reflejos)
   // Arcos: los metros recorridos (con la fiebre) y la carrera contra el fantasma de tu mejor ronda
   if (settings.mode === 'arcs' && live && state !== 'rest') {
     const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
