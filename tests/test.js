@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { MOTES, MOTEB, motesBeat, HRX, hrxStep, hrxTake, hrxSeal, spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, BODY, HRS, appVal, APP_SECS, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, sndPreview, sndSetOn, shieldCheck, crSave,
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, sesClean, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, danceP, throwK, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine, ARX_TINT, arxSpeed, QUAL, qualLevel, DAYB, TROPHY, trophy, TREK, trekRep, trekMoveStep, TMV, TREK_BAND, TREK_WOLF, demoJoints, demoPose };
@@ -599,15 +599,16 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const IWF = { flash: 0, fill: 0, gold: 0, home: 0, homeOk: 0, speed: null, inside: 0, wave: 0, flew: false, boom: 0, prints: 0 };
   const shock0 = RA.SND.shock; RA.SND.shock = (...a) => { IWF.boom++; return shock0(...a); }; RA.PV.iwT = 0;
   await runConfig('Combate flexiones inchworm', { ...base, mode: 'combat', foes: 'robots', exercise: 'inchworm', walkTime: 10 }, t => {
-    RA.PV.iwAuto = true; if (RA.IW.flash > 0.9) IWF.flash++; IWF.fill = Math.max(IWF.fill, RA.IW.fill.scale.y); if (RA.IW.fill.material.color.getHex() === 0xffd166 && RA.IW.fill.scale.y > 0.5) IWF.gold++;
+    RA.PV.iwAuto = true; if (RA.state === 'play' && RA.enemies.some(e => e.alive)) { IWF.play = (IWF.play || 0) + 1; const a = RA.IW.aim; if (a && a.alive && a.lkl && a.lkl[0] && a.lkl[0].visible) IWF.aimed = (IWF.aimed || 0) + 1; } if (RA.IW.flash > 0.9) IWF.flash++; IWF.fill = Math.max(IWF.fill, RA.IW.fill.scale.y); if (RA.IW.fill.material.color.getHex() === 0xffd166 && RA.IW.fill.scale.y > 0.5) IWF.gold++;
     if (RA.IWW.g && RA.IWW.g.visible) IWF.wave = Math.max(IWF.wave, RA.IWW.r1.scale.x);
-    if (RA.IWW.g && RA.IWW.g.visible) { const c = RA.IWW.g.position; let n = 0, far = 0; for (const p of RA.PNORM.p) if (p.c0 && p.c0[0] === 0.58 && p.tile === 1) { n++; if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) > 1.5 && p.pos.y > 0.08) far++; } IWF.dust = Math.max(IWF.dust || 0, n); IWF.dustFar = Math.max(IWF.dustFar || 0, far); } // (las nubes de polvo: fx.dustCloud)
+    if (RA.IWW.g && RA.IWW.g.visible) { const c = RA.IWW.g.position; let n = 0, far = 0; for (const p of RA.PNORM.p) if (p.c0 && p.c0[0] === 0.58 && p.tile === 1) { n++; IWF.dustBig = Math.max(IWF.dustBig || 0, p.s1 || 0); if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) > 1.5 && p.pos.y > 0.08) far++; } IWF.dust = Math.max(IWF.dust || 0, n); IWF.dustFar = Math.max(IWF.dustFar || 0, far); } // (las nubes de polvo: fx.dustCloud)
     for (const e of RA.enemies) if (e.type === 'spider' && e.alive) { const B = RA.FLOORB; const r = (e.radius || 0.05) * 0.8; if (e.pos.y < 0.3 && e.mode !== 'emerge' && Math.abs(e.pos.x) < B.hw + r && e.pos.z > B.z0 - r && e.pos.z < B.z1 + r) IWF.inside++; /* (con su cuerpo, no solo su centro) */ if (e.pos.y > 0.3 || e.flung) IWF.flew = true; if (IWF.speed === null && e.mode === 'run') { IWF.speed = e.avg; IWF.dist = e.startD; } if (e.mode === 'recoil' && e.lungeTo.distanceTo(e.home) < 0.01 && !e._h) { e._h = 1; IWF.home++; } }
   }, 420, s => s.reps < 5 ? `inchworm: pocas repeticiones (${s.reps})` : '');
   log(`  inchworm (head path): line flashes ${IWF.flash} frames · bar filled up to ${IWF.fill.toFixed(2)} m · gold on the way back ${IWF.gold} frames · shockwaves ${RA.stats.waves || 0} · spiders sent home ${IWF.home} · spider speed ${IWF.speed && IWF.speed.toFixed(3)} m/s for ${IWF.dist && IWF.dist.toFixed(2)} m with «llegan en 10 s» (${IWF.speed && (IWF.dist / IWF.speed).toFixed(0)} s)`);
   RA.SND.shock = shock0; log(`  inchworm: spiders inside the board ${IWF.inside} frames · flung through the air ${IWF.flew} · shockwave reached ${IWF.wave.toFixed(2)} m · boom sounds ${IWF.boom}`);
-  log(`  inchworm: dust clouds raised by the wave ${IWF.dust || 0} (more than 1,5 m away and above the floor ${IWF.dustFar || 0})`);
-  if (!((IWF.dust || 0) >= 25 && (IWF.dustFar || 0) >= 10)) errors.push(`inchworm: la onda debería levantar nubes de polvo a su paso (${IWF.dust || 0}, lejos ${IWF.dustFar || 0})`);
+  log(`  inchworm: dust clouds raised by the wave ${IWF.dust || 0} (more than 1,5 m away and above the floor ${IWF.dustFar || 0}, growing up to ${(IWF.dustBig || 0).toFixed(2)} m) · reticle on the enemy the shot goes to ${IWF.aimed || 0} of ${IWF.play || 0} frames`);
+  if (!(IWF.play > 30 && IWF.aimed > IWF.play * 0.6)) errors.push(`inchworm: la diana debería marcar a quién irá el rayo (${IWF.aimed || 0} de ${IWF.play || 0} fotogramas)`);
+  if (!((IWF.dust || 0) >= 60 && (IWF.dustFar || 0) >= 30 && (IWF.dustBig || 0) >= 1.2)) errors.push(`inchworm: la onda debería levantar mucho polvo a su paso, en nubes grandes (${IWF.dust || 0}, lejos ${IWF.dustFar || 0}, hasta ${(IWF.dustBig || 0).toFixed(2)} m)`);
   if (IWF.inside) errors.push('inchworm: los bichos no deberían atravesar el marcador tumbado en el suelo');
   if (IWF.speed !== null && (IWF.wave < 2.5 || !IWF.boom || (IWF.home && !IWF.flew))) errors.push('inchworm: la onda debería abrirse a más de 2,5 m, sonar y lanzar a los bichos por el aire');
   if (!IWF.flash || IWF.fill < 0.6 || !IWF.gold) errors.push('inchworm: al llegar la cabeza a la línea debería destellar, y la barra llenarse con lo que avanza (dorada a la vuelta)');
@@ -865,8 +866,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`trek bandits: ${T.o && T.o.bandits.length} · stones dodged ${T.o && T.o.dodges} of ${T.o && T.o.hp0} · hit ${T.o && T.o.hits} · kinds ${[...T.kinds].join(',')} · ${T.o && T.o.bandits.map(b => b.st).join(',')}`);
     RA.TREK_BAND.bare = false; for (const k in sv) RA.setSetting(k, sv[k]); }
   // Travesía: si no avanzas, los lobos te alcanzan y muerden (una vida)
-  { let chased = 0; await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);
-    log(`trek wolves: chased ${chased}`); }
+  { let chased = 0; const W = { wolfHowl: 0, wolfGrowl: 0, wolfBite: 0 }, keep = {}; for (const k in W) { keep[k] = RA.SND[k]; RA.SND[k] = (...a) => { W[k]++; return keep[k](...a); }; }
+    await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);
+    for (const k in W) RA.SND[k] = keep[k];
+    log(`trek wolves: chased ${chased} · howl ${W.wolfHowl} · growls ${W.wolfGrowl} · bite roars ${W.wolfBite}`);
+    if (!W.wolfHowl || W.wolfGrowl < 2 || !W.wolfBite) errors.push('lobos: deberían aullar al salir, gruñir al acercarse y rugir al morder'); }
   // Travesía: los lobos salen lejos, delante y a un lado (a la vista), y corren en diagonal a cortarte el paso; con buen
   // ritmo llegas antes, cruzan el sendero por detrás de ti y se quedan atrás sin morder
   { const T = { start: null, minD: 99, ended: false, behind: false, maxV: 0, mark: 0, markGone: false };
@@ -1086,6 +1090,43 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (R.upA !== 6 || R.histB2 !== 6 || R.profB2 !== 'Mañana suave') errors.push('sincronización: al subir deberían juntarse las partidas de los dos aparatos');
     if (R.cfgLink || !R.cfgAskA || R.cfgAskA.sets !== 1 || !R.cfgAskB || R.cfgAskB.sets !== 1 || !R.cfgB || R.cfgB.lives !== 7 || R.cfgB.walkTime !== 33 || R.cfgA.lives !== 0) errors.push('sincronización: de cada ajuste debería quedar el cambiado más tarde, en cualquiera de los dos aparatos');
     if (!/Sincronizar ahora/.test(R.menu || '') || !/Importar y reiniciar/.test(R.askMenu || '') || !/Importar y reiniciar|Sincronizar ahora/.test(R.keypad || '')) errors.push('sincronización: falta el menú en el juego (o el teclado no admite el código de 16 cifras)'); }
+  // ---- Pulsómetro del móvil a las gafas: el navegador de las gafas no deja conectarlo, así que el móvil pasa cada pulso
+  // cifrado con el código de sincronización a otro hueco de la base de datos y las gafas lo escuchan (aquí, preguntando) ----
+  { const db = new Map(), realFetch = globalThis.fetch, base = 'https://prueba-rtdb.europe-west1.firebasedatabase.app', sync0 = storage.get('reparena3-sync'), db0 = RA.SYNC.db, R = {}, H = RA.HR, X = RA.HRX, nodeHash = t => require('crypto').createHash('sha256').update(t).digest('hex');
+    let puts = 0;
+    globalThis.fetch = async (url, o = {}) => {
+      const m = String(url).match(/^https:\/\/prueba-rtdb\.europe-west1\.firebasedatabase\.app\/sync\/([0-9a-f]{64})(\/meta)?\.json$/); if (!m) return realFetch ? realFetch(url, o) : { ok: false, status: 404 };
+      if (o.method === 'PUT') { const v = JSON.parse(o.body); if (!v.meta || typeof v.blob !== 'string') return { ok: false, status: 400 }; puts++; db.set(m[1], v); return { ok: true, status: 200, json: async () => v }; }
+      const v = db.get(m[1]) || null; return { ok: true, status: 200, json: async () => (v && m[2] ? v.meta : v) };
+    };
+    const dv = b => new DataView(new Uint8Array([0, b]).buffer), until = async f => { for (let i = 0; i < 100 && !f(); i++) await sleep(30); return f(); };
+    const resetHR = () => { Object.assign(H, { dev: null, char: null, bpm: 0, t: 0, max: 0 }); Object.assign(X, { busy: false, sent: -1e9, last: 0, lastT: 0, pollT: 0, polling: false }); };
+    RA.SYNC.db = base;
+    try {
+      // sin código de sincronización, nada sale del móvil
+      storage.set('reparena3-sync', JSON.stringify({ dev: 'movil1' })); resetHR(); RA.hrParse(dv(120)); await sleep(60); R.noCode = puts === 0;
+      // el móvil, con el código: le llega un 132 del pulsómetro y lo deja cifrado en el hueco del pulso (no en el de los datos)
+      const code = '1234567812345678'; storage.set('reparena3-sync', JSON.stringify({ code, dev: 'movil1' })); resetHR();
+      RA.hrParse(dv(132)); R.sent = await until(() => db.size > 0); const slot = [...db.keys()][0], rec = db.get(slot);
+      R.slot = slot === nodeHash('reparena-pulso:' + code) && slot !== nodeHash('reparena-sync:' + code); R.hidden = !!rec && !/"b"\s*:\s*132/.test(JSON.stringify(rec)) && rec.meta && rec.meta.n === 0;
+      // otro pulso enseguida (menos de 1 s): no sale (uno por segundo como mucho)
+      const p1 = puts; RA.hrParse(dv(133)); await sleep(60); R.throttle = puts === p1;
+      // las gafas (sin pulsómetro), mientras juegas: preguntan y el pulso sale en el marcador, desde el móvil
+      resetHR(); RA.hrxStep(3); R.got = await until(() => RA.hrNow() === 132); R.from = H.from;
+      // un pulso viejo (de hace un minuto) no vale
+      resetHR(); db.set(slot, { meta: rec.meta, blob: await RA.hrxSeal({ b: 150, t: Date.now() - 60000, m: 150, w: 'el móvil' }) }); RA.hrxStep(3); await sleep(200); await until(() => !X.polling); R.stale = RA.hrNow() === 0;
+      // con otro código no se puede leer
+      db.set(slot, rec); storage.set('reparena3-sync', JSON.stringify({ code: '8765432187654321', dev: 'gafas1' })); resetHR(); R.wrong = !(await RA.hrxTake(rec)) && RA.hrNow() === 0;
+    } catch (e) { R.err = e.message; } finally { globalThis.fetch = realFetch; RA.SYNC.db = db0; if (sync0 == null) storage.delete('reparena3-sync'); else storage.set('reparena3-sync', sync0); resetHR(); X.kc = ''; X.note = ''; }
+    console.log('pulso del móvil a las gafas:', JSON.stringify(R));
+    if (R.err) errors.push('pulso a las gafas: ' + R.err);
+    if (!R.noCode) errors.push('pulso a las gafas: sin código de sincronización, el móvil no debería mandar nada');
+    if (!R.sent || !R.slot || !R.hidden) errors.push(`pulso a las gafas: el móvil no deja el pulso cifrado en su hueco (enviado ${R.sent}, hueco ${R.slot}, cifrado ${R.hidden})`);
+    if (!R.throttle) errors.push('pulso a las gafas: manda más de un pulso por segundo');
+    if (!R.got || R.from !== 'el ordenador') errors.push(`pulso a las gafas: a las gafas no les llega el pulso del móvil (llega ${R.got}, desde ${R.from})`);
+    if (!R.stale) errors.push('pulso a las gafas: un pulso de hace un minuto sale en el marcador');
+    if (!R.wrong) errors.push('pulso a las gafas: con otro código se lee el pulso');
+  }
   // ---- Spotify: elegir lista y canción en el juego, y la música de cada bloque (varias canciones, en orden y en bucle) ----
   { const realFetch = globalThis.fetch, calls = [], cfg0 = RA.SP.cfg, st0 = RA.SP.st; let oldCalls = 0;
     // (como la API desde 2026: las canciones, en /items y cada una en «item»; /tracks responde 403; la lista 10 es de otro usuario)
@@ -1360,7 +1401,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const bars = { ...base, mode: 'bars', barArrive: 2, barWait: 0, fallMargin: 12, dipBars: '2' };
   await runConfig('Barras+remo (pompas)', { ...bars, exercise: 'row', barTarget: 'bubbles' }, watchPanels(pullSim()), 420, panelCheck('remo', s => s.reps < 9 ? 'pocas repeticiones' : s.kills < 4 ? 'no revienta las pompas' : ''));
   await runConfig('Barras+remo una paralela', { ...bars, exercise: 'row', dipBars: '1', barTarget: 'bubbles' }, pullSim(), 420, s => s.kills < 4 ? 'con una paralela no revienta las pompas' : '');
-  // remo con avispas: esperan a 3/4 de la altura de la barra, pasado su borde hacia la cabeza, y vuelan niveladas mirándote
+  // remo con avispas: esperan casi a la altura de la barra (6 cm por debajo), pasado su borde hacia la cabeza, y vuelan niveladas mirándote
   for (const bars_ of ['2', '1']) {
     const W = { n: 0, bad: [], maxPitch: 0 };
     await runConfig('Barras+remo avispas (' + bars_ + ' paralela' + (bars_ === '1' ? ')' : 's)'), { ...bars, exercise: 'row', dipBars: bars_, barTarget: 'bugs' }, t => {
@@ -1368,12 +1409,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       for (const e of RA.enemies) if (e.alive && e.K && e.K.wasp && e.mode === 'wait' && e.slotIndex() === 0) { // la primera: las demás esperan detrás
         const w = RA.arena.localToWorld(e.slot.clone()), l = RA.eqLocal(RA.eqPose('dip'), w, new THREE.Vector3()), m = RA.eqLocal(RA.eqPose('dip'), RA.BAR.mountXZ.clone(), new THREE.Vector3());
         const H = RA.settings.dipH / 100, L = RA.settings.dipLen / 200;
-        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + RA.settings.rowRange / 100 + 0.04, H * 0.75 + 0.05)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
+        const okY = Math.abs(w.y - Math.max(RA.BAR.ref + RA.settings.rowRange / 100 + 0.04, H - 0.06)) < 0.02, okXZ = bars_ === '1' ? Math.sign(l.x) === Math.sign(m.x || 1) && Math.abs(Math.abs(l.x) - 0.12) < 0.01 : Math.abs(l.z) > L && Math.sign(l.z) === Math.sign(m.z || 1);
         if (!(okY && okXZ)) W.bad.push(`${l.x.toFixed(2)},${w.y.toFixed(2)},${l.z.toFixed(2)}`);
         W.maxPitch = Math.max(W.maxPitch, Math.abs(e.root.rotation.x)); W.n++;
       }
     }, 420, s => { log(`   avispas: ${W.n} fotogramas esperando, fuera de sitio ${W.bad.length} ${W.bad.slice(0, 2).join(' ')}, inclinación máx. ${W.maxPitch.toFixed(2)} rad`);
-      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan a 3/4 de la barra (algo más arriba) pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
+      return !W.n ? 'no se ven avispas esperando' : W.bad.length ? 'las avispas no esperan casi a la altura de la barra pasado su borde' : W.maxPitch > 0.36 ? 'las avispas se ponen en vertical' : ''; });
   }
   RA.setSetting('dipBars', '2');
   // por los lados: llegan en diagonal (desde delante y su lado, a la vista) y se paran apartados del centro, alternando
@@ -1787,6 +1828,33 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     C.createBufferSource = mk;
   }
   { const seen = new Set(), dup = RA.SCHEMA.map(f => f.key).filter(k => seen.has(k) || !seen.add(k)); log('settings with the same key:', dup.join(', ') || 'none'); if (dup.length) errors.push('ajustes repetidos (se pisan entre sí): ' + dup.join(', ')); }
+  // ---- Luciérnagas: sin la sacudida de antes (el temblor de alas y el tiempo que retrocedía) y, con música, a su compás:
+  // el reloj del baile se engancha poco a poco a la canción, sin saltos al cambiar de canción, de ritmo o al pararla ----
+  {
+    const B = RA.MOTEB, vs = RA.MOTES.material.vertexShader, bpm0 = RA.settings.bpm, st0 = RA.SP.st, on0 = RA.SP.songOn, b00 = RA.TCH.beat0, B0 = { ...B };
+    if (/t \* 2[13]\.0/.test(vs)) errors.push('luciérnagas: sigue el temblor de alas (la sacudida)');
+    // su tiempo propio: la derivada (1 + 0,4·sen + 0,4·sen veces su paso) nunca baja de 0,2: nunca va hacia atrás
+    if (!/F - 0\.4 \* cos\(F \* wa/.test(vs)) errors.push('luciérnagas: el tiempo propio ya no es el que nunca retrocede');
+    Object.assign(B, { fly: 0, ph: 0, sw: 0, rate: 0, k: 0 }); let now = 5000;
+    const run = sec => { let jump = 0, prev = [B.ph, B.sw]; for (let i = 0; i < sec * 72; i++) { RA.motesBeat(1 / 72, now += 1 / 72); [B.ph, B.sw].forEach((v, k) => { let d = v - prev[k]; d -= 4 * Math.round(d / 4); jump = Math.max(jump, Math.abs(d)); prev[k] = v; }); } return jump; };
+    const lockErr = (c = B.ph, per = 1) => { let e = (now - RA.TCH.beat0) * RA.settings.bpm / 60 / per - c; return Math.abs(e - Math.round(e)); };
+    RA.settings.bpm = 0; RA.SP.st = null; RA.SP.songOn = false; run(3); const kOff = B.k;
+    RA.settings.bpm = 120; RA.SP.st = { is_playing: true }; RA.SP.songOn = true; RA.TCH.beat0 = now - 0.31; const f0 = B.fly, j1 = run(6), k1 = B.k, e1 = lockErr(), fly1 = (B.fly - f0) / 6;
+    RA.settings.bpm = 90; RA.TCH.beat0 = now - 0.37; const j2 = run(6), e2 = Math.max(lockErr(), lockErr(B.sw)), r2 = B.rate;
+    RA.settings.bpm = 160; RA.TCH.beat0 = now - 0.11; const j3 = run(6), e3 = Math.max(lockErr(), lockErr(B.sw, 2)); // (rápida: el vaivén, a medio tiempo)
+    RA.SP.st = { is_playing: false }; run(4); const kPause = B.k;
+    RA.SP.st = null; RA.SP.songOn = false; RA.settings.bpm = 100; run(5); const kHand = B.k;
+    console.log(`luciérnagas: baile sin música ${kOff.toFixed(2)} · con Spotify a 120 ${k1.toFixed(2)} (desfase ${e1.toFixed(3)} pulsos, vuelo ×${fly1.toFixed(2)}) · a 90 desfase ${e2.toFixed(3)} (${(r2 * 60).toFixed(0)} BPM) · a 160 desfase ${e3.toFixed(3)} (vaivén a medio tiempo) · el mayor paso ${Math.max(j1, j2, j3).toFixed(3)} pulsos · en pausa ${kPause.toFixed(2)} · ritmo a mano ${kHand.toFixed(2)}`);
+    if (kOff > 0.05) errors.push(`luciérnagas: bailan sin música (${kOff.toFixed(2)})`);
+    if (k1 < 0.95 || e1 > 0.01) errors.push(`luciérnagas: con Spotify a 120 BPM no van a su compás (baile ${k1.toFixed(2)}, desfase ${e1.toFixed(3)})`);
+    if (e2 > 0.01 || Math.abs(r2 * 60 - 90) > 1) errors.push(`luciérnagas: al cambiar de canción no se enganchan al ritmo nuevo (desfase ${e2.toFixed(3)}, ${(r2 * 60).toFixed(0)} BPM)`);
+    if (e3 > 0.01) errors.push(`luciérnagas: con una canción rápida (160 BPM) el vaivén no va a medio tiempo y a su compás (desfase ${e3.toFixed(3)})`);
+    if (Math.max(j1, j2, j3) > 0.06) errors.push(`luciérnagas: el baile da saltos (${Math.max(j1, j2, j3).toFixed(3)} pulsos en un fotograma)`);
+    if (Math.abs(fly1 - 120 / 110) > 0.06) errors.push(`luciérnagas: con una canción a 120 BPM no vuelan algo más deprisa (×${fly1.toFixed(2)})`);
+    if (kPause > 0.15) errors.push(`luciérnagas: siguen bailando con Spotify en pausa (${kPause.toFixed(2)})`);
+    if (kHand < 0.9) errors.push(`luciérnagas: con el ritmo puesto a mano no bailan (${kHand.toFixed(2)})`);
+    RA.settings.bpm = bpm0; RA.SP.st = st0; RA.SP.songOn = on0; RA.TCH.beat0 = b00; Object.assign(B, B0);
+  }
   // ---- entorno: sin cargador de glTF (aquí) el bosque no se puede cargar y sigue la fortaleza, sin errores ----
   { RA.setSetting('scenery', 'nature'); frame(1); const envOn = RA.env.visible; RA.setSetting('scenery', 'arena'); frame(1);
     log('scenery nature without loader: fortress visible', envOn); if (!envOn) errors.push('entorno: si el bosque no se puede cargar debería verse la fortaleza');

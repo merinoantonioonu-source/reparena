@@ -88,8 +88,9 @@ No las cambies sin preguntarle.
   esquivadas (6 desde el tercer tramo), se rinden y huyen; nada de puñetazos, que con el retraso de las manos en las gafas
   no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te cortan el paso: salen a lo lejos, delante y a un
   lado (siempre a la vista: flecha roja encima, que se ve a través de rocas y árboles), y corren en diagonal a un punto del
-  sendero por delante de ti; si llegas antes (hay que acelerar: algo más deprisa que ellos), cruzan por detrás y se quedan
-  atrás; si llegan antes, muerden. Sin enjambres.
+  sendero por delante de ti; si llegas antes (con margen: basta con ir a su paso a buen ritmo; muerden a menos de 0,8 m),
+  cruzan por detrás y se quedan atrás; si llegan antes, muerden. Se oyen: aúllan al salir, gruñen más fuerte según se
+  acercan y rugen al morder. Sin enjambres.
 - **No crear de cero enemigos ni elementos**: se usan los modelos que da el usuario (en `models/`); si no hay, se cambia
   el elemento. Las casas se montan con las piezas del Medieval Village.
 - El marcador, siempre flotando a un lado (nada de columnas que vayan contigo).
@@ -161,6 +162,8 @@ No las cambies sin preguntarle.
   (nubarrones, niebla roja y cerrada, relámpagos); empieza de golpe con un relámpago enorme y un trueno, también con música,
   y un velo rojo tiñe toda la vista (por debajo de los paneles). Con música, el compás se ve (♪ y destellos en cada pulso).
 - Arcos va **«Al fallo» de serie** (reto de aguante).
+- Arcos: el marcador **no anuncia lo que viene** (derecha, izquierda, salta, plancha, maza, baja…): despistaba, y se
+  entrenan los reflejos.
 - Arcos: entre dos vallas seguidas, al menos 1,1 s (si no, había que volar).
 - Arcos: las vallas tienen su propia altura del salto (6 cm de serie, en «Tu cuerpo (recorridos)», a la vista del jugador),
   aparte de la de Toques. Hay ráfagas de vallas (3 o 4 seguidas) y burpees (arco de plancha y, enseguida, una valla).
@@ -179,9 +182,13 @@ No las cambies sin preguntarle.
 - Al abrirse una compuerta, su interior es oscuro.
 - Toques: las «amebas» son aros de neón (tubo de luz con flechas que giran hacia el hueco; estallan en chispas), elegidos
   por el usuario en vez de los aros de agua (se leían mal y no casaban con Cómic).
-- Pulsómetro (`src/57_pulse.js`): reloj o banda Bluetooth con el servicio estándar de pulso; el pulso, en el marcador.
+- Pulsómetro (`src/57_pulse.js`): reloj o banda Bluetooth con el servicio estándar de pulso; el pulso, en el marcador. El
+  navegador de las Quest no tiene Bluetooth para páginas: el móvil lo pasa a las gafas por la sincronización (cifrado con
+  el código, en otro hueco de Firebase con la forma `meta` + `blob`, uno por segundo como mucho; las gafas lo escuchan).
 - Luciérnagas (`src/56_motes.js`, Entorno → «Luciérnagas»): puntitos de luz con vuelo sereno y sinuoso de insecto (se
-  ciernen, siguen, tiemblan un poco), en la tarjeta gráfica; nada de sprites que giren en círculo (las de antes, toscas).
+  ciernen y siguen; sin temblor de alas ni retrocesos, que daban una sacudida sin sentido), en la tarjeta gráfica; nada de
+  sprites que giren en círculo (las de antes, toscas). Con música, bailan a su compás: vaivén con un extremo en cada pulso
+  (a medio tiempo si la canción es rápida), destello en cada pulso y algo más deprisa cuanto más rápida; sin saltos.
 - Los contornos de tinta: finos de lejos (grosor fijo en el mundo pasados 2,5 m) y solo en el borde de verdad (sin
   parpadeos al mover la cabeza).
 - Los personajes geométricos hechos a mano gustaron poco: para enemigos nuevos, mejor modelos de Quaternius.
