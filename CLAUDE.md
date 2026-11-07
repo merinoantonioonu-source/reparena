@@ -199,6 +199,9 @@ No las cambies sin preguntarle.
 
 **Paneles y avisos en las gafas**
 - Ningún panel puede tapar lo que viene hacia el jugador.
+- Cuentas de vida (opción A elegida; `LIFE`, `src/70_game.js`): encima de cada enemigo, desde que sale, una fila de bolitas
+  doradas de cara al jugador, una por disparo normal; las que pierde **desaparecen** (no se quedan huecas) y las demás se
+  juntan; los que aguantan más de 8, bolitas grandes de 5. Sustituyen a la barra de vida. Un solo dibujo (puntos).
 - La diana (la única, líneas de enfoque): rayas que se mueven (giran, corren hacia fuera y ondulan), gruesas y con el centro
   claro, en un marco de al menos 32 cm (en los voladores pequeños apenas se veían). Las demás se quitaron.
 - Cada ajuste con explicación lleva una tecla «?» que enseña su explicación al lado del menú.

@@ -266,7 +266,7 @@ class HeadTarget {
       this.inst = RIGS[K.rig].instance(K.wasp ? MAT_STINGER : MAT_DRONE); this.root = this.inst.root; this.B = this.inst.bones;
       this.root.scale.setScalar(K.scale);
     }
-    if (K.boss) { this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2, this.bubble ? 0.24 : 0.3); setHpBar(this.bar, 1); }
+    this.bar = makeHpBar(this.root, this.bubble ? K.r + 0.05 : 0.2); // (el sitio de sus cuentas de vida, encima)
     if (eqKind() === 'door') { this.guide = new THREE.Mesh(guideGeo, guideMat); this.guide.scale.setScalar(1 / (K.scale || 1)); this.guide.position.y = -(K.r + 0.02) / (K.scale || 1); this.root.add(this.guide); }
     arena.add(this.root);
     this.side = barNextSide(); // por un lado (izquierda y derecha, por turnos: los dos brazos por igual) o al centro
@@ -349,7 +349,6 @@ class HeadTarget {
       if (this.inst.meshes.glow) this.inst.meshes.glow.visible = this.flick <= 0 || Math.random() < 0.5;
       if (this.buzz) this.buzz.set(this.center(tmpB));
     }
-    if (this.bar) this.bar.g.lookAt(head.p);
     if (this.guide) { this.guide.visible = (this.mode === 'wait' || this.mode === 'approach') && !idx; if (this.root.quaternion) this.guide.quaternion.copy(this.root.quaternion).invert(); }
   }
   // Avispa: vuela nivelada, como un insecto, girada hacia ti; su cara te mira sin parar y el abdomen va doblado por
@@ -387,7 +386,7 @@ class HeadTarget {
     if (this.buzz) this.buzz.set(this.center(tmpB));
   }
   onHit(dmg, perfect) {
-    this.hp -= dmg; this.flick = 0.3; if (this.bar) setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.flick = 0.3;
     if (this.hp <= 0) { this.pop(); return; }
     const c = this.center(new V3());
     if (this.bubble) { SND.pop(c, false); fx.droplets(c, 8, [0.45, 1, 0.85], 1, 0.025); } else { SND.metalHit(c, false); fx.sparks(c, 8, [1, 0.6, 0.2], 2, 0.03); }

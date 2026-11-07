@@ -29,17 +29,82 @@ function say(text, color = '#ffffff', dur = 1.4, toast = true) {
 }
 const cheer = (text, color, dur) => say(text, color, dur, false);
 
-/* ---------- Barra de vida flotante ---------- */
-const barBgMat = new THREE.MeshBasicMaterial({ color: 0x120d1c, transparent: true, opacity: 0.85, depthWrite: false });
-const barFgMat = new THREE.MeshBasicMaterial({ color: 0xff3b5c, toneMapped: false });
-const unitPlane = new THREE.PlaneGeometry(1, 1);
-function makeHpBar(parent, y, w) {
-  const g = new THREE.Group(); g.position.y = y; parent.add(g);
-  const bg = new THREE.Mesh(unitPlane, barBgMat); bg.scale.set(w, w * 0.09, 1); g.add(bg);
-  const fg = new THREE.Mesh(unitPlane, barFgMat); fg.scale.set(w * 0.96, w * 0.06, 1); fg.position.z = 0.002; g.add(fg);
-  g.visible = false; return { g, fg, w };
+/* ---------- Cuentas de vida (opción A, elegida por el usuario) ---------- */
+// Encima de cada enemigo, desde que sale, una fila de bolitas doradas de cara a ti: cada una es un disparo normal (la
+// perfecta quita dos y las cargas ×2/×3/×4, más), así se sabe antes de empezar cuánto aguanta. Las que pierde desaparecen
+// (encogen con un destello) y las demás se juntan en el centro; al derribarlo, se van las que le quedaban. Los que aguantan
+// más de 8 (los jefes), bolitas grandes de 5 (más anaranjadas, con un aro claro) y las sueltas. Todas en un solo dibujo
+// (puntos en la tarjeta gráfica, sin contorno de tinta ni niebla). Sustituyen a la barra de vida: makeHpBar deja solo el
+// sitio (un grupo vacío sobre la cabeza, a la altura de cada uno)
+function makeHpBar(parent, y) { const g = new THREE.Group(); g.position.y = y; parent.add(g); return { g }; }
+const LIFE_N = 192, LIFE_ROW = 6, LIFE_BIG = 5, LIFE_GAP = 0.3; // (cuántas como mucho a la vez, por fila, lo que vale una grande y el hueco entre ellas, en diámetros)
+const LIFE = (() => {
+  const g = new THREE.BufferGeometry(), pos = new Float32Array(LIFE_N * 3), size = new Float32Array(LIFE_N), kind = new Float32Array(LIFE_N), pop = new Float32Array(LIFE_N);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aSize', new THREE.BufferAttribute(size, 1)); g.setAttribute('aKind', new THREE.BufferAttribute(kind, 1)); g.setAttribute('aPop', new THREE.BufferAttribute(pop, 1)); g.setDrawRange(0, 0);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uVH: { value: 1000 } },
+    vertexShader: `attribute float aSize, aKind, aPop; uniform float uVH; varying float vKind, vPop, vPx;
+      void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+        float px = aSize * projectionMatrix[1][1] * uVH * 0.5 / max(0.05, -mv.z); gl_PointSize = aSize > 0.0 ? clamp(px, 3.0, 220.0) : 0.0;
+        vKind = aKind; vPop = aPop; vPx = max(px, 3.0); }`,
+    fragmentShader: `varying float vKind, vPop, vPx;
+      void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float d = length(q); if (d > 1.0) discard; float aa = 2.5 / vPx;
+        vec2 h = q - vec2(-0.32, -0.36); float hl = exp(-dot(h, h) * 5.0); // (el brillo, arriba a la izquierda)
+        vec3 lo = mix(vec3(0.93, 0.60, 0.11), vec3(0.88, 0.38, 0.10), vKind), mid = mix(vec3(1.0, 0.83, 0.36), vec3(1.0, 0.66, 0.2), vKind);
+        vec3 c = mix(lo, mid, clamp(1.1 - d * 1.2, 0.0, 1.0)); c = mix(c, vec3(1.0, 0.98, 0.9), hl * 0.85);
+        c = mix(c, vec3(1.0, 0.95, 0.75), vKind * smoothstep(0.47, 0.5, d) * (1.0 - smoothstep(0.57, 0.6, d))); // (la grande: un aro claro)
+        c = mix(c, vec3(0.106, 0.071, 0.149), smoothstep(0.74 - aa, 0.74, d)); // (el contorno de tinta)
+        gl_FragColor = vec4(mix(c, vec3(1.0, 1.0, 0.92), vPop), 1.0 - smoothstep(1.0 - aa, 1.0, d)); }`,
+    transparent: true, depthWrite: false
+  });
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 40; pts.userData.noInk = true; scene.add(pts);
+  return { pts, g, pos, size, kind, pop, sets: new Map() };
+})();
+const _lfa = new V3(), _lfr = new V3();
+// el tamaño de sus bolitas: 6,5 cm (4,2 cm en el suelo, en flexiones y planchas, que están cerca; 3,5 cm en las pompas de las barras, que llegan a la cara)
+const lifeDia = e => e.type === 'target' ? 0.035 : e.type === 'spider' || (e.type === 'flyer' && isTiny()) ? 0.042 : 0.065;
+const lifeD = (S, b) => S.d * (b.k ? 1.45 : 1); // (la grande, casi una vez y media)
+// lo que le queda, en bolitas: grandes de 5 si aguantaba más de 8, y sueltas
+const lifeWant = e => { const hp = Math.max(0, Math.ceil(e.alive ? e.hp : 0)), big = (e.maxHp || 0) > 8 ? Math.floor(hp / LIFE_BIG) : 0; return [big, hp - big * LIFE_BIG]; };
+function lifeStep(dt) {
+  const L = LIFE, seen = new Set();
+  for (const e of enemies) if (e.alive && e.bar && e.root && e.root.parent && e.root.visible !== false && e.hp > 0) {
+    seen.add(e); let S = L.sets.get(e); if (!S) { S = { b: [], at: new V3(), d: lifeDia(e) }; L.sets.set(e, S); }
+    const a = e.bar.g, r = e.root; S.at.set(0, a.position.y * r.scale.y, 0).add(r.position); r.parent.localToWorld(S.at); // (sobre la cabeza: sin el giro ni la inclinación del cuerpo)
+  }
+  for (const [e, S] of L.sets) {
+    const live = seen.has(e), [big, small] = live ? lifeWant(e) : [0, 0];
+    // las que sobran se van (primero las sueltas, de la derecha); si faltan sueltas (se rompió una grande), salen nuevas
+    for (const [k, want] of [[1, big], [0, small]]) {
+      const on = S.b.filter(b => b.k === k && !b.die); for (let i = want; i < on.length; i++) { on[i].die = true; on[i].pop = 1; }
+      for (let i = on.length; i < want; i++) S.b.push({ k, x: 0, y: 0, s: 0, die: false, pop: 0, fresh: true }); // (salen creciendo)
+    }
+    // su sitio: centradas, en filas de 6 (las grandes primero, arriba), cada fila tan ancha como sus bolitas
+    const on = S.b.filter(b => !b.die).sort((p, q) => q.k - p.k), gap = S.d * LIFE_GAP, rows = [];
+    for (let i = 0; i < on.length; i += LIFE_ROW) rows.push(on.slice(i, i + LIFE_ROW));
+    let y0 = 0;
+    for (let r = rows.length - 1; r >= 0; r--) {
+      const R = rows[r], w = R.reduce((a, b) => a + lifeD(S, b), 0) + gap * (R.length - 1), h = Math.max(...R.map(b => lifeD(S, b))); let x = -w / 2;
+      for (const b of R) { const tx = x + lifeD(S, b) / 2, ty = y0 + h / 2; x += lifeD(S, b) + gap;
+        if (b.fresh) { b.x = tx; b.y = ty; b.fresh = false; } else { const k = Math.min(1, dt * 12); b.x += (tx - b.x) * k; b.y += (ty - b.y) * k; } b.s = Math.min(1, b.s + dt * 6); }
+      y0 += h + gap;
+    }
+    for (const b of S.b) if (b.die) { b.s -= dt / 0.18; b.pop = Math.max(0, b.pop - dt * 5); } // (encoge en 0,18 s con un destello)
+    S.b = S.b.filter(b => b.s > 0); if (!S.b.length && !live) L.sets.delete(e);
+  }
+  // a los puntos: de cara a ti, la fila de lado a lado según desde dónde la miras
+  let n = 0;
+  for (const S of L.sets.values()) {
+    _lfr.set(head.p.z - S.at.z, 0, S.at.x - head.p.x); if (_lfr.lengthSq() < 1e-6) _lfr.set(1, 0, 0); _lfr.normalize();
+    for (const b of S.b) { if (n >= LIFE_N) break; const d = lifeD(S, b) * (b.die ? 1 + 0.35 * (1 - b.s) : 1) * Math.max(0, b.s); // (al irse, crece un poco mientras se apaga)
+      _lfa.copy(S.at).addScaledVector(_lfr, b.x); _lfa.y += b.y; L.pos[n * 3] = _lfa.x; L.pos[n * 3 + 1] = _lfa.y; L.pos[n * 3 + 2] = _lfa.z;
+      L.size[n] = b.die ? d * Math.min(1, b.s * 1.6) : d; L.kind[n] = b.k; L.pop[n] = b.pop; n++; }
+  }
+  L.g.setDrawRange(0, n); L.pts.visible = n > 0;
+  for (const k of ['position', 'aSize', 'aKind', 'aPop']) L.g.attributes[k].needsUpdate = true;
+  const xs = renderer.xr && renderer.xr.isPresenting && renderer.xr.getSession(), XL = xs && xs.renderState && xs.renderState.baseLayer; // (como las luciérnagas: el alto de la imagen de cada ojo)
+  L.pts.material.uniforms.uVH.value = XL && XL.framebufferHeight ? XL.framebufferHeight : innerHeight * (renderer.getPixelRatio ? renderer.getPixelRatio() : 1);
 }
-function setHpBar(bar, r) { bar.g.visible = true; bar.fg.scale.x = bar.w * 0.96 * Math.max(0, r); bar.fg.position.x = -bar.w * 0.48 * (1 - Math.max(0, r)); }
 function rigDebris(inst, center, power, smokeChance, mats) {
   inst.root.updateMatrixWorld(true);
   for (const b of inst.rig.bones) {
@@ -207,7 +272,7 @@ class Robot {
     this.vMove = this.vWalk * travel;
     this.speed = this.vWalk;
     this.yaw = Math.atan2(this.slot.x - this.pos.x, this.slot.z - this.pos.z);
-    this.bar = makeHpBar(this.root, 2.25, 0.7); if (K.boss) setHpBar(this.bar, 1);
+    this.bar = makeHpBar(this.root, 2.25); // (el sitio de sus cuentas de vida)
     // con las animaciones de la biblioteca cargadas, se mueven con ellas (el pequeño, de cintura para arriba)
     const mk = { ripper: 'ripper', destroyer: 'destroyer', colossus: 'destroyer' }[this.rig.kind];
     if (mk && BEAST.rigClips && BEAST.rigClips[mk]) Object.assign(this, { clips: BEAST.rigClips[mk], mx: new THREE.AnimationMixer(this.root), acts: {}, cur: null, react: 0, prevSt: '', mxLegs: mk === 'destroyer', stepU: 0, stepClip: '' });
@@ -477,7 +542,6 @@ class Robot {
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
     this.animate(dt, this.gt, this.aspd); // su propio reloj, al ritmo de sus gestos
     if (this.rig.kind !== 'ripper' && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
-    if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   // Esquivas: se aparta de golpe hacia un lado (los que tienen las animaciones de la biblioteca y el cuerpo entero, con
   // una voltereta); de vez en cuando mientras se acerca y, a veces, al recibir un disparo. Nunca contra otro ni contra
@@ -528,7 +592,7 @@ class Robot {
   onHit(dmg, perfect, point, pow = 1) {
     if (this.mx) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; }
     if (pow >= 3 && this.hp > dmg) this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
+    this.hp -= dmg; this.hitT = 0.3; this.flickT = 0.25; this.stagger = Math.min(1, this.stagger + 0.6); this.twitch = 1; this.recoil(perfect, pow);
     fx.sparks(point, 12, [1, 0.55, 0.15], 3, 0.05); fx.glow(point, [1, 0.6, 0.3], 0.5, 0.1); SND.metalHit(point, this.K.heavy);
     if (this.hp <= 0) this.kill();
   }
@@ -619,7 +683,7 @@ class Beast extends Robot {
   }
   onHit(dmg, perfect, point, pow = 1) {
     const down = pow >= 3 && this.hp > dmg && this.knockDown();
-    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; setHpBar(this.bar, this.hp / this.maxHp); this.recoil(perfect, pow);
+    this.hp -= dmg; this.hitT = 0.3; this.stagger = Math.min(1, this.stagger + 0.6); this.tint = 1; this.recoil(perfect, pow);
     if (down && this.downAnim) { /* ya cae con su animación */ }
     else if (this.clips.Hit_Chest) { this.reactClip = Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head'; this.react = 0.35 / (this.pace || 1); this.restart = true; } // sin esas animaciones (zombi, dinosaurios), solo el tambaleo
     else if (this.D.hit && this.clips[this.D.hit]) { this.reactClip = this.D.hit; this.react = 0.35 / (this.pace || 1); this.restart = true; } // (los que traen la suya)
@@ -670,7 +734,7 @@ class Spider {
     this.legs = this.legless ? [] : SPIDER_LEGS.map(d => ({ d, foot: new V3(), from: new V3(), to: new V3(), t: 1, dur: 0.08, hipW: new V3() }));
     this.root.position.copy(this.pos); this.root.rotation.y = this.yaw; this.root.updateMatrixWorld(true);
     this.legs.forEach(L => { this.idealFoot(L, _foot); L.foot.copy(_foot); });
-    this.bar = makeHpBar(this.root, this.legless ? 0.27 : 0.17, 0.14); if (this.boss) setHpBar(this.bar, 1);
+    this.bar = makeHpBar(this.root, this.legless ? 0.27 : 0.17);
     SND.hiss(this.center(tmpA), this.s, this.voice);
   }
   makeBody() {
@@ -757,7 +821,6 @@ class Spider {
     this.pose(dt, t);
     this.root.updateMatrixWorld(true);
     this.updateLegs(dt);
-    if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   // el aspecto: respiración, colmillos, pedipalpos y ojos que se encienden
   pose(dt, t) {
@@ -822,7 +885,7 @@ class Spider {
     if (this.mode === 'rear') { if ((pow >= 2 || perfect) && !this.boss) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = 0.5; } else this.st = Math.max(0, this.st - 0.15 * k); }
   }
   onHit(dmg, perfect, point, pow = 1) {
-    this.hp -= dmg; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg;
     fx.ichor(point, 8, this.s); SND.squish(point);
     this.rear = 0; if (this.mode === 'run') { this.run = false; this.runT = 0.25; }
     this.recoil(perfect, pow);
@@ -946,7 +1009,7 @@ class Flyer {
     const sp = dv('flySpeed') / 3.6 * (push ? 0.27 : 1);
     if (!push) { const g = this.gate = pick(liveGates()), r = g.g.rotation.y; g.openT = Math.min(10, 1.2 + 1.2 / Math.max(0.05, sp * K.speed)); start = new V3(g.x - 0.6 * Math.sin(r), (low ? 0.6 : 1.5) * g.scale, g.z - 0.6 * Math.cos(r)); }
     Object.assign(this, { base: start.clone(), pos: start.clone(), last: start.clone(), dart: new V3(), dartT: new V3(0, push ? 0.25 : rand(1.8, 3.6), 0), nextDart: 1.2, speed: sp * K.speed * rand(0.85, 1.15), erratic: K.erratic * dv('erratic') / 100, w1: rand(0.6, 1.6), w2: rand(0.8, 1.8), ph1: rand(0, TAU), ph2: rand(0, TAU), t: 0, retreat: 0, hp: spec.hp, maxHp: spec.hp, pending: 0, alive: true, radius: 0.24 * this.scale * (spec.kind === 'hornet' ? 0.78 : 1), bank: 0, flickT: 0, windT: 0 });
-    this.bar = makeHpBar(this.root, K.beast ? 0.34 : spec.kind === 'hornet' ? 0.1 : 0.17, spec.kind === 'hornet' ? 0.16 : 0.3); if (K.boss) setHpBar(this.bar, 1);
+    this.bar = makeHpBar(this.root, K.beast ? 0.34 : spec.kind === 'hornet' ? 0.1 : 0.17);
     this.buzz = buzzLoop(spec.kind, arena.localToWorld(start.clone()));
     this.root.position.copy(start);
   }
@@ -1017,7 +1080,6 @@ class Flyer {
     }
     if (this.flickT > 0) { this.flickT -= dt; const m = this.inst.meshes.glow; if (m) m.visible = this.flickT <= 0 || Math.random() < 0.5; }
     if (this.buzz) this.buzz.set(this.center(tmpA));
-    if (this.bar.g.visible) this.bar.g.lookAt(head.p);
   }
   shove(dist) {
     if (!(dist > 0)) return;
@@ -1031,7 +1093,7 @@ class Flyer {
     if (this.windT > 0 && this.windT < 0.45 && !this.K.boss) { this.windT = 0; this.retreat = Math.max(this.retreat, 0.5); }
   }
   onHit(dmg, perfect, point, pow = 1) {
-    this.hp -= dmg; this.flickT = 0.2; setHpBar(this.bar, this.hp / this.maxHp);
+    this.hp -= dmg; this.flickT = 0.2;
     fx.sparks(point, 8, [1, 0.6, 0.2], 2, 0.03 * Math.max(0.5, this.scale)); SND.metalHit(point, false);
     this.dartT.multiplyScalar(-1); this.recoil(perfect, pow);
     if (this.hp <= 0) this.kill();
