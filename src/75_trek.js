@@ -680,11 +680,12 @@ function trekWolfLoad() {
   TREK_WOLF.loading = true;
   new THREE.GLTFLoader().load('models/animales/lobo.glb', g => { TREK_WOLF.scene = g.scene; TREK_WOLF.clips = g.animations; TREK_WOLF.loading = false; }, undefined, e => { TREK_WOLF.failed = true; TREK_WOLF.loading = false; console.log('No se pudo cargar el lobo:', e && e.message); });
 }
-const trekWolfV = () => Math.min(1.75, 0.97 + 0.095 * waveIdx + 0.04 * rankIdx()) * trekK(); // (en m/s: hay que ir más deprisa que ellos; a tu velocidad de avance)
+const trekWolfV = () => Math.min(1.4, 0.75 + 0.07 * waveIdx + 0.03 * rankIdx()) * trekK(); // (en m/s, a tu velocidad de avance: un 25 % menos que antes, que costaba demasiado ganarles)
 // la velocidad de avance elegida (Ajustes → Modo Travesía)
 const trekK = () => (settings.trekSpeed || 100) / 100;
-// Dónde salen (a D m por delante y X m a un lado) y lo que hay que ir más deprisa que ellos para ganar la carrera
-const TREK_WOLF_D = 28, TREK_WOLF_X = 9, TREK_WOLF_RHO = 1.1;
+// Dónde salen (a D m por delante y X m a un lado) y lo que hay que ir más deprisa que ellos para ganar la carrera (1: basta
+// con ir a su paso), y a cuánto muerden
+const TREK_WOLF_D = 28, TREK_WOLF_X = 9, TREK_WOLF_RHO = 1, TREK_WOLF_BITE = 0.8;
 // el punto del sendero al que corren, a c m por delante de ti: yendo RHO veces más deprisa que ellos, llegaríais a la vez
 function trekCutPoint(D, X, rho) { let lo = 0, hi = D; for (let i = 0; i < 40; i++) { const c = (lo + hi) / 2; if (c > rho * Math.hypot(D - c, X)) hi = c; else lo = c; } return (lo + hi) / 2; }
 function trekChaseStart() {
@@ -697,7 +698,7 @@ function trekChaseStart() {
 // árboles (de lejos se tapaban) y siempre del mismo tamaño a la vista; se apaga al acercarse, cuando ya se ve el lobo
   for (const w of C.wolves) { w.mark = new THREE.Mesh(TREK_WOLF.markGeo || (TREK_WOLF.markGeo = new THREE.PlaneGeometry(1, 1)), new THREE.MeshBasicMaterial({ map: trekWolfMarkTex(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false, side: THREE.DoubleSide })); w.mark.renderOrder = 45; w.mark.raycast = () => {}; TREK.group.add(w.mark); }
   TREK.chase = C; trekWolfMeshes(C); say('¡LOBOS! Acelera y pasa antes que ellos', '#ff8a3d', 2.2);
-  const w = C.wolves[0]; trekBend(w.s, w.u, _tkq); SND.roar(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z)), 0.7);
+  const w = C.wolves[0]; trekBend(w.s, w.u, _tkq); SND.wolfHowl(arena.localToWorld(_tkh.set(_tkq.x, 0.8, _tkq.z + HL.z))); // (el aullido: se oye de lejos)
 }
 // la flecha (▼ roja con borde claro), una sola textura para todos
 function trekWolfMarkTex() {
@@ -727,16 +728,16 @@ function trekChaseStep(dt, t) {
     if (run) {
       // la carrera: a su punto del sendero; luego, a por ti (detrás de ti, si llegaste antes); tras morder, se aparta
       let ts = w.cs, tu = 0, v = C.v;
-      if (w.st === 'chase') { ts = su; tu = uu; } else if (w.st === 'off') { ts = w.s - 6; tu = w.side * 14; v *= 0.8; w.offT += dt; }
+      if (w.st === 'chase') { ts = su; tu = uu; if (w.s < su) v *= 0.85; } else if (w.st === 'off') { ts = w.s - 6; tu = w.side * 14; v *= 0.8; w.offT += dt; } // (por detrás de ti, cansados: si sigues, no te alcanzan)
       const ds = ts - w.s, du = tu - w.u, r = Math.hypot(ds, du);
       if (r > 1e-3) { const k = Math.min(r, v * dt) / r; w.s += ds * k; w.u += du * k; w.hd = Math.atan2(du, -ds); }
-      if (w.st === 'race' && r < 0.25) w.st = 'chase';
+      if (w.st === 'race' && r < 0.25) { w.st = 'chase'; w.chaseT = 0; } else if (w.st === 'chase') w.chaseT = (w.chaseT || 0) + dt;
     }
     const ds = w.s - su, d = Math.hypot(ds, w.u - uu);
     if (w.st === 'race' || w.st === 'chase') {
       near = Math.min(near, d);
-      if (run && d < 1.1) { w.st = 'off'; C.bit = true; trekWolfBite(w); hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); hapticBoth(0.9, 160); boardDirty = true; }
-      else if (ds < -12) w.st = 'gone'; // (se ha quedado atrás)
+      if (run && d < TREK_WOLF_BITE) { w.st = 'off'; C.bit = true; trekWolfBite(w); trekBend(w.s, w.u, _tkq); SND.wolfBite(arena.localToWorld(_tkh.set(_tkq.x, 0.7, _tkq.z + HL.z))); hurtPlayer({ silent: true }); say('¡Te ha mordido un lobo! Acelera', '#ff3b5c', 1.8); hapticBoth(0.9, 160); boardDirty = true; }
+      else if (w.st === 'race' ? ds < -45 : ds < -12 && w.chaseT > 1.5) w.st = 'gone'; // (se ha quedado atrás; en la carrera, aunque vaya muy atrás, sigue hasta cruzar el sendero por detrás de ti y corre un momento por él)
     } else if (w.st === 'off' && (w.offT > 4 || ds < -15)) w.st = 'gone';
     if (w.mark) { trekBend(w.s, w.u, _tkq); const k = clamp(d * 0.04, 0.3, 1.5) * (1 + 0.08 * Math.sin(t * 7 + w.ph)); w.mark.position.set(_tkq.x, 0.95 + k * 0.6, _tkq.z + HL.z); w.mark.scale.set(k, k, 1); w.mark.lookAt(head.p); w.mark.material.opacity = w.st === 'race' || w.st === 'chase' ? clamp((d - 4) / 5, 0, 1) * 0.95 : 0; w.mark.visible = w.mark.material.opacity > 0.01; } // (unos 2,3° a la vista, cerca o lejos)
     if (w.mesh) { // en el sendero (con sus curvas), mirando hacia donde corre
@@ -747,7 +748,8 @@ function trekChaseStep(dt, t) {
     }
   }
   C.gap = near; // (lo que dice el marcador: el más cercano)
-  if (near < 4 && (C.growl -= dt) <= 0) { C.growl = 1.6; const w = C.wolves.find(x => x.st === 'race' || x.st === 'chase'); if (w) { trekBend(w.s, w.u, _tkq); SND.hiss(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z))); } hapticBoth(0.25, 40); }
+  // al acercarse, gruñen: más a menudo y más fuerte cuanto más cerca (el más cercano)
+  if (near < 12 && (C.growl -= dt) <= 0) { const k = clamp(1 - near / 12, 0, 1); C.growl = 2.2 - 1.2 * k; let w = null, wd = 99; for (const x of C.wolves) if (x.st === 'race' || x.st === 'chase') { const d = Math.hypot(x.s - su, x.u - uu); if (d < wd) { wd = d; w = x; } } if (w) { trekBend(w.s, w.u, _tkq); SND.wolfGrowl(arena.localToWorld(_tkh.set(_tkq.x, 0.6, _tkq.z + HL.z)), k); } if (near < 4) hapticBoth(0.25, 40); }
   if (C.wolves.every(w => w.st === 'gone')) { if (!C.bit) score += 250; trekChaseEnd(C.bit ? 'Los lobos se quedan atrás' : '¡Has dejado atrás a los lobos!', '#3cf0c6'); }
   else if (C.t > 50) trekChaseEnd('Los lobos se cansan', '#a49fc8');
 }

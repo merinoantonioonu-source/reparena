@@ -28,6 +28,9 @@ Vale `.mp3`, `.ogg` o `.wav` (por ejemplo `rayo.mp3`). Si un archivo no está, s
 | `ataque-arana` | Una araña salta a por ti. |
 | `aplastar` | Revientas una araña o un avispón (chapoteo viscoso). |
 | `ataque-volador` | Un avispón se lanza a picarte (o, en Barras, una avispa o un dron). |
+| `lobo-aullido` | Travesía: los lobos aparecen a lo lejos (aúlla el primero; se oye desde lejos). |
+| `lobo-grunido` | Travesía: un lobo gruñe al acercarse (cada vez más a menudo y más fuerte). |
+| `lobo-ataque` | Travesía: un lobo te alcanza y muerde (rugido y dentellada). |
 | `lanzamiento` | El lanzador te tira una piedra. |
 | `arco-pasa` | Un arco de energía te pasa por encima, o lo saltas (Arcos). |
 | `orbe` | Coges un orbe en Arcos. (Campanitas de cristal que suben.) |

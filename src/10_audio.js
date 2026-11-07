@@ -196,6 +196,31 @@ const SND = {
     const lp = C.createBiquadFilter(); lp.type = 'bandpass'; lp.frequency.value = 1400; lp.Q.value = 1.5; os.connect(lp); lp.connect(envGain(T, 0.03, 0.05, 0.35, o)); os.start(T); os.stop(T + 0.42);
   },
   roar(pos, s = 1) { roarSynth(pos, s); },
+  // los lobos de la Travesía: el aullido al aparecer (se oye de lejos), el gruñido que crece al acercarse (k: de 0, lejos, a
+  // 1, encima) y el rugido con la dentellada al morder
+  wolfHowl(pos) {
+    if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.75, gain: 0.9, ref: 16 });
+    const bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 950; bp.Q.value = 0.7; bp.connect(o);
+    const env = C.createGain(); env.gain.setValueAtTime(0.0001, T); env.gain.exponentialRampToValueAtTime(0.5, T + 0.35); env.gain.setValueAtTime(0.5, T + 1.7); env.gain.exponentialRampToValueAtTime(0.0001, T + 2.6); env.connect(bp);
+    const vib = C.createOscillator(), vg = C.createGain(); vib.frequency.value = 5.2; vg.gain.value = 9; vib.connect(vg); vib.start(T); vib.stop(T + 2.7);
+    [[1, 'triangle', 0.5], [2, 'sine', 0.18], [3, 'sine', 0.08]].forEach(([h, ty, gn]) => { const os = C.createOscillator(), g = C.createGain(); os.type = ty; os.frequency.setValueAtTime(300 * h, T); os.frequency.exponentialRampToValueAtTime(560 * h, T + 0.6); os.frequency.setValueAtTime(560 * h, T + 1.5); os.frequency.exponentialRampToValueAtTime(400 * h, T + 2.6); vg.connect(os.frequency); g.gain.value = gn; os.connect(g).connect(env); os.start(T); os.stop(T + 2.7); });
+    noise(o, { type: 'bandpass', f: 1800, q: 1, a: 0.3, d: 2, gain: 0.04 });
+  },
+  wolfGrowl(pos, k = 0.5) {
+    if (!sndOK()) return; const C = AUD.C, T = C.currentTime, d = 0.8 + 0.5 * Math.random(), o = sout(pos, { rev: 0.3, gain: 0.5 + 0.7 * k, ref: 3 });
+    const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420 + 200 * k; bp.Q.value = 1.4; bp.connect(sh);
+    const am = C.createGain(); am.gain.value = 0.5; am.connect(bp);
+    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = rand(24, 34); lg.gain.value = 0.45; lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + d + 0.1);
+    [78, 81.5, 156].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * 1.1, T); os.frequency.linearRampToValueAtTime(f, T + d); os.connect(envGain(T, 0.12, 0.25, d, am)); os.start(T); os.stop(T + d + 0.2); });
+    noise(o, { brown: true, type: 'bandpass', f: 500, q: 1.2, a: 0.1, d, gain: 0.3 + 0.3 * k });
+  },
+  wolfBite(pos) {
+    if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.35, gain: 1.2, ref: 2 });
+    const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.6; bp.frequency.setValueAtTime(700, T); bp.frequency.linearRampToValueAtTime(1300, T + 0.15); bp.frequency.linearRampToValueAtTime(500, T + 0.7); bp.connect(sh);
+    [130, 137, 262].forEach(f => { const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * 1.3, T); os.frequency.exponentialRampToValueAtTime(f * 0.8, T + 0.7); os.connect(envGain(T, 0.03, 0.3, 0.7, bp)); os.start(T); os.stop(T + 0.8); });
+    noise(o, { type: 'bandpass', f: 2200, q: 1.1, a: 0.01, d: 0.45, gain: 0.35 });
+    for (const t of [0.18, 0.3]) noise(o, { t, type: 'highpass', f: 2500, a: 0.001, d: 0.03, gain: 0.6 }); // (la dentellada: dos chasquidos de mandíbula)
+  },
   // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
   bird(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
@@ -358,7 +383,8 @@ const SND_FILES = {
   orb: ['orbe', 0], hiss: [{ who: 2, def: 'spider' }, 0], skitter: ['patas-arana', 0], squish: ['aplastar', 0], zap: ['chispazo', 0], waterPop: ['ameba', 0], splash: ['chapoteo', 0],
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
-  owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0]
+  owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0],
+  wolfHowl: ['lobo-aullido', 0], wolfGrowl: ['lobo-grunido', 0], wolfBite: ['lobo-ataque', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
