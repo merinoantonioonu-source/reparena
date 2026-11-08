@@ -197,11 +197,11 @@ function guardPoint(src, out) {
   return out.copy(head.p).addScaledVector(d, 0.38 / l).add(_gdQ.set(0, isFloor() ? -0.05 : -0.2, 0));
 }
 // Rebote: lo aparta (dist, en metros a su escala) y, en una parada, lo deja aturdido «stun» segundos
-function guardRepel(e, dist, stun) {
+function guardRepel(e, dist, stun, dir) { // (dir: hacia dónde iba la mano; sin ella, solo lejos de ti)
   if (!e || !e.alive) return;
-  if (e.type === 'robot') { e.shove(dist * (e.K.boss ? 0.4 : 1)); if (stun) { e.stunT = Math.max(e.stunT || 0, stun * (e.K.boss ? 0.6 : 1)); e.stagger = 1; } }
+  if (e.type === 'robot') { e.shove(dist * (e.K.boss ? 0.4 : 1), dir); if (stun) { e.stunT = Math.max(e.stunT || 0, stun * (e.K.boss ? 0.6 : 1)); e.stagger = 1; } }
   else if (e.type === 'spider') { e.bounce = dist * 0.35; e.parryT = stun; }
-  else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1)); e.parryT = stun; }
+  else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1), dir); e.parryT = stun; }
 }
 /* ---------- Golpe: un puñetazo (o con la pesa o el mando que lleves) aparta al que tienes cerca ---------- */
 // En Combate, de pie o sentado (en el suelo, las manos están apoyadas) y sin espadas (que cortan): la mano que va deprisa
@@ -218,8 +218,9 @@ function punchStep(dt) {
   for (const s of ['left', 'right']) {
     const h = hands[s], P = PUNCH[s]; P.cd -= dt;
     if (!h.ok || h.back) { P.ok = false; if (!h.ok) continue; } // (al volver tras una mano calculada, el salto no es un puñetazo)
-    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
-    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
+    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; P.acc = 0; continue; }
+    P.acc += dt; if (!handNew(h)) continue; // (postura repetida por las gafas: se mide con la siguiente, con el tiempo de verdad entre las dos)
+    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(P.acc); P.last.copy(h.wrist); P.hl.copy(head.p); P.acc = 0;
     const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;
     for (const e of enemies) {
       if (!e.alive || e.state === 'emerge' || (e.punchT && PUNCH.t < e.punchT)) continue;
@@ -228,7 +229,7 @@ function punchStep(dt) {
       P.cd = PUNCH_CD; e.punchT = PUNCH.t + PUNCH_E; PUNCH.n++;
       // si estaba preparando o soltando su golpe, se lo cortas (no te da)
       if (e.type === 'robot' && (e.state === 'windup' || e.state === 'strike')) { if (e.zone) blockCancel(e); e.zone = null; e.state = 'walk'; e.st = 0; e.vel.set(0, 0, 0); }
-      const k = clamp(sp / 4, 0.6, 1.4); guardRepel(e, 0.55 * k, 0.5);
+      const k = clamp(sp / 4, 0.6, 1.4); guardRepel(e, 0.55 * k, 0.5, _puV); // (hacia donde iba el puño: un gancho lo echa de lado)
       const hit = h.wrist.clone().lerp(_puC, 0.5);
       fx.sparks(hit, 14, [1, 0.85, 0.5], 2.5, 0.035); fx.glow(hit, [1, 0.9, 0.7], 0.35, 0.08); comicHit(hit);
       if (e.type === 'robot' && !(e.K && e.K.beast3d)) SND.metalHit(hit, false); else SND.squish(hit);

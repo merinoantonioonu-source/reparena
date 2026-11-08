@@ -48,7 +48,7 @@ global.fetch = async (url, opts = {}) => {
 };
 let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.js'), 'utf8');
 const expose = `
-window.__RA = { LIFE, lifeWant, MOTES, MOTEB, motesBeat, HRX, hrxStep, hrxTake, hrxSeal, spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
+window.__RA = { get SWORD_ARM(){return SWORD_ARM}, TOPC, LIFE, lifeWant, MOTES, MOTEB, motesBeat, HRX, hrxStep, hrxTake, hrxSeal, spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
   setSetting, startXR, gloves, watch, BODY, HRS, appVal, APP_SECS, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, sndPreview, sndSetOn, shieldCheck, crSave,
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, sesClean, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, danceP, throwK, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine, ARX_TINT, arxSpeed, QUAL, qualLevel, DAYB, TROPHY, trophy, TREK, trekRep, trekMoveStep, TMV, TREK_BAND, TREK_WOLF, demoJoints, demoPose };
@@ -1620,6 +1620,12 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     R.match = es.length > 0 && es.every(e => on(e).length === e.hp); R.drawn = L.g.drawRange.count; R.total = es.reduce((a, e) => a + e.hp, 0);
     R.noBar = es.every(e => e.bar && e.bar.g.children.length === 0); // (de la barra de antes no queda nada: solo el sitio)
     R.above = es.every(e => { const S = L.sets.get(e), c = e.center(new THREE.Vector3()); return S && S.at.y > c.y; });
+    // el empujón con dirección: un golpe de lado (puñetazo o tajo) lo echa también hacia ese lado y le gira el cuerpo
+    { const r = live().find(x => x.type === 'robot' && x.out && x.state !== 'emerge');
+      if (r) { const aw = new THREE.Vector3().subVectors(r.pos, RA.HL); aw.y = 0; aw.normalize(); const side = new THREE.Vector3(-aw.z, 0, aw.x), sideW = side.clone().applyQuaternion(RA.arena.quaternion);
+        const p0 = (r.pushV || new THREE.Vector3()).clone(), tw0 = r.twist || 0; r.shove(0.3, sideW.clone().multiplyScalar(3));
+        const dp = r.pushV.clone().sub(p0); R.lat = dp.dot(side) / (dp.length() || 1); R.away = dp.dot(aw) / (dp.length() || 1); R.tw = Math.abs((r.twist || 0) - tw0) + Math.abs(r.yawKick || 0);
+        const p1 = r.pushV.clone(); r.shove(0.3); const dq = r.pushV.clone().sub(p1); R.straight = dq.dot(aw) / (dq.length() || 1); } }
     // un golpe: una bolita menos (se va encogiendo y desaparece) y las demás, juntas en el centro
     const e = es.find(x => x.hp >= 2) || es[0];
     if (e) { const h0 = e.hp; e.hp -= 1; step(1); const S = L.sets.get(e); R.dying = S ? S.b.filter(b => b.die).length : -1; step(10);
@@ -1628,6 +1634,8 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       e.hp = 0; step(10); R.allGone = !L.sets.has(e) || !L.sets.get(e).b.length; }
     // los jefes (más de 8): grandes de 5 y sueltas; al romperse una grande, salen sueltas
     R.boss = JSON.stringify([RA.lifeWant({ alive: true, hp: 23, maxHp: 23 }), RA.lifeWant({ alive: true, hp: 19, maxHp: 23 }), RA.lifeWant({ alive: true, hp: 6, maxHp: 6 })]);
+    if (R.lat !== undefined) { log(`directional shove: a side blow pushes ${(R.lat * 100).toFixed(0)} % sideways and ${(R.away * 100).toFixed(0)} % away, turns it ${R.tw.toFixed(2)}; a ray (no direction) pushes ${(R.straight * 100).toFixed(0)} % straight away`);
+      if (!(R.lat > 0.4 && R.away > 0.2 && R.tw > 0.05 && R.straight > 0.99)) errors.push('empujón: un golpe de lado debería echar al enemigo también hacia ese lado y girarle el cuerpo (y el rayo, recto hacia atrás)'); }
     log(`life beads: ${R.n} enemies (${R.types}) · beads = their life ${R.match} (drawn ${R.drawn} of ${R.total}) · old bar gone ${R.noBar} · above them ${R.above} · a hit: ${R.h0} → ${R.left}, dying ${R.dying}, then ${R.after} left, ${R.gone} still dying, centred ${R.centred} · killed: all gone ${R.allGone} · boss ${R.boss}`);
     if (!R.n || !R.match || R.drawn < R.total) errors.push('cuentas de vida: cada enemigo debería llevar encima una bolita por cada disparo que aguanta, desde que sale');
     if (!R.noBar) errors.push('cuentas de vida: la barra de vida de antes debería haber desaparecido');
@@ -2588,6 +2596,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (block && (parries < 2 || RA.stats.kills < 1)) errors.push(`espada XR (${name}): no se paran los golpes con la espada o no hay contraataque`);
     RA.exitAll(); frame(2, 16, xrFrame);
   }
+  // La espada pide mover el brazo (no basta un giro de muñeca: la punta corre mucho por la palanca de la hoja) y el bloqueo
+  // cuenta solo si la hoja sigue en la marca al llegar el golpe (pasarla al principio y quitarla ya no para nada)
+  { applyCfg({ mode: 'walkers', aim: 'hands', exercise: 'squat', sword: 'one', swordHand: 'right', swordKind: 'metal', swordBlock: 1, swordSpeed: 1.6, pistol: 0, lives: 0, waves: 1, repsWave: 30, rest: 0, walkTime: 6, maxAlive: 1, spawnGap: 1, squatDepth: 25 });
+    XRS.controllers = true; XRS.haptics = []; XRS.headY = 1.7; restSword('right'); restSword('left'); await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
+    const S = RA.SWD.s.right, piv = new THREE.Vector3(0.3, 1.2, -0.4); let flickTip = 0, flickArm = 9, swingTip = 0, swingArm = 0;
+    for (let k = 0; k <= 8; k++) { const a = -0.9 + 1.8 * k / 8, d = new THREE.Vector3(Math.sin(a), 0, -Math.cos(a)); XRS.ctrl.right = { p: piv.clone(), q: new THREE.Quaternion().setFromUnitVectors(_Z, d) }; frame(1, 16, xrFrame); if (k > 1) { flickTip = Math.max(flickTip, S.speed); flickArm = Math.min(flickArm, S.arm); } }
+    restSword('right'); frame(10, 16, xrFrame);
+    for (let k = 0; k <= 8; k++) { holdSword('right', new THREE.Vector3(0, 1.2, -1.3), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), -0.45 + 0.9 * k / 8); frame(1, 16, xrFrame); if (k > 1) { swingTip = Math.max(swingTip, S.speed); swingArm = Math.max(swingArm, S.arm); } }
+    restSword('right'); frame(10, 16, xrFrame);
+    // bloqueo: la hoja en la marca solo al principio de la preparación, y luego fuera
+    const res = { early: [0, 0], late: [0, 0] }; let cur = null, mode = null, tint = false;
+    for (let i = 0; i < 5000 && RA.state !== 'end' && res.late[0] < 2; i++) {
+      const w = RA.enemies.find(e => e.alive && e.zone && (e.state === 'windup' || e.state === 'strike'));
+      if (w && w !== cur) { cur = w; mode = res.early[0] < 2 ? 'early' : 'late'; res[mode][0]++; }
+      if (w) { XRS.headY = w.zone === 'high' ? 1.7 : w.zone === 'low' ? 1.32 : 1.45;
+        const inZone = mode === 'late' || (w.state === 'windup' && w.st < 0.45);
+        if (inZone) { const p = RA.blockPoint(w, new THREE.Vector3()); holdSword('right', p, new THREE.Vector3(1, 0, -0.2).normalize(), new THREE.Vector3(0, 1, 0), 0); } else restSword('right');
+        frame(1, 16, xrFrame); if (inZone && w.zoneSpr && w.zoneSpr.material.color.getHex() === 0x3cf0c6) tint = true; continue; }
+      if (cur) { if (cur.stunT > 0) res[mode][1]++; cur = null; }
+      XRS.headY = 1.7; restSword('right'); frame(1, 16, xrFrame);
+    }
+    const [early, earlyParry] = res.early, [late, lateParry] = res.late;
+    log(`sword XR checks: a wrist flick moves the tip at ${flickTip.toFixed(1)} m/s but the hilt at ${flickArm.toFixed(2)} m/s (needs ${RA.SWORD_ARM}); a real swing: tip ${swingTip.toFixed(1)}, hilt ${swingArm.toFixed(1)} · block: blade in the mark only at the start ${early} times → parried ${earlyParry}; held to the end ${late} → parried ${lateParry} · mark turns turquoise when covered ${tint}`);
+    if (!(flickTip > 1.6 && flickArm < RA.SWORD_ARM && swingArm > RA.SWORD_ARM)) errors.push('espada: un giro de muñeca con el brazo quieto no debería valer como tajo (y uno de verdad sí)');
+    if (!early || earlyParry) errors.push('espada: pasar la hoja por la marca al principio y quitarla no debería parar el golpe');
+    if (late && !lateParry) errors.push('espada: con la hoja en la marca hasta el golpe, debería pararse');
+    if (!tint) errors.push('espada: la marca del golpe debería ponerse turquesa al cubrirla con la hoja');
+    RA.exitAll(); frame(2, 16, xrFrame); }
   // espada en una mano y bláster en la otra; o dos espadas
   for (const [sw, pis] of [['one', 1], ['two', 0]]) {
     applyCfg({ mode: 'walkers', exercise: 'squat', sword: sw, swordHand: 'right', pistol: pis, lives: 0, waves: 1, repsWave: 6 });
@@ -2681,6 +2717,24 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.pinch = 'right'; frame(10, 16, xrFrame); XRS.pinch = null; frame(4, 16, xrFrame); const pinchShots = RA.stats.shots - shots0;
     throwAt('right', true); const slowShots = RA.stats.shots - shots0;
     throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const two = RA.stats.shots - shots0; throwAt('left'); const extra = RA.stats.shots - shots0 - two;
+    // las gafas leen las manos menos veces de las que pintan y repiten la postura a ratos: una sacudida normal (32 cm en
+    // 0,2 s, unos 1,6 m/s) con la mano nueva solo uno de cada dos fotogramas tiene que lanzar igual que con todas nuevas
+    // (antes, el fotograma repetido parecía un frenazo y cortaba el gesto en trozos de unos 5 cm)
+    const throwRep = (side, every) => { const s0 = RA.stats.shots; squat();
+      for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive) && RA.state !== 'end'; i++) frame(1, 16, xrFrame);
+      const e = RA.enemies.find(x => x.alive), back = new THREE.Vector3(side === 'left' ? -0.2 : 0.2, XRS.headY - 0.25, 0); XRS.hands[side] = back.clone(); frame(6, 16, xrFrame);
+      const d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
+      for (let k = 1; k <= 12; k++) { if (k % every === 0) XRS.hands[side] = back.clone().addScaledVector(d, 0.32 * k / 12); frame(1, 16, xrFrame); }
+      frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); return RA.stats.shots - s0; };
+    const repAll = pis ? 1 : throwRep('right', 1); globalThis.__THD = !pis; const repHalf = pis ? 1 : throwRep('left', 2); globalThis.__THD = false; const _q = 0, repThird = pis ? 1 : throwRep('right', 3);
+    if (!pis) log(`throw XR with repeated hand samples: a normal flick (1.6 m/s) fires ${repAll} with every sample new, ${repHalf} with one in two repeated, ${repThird} with two in three repeated`);
+    if (!pis && (repAll < 1 || repHalf < 1 || repThird < 1)) errors.push(`lanzar con la mano: con las posturas repetidas por las gafas, una sacudida normal debería lanzar (todas nuevas ${repAll}, una de cada dos ${repHalf}, una de cada tres ${repThird})`);
+    if (!pis) { // con los puños cerrados el pulgar cae sobre el índice: eso no es un pellizco (si no, 1 s así ponía la pausa)
+      const st0 = RA.state; XRS.pinch = 'both'; frame(3, 16, xrFrame); const pinchOk = RA.hands.left.pinch && RA.hands.right.pinch;
+      XRS.fist = 'both'; frame(3, 16, xrFrame); const fistPinch = RA.hands.left.pinch || RA.hands.right.pinch; frame(80, 16, xrFrame); const st1 = RA.state;
+      XRS.fist = null; XRS.pinch = null; frame(4, 16, xrFrame);
+      log(`pinch vs fist: open-hand pinch seen ${pinchOk} · with the fist closed it counts as a pinch ${fistPinch} · after 1.3 s with both fists: ${st0} → ${st1}`);
+      if (!pinchOk || fistPinch || st1 !== st0) errors.push('pellizco: con los puños cerrados no debería contar como pellizco ni poner la pausa (y un pellizco con la mano abierta, sí contar)'); }
     // sin manos a la vista: la repetición carga las dos manos y no dispara sola; una sacudida que no va hacia ningún enemigo
     // no lanza (la carga sigue); una sacudida desde la cadera hacia el enemigo, en plena bajada, sí
     const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });
@@ -2850,7 +2904,9 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame); RA.beginRun(); frame(250, 16, xrFrame);
   const curlCycle = (sides, n) => { for (let c = 0; c < n; c++) for (let i = 0; i < 80; i++) { const up = i >= 20 && i < 50; for (const sd of ['left', 'right']) XRS.hands[sd].y = up && sides.includes(sd) ? 1.42 : 0.95; frame(1, 16, xrFrame); } };
   const c0 = RA.stats.reps, cp0 = RA.stats.partial; curlCycle(['left'], 4); const oneArm = RA.stats.reps - c0, oneMsg = RA.stats.partial - cp0;
-  const c1 = RA.stats.reps; curlCycle(['left', 'right'], 4); const twoArms = RA.stats.reps - c1;
+  const c1 = RA.stats.reps, cue0 = RA.TOPC.n; curlCycle(['left', 'right'], 4); const twoArms = RA.stats.reps - c1, cues = RA.TOPC.n - cue0;
+  // arriba del todo ya se nota (chispa, sonido y, con mandos, vibración): el disparo sale al bajar, pero la repetición vale al llegar
+  log(`curl con barra XR: top-of-rep cues ${cues} for ${twoArms} reps`); if (cues < twoArms) errors.push(`curl: al llegar arriba debería notarse la repetición (chispa y sonido), no solo al bajar (${cues} de ${twoArms})`);
   log('curl con barra XR: una mano quieta donde se perdió y la otra sube', oneArm, 'reps', oneMsg, 'avisos · las dos', twoArms, 'reps');
   if (oneArm < 4 || oneMsg) errors.push('curl con barra: con una mano quieta donde la perdieron las gafas, la que sube con la pesa debería contar (sin avisos)');
   if (twoArms < 4) errors.push('curl con barra: subiendo las dos manos juntas no cuenta');
@@ -3081,7 +3137,8 @@ function makeXRFrame() {
         }
         if (XRS.hands) { const g = XRS.hands[j.side]; pos = { x: g.x + (i % 5) * 0.01, y: g.y, z: g.z - Math.floor(i / 5) * 0.02 }; }
         if (XRS.handsAway) pos = { x: pos.x, y: XRS.headY - 0.9, z: 0.4 }; // manos bajadas, junto al cuerpo
-        if (XRS.pinch === j.side && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
+        if ((XRS.fist === j.side || XRS.fist === 'both') && (i === 14 || i === 19 || i === 24)) { const g = XRS.hands[j.side]; pos = { x: g.x + 0.01, y: g.y, z: g.z - 0.02 }; } // puño: las puntas vuelven hacia la palma
+        if ((XRS.pinch === j.side || XRS.pinch === 'both') && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
         if (XRS.left && j.side === 'left') pos = leftJoint(i, XRS.left); // mano izquierda con forma de mano: palma, dedos y puño
         if (XRS.thumbUp === j.side) pos = thumbJoint(i, j.side); // (pulgar arriba y el resto del puño cerrado)

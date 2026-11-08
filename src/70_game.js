@@ -216,6 +216,16 @@ const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heav
 // Empujones: lo que se frena cada segundo (al recibir, sale despedido y en unas décimas se para) y cuánto, según
 // «Retroceso al recibir impactos»
 const SHOVE_K = 7, knockK = () => (settings.knockback >= 0 ? settings.knockback : 100) / 100;
+// La dirección del empujón (en la arena, horizontal, de largo 1): lejos de ti y, si el golpe lleva dirección (puñetazo o
+// tajo: la de la mano o la hoja), también hacia donde iba, para que uno lateral lo eche de lado y no siempre en línea
+// recta. Devuelve cuánto le gira el golpe el tronco (+ a su izquierda), según por dónde le da
+const _sdQ = new Q4(), _shD = new V3();
+function shoveDir(b, dir) {
+  b.y = 0; const l = b.length() || 1; b.divideScalar(l); if (!dir) return 0;
+  _shD.copy(dir).applyQuaternion(_sdQ.copy(arena.quaternion).invert()); _shD.y = 0; const dl = _shD.length(); if (dl < 0.3) return 0; _shD.divideScalar(dl);
+  const tw = b.x * _shD.z - b.z * _shD.x; // (le da por delante, del lado que mira hacia ti: el giro va con el golpe)
+  b.addScaledVector(_shD, 0.8); if (b.lengthSq() < 1e-4) b.set(_shD.x, 0, _shD.z); b.normalize(); return tw;
+}
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x - HL.x, -(r.pos.z - HL.z)); // hacia dónde le pilla de camino (alrededor de donde estás ahora)
@@ -539,7 +549,8 @@ class Robot {
     const a0 = (this.aspd || 0) * (locoV * (this.aspd || 0) < 0 ? 0 : 1); this.aspd = a0 + (locoV - a0) * Math.min(1, dt * (Math.abs(locoV) > Math.abs(a0) ? 12 : 6)); // (arranca enseguida: sin deslizarse al empezar a andar)
     const runK = this.aspd > this.vWalk * 1.15 ? clamp((this.aspd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
     this.run += (runK - this.run) * Math.min(1, dt * 4);
-    this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
+    if (this.yawKick) { this.yawKick *= Math.max(0, 1 - dt * 5); if (Math.abs(this.yawKick) < 1e-3) this.yawKick = 0; }
+    this.root.position.copy(this.pos); this.root.rotation.y = this.yaw + (this.yawKick || 0);
     this.animate(dt, this.gt, this.aspd); // su propio reloj, al ritmo de sus gestos
     if (this.rig.kind !== 'ripper' && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
   }
@@ -577,16 +588,17 @@ class Robot {
     this.stagger = 1; cheer('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
   // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
-  shove(dist) {
+  shove(dist, dir) {
     if (!this.out || this.state === 'emerge' || !(dist > 0)) return;
-    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.pos, HL), tw = shoveDir(b, dir);
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
+    if (tw) { const k = clamp(tw, -1, 1) * Math.min(1, dist * 3); this.twist += 0.45 * k; this.yawKick = clamp((this.yawKick || 0) + 0.25 * k, -0.4, 0.4); } // (el tronco y el cuerpo giran con el golpe)
   }
   // Retroceso con cada impacto: más cuanto más fuerte (cargado, perfecto); los pesados, menos; los jefes, muy poco. Si
   // estaba preparando el golpe, se le retrasa
   recoil(perfect, pow) {
     const k = knockK() * (this.K.boss ? 0.3 : this.K.heavy ? 0.6 : 1); if (!k || this.hp <= 0 || this.state === 'down') return;
-    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k);
+    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k, this.hitDir);
     if (this.state === 'windup') this.st = Math.max(0, this.st - (this.K.boss ? 0.08 : 0.2) * pow * Math.min(1, k));
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -872,16 +884,16 @@ class Spider {
       legInstance(SPLEGS.fem, SPLEGS.n, L.hipW, _knee, s); legInstance(SPLEGS.tib, SPLEGS.n, _knee, L.foot, s); SPLEGS.n++;
     }
   }
-  shove(dist) {
+  shove(dist, dir) {
     if (this.mode === 'emerge' || this.mode === 'dying' || !(dist > 0)) return;
-    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.pos, HL); shoveDir(b, dir);
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
   }
   // Retroceso: unos centímetros (a su escala); alzada para atacar, un disparo fuerte o perfecto le quita el ataque y uno
   // flojo se lo retrasa
   recoil(perfect, pow) {
     const k = knockK() * (this.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
-    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k);
+    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k, this.hitDir);
     if (this.mode === 'rear') { if ((pow >= 2 || perfect) && !this.boss) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = 0.5; } else this.st = Math.max(0, this.st - 0.15 * k); }
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -1081,15 +1093,16 @@ class Flyer {
     if (this.flickT > 0) { this.flickT -= dt; const m = this.inst.meshes.glow; if (m) m.visible = this.flickT <= 0 || Math.random() < 0.5; }
     if (this.buzz) this.buzz.set(this.center(tmpA));
   }
-  shove(dist) {
+  shove(dist, dir) {
     if (!(dist > 0)) return;
-    const b = tmpA.subVectors(this.base, HL); b.y *= 0.3; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.base, HL), up = b.y * 0.3, vy = up / (Math.hypot(Math.hypot(b.x, b.z), up) || 1); // (un poco hacia arriba o abajo, como antes)
+    shoveDir(b, dir); b.multiplyScalar(Math.sqrt(1 - vy * vy)); b.y = vy;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
   }
   // Retroceso: sale despedido hacia atrás; si estaba cogiendo impulso para picar, se le quita
   recoil(perfect, pow) {
     const k = knockK() * (this.K.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
-    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1));
+    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1), this.hitDir);
     if (this.windT > 0 && this.windT < 0.45 && !this.K.boss) { this.windT = 0; this.retreat = Math.max(this.retreat, 0.5); }
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -1362,6 +1375,17 @@ function onPower(pow, deep) {
   chargeFloor(pow >= 4 ? `×4 · ¡ARRIBA!` : deep ? `RECARGA ×${pow}` : `CARGA ×${pow}`, col); // (en el suelo: agachado, es lo que ves)
   if (pow >= 4 && sorbFor()) sorbMax(); // la bola, al máximo: el destello
 }
+// Arriba del todo en el curl, la elevación frontal o el curl con barra: la repetición ya vale. El disparo sale al empezar a
+// bajar (para poder aguantar y cargar ×2/×3/×4), pero aquí ya se nota: un chasquido de luz en las manos, su sonido y,
+// con mandos, una vibración (antes no pasaba nada hasta bajar y parecía que el juego iba con retraso)
+const _tcP = new V3();
+function topCue(side) {
+  if (!['play', 'rest', 'ready'].includes(state)) return;
+  let n = 0; _tcP.set(0, 0, 0); for (const s of side ? [side] : ['left', 'right']) if (hands[s].ok) { _tcP.add(hands[s].wrist); n++; }
+  if (n) { _tcP.divideScalar(n); fx.sparks(_tcP, 12, [1, 0.88, 0.45], 1.6, 0.025); fx.glow(_tcP, [1, 0.95, 0.7], 0.3, 0.12); }
+  SND.tick(); if (side) haptic(side, 0.5, 40); else hapticBoth(0.5, 40); TOPC.n++;
+}
+const TOPC = { n: 0 };
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || settings.mode === 'trek' || isBars()) return;
   charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && !sorbFor(); SND.charge(); boardDirty = true; // (con rayos, la carga se ve en la bola de energía: 54_suporb)
@@ -1468,7 +1492,7 @@ function armStep(kind, side, t, dt) {
     d.max = Math.max(d.max, r);
     if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) {
       const dur = t - d.t0, ev = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
-      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); return null; }
+      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); topCue(side); return null; }
       d.state = 'top'; return { top: true, ...ev };
     }
     if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
@@ -1480,6 +1504,12 @@ function armStep(kind, side, t, dt) {
 // ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
 // salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
 // así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
+// Las gafas leen las manos menos veces que pintan la imagen (unas 60 frente a 72 o 90): a ratos repiten la misma postura.
+// Para medir velocidades y saltos solo cuentan las posturas nuevas, con el tiempo de verdad desde la anterior; si no, la
+// mano parece pararse en seco en el fotograma repetido y avanzar el doble en el siguiente (lo vio una auditoría externa)
+// (repetida hace poco: es un hueco del seguimiento y se espera a la nueva; si lleva más de 45 ms igual, está quieta de
+// verdad y cuenta, con velocidad cero). Quien mide velocidades divide por el tiempo desde la última postura que contó
+const handNew = h => !(h.isHand && !h.est && h.F && h.F.fresh === false && h.F.t - h.F.tRaw < 0.045);
 const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
 const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
 function handFilter(dt) {
@@ -1488,7 +1518,8 @@ function handFilter(dt) {
     const h = hands[s], F = HF[s];
     if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
     const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
-    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
+    F.acc = (F.acc || 0) + dt; if (F.has && !handNew(h)) continue; // (postura repetida por las gafas: se juzga la siguiente)
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * F.acc); F.p.copy(h.wrist); F.has = true; F.acc = 0; // (el salto, con el tiempo desde la postura anterior: si no, al llegar una nueva tras una repetida parecía imposible)
     F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
@@ -1528,7 +1559,7 @@ function barStep(kind, t, dt) {
   if (back > 0) B.vy = 0; else if (dt > 0) B.vy += ((y - B.prev) / dt - B.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
   B.prev = y;
   B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
-  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); } };
+  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); topCue(); } };
   // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
   // (en el press, si estuvieron perdidas un buen rato, por encima de la cabeza, basta con reaparecer bajando a media altura)
   if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? (back > 0.3 ? 0.5 : 0.8) : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
@@ -1616,7 +1647,7 @@ function fraiseStep(t, dt) {
       if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
       const dur = t - d.t0, pt = settings.perfectTime, o = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
       d.state = 'top'; d.holdT = 0; d.pow = 1;
-      if (pistolOn() || swordActive()) onRep(o); else d.o = o; // (dispara al empezar a bajarla: aguantar arriba la carga)
+      if (pistolOn() || swordActive()) onRep(o); else { d.o = o; topCue(); } // (dispara al empezar a bajarla: aguantar arriba la carga; arriba ya se nota)
     } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
   } else {
     // arriba, con los brazos estirados al frente: aguantar sube la carga (×2, ×3, ×4); al empezar a bajar, dispara
@@ -2075,11 +2106,12 @@ function throwStep(dt, t) {
     // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
     if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
       const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
-      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); T.acc = 0; continue; }
     }
     T.gone.set(0, 0, 0);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; T.acc = 0; continue; }
+    T.acc = (T.acc || 0) + dt; if (!handNew(h)) continue; // (postura repetida por las gafas: ni se ha parado ni ha frenado; se espera a la siguiente)
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(T.acc, 1e-3)); T.prev.copy(_thr); T.acc = 0;
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();

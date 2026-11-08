@@ -6,6 +6,7 @@
 // contraataque hace el doble. En Toques se cortan bloques en la dirección de su flecha. Los mandos vibran con cada
 // contacto, golpe, bloqueo, disparo y recarga.
 const SWD = { perf: [], beatT: 0, clashT: 0, hintT: 0, s: {} };
+const SWORD_ARM = 0.6, BLOCK_LATE = 0.35; // (m/s: la empuñadura también tiene que moverse; un giro de muñeca con el brazo quieto ya no corta)
 const SWORD_COL = { left: 0x4aa8ff, right: 0xff7a2a };
 const swordSides = () => !swordSet() ? [] : settings.sword === 'two' ? ['left', 'right'] : [settings.swordHand];
 const swordCap = () => settings.sword === 'two' ? 2 : 1; // una carga por espada: no se acumulan más
@@ -114,7 +115,8 @@ function updateSwords(dt, t) {
     if (!S.had) for (let i = 0; i < BLADE_N; i++) (S.prev[i] || (S.prev[i] = new V3())).copy(S.cur[i]);
     const tip = S.cur[BLADE_N - 1];
     S.vel.subVectors(tip, S.had ? S.prev[BLADE_N - 1] : tip).divideScalar(Math.max(dt, 1e-3));
-    S.speed = S.speed * 0.4 + S.vel.length() * 0.6; S.had = true;
+    S.speed = S.speed * 0.4 + S.vel.length() * 0.6;
+    const hp = hands[side].wrist, hv = S.had && S.hp ? _ca.subVectors(hp, S.hp).length() / Math.max(dt, 1e-3) : 0; (S.hp || (S.hp = new V3())).copy(hp); S.arm = (S.arm || 0) * 0.5 + hv * 0.5; S.had = true; // (lo que se mueve la mano que la empuña, con el brazo: un giro de muñeca apenas la mueve)
     // silbido (o zumbido que sube) al cortar el aire
     S.swishT -= dt;
     if (S.speed > settings.swordSpeed * 0.8 && S.swishT <= 0) { S.swishT = 0.3; SND.swordSwish(tip, laser, S.speed); }
@@ -165,7 +167,7 @@ function swordVsRobots(S, t) {
     const last = S.hitCool.get(e); if (last !== undefined && t - last < 0.45) continue; // un tajo, un golpe
     S.hitCool.set(e, t);
     const p = _hp.clone();
-    if (S.speed < settings.swordSpeed) { // roce lento: vibra un poco, no hace daño
+    if (S.speed < settings.swordSpeed || (S.arm || 0) < SWORD_ARM) { // roce lento (o solo de muñeca, con el brazo quieto): vibra un poco, no hace daño
       haptic(S.side, 0.25, 20); fx.sparks(p, 3, [1, 0.8, 0.5], 0.8, 0.02); SND.swordClang(p, laser, 0.6);
       if (SWD.hintT <= 0) { SWD.hintT = 2.5; say('¡Más rápido! Un tajo amplio', '#ff8a3d', 1); }
       continue;
@@ -190,7 +192,7 @@ function swordStrike(S, e, p, dmg, counter) {
   if (laser) fx.electric(p, 10);
   stats.hits++; stats.shots++;
   if (counter) cheer('¡CONTRAATAQUE!', '#ffd166', 0.9);
-  e.onHit(dmg, true, p); comicHit(p); if (!e.alive) onKilled(e);
+  e.hitDir = S.vel; e.onHit(dmg, true, p); e.hitDir = null; comicHit(p); if (!e.alive) onKilled(e); // (el tajo lo echa hacia donde iba la hoja)
 }
 
 /* ---------- Combate: bloquear el golpe del robot ---------- */
@@ -203,7 +205,7 @@ const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'
 // abajo); sin un golpe conocido, al azar
 function blockStart(r) {
   const z = (r.D && r.D.zone && r.atk === (r.D.atk || [])[0] && r.D.zone) || (r.atk && ATK_ZONE[r.atk]); // (los piratas, su tajo)
-  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
+  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false; r.inT = -9; r.coverNow = false;
   if (!r.zoneSpr) { r.zoneSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: blockTex, transparent: true, depthWrite: false, toneMapped: false })); r.zoneSpr.renderOrder = 22; scene.add(r.zoneSpr); }
   r.zoneSpr.material.color.setHex(BLOCK_Z[r.zone].col); r.zoneSpr.visible = true;
   say('Golpe ' + BLOCK_Z[r.zone].txt + (r.zoneSide ? (r.zoneSide < 0 ? ' · por tu izquierda' : ' · por tu derecha') : ''), '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
@@ -219,19 +221,24 @@ function blockStep(r, t) {
   const p = blockPoint(r, _hp), Z = BLOCK_Z[r.zone], s = 0.38 + 0.08 * Math.sin(t * 14);
   r.zoneSpr.position.copy(p); r.zoneSpr.scale.set(s, s, 1);
   const low = !Z.crouch || head.p.y < calibRef - Z.crouch * settings.squatDepth / 100; // el alto se para de pie
-  if (r.blocked) return;
+  // cubierto: la hoja en la marca (y la postura pedida) ahora; la marca se pone turquesa y el mando vibra suave al entrar.
+  // Cuenta lo de los últimos BLOCK_LATE s al llegar el golpe: pasar la hoja al principio y quitarla ya no lo para
+  r.lastT = t; let cover = null;
   for (const side of ['left', 'right']) {
     if (!swordIn(side)) continue; const S = SWD.s[side];
     let near = false; for (let i = 1; i < BLADE_N; i++) if (S.cur[i].distanceTo(p) < 0.25) near = true;
     if (!near) continue;
     if (!low) { if (SWD.hintT <= 0) { SWD.hintT = 1.2; say('¡Agáchate para parar el golpe!', '#ff8a3d', 0.9); } continue; }
-    r.blocked = side; return;
+    cover = side; break;
   }
+  if (cover) { if (!r.coverNow) haptic(cover, 0.3, 30); r.blocked = cover; r.inT = t; }
+  r.coverNow = !!cover; r.zoneSpr.material.color.setHex(cover ? 0x3cf0c6 : BLOCK_Z[r.zone].col);
 }
 // Al llegar el golpe: parado (el robot queda aturdido) o no (te da)
 function blockResolve(r) {
   if (r.zoneSpr) r.zoneSpr.visible = false;
-  if (!r.blocked) return false;
+  const late = r.blocked && r.lastT - (r.inT || -9) < BLOCK_LATE; r.coverNow = false;
+  if (!late) { r.blocked = false; return false; }
   const p = blockPoint(r, new V3()), laser = settings.swordKind === 'laser';
   SND.swordBlock(p, laser); fx.sparks(p, 30, laser ? [0.6, 0.9, 1] : [1, 0.75, 0.35], 3, 0.04); fx.glow(p, [1, 0.9, 0.7], 0.6, 0.12);
   haptic(r.blocked, 1, 80); haptic(r.blocked === 'left' ? 'right' : 'left', 0.4, 40);
@@ -250,7 +257,7 @@ function swordCutTest(x) {
     const S = SWD.s[side]; let hit = false;
     for (let i = 1; i < BLADE_N && !hit; i++) { arena.worldToLocal(_ca.copy(S.prev[i])).sub(x.prevPos); arena.worldToLocal(_cb.copy(S.cur[i])).sub(x.root.position); if (segDist(_ca, _cb) < 0.14) hit = true; }
     if (!hit) continue; tried = true;
-    if (S.speed < settings.swordSpeed * 0.8) { haptic(side, 0.2, 15); continue; }
+    if (S.speed < settings.swordSpeed * 0.8 || (S.arm || 0) < SWORD_ARM * 0.8) { haptic(side, 0.2, 15); continue; } // (también aquí: con el brazo, no solo la muñeca)
     // dirección del tajo en coordenadas de la arena, proyectada en el plano del bloque
     _sr.copy(S.vel).applyAxisAngle(_up, -arena.rotation.y); const n = x.normal, full = _sr.length(); _sr.addScaledVector(n, -_sr.dot(n)); // sin normalizar: es una velocidad
     // lo que cuenta es el tajo de lado a lado del bloque (deprisa y casi todo en su plano), no la estocada hacia él
