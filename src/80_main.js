@@ -366,7 +366,7 @@ renderer.setAnimationLoop((time, frame) => {
   arena.updateMatrixWorld(); HL.copy(head.p); arena.worldToLocal(HL);
   updateListener(head.p, head.q);
   fingers.length = 0; for (const s of ['left', 'right']) if (hands[s].tipOk && !hands[s].est) fingers.push({ side: s, p: hands[s].tip, s: hands[s].tipSm ? hands[s].tipS : hands[s].tip }); // (s: la que se ve, sin temblor)
-  gameStep(dt, t);
+  gameStep(dt, t); lifeStep(dt); // (las cuentas de vida, donde han quedado los enemigos)
   updateFX(dt); updateBolts(dt);
   updateAim(t); throwStep(dt, t); iwAimStep(t); lockStep(t); updatePistol(dt); updateSwords(dt, t);
   updateWatch(dt); updateWristMenu(dt); updateOutcome(dt); updateWaveIntro(dt); updateBigNotice(dt);
