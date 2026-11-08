@@ -1075,7 +1075,7 @@ const SCHEMA = [
   { key: 'sword', g: 'armas', label: 'Espadas (con los mandos)', short: 'Espadas', type: 'choice', opts: [['off', 'No'], ['one', 'Una'], ['two', 'Dos']], def: 'off', modes: ['combat', 'touch'], ex: ['squat', 'lunge', 'jump', 'slam', 'combo'], cond: () => (settings.exercise !== 'combo' || settings.comboBase === 'stand') && (!isCombat() || foes() === 'robots'), relayout: true, hint: 'Con los mandos en la mano. En Combate (solo contra robots) cada sentadilla carga la hoja y los robots se derriban a tajos; en Toques se cortan bloques en la dirección de su flecha. Despeja bien el espacio a tu alrededor y ponte la correa de los mandos.' },
   { key: 'swordKind', g: 'armas', label: 'Tipo de espada', short: 'Tipo', type: 'choice', opts: [['metal', 'Metálica'], ['laser', 'Láser']], def: 'metal', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Metálica: acero que refleja las luces del entorno. Láser: hoja de energía con su zumbido.' },
   { key: 'swordHand', g: 'armas', label: 'Mano de la espada', short: 'Mano', type: 'choice', opts: [['right', 'Derecha'], ['left', 'Izquierda']], def: 'right', modes: ['combat', 'touch'], cond: () => swordSet() && settings.sword === 'one', hint: 'Con una sola espada y las pistolas activadas, en la otra mano llevas el bláster.' },
-  { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido: más alto obliga a girar el tronco y extender el brazo.' },
+  { key: 'swordSpeed', g: 'armas', label: 'Velocidad mínima del corte', short: 'Vel. corte', type: 'num', min: 0.5, max: 5, step: 0.1, def: 1.6, unit: 'm/s', modes: ['combat', 'touch'], cond: () => swordSet(), hint: 'Solo cuenta un tajo amplio y rápido, con el brazo (un giro de muñeca no vale: la mano también tiene que moverse): más alto obliga a girar el tronco y extender el brazo.' },
   { key: 'swordBlock', g: 'armas', label: 'Bloquear los golpes de los robots', short: 'Bloqueos', type: 'toggle', def: 1, modes: ['combat'], cond: () => swordSet(), hint: 'El robot avisa a qué altura va a golpear: pon la espada ahí. Los golpes medios y bajos solo se paran agachado. Un bloqueo lo deja aturdido y tu contraataque hace el doble de daño.' },
   { key: 'guard', g: 'armas', label: 'Defensa contra los golpes', short: 'Defensa', type: 'choice', opts: [['off', 'No'], ['tech', 'Solo escudo por técnica'], ['full', 'Completa (con gestos)']], def: 'full', modes: ['combat'], relayout: true, hint: 'Escudo por técnica: las repeticiones perfectas y las rachas llenan una barra; llena, para sola el siguiente golpe y aparta al enemigo. Completa: además, en los ejercicios de pie con las manos libres (sentadillas, zancadas, sentadilla con salto), el puño cerrado delante del pecho saca un escudo en el antebrazo (con los mandos, el botón de agarre). Con pesas o con las manos apoyadas solo vale el escudo por técnica.' },
   { key: 'guardDiff', g: 'armas', label: 'Dificultad de la defensa', short: 'Dif. defensa', type: 'choice', opts: [['easy', 'Fácil'], ['normal', 'Normal'], ['hard', 'Difícil']], def: 'normal', modes: ['combat'], cond: () => settings.guard !== 'off', hint: 'Lo pone el rango (fácil hasta soldado, normal de cabo a teniente, difícil desde capitán; aquí, retocarlo). Fácil: el escudo se llena antes, la guardia gasta menos y la parada vale aunque la subas pronto. Difícil: todo lo contrario.' },
@@ -10504,6 +10504,16 @@ const robotStop = K => K.thrower ? K.stop : swordSet() ? (K.boss ? 1.45 : K.heav
 // Empujones: lo que se frena cada segundo (al recibir, sale despedido y en unas décimas se para) y cuánto, según
 // «Retroceso al recibir impactos»
 const SHOVE_K = 7, knockK = () => (settings.knockback >= 0 ? settings.knockback : 100) / 100;
+// La dirección del empujón (en la arena, horizontal, de largo 1): lejos de ti y, si el golpe lleva dirección (puñetazo o
+// tajo: la de la mano o la hoja), también hacia donde iba, para que uno lateral lo eche de lado y no siempre en línea
+// recta. Devuelve cuánto le gira el golpe el tronco (+ a su izquierda), según por dónde le da
+const _sdQ = new Q4(), _shD = new V3();
+function shoveDir(b, dir) {
+  b.y = 0; const l = b.length() || 1; b.divideScalar(l); if (!dir) return 0;
+  _shD.copy(dir).applyQuaternion(_sdQ.copy(arena.quaternion).invert()); _shD.y = 0; const dl = _shD.length(); if (dl < 0.3) return 0; _shD.divideScalar(dl);
+  const tw = b.x * _shD.z - b.z * _shD.x; // (le da por delante, del lado que mira hacia ti: el giro va con el golpe)
+  b.addScaledVector(_shD, 0.8); if (b.lengthSq() < 1e-4) b.set(_shD.x, 0, _shD.z); b.normalize(); return tw;
+}
 function robotSlot(r) {
   const others = enemies.filter(o => o !== r && o.alive && o.type === 'robot' && o.slotOk);
   const want = Math.atan2(r.pos.x - HL.x, -(r.pos.z - HL.z)); // hacia dónde le pilla de camino (alrededor de donde estás ahora)
@@ -10827,7 +10837,8 @@ class Robot {
     const a0 = (this.aspd || 0) * (locoV * (this.aspd || 0) < 0 ? 0 : 1); this.aspd = a0 + (locoV - a0) * Math.min(1, dt * (Math.abs(locoV) > Math.abs(a0) ? 12 : 6)); // (arranca enseguida: sin deslizarse al empezar a andar)
     const runK = this.aspd > this.vWalk * 1.15 ? clamp((this.aspd - this.vWalk) / Math.max(0.1, this.vRun - this.vWalk), 0, 1) : 0;
     this.run += (runK - this.run) * Math.min(1, dt * 4);
-    this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
+    if (this.yawKick) { this.yawKick *= Math.max(0, 1 - dt * 5); if (Math.abs(this.yawKick) < 1e-3) this.yawKick = 0; }
+    this.root.position.copy(this.pos); this.root.rotation.y = this.yaw + (this.yawKick || 0);
     this.animate(dt, this.gt, this.aspd); // su propio reloj, al ritmo de sus gestos
     if (this.rig.kind !== 'ripper' && !K.beast3d) { this.smokeT -= dt; if (this.smokeT <= 0) { this.smokeT = 0.3; for (const s of [-1, 1]) fx.smoke(this.B.chest.localToWorld(tmpB.set(s * 0.15, 0.8, -0.26)), 0.12 * K.scale, 0.7, 1.6, 0.12); } }
   }
@@ -10865,16 +10876,17 @@ class Robot {
     this.stagger = 1; cheer('¡DERRIBADO!', '#ffd166', 0.9); return true;
   }
   // Empujón: lo aleja de ti «dist» metros, deslizándose (se frena en un instante)
-  shove(dist) {
+  shove(dist, dir) {
     if (!this.out || this.state === 'emerge' || !(dist > 0)) return;
-    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.pos, HL), tw = shoveDir(b, dir);
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
+    if (tw) { const k = clamp(tw, -1, 1) * Math.min(1, dist * 3); this.twist += 0.45 * k; this.yawKick = clamp((this.yawKick || 0) + 0.25 * k, -0.4, 0.4); } // (el tronco y el cuerpo giran con el golpe)
   }
   // Retroceso con cada impacto: más cuanto más fuerte (cargado, perfecto); los pesados, menos; los jefes, muy poco. Si
   // estaba preparando el golpe, se le retrasa
   recoil(perfect, pow) {
     const k = knockK() * (this.K.boss ? 0.3 : this.K.heavy ? 0.6 : 1); if (!k || this.hp <= 0 || this.state === 'down') return;
-    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k);
+    this.shove((0.16 + 0.1 * (pow - 1) + (perfect ? 0.06 : 0)) * k, this.hitDir);
     if (this.state === 'windup') this.st = Math.max(0, this.st - (this.K.boss ? 0.08 : 0.2) * pow * Math.min(1, k));
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -11160,16 +11172,16 @@ class Spider {
       legInstance(SPLEGS.fem, SPLEGS.n, L.hipW, _knee, s); legInstance(SPLEGS.tib, SPLEGS.n, _knee, L.foot, s); SPLEGS.n++;
     }
   }
-  shove(dist) {
+  shove(dist, dir) {
     if (this.mode === 'emerge' || this.mode === 'dying' || !(dist > 0)) return;
-    const b = tmpA.subVectors(this.pos, HL); b.y = 0; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.pos, HL); shoveDir(b, dir);
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
   }
   // Retroceso: unos centímetros (a su escala); alzada para atacar, un disparo fuerte o perfecto le quita el ataque y uno
   // flojo se lo retrasa
   recoil(perfect, pow) {
     const k = knockK() * (this.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
-    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k);
+    this.shove((0.05 + 0.03 * (pow - 1) + (perfect ? 0.02 : 0)) * k, this.hitDir);
     if (this.mode === 'rear') { if ((pow >= 2 || perfect) && !this.boss) { this.mode = 'run'; this.st = 0; this.run = false; this.runT = 0.5; } else this.st = Math.max(0, this.st - 0.15 * k); }
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -11369,15 +11381,16 @@ class Flyer {
     if (this.flickT > 0) { this.flickT -= dt; const m = this.inst.meshes.glow; if (m) m.visible = this.flickT <= 0 || Math.random() < 0.5; }
     if (this.buzz) this.buzz.set(this.center(tmpA));
   }
-  shove(dist) {
+  shove(dist, dir) {
     if (!(dist > 0)) return;
-    const b = tmpA.subVectors(this.base, HL); b.y *= 0.3; const l = b.length() || 1;
-    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K / l);
+    const b = tmpA.subVectors(this.base, HL), up = b.y * 0.3, vy = up / (Math.hypot(Math.hypot(b.x, b.z), up) || 1); // (un poco hacia arriba o abajo, como antes)
+    shoveDir(b, dir); b.multiplyScalar(Math.sqrt(1 - vy * vy)); b.y = vy;
+    (this.pushV || (this.pushV = new V3())).addScaledVector(b, dist * SHOVE_K);
   }
   // Retroceso: sale despedido hacia atrás; si estaba cogiendo impulso para picar, se le quita
   recoil(perfect, pow) {
     const k = knockK() * (this.K.boss ? 0.3 : 1); if (!k || this.hp <= 0) return;
-    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1));
+    this.shove((0.25 + 0.12 * (pow - 1) + (perfect ? 0.08 : 0)) * k * (isTiny() ? 0.42 : 1), this.hitDir);
     if (this.windT > 0 && this.windT < 0.45 && !this.K.boss) { this.windT = 0; this.retreat = Math.max(this.retreat, 0.5); }
   }
   onHit(dmg, perfect, point, pow = 1) {
@@ -11650,6 +11663,17 @@ function onPower(pow, deep) {
   chargeFloor(pow >= 4 ? `×4 · ¡ARRIBA!` : deep ? `RECARGA ×${pow}` : `CARGA ×${pow}`, col); // (en el suelo: agachado, es lo que ves)
   if (pow >= 4 && sorbFor()) sorbMax(); // la bola, al máximo: el destello
 }
+// Arriba del todo en el curl, la elevación frontal o el curl con barra: la repetición ya vale. El disparo sale al empezar a
+// bajar (para poder aguantar y cargar ×2/×3/×4), pero aquí ya se nota: un chasquido de luz en las manos, su sonido y,
+// con mandos, una vibración (antes no pasaba nada hasta bajar y parecía que el juego iba con retraso)
+const _tcP = new V3();
+function topCue(side) {
+  if (!['play', 'rest', 'ready'].includes(state)) return;
+  let n = 0; _tcP.set(0, 0, 0); for (const s of side ? [side] : ['left', 'right']) if (hands[s].ok) { _tcP.add(hands[s].wrist); n++; }
+  if (n) { _tcP.divideScalar(n); fx.sparks(_tcP, 12, [1, 0.88, 0.45], 1.6, 0.025); fx.glow(_tcP, [1, 0.95, 0.7], 0.3, 0.12); }
+  SND.tick(); if (side) haptic(side, 0.5, 40); else hapticBoth(0.5, 40); TOPC.n++;
+}
+const TOPC = { n: 0 };
 function onCharge() {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || settings.mode === 'trek' || isBars()) return;
   charged = true; chargePow = 1; chargeOrb.material.color.setHex(POW_COL[0]); chargeOrb.visible = autoAim() && !sorbFor(); SND.charge(); boardDirty = true; // (con rayos, la carga se ve en la bola de energía: 54_suporb)
@@ -11756,7 +11780,7 @@ function armStep(kind, side, t, dt) {
     d.max = Math.max(d.max, r);
     if (r - d.bottom >= range * (press && d.lostUp ? 0.8 : 1)) {
       const dur = t - d.t0, ev = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
-      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); return null; }
+      if (!press) { Object.assign(d, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); topCue(side); return null; }
       d.state = 'top'; return { top: true, ...ev };
     }
     if (r < d.bottom + (press ? 0.06 : 0.07)) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) return { msg: press ? 'Estira el brazo del todo arriba' : 'Sube hasta el hombro' }; }
@@ -11768,6 +11792,12 @@ function armStep(kind, side, t, dt) {
 // ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
 // salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
 // así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
+// Las gafas leen las manos menos veces que pintan la imagen (unas 60 frente a 72 o 90): a ratos repiten la misma postura.
+// Para medir velocidades y saltos solo cuentan las posturas nuevas, con el tiempo de verdad desde la anterior; si no, la
+// mano parece pararse en seco en el fotograma repetido y avanzar el doble en el siguiente (lo vio una auditoría externa)
+// (repetida hace poco: es un hueco del seguimiento y se espera a la nueva; si lleva más de 45 ms igual, está quieta de
+// verdad y cuenta, con velocidad cero). Quien mide velocidades divide por el tiempo desde la última postura que contó
+const handNew = h => !(h.isHand && !h.est && h.F && h.F.fresh === false && h.F.t - h.F.tRaw < 0.045);
 const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
 const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
 function handFilter(dt) {
@@ -11776,7 +11806,8 @@ function handFilter(dt) {
     const h = hands[s], F = HF[s];
     if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
     const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
-    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
+    F.acc = (F.acc || 0) + dt; if (F.has && !handNew(h)) continue; // (postura repetida por las gafas: se juzga la siguiente)
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * F.acc); F.p.copy(h.wrist); F.has = true; F.acc = 0; // (el salto, con el tiempo desde la postura anterior: si no, al llegar una nueva tras una repetida parecía imposible)
     F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
@@ -11816,7 +11847,7 @@ function barStep(kind, t, dt) {
   if (back > 0) B.vy = 0; else if (dt > 0) B.vy += ((y - B.prev) / dt - B.vy) * Math.min(1, dt * 15); // velocidad de subida, suavizada
   B.prev = y;
   B.bottom += (y - B.bottom) * (y < B.bottom ? 0.5 : press ? 0.0015 : 0.0012); // lo más bajo del recorrido
-  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); } };
+  const top = ev => { if (press) { B.state = 'top'; onRep(ev); } else { Object.assign(B, { state: 'hold', holdT: 0, pow: 1, ev }); onCharge(); topCue(); } };
   // reaparecen ya arriba tras perderlas un rato (subiendo): esa subida cuenta
   // (en el press, si estuvieron perdidas un buen rato, por encima de la cabeza, basta con reaparecer bajando a media altura)
   if (back > 0.1 && back < 2 && (B.state === 'down' || B.state === 'rising') && y - B.bottom >= range * (press ? (back > 0.3 ? 0.5 : 0.8) : 0.85)) { if (press && B.state === 'down') onCharge(); top({ perfect: false, fast: false }); return; }
@@ -11904,7 +11935,7 @@ function fraiseStep(t, dt) {
       if (d.fwd < 0.36) { onPartial('Brazos estirados: la pesa, al frente'); d.state = 'top'; return; }
       const dur = t - d.t0, pt = settings.perfectTime, o = { perfect: dur >= pt * 0.5 && dur < 5 && r - d.bottom >= range + 0.03, fast: pt > 0 && dur < pt * 0.25 };
       d.state = 'top'; d.holdT = 0; d.pow = 1;
-      if (pistolOn() || swordActive()) onRep(o); else d.o = o; // (dispara al empezar a bajarla: aguantar arriba la carga)
+      if (pistolOn() || swordActive()) onRep(o); else { d.o = o; topCue(); } // (dispara al empezar a bajarla: aguantar arriba la carga; arriba ya se nota)
     } else if (r < d.bottom + 0.06) { d.state = 'down'; if (d.max - d.bottom > range * 0.55) onPartial('Sube hasta la altura de los hombros'); }
   } else {
     // arriba, con los brazos estirados al frente: aguantar sube la carga (×2, ×3, ×4); al empezar a bajar, dispara
@@ -12363,11 +12394,12 @@ function throwStep(dt, t) {
     // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
     if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
       const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
-      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); T.acc = 0; continue; }
     }
     T.gone.set(0, 0, 0);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; T.acc = 0; continue; }
+    T.acc = (T.acc || 0) + dt; if (!handNew(h)) continue; // (postura repetida por las gafas: ni se ha parado ni ha frenado; se espera a la siguiente)
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(T.acc, 1e-3)); T.prev.copy(_thr); T.acc = 0;
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
@@ -16035,6 +16067,7 @@ settingHooks.push(k => {
 // contraataque hace el doble. En Toques se cortan bloques en la dirección de su flecha. Los mandos vibran con cada
 // contacto, golpe, bloqueo, disparo y recarga.
 const SWD = { perf: [], beatT: 0, clashT: 0, hintT: 0, s: {} };
+const SWORD_ARM = 0.6, BLOCK_LATE = 0.35; // (m/s: la empuñadura también tiene que moverse; un giro de muñeca con el brazo quieto ya no corta)
 const SWORD_COL = { left: 0x4aa8ff, right: 0xff7a2a };
 const swordSides = () => !swordSet() ? [] : settings.sword === 'two' ? ['left', 'right'] : [settings.swordHand];
 const swordCap = () => settings.sword === 'two' ? 2 : 1; // una carga por espada: no se acumulan más
@@ -16143,7 +16176,8 @@ function updateSwords(dt, t) {
     if (!S.had) for (let i = 0; i < BLADE_N; i++) (S.prev[i] || (S.prev[i] = new V3())).copy(S.cur[i]);
     const tip = S.cur[BLADE_N - 1];
     S.vel.subVectors(tip, S.had ? S.prev[BLADE_N - 1] : tip).divideScalar(Math.max(dt, 1e-3));
-    S.speed = S.speed * 0.4 + S.vel.length() * 0.6; S.had = true;
+    S.speed = S.speed * 0.4 + S.vel.length() * 0.6;
+    const hp = hands[side].wrist, hv = S.had && S.hp ? _ca.subVectors(hp, S.hp).length() / Math.max(dt, 1e-3) : 0; (S.hp || (S.hp = new V3())).copy(hp); S.arm = (S.arm || 0) * 0.5 + hv * 0.5; S.had = true; // (lo que se mueve la mano que la empuña, con el brazo: un giro de muñeca apenas la mueve)
     // silbido (o zumbido que sube) al cortar el aire
     S.swishT -= dt;
     if (S.speed > settings.swordSpeed * 0.8 && S.swishT <= 0) { S.swishT = 0.3; SND.swordSwish(tip, laser, S.speed); }
@@ -16194,7 +16228,7 @@ function swordVsRobots(S, t) {
     const last = S.hitCool.get(e); if (last !== undefined && t - last < 0.45) continue; // un tajo, un golpe
     S.hitCool.set(e, t);
     const p = _hp.clone();
-    if (S.speed < settings.swordSpeed) { // roce lento: vibra un poco, no hace daño
+    if (S.speed < settings.swordSpeed || (S.arm || 0) < SWORD_ARM) { // roce lento (o solo de muñeca, con el brazo quieto): vibra un poco, no hace daño
       haptic(S.side, 0.25, 20); fx.sparks(p, 3, [1, 0.8, 0.5], 0.8, 0.02); SND.swordClang(p, laser, 0.6);
       if (SWD.hintT <= 0) { SWD.hintT = 2.5; say('¡Más rápido! Un tajo amplio', '#ff8a3d', 1); }
       continue;
@@ -16219,7 +16253,7 @@ function swordStrike(S, e, p, dmg, counter) {
   if (laser) fx.electric(p, 10);
   stats.hits++; stats.shots++;
   if (counter) cheer('¡CONTRAATAQUE!', '#ffd166', 0.9);
-  e.onHit(dmg, true, p); comicHit(p); if (!e.alive) onKilled(e);
+  e.hitDir = S.vel; e.onHit(dmg, true, p); e.hitDir = null; comicHit(p); if (!e.alive) onKilled(e); // (el tajo lo echa hacia donde iba la hoja)
 }
 
 /* ---------- Combate: bloquear el golpe del robot ---------- */
@@ -16232,7 +16266,7 @@ const blockTex = texFrom((() => { const c = mkCanvas(128), x = c.getContext('2d'
 // abajo); sin un golpe conocido, al azar
 function blockStart(r) {
   const z = (r.D && r.D.zone && r.atk === (r.D.atk || [])[0] && r.D.zone) || (r.atk && ATK_ZONE[r.atk]); // (los piratas, su tajo)
-  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false;
+  r.zone = z ? z[0] : pick(['high', 'mid', 'mid', 'low']); r.zoneSide = z ? z[1] : 0; r.blocked = false; r.inT = -9; r.coverNow = false;
   if (!r.zoneSpr) { r.zoneSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: blockTex, transparent: true, depthWrite: false, toneMapped: false })); r.zoneSpr.renderOrder = 22; scene.add(r.zoneSpr); }
   r.zoneSpr.material.color.setHex(BLOCK_Z[r.zone].col); r.zoneSpr.visible = true;
   say('Golpe ' + BLOCK_Z[r.zone].txt + (r.zoneSide ? (r.zoneSide < 0 ? ' · por tu izquierda' : ' · por tu derecha') : ''), '#' + BLOCK_Z[r.zone].col.toString(16).padStart(6, '0'), 1.0);
@@ -16248,19 +16282,24 @@ function blockStep(r, t) {
   const p = blockPoint(r, _hp), Z = BLOCK_Z[r.zone], s = 0.38 + 0.08 * Math.sin(t * 14);
   r.zoneSpr.position.copy(p); r.zoneSpr.scale.set(s, s, 1);
   const low = !Z.crouch || head.p.y < calibRef - Z.crouch * settings.squatDepth / 100; // el alto se para de pie
-  if (r.blocked) return;
+  // cubierto: la hoja en la marca (y la postura pedida) ahora; la marca se pone turquesa y el mando vibra suave al entrar.
+  // Cuenta lo de los últimos BLOCK_LATE s al llegar el golpe: pasar la hoja al principio y quitarla ya no lo para
+  r.lastT = t; let cover = null;
   for (const side of ['left', 'right']) {
     if (!swordIn(side)) continue; const S = SWD.s[side];
     let near = false; for (let i = 1; i < BLADE_N; i++) if (S.cur[i].distanceTo(p) < 0.25) near = true;
     if (!near) continue;
     if (!low) { if (SWD.hintT <= 0) { SWD.hintT = 1.2; say('¡Agáchate para parar el golpe!', '#ff8a3d', 0.9); } continue; }
-    r.blocked = side; return;
+    cover = side; break;
   }
+  if (cover) { if (!r.coverNow) haptic(cover, 0.3, 30); r.blocked = cover; r.inT = t; }
+  r.coverNow = !!cover; r.zoneSpr.material.color.setHex(cover ? 0x3cf0c6 : BLOCK_Z[r.zone].col);
 }
 // Al llegar el golpe: parado (el robot queda aturdido) o no (te da)
 function blockResolve(r) {
   if (r.zoneSpr) r.zoneSpr.visible = false;
-  if (!r.blocked) return false;
+  const late = r.blocked && r.lastT - (r.inT || -9) < BLOCK_LATE; r.coverNow = false;
+  if (!late) { r.blocked = false; return false; }
   const p = blockPoint(r, new V3()), laser = settings.swordKind === 'laser';
   SND.swordBlock(p, laser); fx.sparks(p, 30, laser ? [0.6, 0.9, 1] : [1, 0.75, 0.35], 3, 0.04); fx.glow(p, [1, 0.9, 0.7], 0.6, 0.12);
   haptic(r.blocked, 1, 80); haptic(r.blocked === 'left' ? 'right' : 'left', 0.4, 40);
@@ -16279,7 +16318,7 @@ function swordCutTest(x) {
     const S = SWD.s[side]; let hit = false;
     for (let i = 1; i < BLADE_N && !hit; i++) { arena.worldToLocal(_ca.copy(S.prev[i])).sub(x.prevPos); arena.worldToLocal(_cb.copy(S.cur[i])).sub(x.root.position); if (segDist(_ca, _cb) < 0.14) hit = true; }
     if (!hit) continue; tried = true;
-    if (S.speed < settings.swordSpeed * 0.8) { haptic(side, 0.2, 15); continue; }
+    if (S.speed < settings.swordSpeed * 0.8 || (S.arm || 0) < SWORD_ARM * 0.8) { haptic(side, 0.2, 15); continue; } // (también aquí: con el brazo, no solo la muñeca)
     // dirección del tajo en coordenadas de la arena, proyectada en el plano del bloque
     _sr.copy(S.vel).applyAxisAngle(_up, -arena.rotation.y); const n = x.normal, full = _sr.length(); _sr.addScaledVector(n, -_sr.dot(n)); // sin normalizar: es una velocidad
     // lo que cuenta es el tajo de lado a lado del bloque (deprisa y casi todo en su plano), no la estocada hacia él
@@ -16490,11 +16529,11 @@ function guardPoint(src, out) {
   return out.copy(head.p).addScaledVector(d, 0.38 / l).add(_gdQ.set(0, isFloor() ? -0.05 : -0.2, 0));
 }
 // Rebote: lo aparta (dist, en metros a su escala) y, en una parada, lo deja aturdido «stun» segundos
-function guardRepel(e, dist, stun) {
+function guardRepel(e, dist, stun, dir) { // (dir: hacia dónde iba la mano; sin ella, solo lejos de ti)
   if (!e || !e.alive) return;
-  if (e.type === 'robot') { e.shove(dist * (e.K.boss ? 0.4 : 1)); if (stun) { e.stunT = Math.max(e.stunT || 0, stun * (e.K.boss ? 0.6 : 1)); e.stagger = 1; } }
+  if (e.type === 'robot') { e.shove(dist * (e.K.boss ? 0.4 : 1), dir); if (stun) { e.stunT = Math.max(e.stunT || 0, stun * (e.K.boss ? 0.6 : 1)); e.stagger = 1; } }
   else if (e.type === 'spider') { e.bounce = dist * 0.35; e.parryT = stun; }
-  else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1)); e.parryT = stun; }
+  else if (e.type === 'flyer') { e.shove(dist * (isTiny() ? 0.42 : 1), dir); e.parryT = stun; }
 }
 /* ---------- Golpe: un puñetazo (o con la pesa o el mando que lleves) aparta al que tienes cerca ---------- */
 // En Combate, de pie o sentado (en el suelo, las manos están apoyadas) y sin espadas (que cortan): la mano que va deprisa
@@ -16511,8 +16550,9 @@ function punchStep(dt) {
   for (const s of ['left', 'right']) {
     const h = hands[s], P = PUNCH[s]; P.cd -= dt;
     if (!h.ok || h.back) { P.ok = false; if (!h.ok) continue; } // (al volver tras una mano calculada, el salto no es un puñetazo)
-    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
-    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
+    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; P.acc = 0; continue; }
+    P.acc += dt; if (!handNew(h)) continue; // (postura repetida por las gafas: se mide con la siguiente, con el tiempo de verdad entre las dos)
+    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(P.acc); P.last.copy(h.wrist); P.hl.copy(head.p); P.acc = 0;
     const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;
     for (const e of enemies) {
       if (!e.alive || e.state === 'emerge' || (e.punchT && PUNCH.t < e.punchT)) continue;
@@ -16521,7 +16561,7 @@ function punchStep(dt) {
       P.cd = PUNCH_CD; e.punchT = PUNCH.t + PUNCH_E; PUNCH.n++;
       // si estaba preparando o soltando su golpe, se lo cortas (no te da)
       if (e.type === 'robot' && (e.state === 'windup' || e.state === 'strike')) { if (e.zone) blockCancel(e); e.zone = null; e.state = 'walk'; e.st = 0; e.vel.set(0, 0, 0); }
-      const k = clamp(sp / 4, 0.6, 1.4); guardRepel(e, 0.55 * k, 0.5);
+      const k = clamp(sp / 4, 0.6, 1.4); guardRepel(e, 0.55 * k, 0.5, _puV); // (hacia donde iba el puño: un gancho lo echa de lado)
       const hit = h.wrist.clone().lerp(_puC, 0.5);
       fx.sparks(hit, 14, [1, 0.85, 0.5], 2.5, 0.035); fx.glow(hit, [1, 0.9, 0.7], 0.35, 0.08); comicHit(hit);
       if (e.type === 'robot' && !(e.K && e.K.beast3d)) SND.metalHit(hit, false); else SND.squish(hit);
@@ -16956,7 +16996,7 @@ function readXR(frame, t = 0) {
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
-      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
+      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02 && !handCurled(h); h.trig = h.pinch; // con las manos, pellizcar es el gatillo (con el puño cerrado el pulgar cae sobre el índice: eso no es un pellizco; si no, cerrar los puños 1 s ponía la pausa)
     } else if (src.gripSpace) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
@@ -16999,8 +17039,9 @@ function handRescue(frame, ref, t) {
     if (h.ok && h.isHand) { // la ven las cámaras: su forma (respecto a la muñeca), su velocidad y su sitio respecto a la muñeca del cuerpo
       const W = h.J[0]; _hrQi.copy(W.q).invert();
       for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; if (!J.ok) continue; r.p.copy(J.p).sub(W.p).applyQuaternion(_hrQi); r.q.copy(_hrQi).multiply(J.q); r.r = J.r; }
+      const wasPred = R.mode === 'pred' && R.lostT > 0.08; // (antes de olvidar cuánto estuvo perdida)
       R.has = true; if (h.F) R.v.lerp(t - h.F.tRaw < 0.06 ? _hrT.set(h.F.v[0], h.F.v[1], h.F.v[2]) : _hrT.set(0, 0, 0), 0.6); R.lastP.copy(W.p); R.lastQ.copy(W.q); R.lostT = 0; // (si las gafas repiten la misma postura un rato, está parada: sin velocidad)
-      h.back = R.mode === 'body'; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto, no: va por el mismo camino)
+      h.back = R.mode === 'body' || wasPred; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto más de 0,08 s, también: la de verdad ya frenó o giró y el salto hasta ella no es una sacudida)
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
@@ -17037,12 +17078,17 @@ function bodySessionEnd() {
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
 const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+// Los tres últimos dedos (corazón, anular y meñique) cerrados: puño (para no confundirlo con un pellizco). Se compara la
+// punta con su nudillo respecto a la muñeca (vale para cualquier tamaño de mano): cerrado, la punta vuelve hacia la palma
+// y queda casi tan cerca como el nudillo; estirado o relajado, bastante más lejos
+function handCurled(h) { const W = h.J[0]; if (!W.ok) return false; let n = 0, c = 0; for (const [tip, kn] of [[14, 11], [19, 16], [24, 21]]) { const T = h.J[tip], K = h.J[kn]; if (!T.ok || !K.ok) continue; n++; if (T.p.distanceTo(W.p) < 1.15 * K.p.distanceTo(W.p)) c++; } return n >= 2 && c >= n - 1 && c >= 2; }
 function handSmooth(h, t) {
   const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
-  const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
+  const same = !reset && J[0].ok && Math.abs(W.x - F.raw[0]) + Math.abs(W.y - F.raw[1]) + Math.abs(W.z - F.raw[2]) < 1e-5, rdt = t - F.tRaw; // (con margen: lo guardado va en precisión simple)
   if (!same) F.tRaw = t;
+  F.fresh = !same; // (para el juego: si esta postura es nueva; ver handNew)
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
     if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
