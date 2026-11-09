@@ -61,8 +61,8 @@ const LIFE = (() => {
   return { pts, g, pos, size, kind, pop, sets: new Map() };
 })();
 const _lfa = new V3(), _lfr = new V3();
-// el tamaño de sus bolitas: 6,5 cm (4,2 cm en el suelo, en flexiones y planchas, que están cerca; 3,5 cm en las pompas de las barras, que llegan a la cara)
-const lifeDia = e => e.type === 'target' ? 0.035 : e.type === 'spider' || (e.type === 'flyer' && isTiny()) ? 0.042 : 0.065;
+// el tamaño de sus bolitas: 6,5 cm (12 cm en los bandidos, que lanzan desde 4,5 m; 4,2 cm en el suelo, en flexiones y planchas, que están cerca; 3,5 cm en las pompas de las barras, que llegan a la cara)
+const lifeDia = e => e.band ? 0.12 : e.type === 'target' ? 0.035 : e.type === 'spider' || (e.type === 'flyer' && isTiny()) ? 0.042 : 0.065;
 const lifeD = (S, b) => S.d * (b.k ? 1.45 : 1); // (la grande, casi una vez y media)
 // lo que le queda, en bolitas: grandes de 5 si aguantaba más de 8, y sueltas
 const lifeWant = e => { const hp = Math.max(0, Math.ceil(e.alive ? e.hp : 0)), big = (e.maxHp || 0) > 8 ? Math.floor(hp / LIFE_BIG) : 0; return [big, hp - big * LIFE_BIG]; };
@@ -71,6 +71,11 @@ function lifeStep(dt) {
   for (const e of enemies) if (e.alive && e.bar && e.root && e.root.parent && e.root.visible !== false && e.hp > 0) {
     seen.add(e); let S = L.sets.get(e); if (!S) { S = { b: [], at: new V3(), d: lifeDia(e) }; L.sets.set(e, S); }
     const a = e.bar.g, r = e.root; S.at.set(0, a.position.y * r.scale.y, 0).add(r.position); r.parent.localToWorld(S.at); // (sobre la cabeza: sin el giro ni la inclinación del cuerpo)
+  }
+  // los bandidos de la Travesía: una bolita por cada piedra que falta esquivarles, desde que se los ve venir (a 40 m)
+  if (settings.mode === 'trek') for (const o of TREK.obs) if (o.bandits && o.at - TREK.dist < 40) for (const b of o.bandits) if (b.alive && b.hp > 0 && b.st !== 'leave' && b.st !== 'gone') {
+    seen.add(b); let S = L.sets.get(b); if (!S) { S = { b: [], at: new V3(), d: lifeDia(b) }; L.sets.set(b, S); }
+    o.mesh.localToWorld(S.at.set(b.x, (b.y || 0) + 2.08, b.z));
   }
   for (const [e, S] of L.sets) {
     const live = seen.has(e), [big, small] = live ? lifeWant(e) : [0, 0];
@@ -1336,7 +1341,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  if (settings.mode === 'trek') { if (state !== 'play') return; registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero)
+  if (settings.mode === 'trek') { if (state !== 'play') return; if (TREK.halt) { trekRep(opts); return; } registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero; parado ante un reto, no cuenta para el tramo: lo que toca es el otro movimiento)
   registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -1346,8 +1351,8 @@ function onRep(opts, side) {
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   const bp = sorbFire(); // la bola de energía estalla y de ella salen los rayos (lanzando con las manos, la carga pasa a ellas)
-  if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
-    const sup = settings.exercise === 'superman', origin = bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
+  if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado y siempre desde la mano que levantas: la bola de la carga se ha ido a ella)
+    const sup = settings.exercise === 'superman', arm = oneArm() && side && hands[side].ok ? hands[side].wrist.clone() : null, origin = arm || bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined, settings.exercise === 'inchworm' ? IW.aim : null); // (en el inchworm, al que miras: iwAimStep)
   } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
@@ -1504,12 +1509,6 @@ function armStep(kind, side, t, dt) {
 // ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
 // salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
 // así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
-// Las gafas leen las manos menos veces que pintan la imagen (unas 60 frente a 72 o 90): a ratos repiten la misma postura.
-// Para medir velocidades y saltos solo cuentan las posturas nuevas, con el tiempo de verdad desde la anterior; si no, la
-// mano parece pararse en seco en el fotograma repetido y avanzar el doble en el siguiente (lo vio una auditoría externa)
-// (repetida hace poco: es un hueco del seguimiento y se espera a la nueva; si lleva más de 45 ms igual, está quieta de
-// verdad y cuenta, con velocidad cero). Quien mide velocidades divide por el tiempo desde la última postura que contó
-const handNew = h => !(h.isHand && !h.est && h.F && h.F.fresh === false && h.F.t - h.F.tRaw < 0.045);
 const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
 const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
 function handFilter(dt) {
@@ -1518,8 +1517,7 @@ function handFilter(dt) {
     const h = hands[s], F = HF[s];
     if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
     const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
-    F.acc = (F.acc || 0) + dt; if (F.has && !handNew(h)) continue; // (postura repetida por las gafas: se juzga la siguiente)
-    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * F.acc); F.p.copy(h.wrist); F.has = true; F.acc = 0; // (el salto, con el tiempo desde la postura anterior: si no, al llegar una nueva tras una repetida parecía imposible)
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
     F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
@@ -2106,12 +2104,11 @@ function throwStep(dt, t) {
     // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
     if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
       const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
-      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); T.acc = 0; continue; }
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
     }
     T.gone.set(0, 0, 0);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; T.acc = 0; continue; }
-    T.acc = (T.acc || 0) + dt; if (!handNew(h)) continue; // (postura repetida por las gafas: ni se ha parado ni ha frenado; se espera a la siguiente)
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(T.acc, 1e-3)); T.prev.copy(_thr); T.acc = 0;
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
@@ -2718,7 +2715,7 @@ function warmQueue() {
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
 // tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)
 function warmStep() {
-  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true;
+  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true; HITCH.f.warm = 1;
   try {
     const o = it.mk(); WARM.done.add(it.key); if (!o) return true;
     const g = new THREE.Group(); g.add(o.root || o); g.traverse(n => { n.frustumCulled = false; }); g.position.set(0, -80, 0);
@@ -2814,7 +2811,7 @@ function startWave(i) {
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK();
   if (waveIntroOn(i)) { waveIntro(i); spawnTimer += WIN.dur; if (settings.mode === 'touch') TCH.nextArrive += WIN.dur; } // (que lleguen cuando se va el panel)
-  cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  const W1 = settings.mode === 'trek' ? `TRAMO ${i + 1} · ${TREK_BIOMES[TREK.biome].name.toUpperCase()}` : `OLEADA ${i + 1}`; cheer(rk ? `${W1} · +${Math.round(rk * 100)} % DIFICULTAD` : W1, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
@@ -2942,11 +2939,12 @@ function waveIntro(i) {
   const P = WIN.p, c = P.ctx, W = P.W, H = P.H, N = nWaves(), rk = rampK(), last = N && i >= N - 1;
   c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
   rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,10,28,0.82)'; c.fill(); c.lineWidth = 6; c.strokeStyle = 'rgba(255,209,102,0.7)'; c.stroke(); // (un panel, no letras sueltas)
-  const t1 = last ? '¡ÚLTIMA OLEADA!' : N ? `OLEADA ${i + 1} DE ${N}` : `OLEADA ${i + 1}`;
+  const tk = settings.mode === 'trek', W1 = tk ? 'TRAMO' : 'OLEADA'; // (en la Travesía, cada oleada es un tramo del camino, con su paisaje)
+  const t1 = last ? `¡ÚLTIM${tk ? 'O' : 'A'} ${W1}!` : N ? `${W1} ${i + 1} DE ${N}` : `${W1} ${i + 1}`;
   fitFont(c, t1, W - 60, 120, '%px ' + FD); c.save(); c.shadowColor = '#ffd166'; c.shadowBlur = 30; c.fillStyle = '#ffd166'; c.fillText(t1, W / 2, H * 0.3); c.restore();
-  const t2 = `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
+  const t2 = tk ? `${TREK_BIOMES[TREK.biome].name} · ${score} puntos` : `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
   const nw = LADDER.fresh.map(k => (FOE_GATE.concat(FOE_HATCH, FOE_FLY).find(o => o[0] === k) || [k, k])[1]).join(', '); // (el que entra en juego)
-  const t3 = nw ? `Entra en juego: ${nw}` : rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
+  const t3 = tk ? `${waveTarget} repeticiones te llevan al ${last ? 'final del camino' : 'tramo siguiente'}` : nw ? `Entra en juego: ${nw}` : rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
   if (t3) { fitFont(c, t3, W - 80, 48, '600 %px ' + FB); c.fillStyle = nw ? '#ff8a3d' : '#3cf0c6'; c.fillText(t3, W / 2, H * 0.87); }
   P.tex.needsUpdate = true; WIN.t = 0;
   hudLocal(_wiP.set(0, 0.02, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ()); // (donde salen los avisos, delante de ti)
@@ -3064,13 +3062,13 @@ function gameStep(dt, t) {
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { const cur = spawnQueue[0], wasJump = settings.mode === 'arcs' && cur && cur.kind === 'jump'; spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); if (wasJump && spawnQueue[0] && spawnQueue[0].kind === 'jump') spawnTimer = Math.max(spawnTimer, ARX_JUMP_GAP); boardDirty = true; } // (dos vallas seguidas: al menos ARX_JUMP_GAP entre una y otra, para caer y volver a saltar)
-    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget : enemies.some(e => e.alive);
+    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget || !!TREK.halt /* (el tramo no acaba a mitad de una parada) */ : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
       rampWaveEnd(!BAR.failed);
       if (BAR.failed) { const last = nWaves() && waveIdx >= nWaves() - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
       else if (nWaves() && waveIdx >= nWaves() - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : settings.mode === 'trek' ? '¡Tramo superado!' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {

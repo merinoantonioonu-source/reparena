@@ -76,7 +76,9 @@ SORB.num.renderOrder = 8; SORB.g.visible = false; scene.add(SORB.g);
 // Donde va: a un metro del pecho, a su altura (por debajo de los ojos: no tapa la vista), hacia donde miras de cuerpo (se
 // gira despacio: no da latigazos al mover la cabeza) y con un vaivén leve. Tumbado o en plancha, el pecho va casi a ras de
 // la cabeza
+// (en la plancha con un brazo, en cuanto levantas uno, la bola se va a esa mano: el rayo sale de ella, no de la bola)
 function sorbAt(out, dt) {
+  if (oneArm() && DET.pl) for (const s of ['left', 'right']) if (DET.pl[s].state === 'up' && hands[s].ok) return out.copy(hands[s].wrist).add(_sorbU.set(0, 0.06, 0));
   const f = fwdH(), want = Math.atan2(f.x, f.z), low = head.p.y < 1.0;
   SORB.yaw = SORB.init ? SORB.yaw + wrapAng(want - SORB.yaw) * Math.min(1, dt * 2.5) : want;
   const cy = low ? Math.max(0.22, head.p.y - 0.12) : head.p.y - 0.32; // (el pecho)

@@ -77,15 +77,20 @@ No las cambies sin preguntarle.
   Turbo por racha: seis repeticiones seguidas a buen ritmo lo encienden (más deprisa, puntos ×2, estelas de viento); una floja,
   3 s sin ninguna o chocar lo apagan. El
   sendero serpentea (el mundo gira despacio a tu alrededor; «Sendero con curvas» lo quita si marea). Detrás, siempre paisaje.
-- Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
+- Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer), y se llama tramo (panel «TRAMO
+  2 DE 5 · Aldea», las repeticiones que faltan en el marcador). El tramo no acaba a mitad de una parada, y las repeticiones
+  hechas en una parada no cuentan para él. Los retos salen a lo lejos, entre la niebla (88 m), no de golpe cerca; la roca o
+  el cofre que no se superan se apartan del sendero (nunca se atraviesan). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
-  una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: cada
-  embestida la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
+  una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: no se mueve con
+  la zancada, y cada embestida —al llegar abajo y adelante, no al volver— la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
   saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
   esquivar: lanzan piedras con aviso largo —la alta, agacharse; la baja, saltar; la que va al cuerpo, apartarse— y, con 5
-  esquivadas (6 desde el tercer tramo), se rinden y huyen; nada de puñetazos, que con el retraso de las manos en las gafas
+  esquivadas (6 desde el tercer tramo; encima, una bolita de vida por cada una que falta), caen muertos; cada esquivada les
+  duele (gesto y quejido); al lanzar, voz de persona (nunca el siseo de las arañas), con su animación a su velocidad, la
+  piedra desde su mano y en parábola; nada de puñetazos, que con el retraso de las manos en las gafas
   no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te cortan el paso: salen a lo lejos, delante y a un
   lado (siempre a la vista: flecha roja encima, que se ve a través de rocas y árboles), y corren en diagonal a un punto del
   sendero por delante de ti; si llegas antes (con margen: basta con ir a su paso a buen ritmo; muerden a menos de 0,8 m),
@@ -122,7 +127,7 @@ No las cambies sin preguntarle.
 - Cargas ×2/×3/×4 aguantando la postura más dura, como en la sentadilla: fondos (abajo, codos a 90°), elevación frontal
   (arriba), antebrazos (la barra escurrida), dominadas y remo (arriba; al bajar, onda que con ×4 revienta también a los
   cercanos) y la plancha con un brazo (una flexión aguantada abajo carga ×2/×3/×4, con la bola a la vista; el brazo que se
-  levanta después lanza esa carga).
+  levanta después lanza esa carga: la bola se va a esa mano y el rayo sale siempre de la mano levantada, nunca de la bola).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
@@ -138,9 +143,9 @@ No las cambies sin preguntarle.
   con el cuerpo» (Ajustes → Menú, de serie) y si el navegador da el cuerpo, la perdida se coloca en la muñeca del
   cuerpo con su última forma y las puntas celestes (`h.est = 'body'`). Una mano con `h.est` no pulsa menús ni coloca
   barras: lo que necesite la mano de verdad tiene que saltársela; al volver a verla, `h.back` (ese fotograma).
-- Las gafas repiten a ratos la postura de la mano (leen las manos a menos fotogramas que la imagen): lo que mida velocidades o
-  saltos de las manos usa solo posturas nuevas (`handNew`, `src/70_game.js`) y el tiempo desde la última que contó (el
-  lanzamiento, el puñetazo y el filtro `HF`). El pellizco no cuenta con el puño cerrado (`handCurled`, `src/80_main.js`).
+- La lectura de las manos (suavizado, filtro `HF` de las dos manos juntas, lanzamiento, puñetazo, pellizco) está como antes
+  de la auditoría externa: sus cambios (solo posturas nuevas, pellizco con puño, salto de la mano recuperada) empeoraron
+  mucho los dos curls en las gafas y el usuario pidió quitarlos. No vuelvas a tocarla sin probarlo con él en las gafas.
 - Espada: corta solo con el brazo (la mano también a ≥ 0,6 m/s, `SWORD_ARM`); el bloqueo, con la hoja en la marca en los
   últimos 0,35 s (`BLOCK_LATE`), y la marca se pone turquesa al cubrirla. Arriba del curl y la elevación frontal, chispa y
   chasquido (`topCue`); el disparo sigue al bajar (por las cargas). Puñetazo y tajo empujan también hacia el lado del golpe.

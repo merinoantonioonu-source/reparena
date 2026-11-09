@@ -308,13 +308,13 @@ function introPrep(steps = 1) {
   const S = introScene(), k = `${S.pose}|${S.boss}|${S.what}|${introName()}|${introSub()}`, A = INTRO_ART;
   if (!A.cv) { A.cv = mkCanvas(960, 540); A.card = mkCanvas(1280, 720); }
   if (A.key !== k) { A.key = k; A.ready = false; A.gen = (function* () { yield* CIN.paintGen(A.cv.getContext('2d'), 960, 540, S); yield; introDeco(A.card.getContext('2d'), 1280, 720, A.cv); })(); }
-  while (!A.ready && steps-- > 0) { if (A.gen.next().done) A.ready = true; A.cv.getContext('2d').getImageData(0, 0, 1, 1); } // (leer un punto obliga a acabar el dibujo de este paso ya, y no todo de golpe al final)
+  while (!A.ready && steps-- > 0) { HITCH.f.intro = 1; if (A.gen.next().done) A.ready = true; A.cv.getContext('2d').getImageData(0, 0, 1, 1); } // (leer un punto obliga a acabar el dibujo de este paso ya, y no todo de golpe al final)
   return A.ready;
 }
 // cada fotograma, fuera de la partida: lo que falte por pintar (y, cada medio segundo, si ha cambiado el ejercicio o el jefe)
 function introIdle(dt) {
-  if (!settings.intro || INTRO.t >= 0 || !(xrActive || preview) || GAME_STATES.includes(state)) return;
-  INTRO_ART.t -= dt; if (INTRO_ART.ready && INTRO_ART.t > 0) return; INTRO_ART.t = 0.5;
+  if (!settings.intro || INTRO.t >= 0 || !(xrActive || preview) || GAME_STATES.includes(state) || menuBusy()) return; // (no mientras tocas el menú: cada trozo de la ilustración puede congelar la imagen un instante)
+  INTRO_ART.t -= dt; if (INTRO_ART.t > 0) return; INTRO_ART.t = INTRO_ART.ready ? 0.5 : 0.15; // (un trozo cada 0,15 s, no uno por fotograma)
   try { introPrep(1); } catch (e) { console.warn('cortinilla', e && e.message); INTRO_ART.ready = true; }
 }
 // lo que no cambia de una ronda a otra (la ilustración ampliada, los tintes, el tajo de luz, el título y el VS: con

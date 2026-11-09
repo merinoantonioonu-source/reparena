@@ -290,7 +290,7 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3();
 //    la pulsación abre otro menú en el mismo sitio, hasta que sale por delante). El dedo de verdad sigue contando para pulsar
 //  · el panel del menú también es sólido: el dedo que llega por delante al fondo o a un hueco entre teclas se queda
 //    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
-const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
+const POKE = { st: {}, need: { left: false, right: false }, until: 0, busyT: -9, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
 const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.02, POKE_GAP = 0.25, POKE_BACK = 0.02;
 // El imán (elegido por el usuario): la tecla iluminada sigue iluminada hasta que el dedo sale de ella más de POKE_STICK (así
@@ -333,6 +333,8 @@ function pokeSwipe(S, w, fs) {
   _pkV.set(fs.x - o[1], fs.y - o[2], fs.z - o[3]); const nz = _pkV.dot(_pnN), lat = _pkV.addScaledVector(_pnN, -nz).length();
   return lat > POKE_SWIPE_MIN && lat > 2 * Math.max(0, -nz);
 }
+// el dedo con el menú (iluminando o pulsando) hace menos de 1,5 s: lo pesado que se hace de fondo en el menú espera
+const menuBusy = () => performance.now() / 1000 - POKE.busyT < 1.5;
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
   const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
@@ -385,7 +387,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
           if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
           else {
             push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
-            if (!S.done && depth >= POKE_DEPTH) { S.done = true; if (!pokeSwipe(S, w, fs) && !press) press = { w, side }; } // hacia dentro y no de lado
+            if (!S.done && depth >= POKE_DEPTH) { if (pokeSwipe(S, w, fs)) S.done = true; else if (!press) press = { w, side, S }; } // hacia dentro y no de lado (se da por hecha solo si se dispara: si el menú aún no está listo, o acaba de pulsarse otra, espera con el dedo dentro en vez de perderse)
             pin = !!S.pin;
           }
           hov.add(w); break st;
@@ -412,6 +414,10 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     else S.mag.lerp(_pkM, Math.min(1, dt * 18));
     if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
     Hd.v.add(S.mag);
+    // el dedo va a por el menú (se mueve cerca de una tecla) o la está hundiendo: lo pesado de fondo espera (un dedo quieto
+    // cerca del menú no lo frena para siempre)
+    const zz = cur ? cur.z : 9, moving = S.cand && S.lz !== undefined && Math.abs(zz - S.lz) > dt * 0.04; S.lz = zz;
+    if (isMenu && (S.push || moving)) POKE.busyT = now;
   }
   for (const w of vis) {
     if (w.flashT > 0) w.flashStep(dt);
@@ -424,7 +430,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
-  POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
+  press.S.done = true; POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
   SND.click(); haptic(press.side, 0.15, 15); if (press.w.flash) press.w.flash(); press.w.onPress(); return true;
 }
 
@@ -480,7 +486,7 @@ function wrapLines(text, maxPx) {
   if (cur) lines.push(cur); return lines;
 }
 function openMenu(rows, opts = {}) {
-  rows = rows.slice();
+  HITCH.f.menu = 1; rows = rows.slice();
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
   const wasClosed = !!(menu && menuAnchor && menu.closed), reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
@@ -1217,8 +1223,8 @@ function drawBoard() {
     const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
-  // Travesía: los metros recorridos, la velocidad de ahora y el paisaje
-  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
+  // Travesía: los metros recorridos, la velocidad de ahora y el tramo (las repeticiones que faltan para el siguiente; en una parada, no corren)
+  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.halt ? `tramo ${waveIdx + 1}: parada` : `tramo ${waveIdx + 1}: faltan ${Math.max(0, waveTarget - waveDone)}`}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }

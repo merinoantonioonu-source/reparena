@@ -524,6 +524,7 @@ html.app .sndrow:last-child{border-bottom:0}
       <button class="btn" id="btnPreview"><span class="lg">Probar en el ordenador</span><span class="sm">Probar</span></button>
     </div>
     <p class="status" id="xrStatus"></p>
+    <p class="status" id="hitchStatus"></p>
     <!-- El índice: cada apartado (y debajo, los subapartados del que se ve) enseña a la derecha solo lo suyo. En el móvil,
          una barra fija arriba que se despliega -->
     <nav class="toc" id="toc" aria-label="Apartados de la página"></nav>
@@ -561,7 +562,7 @@ html.app .sndrow:last-child{border-bottom:0}
         <small>Vienen hacia ti aros de neón con flechas que giran (mete la cabeza por el hueco) y diamantes con la mano que los toca (izquierda azul, derecha naranja). Llegan donde te obliga el ejercicio, y pueden ir al ritmo de la música.</small></label>
       <label class="card"><input type="radio" name="mode" id="mode-trek" value="trek">
         <span class="tag">Sentadillas, zancadas y curl</span><b>Travesía</b>
-        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar las piedras (agáchate, salta o apártate) hasta que se rinden y huyen… y lobos que te cortan el paso: mantén el ritmo para pasar antes que ellos.</small></label>
+        <small>Recorre un sendero del bosque a fuerza de repeticiones: cada una te empuja y, si paras, te paras. Cada oleada es un tramo con su paisaje (bosque, aldea, pradera del lago y pinar al atardecer). Por el camino, retos de otro movimiento: troncos que saltar, cofres con cadenas, el arroyo saltando de piedra en piedra, el desfiladero que se desmorona a saltos, bandidos a los que esquivar las piedras (agáchate, salta o apártate) hasta que caen (las bolitas de encima dicen cuántas faltan)… y lobos que te cortan el paso: mantén el ritmo para pasar antes que ellos.</small></label>
     </div>
     <p class="modeInfo" id="modeInfo"></p>
   </section>
@@ -765,7 +766,7 @@ html.app .sndrow:last-child{border-bottom:0}
       <li><strong>Mandos como manos</strong> (sentadillas y zancadas en Combate): con los mandos se ven tus manos, agarrando el mando como de verdad (la palma hacia dentro y el índice en el gatillo). Gatillo y agarre a la vez cierran el puño (delante del pecho, escudo); para lanzar el rayo, apunta con la mano y aprieta el gatillo. El menú, con X o Y.</li>
       <li><strong>Entre oleadas</strong>, la escena se oscurece un poco y un panel grande dice qué oleada empieza y cuántos puntos llevas.</li>
       <li><strong>Al fallo</strong> (menú principal; en Arcos, de serie): oleadas sin fin hasta que te quedes sin vidas; al final, la oleada a la que llegaste y tu récord. En Combate, los enemigos van <b>de menos a más duros</b>: primero los fáciles y, cada pocas oleadas, entra uno nuevo, que se anuncia.</li>
-      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales las piedras (agáchate ante la alta, salta la baja, apártate de la que va al cuerpo) hasta que se rindan y huyan; y gánales la carrera a los lobos: salen a lo lejos, delante y a un lado (con una flecha roja encima), y corren a cortarte el paso (los oirás aullar y gruñir cada vez más cerca); a buen ritmo, llegas antes y se quedan atrás. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
+      <li><strong>Travesía:</strong> cada repetición te empuja por el sendero (más deprisa cuanto más rápido y más hondo); salta los troncos o agáchate bajo las ramas, rompe las cadenas de los cofres, aparta la roca del derrumbe con zancadas, cruza el arroyo saltando de piedra en piedra y el desfiladero saltando de pilar en pilar antes de que se hundan; a los bandidos, esquívales las piedras (agáchate ante la alta, salta la baja, apártate de la que va al cuerpo) hasta que caigan (encima de cada uno, una bolita por piedra que falta); y gánales la carrera a los lobos: salen a lo lejos, delante y a un lado (con una flecha roja encima), y corren a cortarte el paso (los oirás aullar y gruñir cada vez más cerca); a buen ritmo, llegas antes y se quedan atrás. Cada tramo, otro paisaje: bosque, aldea, pradera del lago y pinar al atardecer.</li>
       <li><strong>Logros en grande:</strong> la meta del día, un récord, un nivel nuevo o el cofre del día salen en un aviso dorado bien grande, con fanfarria.</li>
       <li><strong>El marcador</strong> flota a un lado, por delante (a la izquierda, o donde elijas en Entorno → Marcador), sin poste, bien grande y siempre a la vista, con la insignia de tu rango. Al acabar, el resumen te da una medalla. <strong>Tumbado o en plancha</strong>, los avisos salen en el suelo bajo tu cara o en el techo, con lo de arriba del texto hacia tu cabeza.</li>
       <li><strong>El marcador:</strong> a la izquierda, un rosco doble: el anillo de fuera se llena con la oleada y el de dentro es tu <b>racha</b>, en 10 tramos, que se encienden con cada repetición buena seguida (una a medias o un golpe la apagan); en medio, tus repeticiones. Arriba, las oleadas en puntos, los puntos y las vidas. Las celebraciones (¡PERFECTA!, COMBO…) salen en el marcador; delante de ti, solo lo que tienes que hacer ya. El escudo por técnica es un <b>brazalete de luz</b> en tu antebrazo que se llena con las perfectas.</li>
@@ -808,6 +809,9 @@ html.app .sndrow:last-child{border-bottom:0}
 <div class="sndrow" data-row="lobo-aullido"><button type="button" class="snd" data-snd="lobo-aullido" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>lobo-aullido</code><span>Travesía: los lobos aparecen a lo lejos (aúlla el primero; se oye desde lejos).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="lobo-aullido" checked aria-label="lobo-aullido: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
 <div class="sndrow" data-row="lobo-grunido"><button type="button" class="snd" data-snd="lobo-grunido" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>lobo-grunido</code><span>Travesía: un lobo gruñe al acercarse (cada vez más a menudo y más fuerte).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="lobo-grunido" checked aria-label="lobo-grunido: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
 <div class="sndrow" data-row="lobo-ataque"><button type="button" class="snd" data-snd="lobo-ataque" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>lobo-ataque</code><span>Travesía: un lobo te alcanza y muerde (rugido y dentellada).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="lobo-ataque" checked aria-label="lobo-ataque: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
+<div class="sndrow" data-row="bandido-lanza"><button type="button" class="snd" data-snd="bandido-lanza" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>bandido-lanza</code><span>Travesía: un bandido lanza una piedra (su esfuerzo: «¡ja!»).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="bandido-lanza" checked aria-label="bandido-lanza: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
+<div class="sndrow" data-row="bandido-dolor"><button type="button" class="snd" data-snd="bandido-dolor" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>bandido-dolor</code><span>Travesía: le has esquivado una piedra a un bandido (un quejido: «¡uh!»).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="bandido-dolor" checked aria-label="bandido-dolor: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
+<div class="sndrow" data-row="bandido-muere"><button type="button" class="snd" data-snd="bandido-muere" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>bandido-muere</code><span>Travesía: un bandido cae derrotado (su lamento).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="bandido-muere" checked aria-label="bandido-muere: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
 <div class="sndrow" data-row="lanzamiento"><button type="button" class="snd" data-snd="lanzamiento" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>lanzamiento</code><span>El lanzador te tira una piedra.<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="lanzamiento" checked aria-label="lanzamiento: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
 <div class="sndrow" data-row="arco-pasa"><button type="button" class="snd" data-snd="arco-pasa" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>arco-pasa</code><span>Un arco de energía te pasa por encima, o lo saltas (Arcos).<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="arco-pasa" checked aria-label="arco-pasa: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
 <div class="sndrow" data-row="orbe"><button type="button" class="snd" data-snd="orbe" title="Escuchar el sonido que usa el juego ahora"><i class="sndplay" aria-hidden="true">▶</i><code>orbe</code><span>Coges un orbe en Arcos. (Campanitas de cristal que suben.)<em class="sndsrc" aria-live="polite"></em></span></button><label class="sndon" title="Encendido: suena en el juego. Apagado: no suena"><input type="checkbox" data-sndon="orbe" checked aria-label="orbe: suena en el juego"><span class="sw" aria-hidden="true"></span><span class="swt">Activado</span></label></div>
@@ -907,6 +911,7 @@ html.app .sndrow:last-child{border-bottom:0}
 'use strict';
 const $ = s => document.querySelector(s);
 const V3 = THREE.Vector3, Q4 = THREE.Quaternion;
+const HITCH = { list: [], f: { warm: 0, intro: 0, menu: 0 }, prev: null, tex: 0, prog: 0, n: 0, KEY: 'reparena3-hitch' }; // (el registro de tirones: ver hitchNote, 80_main)
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -1743,6 +1748,18 @@ function noise(dest, { t = 0, a = 0.002, d = 0.3, gain = 0.3, type = 'lowpass', 
 }
 function shaper(dest, hard) { const w = AUD.C.createWaveShaper(); w.curve = hard ? AUD.curveHard : AUD.curve; w.oversample = '2x'; w.connect(dest); return w; }
 
+// Una voz humana breve: la vibración de la garganta (diente de sierra con el tono que cae) por tres formantes de la vocal,
+// un soplo de aire y, al final del lamento, la voz que se quiebra (fry)
+function voxSynth(pos, { f0, f1, d, a = 0.02, form, breath = 0.4, fry = 0, gain = 1 }) {
+  if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.3, gain, ref: 2.5 }), f = f0 * rand(0.92, 1.08);
+  const env = C.createGain(); env.gain.setValueAtTime(0.0001, T); env.gain.exponentialRampToValueAtTime(0.6, T + a); env.gain.setValueAtTime(0.6, T + a + d * 0.35); env.gain.exponentialRampToValueAtTime(0.0001, T + a + d);
+  for (const [ff, q, g] of form) { const bp = C.createBiquadFilter(), gg = C.createGain(); bp.type = 'bandpass'; bp.frequency.value = ff; bp.Q.value = q; gg.gain.value = g; env.connect(bp); bp.connect(gg); gg.connect(o); }
+  const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * 1.06, T); os.frequency.linearRampToValueAtTime(f, T + a + 0.03); os.frequency.exponentialRampToValueAtTime(f1 * f / f0, T + a + d);
+  const vib = C.createOscillator(), vg = C.createGain(); vib.frequency.value = rand(5, 7); vg.gain.value = f * 0.02; vib.connect(vg).connect(os.frequency); vib.start(T); vib.stop(T + a + d + 0.05);
+  let src = os; if (fry) { const am = C.createGain(), lfo = C.createOscillator(), lg = C.createGain(); am.gain.value = 0.6; lfo.frequency.value = 28; lg.gain.setValueAtTime(0, T); lg.gain.linearRampToValueAtTime(0.5, T + a + d); lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + a + d + 0.05); os.connect(am); src = am; }
+  src.connect(env); os.start(T); os.stop(T + a + d + 0.05);
+  noise(o, { type: 'bandpass', f: 1600, q: 0.9, a, d: d * 0.8, gain: 0.12 * breath });
+}
 function roarSynth(pos, s) {
   if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
   const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
@@ -1848,6 +1865,11 @@ const SND = {
     noise(o, { type: 'bandpass', f: 2200, q: 1.1, a: 0.01, d: 0.45, gain: 0.35 });
     for (const t of [0.18, 0.3]) noise(o, { t, type: 'highpass', f: 2500, a: 0.001, d: 0.03, gain: 0.6 }); // (la dentellada: dos chasquidos de mandíbula)
   },
+  // los bandidos de la Travesía, con voz de persona (no el siseo de las arañas): el esfuerzo al lanzar («¡ja!»), el
+  // quejido al esquivarles una piedra («¡uh!») y el lamento al caer
+  banditThrow(pos) { voxSynth(pos, { f0: 150, f1: 105, d: 0.28, a: 0.02, form: [[720, 6, 1], [1150, 8, 0.6], [2500, 10, 0.25]], breath: 0.5, gain: 1 }); },
+  banditHurt(pos) { voxSynth(pos, { f0: 210, f1: 135, d: 0.34, a: 0.015, form: [[420, 6, 1], [900, 8, 0.45], [2400, 10, 0.18]], breath: 0.35, gain: 0.95 }); },
+  banditDeath(pos) { voxSynth(pos, { f0: 170, f1: 70, d: 1.1, a: 0.04, form: [[650, 5, 1], [1050, 7, 0.5], [2450, 9, 0.2]], breath: 0.45, fry: 1, gain: 1 }); },
   // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
   bird(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
@@ -2011,7 +2033,8 @@ const SND_FILES = {
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0],
-  wolfHowl: ['lobo-aullido', 0], wolfGrowl: ['lobo-grunido', 0], wolfBite: ['lobo-ataque', 0]
+  wolfHowl: ['lobo-aullido', 0], wolfGrowl: ['lobo-grunido', 0], wolfBite: ['lobo-ataque', 0],
+  banditThrow: ['bandido-lanza', 0], banditHurt: ['bandido-dolor', 0], banditDeath: ['bandido-muere', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
@@ -6033,7 +6056,9 @@ SORB.num.renderOrder = 8; SORB.g.visible = false; scene.add(SORB.g);
 // Donde va: a un metro del pecho, a su altura (por debajo de los ojos: no tapa la vista), hacia donde miras de cuerpo (se
 // gira despacio: no da latigazos al mover la cabeza) y con un vaivén leve. Tumbado o en plancha, el pecho va casi a ras de
 // la cabeza
+// (en la plancha con un brazo, en cuanto levantas uno, la bola se va a esa mano: el rayo sale de ella, no de la bola)
 function sorbAt(out, dt) {
+  if (oneArm() && DET.pl) for (const s of ['left', 'right']) if (DET.pl[s].state === 'up' && hands[s].ok) return out.copy(hands[s].wrist).add(_sorbU.set(0, 0.06, 0));
   const f = fwdH(), want = Math.atan2(f.x, f.z), low = head.p.y < 1.0;
   SORB.yaw = SORB.init ? SORB.yaw + wrapAng(want - SORB.yaw) * Math.min(1, dt * 2.5) : want;
   const cy = low ? Math.max(0.22, head.p.y - 0.12) : head.p.y - 0.32; // (el pecho)
@@ -6634,7 +6659,7 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3();
 //    la pulsación abre otro menú en el mismo sitio, hasta que sale por delante). El dedo de verdad sigue contando para pulsar
 //  · el panel del menú también es sólido: el dedo que llega por delante al fondo o a un hueco entre teclas se queda
 //    apoyado en él (POKE.pan: si estaba delante, dentro del panel; entrar por detrás o por un lado no frena)
-const POKE = { st: {}, need: { left: false, right: false }, until: 0, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
+const POKE = { st: {}, need: { left: false, right: false }, until: 0, busyT: -9, lock: { left: null, right: null }, hold: { left: {}, right: {} }, pan: { left: { front: false }, right: { front: false } } };
 const POKE_HOLD_MAX = 0.12; // (más hundido que esto, la mano viene de otro sitio: atraviesa)
 const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.008, POKE_SLIDE = 0.02, POKE_GAP = 0.25, POKE_BACK = 0.02;
 // El imán (elegido por el usuario): la tecla iluminada sigue iluminada hasta que el dedo sale de ella más de POKE_STICK (así
@@ -6677,6 +6702,8 @@ function pokeSwipe(S, w, fs) {
   _pkV.set(fs.x - o[1], fs.y - o[2], fs.z - o[3]); const nz = _pkV.dot(_pnN), lat = _pkV.addScaledVector(_pnN, -nz).length();
   return lat > POKE_SWIPE_MIN && lat > 2 * Math.max(0, -nz);
 }
+// el dedo con el menú (iluminando o pulsando) hace menos de 1,5 s: lo pesado que se hace de fondo en el menú espera
+const menuBusy = () => performance.now() / 1000 - POKE.busyT < 1.5;
 function pokeWidgets(list, dt, ready = true, isMenu = false) {
   const now = performance.now() / 1000, key = isMenu ? 'menu' : 'aux', vis = list.filter(w => w.mesh.visible);
   const push = new Map(), hov = new Set(), drags = new Map(); let press = null;
@@ -6729,7 +6756,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
           if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
           else {
             push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
-            if (!S.done && depth >= POKE_DEPTH) { S.done = true; if (!pokeSwipe(S, w, fs) && !press) press = { w, side }; } // hacia dentro y no de lado
+            if (!S.done && depth >= POKE_DEPTH) { if (pokeSwipe(S, w, fs)) S.done = true; else if (!press) press = { w, side, S }; } // hacia dentro y no de lado (se da por hecha solo si se dispara: si el menú aún no está listo, o acaba de pulsarse otra, espera con el dedo dentro en vez de perderse)
             pin = !!S.pin;
           }
           hov.add(w); break st;
@@ -6756,6 +6783,10 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     else S.mag.lerp(_pkM, Math.min(1, dt * 18));
     if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
     Hd.v.add(S.mag);
+    // el dedo va a por el menú (se mueve cerca de una tecla) o la está hundiendo: lo pesado de fondo espera (un dedo quieto
+    // cerca del menú no lo frena para siempre)
+    const zz = cur ? cur.z : 9, moving = S.cand && S.lz !== undefined && Math.abs(zz - S.lz) > dt * 0.04; S.lz = zz;
+    if (isMenu && (S.push || moving)) POKE.busyT = now;
   }
   for (const w of vis) {
     if (w.flashT > 0) w.flashStep(dt);
@@ -6768,7 +6799,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
-  POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
+  press.S.done = true; POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
   SND.click(); haptic(press.side, 0.15, 15); if (press.w.flash) press.w.flash(); press.w.onPress(); return true;
 }
 
@@ -6824,7 +6855,7 @@ function wrapLines(text, maxPx) {
   if (cur) lines.push(cur); return lines;
 }
 function openMenu(rows, opts = {}) {
-  rows = rows.slice();
+  HITCH.f.menu = 1; rows = rows.slice();
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
   const wasClosed = !!(menu && menuAnchor && menu.closed), reuse = menu && menuAnchor, recent = !reuse && !opts.anchor && lastAnchor && performance.now() / 1000 - lastAnchorT < 2;
@@ -7561,8 +7592,8 @@ function drawBoard() {
     const gd = arxGhostDiff(), t1 = `${Math.round(ARX.dist)} m${ARX.fever ? ' · FIEBRE' : ''}${arxBeatP() ? ` · ♪ ${settings.bpm}` : ''}${gd !== null ? ` · fantasma ${gd >= 0 ? '+' : '−'}${Math.abs(gd)}` : ''}`; c.textAlign = 'right'; // (en una línea: abajo va el rango)
     c.fillStyle = ARX.fever ? '#ff4fa3' : gd !== null && gd < 0 ? '#ff8a3d' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330);
   }
-  // Travesía: los metros recorridos, la velocidad de ahora y el paisaje
-  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.keys ? `llaves ${TREK.keys}/3` : TREK_BIOMES[TREK.biome].name}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
+  // Travesía: los metros recorridos, la velocidad de ahora y el tramo (las repeticiones que faltan para el siguiente; en una parada, no corren)
+  if (settings.mode === 'trek' && live && state !== 'rest') { const C = TREK.chase, t1 = `${Math.round(TREK.dist)} m · ${(TREK.v * 3.6).toFixed(1).replace('.', ',')} km/h${TREK.turbo ? ' · TURBO ×2' : ''} · ${C ? `¡LOBOS a ${Math.max(0, Math.round(C.gap))} m!` : TREK.halt ? `tramo ${waveIdx + 1}: parada` : `tramo ${waveIdx + 1}: faltan ${Math.max(0, waveTarget - waveDone)}`}`; c.textAlign = 'right'; c.fillStyle = C ? '#ff8a3d' : TREK.turbo ? '#c8ff3a' : BC.ink; fitFont(c, t1, 560, 48, '600 %px ' + FB); c.fillText(t1, RX, 330); }
   // abajo a la derecha, el rango: su escudo con los galones y el nombre
   { const nm = rankName().toUpperCase(), i = rankIdx(); c.textAlign = 'right'; c.textBaseline = 'middle'; fitFont(c, nm, 300, 50, '%px ' + FD); const tw = c.measureText(nm).width;
     glowText(c, nm, RX, 404, RANK_METAL[i][0], 8); drawRankShield(c, i, RX - tw - 50, 400, 76); }
@@ -8469,13 +8500,13 @@ function introPrep(steps = 1) {
   const S = introScene(), k = `${S.pose}|${S.boss}|${S.what}|${introName()}|${introSub()}`, A = INTRO_ART;
   if (!A.cv) { A.cv = mkCanvas(960, 540); A.card = mkCanvas(1280, 720); }
   if (A.key !== k) { A.key = k; A.ready = false; A.gen = (function* () { yield* CIN.paintGen(A.cv.getContext('2d'), 960, 540, S); yield; introDeco(A.card.getContext('2d'), 1280, 720, A.cv); })(); }
-  while (!A.ready && steps-- > 0) { if (A.gen.next().done) A.ready = true; A.cv.getContext('2d').getImageData(0, 0, 1, 1); } // (leer un punto obliga a acabar el dibujo de este paso ya, y no todo de golpe al final)
+  while (!A.ready && steps-- > 0) { HITCH.f.intro = 1; if (A.gen.next().done) A.ready = true; A.cv.getContext('2d').getImageData(0, 0, 1, 1); } // (leer un punto obliga a acabar el dibujo de este paso ya, y no todo de golpe al final)
   return A.ready;
 }
 // cada fotograma, fuera de la partida: lo que falte por pintar (y, cada medio segundo, si ha cambiado el ejercicio o el jefe)
 function introIdle(dt) {
-  if (!settings.intro || INTRO.t >= 0 || !(xrActive || preview) || GAME_STATES.includes(state)) return;
-  INTRO_ART.t -= dt; if (INTRO_ART.ready && INTRO_ART.t > 0) return; INTRO_ART.t = 0.5;
+  if (!settings.intro || INTRO.t >= 0 || !(xrActive || preview) || GAME_STATES.includes(state) || menuBusy()) return; // (no mientras tocas el menú: cada trozo de la ilustración puede congelar la imagen un instante)
+  INTRO_ART.t -= dt; if (INTRO_ART.t > 0) return; INTRO_ART.t = INTRO_ART.ready ? 0.5 : 0.15; // (un trozo cada 0,15 s, no uno por fotograma)
   try { introPrep(1); } catch (e) { console.warn('cortinilla', e && e.message); INTRO_ART.ready = true; }
 }
 // lo que no cambia de una ronda a otra (la ilustración ampliada, los tintes, el tajo de luz, el título y el VS: con
@@ -10349,8 +10380,8 @@ const LIFE = (() => {
   return { pts, g, pos, size, kind, pop, sets: new Map() };
 })();
 const _lfa = new V3(), _lfr = new V3();
-// el tamaño de sus bolitas: 6,5 cm (4,2 cm en el suelo, en flexiones y planchas, que están cerca; 3,5 cm en las pompas de las barras, que llegan a la cara)
-const lifeDia = e => e.type === 'target' ? 0.035 : e.type === 'spider' || (e.type === 'flyer' && isTiny()) ? 0.042 : 0.065;
+// el tamaño de sus bolitas: 6,5 cm (12 cm en los bandidos, que lanzan desde 4,5 m; 4,2 cm en el suelo, en flexiones y planchas, que están cerca; 3,5 cm en las pompas de las barras, que llegan a la cara)
+const lifeDia = e => e.band ? 0.12 : e.type === 'target' ? 0.035 : e.type === 'spider' || (e.type === 'flyer' && isTiny()) ? 0.042 : 0.065;
 const lifeD = (S, b) => S.d * (b.k ? 1.45 : 1); // (la grande, casi una vez y media)
 // lo que le queda, en bolitas: grandes de 5 si aguantaba más de 8, y sueltas
 const lifeWant = e => { const hp = Math.max(0, Math.ceil(e.alive ? e.hp : 0)), big = (e.maxHp || 0) > 8 ? Math.floor(hp / LIFE_BIG) : 0; return [big, hp - big * LIFE_BIG]; };
@@ -10359,6 +10390,11 @@ function lifeStep(dt) {
   for (const e of enemies) if (e.alive && e.bar && e.root && e.root.parent && e.root.visible !== false && e.hp > 0) {
     seen.add(e); let S = L.sets.get(e); if (!S) { S = { b: [], at: new V3(), d: lifeDia(e) }; L.sets.set(e, S); }
     const a = e.bar.g, r = e.root; S.at.set(0, a.position.y * r.scale.y, 0).add(r.position); r.parent.localToWorld(S.at); // (sobre la cabeza: sin el giro ni la inclinación del cuerpo)
+  }
+  // los bandidos de la Travesía: una bolita por cada piedra que falta esquivarles, desde que se los ve venir (a 40 m)
+  if (settings.mode === 'trek') for (const o of TREK.obs) if (o.bandits && o.at - TREK.dist < 40) for (const b of o.bandits) if (b.alive && b.hp > 0 && b.st !== 'leave' && b.st !== 'gone') {
+    seen.add(b); let S = L.sets.get(b); if (!S) { S = { b: [], at: new V3(), d: lifeDia(b) }; L.sets.set(b, S); }
+    o.mesh.localToWorld(S.at.set(b.x, (b.y || 0) + 2.08, b.z));
   }
   for (const [e, S] of L.sets) {
     const live = seen.has(e), [big, small] = live ? lifeWant(e) : [0, 0];
@@ -11624,7 +11660,7 @@ function registerRep(perfect, fire = true, side) {
 }
 function onRep(opts, side) {
   if (!['play', 'rest', 'ready'].includes(state) || settings.mode === 'arcs' || isBars()) return;
-  if (settings.mode === 'trek') { if (state !== 'play') return; registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero)
+  if (settings.mode === 'trek') { if (state !== 'play') return; if (TREK.halt) { trekRep(opts); return; } registerRep(opts.perfect, false, side); trekRep(opts); return; } // (en la Travesía, cada repetición te empuja por el sendero; parado ante un reto, no cuenta para el tramo: lo que toca es el otro movimiento)
   registerRep(opts.perfect, true, side); guardOnRep(opts);
   if (!(combo % 10 === 0)) { if (opts.perfect) cheer('¡PERFECTA!', '#3cf0c6', 1.0); else if (opts.fast) say('Más controlado', '#ffffff', 1.0); else say('¡Bien!', '#ffffff', 0.7, false); }
   if (opts.perfect) SND.perfect();
@@ -11634,8 +11670,8 @@ function onRep(opts, side) {
   if (isCombat() && swordActive()) { swordCharge(opts.perfect); if (pistolOn() && settings.sword === 'one') gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   if (pistolOn() && !throwAim()) { gunLoad(opts.perfect); charged = false; chargePow = 1; chargeOrb.visible = false; return; }
   const bp = sorbFire(); // la bola de energía estalla y de ella salen los rayos (lanzando con las manos, la carga pasa a ellas)
-  if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado)
-    const sup = settings.exercise === 'superman', origin = bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
+  if (autoAim()) { // dispara solo al más cercano (en la plancha con un brazo, a los de su lado y siempre desde la mano que levantas: la bola de la carga se ha ido a ella)
+    const sup = settings.exercise === 'superman', arm = oneArm() && side && hands[side].ok ? hands[side].wrist.clone() : null, origin = arm || bp || (sup ? (hands.left.ok && hands.right.ok ? hands.left.wrist.clone().lerp(hands.right.wrist, 0.5) : head.p.clone().addScaledVector(fwdH(), 0.3)) : side && hands[side].ok ? hands[side].wrist.clone() : chargeOrb.position.clone());
     if (side) gloves[side].pulse = 1;
     fireOrb(origin, dmg, opts.perfect, pow, oneArm() ? side : undefined, settings.exercise === 'inchworm' ? IW.aim : null); // (en el inchworm, al que miras: iwAimStep)
   } else if (!throwCharge(dmg, opts.perfect, pow)) { // apuntando con las manos: carga las manos y se lanza con el gesto
@@ -11792,12 +11828,6 @@ function armStep(kind, side, t, dt) {
 // ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
 // salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
 // así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
-// Las gafas leen las manos menos veces que pintan la imagen (unas 60 frente a 72 o 90): a ratos repiten la misma postura.
-// Para medir velocidades y saltos solo cuentan las posturas nuevas, con el tiempo de verdad desde la anterior; si no, la
-// mano parece pararse en seco en el fotograma repetido y avanzar el doble en el siguiente (lo vio una auditoría externa)
-// (repetida hace poco: es un hueco del seguimiento y se espera a la nueva; si lleva más de 45 ms igual, está quieta de
-// verdad y cuenta, con velocidad cero). Quien mide velocidades divide por el tiempo desde la última postura que contó
-const handNew = h => !(h.isHand && !h.est && h.F && h.F.fresh === false && h.F.t - h.F.tRaw < 0.045);
 const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
 const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
 function handFilter(dt) {
@@ -11806,8 +11836,7 @@ function handFilter(dt) {
     const h = hands[s], F = HF[s];
     if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
     const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
-    F.acc = (F.acc || 0) + dt; if (F.has && !handNew(h)) continue; // (postura repetida por las gafas: se juzga la siguiente)
-    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * F.acc); F.p.copy(h.wrist); F.has = true; F.acc = 0; // (el salto, con el tiempo desde la postura anterior: si no, al llegar una nueva tras una repetida parecía imposible)
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
     F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
@@ -12394,12 +12423,11 @@ function throwStep(dt, t) {
     // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
     if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
       const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
-      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); T.acc = 0; continue; }
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
     }
     T.gone.set(0, 0, 0);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; T.acc = 0; continue; }
-    T.acc = (T.acc || 0) + dt; if (!handNew(h)) continue; // (postura repetida por las gafas: ni se ha parado ni ha frenado; se espera a la siguiente)
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(T.acc, 1e-3)); T.prev.copy(_thr); T.acc = 0;
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
@@ -13006,7 +13034,7 @@ function warmQueue() {
 // Uno de la cola: compilar sus sombreadores con las luces de la escena y, con sombras, pintar su sombra una vez (lo que
 // tiene esqueleto usa otro sombreador para la sombra, que solo se compila al pintarla: un dibujo diminuto, fuera de la vista)
 function warmStep() {
-  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true;
+  const it = WARM.q.shift(); if (!it) return false; if (WARM.done.has(it.key)) return true; HITCH.f.warm = 1;
   try {
     const o = it.mk(); WARM.done.add(it.key); if (!o) return true;
     const g = new THREE.Group(); g.add(o.root || o); g.traverse(n => { n.frustumCulled = false; }); g.position.set(0, -80, 0);
@@ -13102,7 +13130,7 @@ function startWave(i) {
   if (WARM.q.length) warmShaders(); // (si quedaba algo por compilar, ahora, antes de que lleguen)
   spawnTimer = 0.6; state = 'play'; stateT = 0; const rk = rampK();
   if (waveIntroOn(i)) { waveIntro(i); spawnTimer += WIN.dur; if (settings.mode === 'touch') TCH.nextArrive += WIN.dur; } // (que lleguen cuando se va el panel)
-  cheer(rk ? `OLEADA ${i + 1} · +${Math.round(rk * 100)} % DIFICULTAD` : `OLEADA ${i + 1}`, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
+  const W1 = settings.mode === 'trek' ? `TRAMO ${i + 1} · ${TREK_BIOMES[TREK.biome].name.toUpperCase()}` : `OLEADA ${i + 1}`; cheer(rk ? `${W1} · +${Math.round(rk * 100)} % DIFICULTAD` : W1, '#ffd166', 1.6); center.mesh.visible = false; SND.horn();
 }
 function hurtPlayer(src) {
   if (guardAbsorb(src)) return; // parado por la guardia, una esquiva o el escudo (77_guard)
@@ -13230,11 +13258,12 @@ function waveIntro(i) {
   const P = WIN.p, c = P.ctx, W = P.W, H = P.H, N = nWaves(), rk = rampK(), last = N && i >= N - 1;
   c.clearRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
   rr(c, 8, 8, W - 16, H - 16, 40); c.fillStyle = 'rgba(14,10,28,0.82)'; c.fill(); c.lineWidth = 6; c.strokeStyle = 'rgba(255,209,102,0.7)'; c.stroke(); // (un panel, no letras sueltas)
-  const t1 = last ? '¡ÚLTIMA OLEADA!' : N ? `OLEADA ${i + 1} DE ${N}` : `OLEADA ${i + 1}`;
+  const tk = settings.mode === 'trek', W1 = tk ? 'TRAMO' : 'OLEADA'; // (en la Travesía, cada oleada es un tramo del camino, con su paisaje)
+  const t1 = last ? `¡ÚLTIM${tk ? 'O' : 'A'} ${W1}!` : N ? `${W1} ${i + 1} DE ${N}` : `${W1} ${i + 1}`;
   fitFont(c, t1, W - 60, 120, '%px ' + FD); c.save(); c.shadowColor = '#ffd166'; c.shadowBlur = 30; c.fillStyle = '#ffd166'; c.fillText(t1, W / 2, H * 0.3); c.restore();
-  const t2 = `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
+  const t2 = tk ? `${TREK_BIOMES[TREK.biome].name} · ${score} puntos` : `${score} puntos`; fitFont(c, t2, W - 80, 84, '%px ' + FD); c.fillStyle = '#eeeaff'; c.fillText(t2, W / 2, H * 0.62);
   const nw = LADDER.fresh.map(k => (FOE_GATE.concat(FOE_HATCH, FOE_FLY).find(o => o[0] === k) || [k, k])[1]).join(', '); // (el que entra en juego)
-  const t3 = nw ? `Entra en juego: ${nw}` : rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
+  const t3 = tk ? `${waveTarget} repeticiones te llevan al ${last ? 'final del camino' : 'tramo siguiente'}` : nw ? `Entra en juego: ${nw}` : rk ? `Un poco más difícil: +${Math.round(rk * 100)} %` : last && N > 1 ? `Has superado ${i} de ${N}` : '';
   if (t3) { fitFont(c, t3, W - 80, 48, '600 %px ' + FB); c.fillStyle = nw ? '#ff8a3d' : '#3cf0c6'; c.fillText(t3, W / 2, H * 0.87); }
   P.tex.needsUpdate = true; WIN.t = 0;
   hudLocal(_wiP.set(0, 0.02, -1.6), P.mesh.position); P.mesh.quaternion.copy(hudQ()); // (donde salen los avisos, delante de ti)
@@ -13352,13 +13381,13 @@ function gameStep(dt, t) {
     const alive = settings.mode === 'arcs' ? 0 : enemies.filter(e => e.alive).length;
     beatStep(dt); const arxOnBeat = arxBeatTick(); // con ritmo, los enemigos salen en el pulso (y los arcos llegan a ti en el pulso)
     if (spawnTimer <= 0 && spawnQueue.length && settings.mode !== 'touch' && alive < (isBars() ? 2 : dv('maxAlive')) && (!beatP() || BEAT.hit) && arxOnBeat) { const cur = spawnQueue[0], wasJump = settings.mode === 'arcs' && cur && cur.kind === 'jump'; spawnFromQueue(); spawnTimer = settings.mode === 'arcs' ? arxBeatGap(Math.max(ARX.minNext || 0, Math.min(spawnInterval * (ARX.nextGap || arcGap()), settings.arcMaxGap))) : isBars() ? barGap() : spawnInterval * rand(0.8, 1.2); if (wasJump && spawnQueue[0] && spawnQueue[0].kind === 'jump') spawnTimer = Math.max(spawnTimer, ARX_JUMP_GAP); boardDirty = true; } // (dos vallas seguidas: al menos ARX_JUMP_GAP entre una y otra, para caer y volver a saltar)
-    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget : enemies.some(e => e.alive);
+    const anyLeft = settings.mode === 'arcs' ? arcs.some(a => a.alive && !a.judged) : settings.mode === 'touch' ? touchLeft() : settings.mode === 'trek' ? waveDone < waveTarget || !!TREK.halt /* (el tramo no acaba a mitad de una parada) */ : enemies.some(e => e.alive);
     if (settings.exercise === 'hang' ? BAR.hold >= BAR.need || BAR.failed : !spawnQueue.length && !anyLeft && !projs.length) {
       // remolino: si te engulló, la oleada termina sin superarla y hay que volver a colgarse
       rampWaveEnd(!BAR.failed);
       if (BAR.failed) { const last = nWaves() && waveIdx >= nWaves() - 1; BAR.failed = false; if (last) endRun(false); else if (settings.rest > 0) { state = 'rest'; stateT = 0; say('Oleada perdida. Descansa', '#ff8a3d', 2); } else barToMount(waveIdx + 1); }
       else if (nWaves() && waveIdx >= nWaves() - 1) endRun(true);
-      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
+      else if (settings.rest > 0) { state = 'rest'; stateT = 0; SND.victory(); say(isBars() ? '¡Oleada superada! Bájate y descansa' : settings.exercise === 'splank' ? '¡Oleada superada! Cambia de lado' : settings.mode === 'trek' ? '¡Tramo superado!' : '¡Oleada superada!', '#3cf0c6', 2); perkWaveCleared(); }
       else startWave(waveIdx + 1);
     }
   } else if (state === 'rest') {
@@ -15456,7 +15485,7 @@ function trekObsMesh(o) {
     o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'bandit') { // los bandidos, plantados en el sendero, uno detrás de otro
     const n = waveIdx >= 4 ? 3 : waveIdx >= 2 ? 2 : 1;
-    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
+    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3, alive: true, band: true, ry: Math.PI }; b.maxHp = b.hp; o.bandits.push(b); trekBandMesh(g, b); }
     o.warn = glowSprite(0xff3b5c, 0.8, 0); g.add(o.warn); trekShadow(g, 2.4, 3.4, 0);
   } else { // el derrumbe: una roca grande atravesada en el sendero
     o.box = new THREE.Group(); g.add(o.box); const n = trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
@@ -15516,12 +15545,17 @@ function trekHoleMat(m) {
 }
 for (const m of [natGround.material, trekPath.material]) trekHoleMat(m);
 // El tramo: cuántas repeticiones pide (lo pone la partida); los retos salen a ratos, uno de cada tipo por turnos
+// (los que ya están en el camino, por delante, se quedan: el tramo nuevo sigue tras ellos; al empezar la ronda, el camino
+// ya tiene sus retos hasta donde alcanza la vista)
+const TREK_SEE = 88;
 function trekWave(i) {
-  TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
-  TREK.next = TREK.dist + 9; return [];
+  TREK.biome = i % TREK_BIOMES.length;
+  TREK.next = Math.max(TREK.next || 0, TREK.dist + 12); if (!i) for (let n = 0; n < 12 && TREK.next - TREK.dist < TREK_SEE; n++) trekSpawn();
+  return [];
 }
 function trekSpawn() {
-  const K = trekKinds(), kind = K[(TREK.nObs = (TREK.nObs || 0) + 1) % K.length], /* (por turnos) */ top = calibRef + HEAD_TOP;
+  const K = trekKinds(); let kind = K[(TREK.nObs = (TREK.nObs || 0) + 1) % K.length]; /* (por turnos) */ const top = calibRef + HEAD_TOP;
+  if (kind === 'chasm' && TREK.obs.some(q => q.kind === 'chasm')) kind = K[(TREK.nObs = TREK.nObs + 1) % K.length]; // (un desfiladero a la vez: el hueco en el suelo es uno)
   const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34), maxUp: -1 };
   if (o.kind === 'bandit' && !TREK_BAND.scene && !TREK_BAND.bare) { trekBandLoad(); o.kind = trekKinds().includes('log') ? 'log' : 'rock'; } // (los bandidos, en cuanto estén cargados)
   if (o.kind === 'bandit') Object.assign(o, { fixed: true, stop: 3.2 });
@@ -15582,7 +15616,7 @@ function trekWindStep(dt) {
 // Ante el cofre o la roca te paras; lo que te mueve ahora es otro movimiento, contado por la cabeza:
 //  · salto: subir jumpHeight sobre tu altura de pie y volver
 //  · sentadilla: bajar lo que pide la sentadilla (85 %) y volver arriba
-//  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante, y volver
+//  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante (cuenta ahí, al embestir), y volver
 // Las cadenas se rompen eslabón a eslabón; la roca, a cada embestida, se aparta un poco hasta rodar fuera. Si en 40 s no
 // sale, lo rodeas (sin premio)
 // El salto cuenta al despegar (así el paso a la piedra o al pilar siguiente va a la vez que tu salto); el siguiente, al volver
@@ -15590,10 +15624,11 @@ function trekWindStep(dt) {
 const TMV = { st: 'up', z0: 0, x0: 0 };
 function trekMoveStep() {
   const up = HL.y - calibRef, down = calibRef - HL.y, k = TREK.halt.move;
+  if (TMV.go) { TMV.go = false; return true; } // (un movimiento dado por hecho: lo usan las pruebas)
   if (TMV.st === 'up') { if (Math.abs(down) < 0.05) TMV.z0 += (HL.z - TMV.z0) * 0.1; // (la postura de partida, de pie)
     if (k === 'jump' && up > settings.jumpHeight / 100) { TMV.st = 'air'; return true; }
-    if (k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : k === 'lunge' && down > 0.12 && HL.z < TMV.z0 - 0.15) TMV.st = 'hit'; return false; }
-  if (k === 'jump' ? up < 0.04 : down < 0.07) { const ok = TMV.st === 'hit'; TMV.st = 'up'; return ok; }
+    if (k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : k === 'lunge' && down > 0.12 && HL.z < TMV.z0 - 0.15) { TMV.st = 'hit'; return true; } return false; } // (cuenta abajo, al embestir: no al volver)
+  if (k === 'jump' ? up < 0.04 : down < 0.07) TMV.st = 'up';
   return false;
 }
 function trekHaltSay(o, first) {
@@ -15647,11 +15682,17 @@ function trekHaltStep(dt, t) {
   }
   if (o.haltT > 40 && TREK.halt === o) { say(o.kind === 'chest' ? 'Dejas el cofre atrás' : 'Rodeas la roca', '#a49fc8', 1.6); trekHaltEnd(o, false); }
 }
-// La roca del derrumbe es sólida: en cada embestida tiembla (y retumba); si la cabeza se acerca a menos de 30 cm de su
-// cara, la roca no deja meterse en ella: se queda delante, como si la empujaras. En la última, se hace añicos
+// La roca o el cofre que no se superan (se acaba el tiempo o la ronda) no se atraviesan: el sendero los rodea (se
+// apartan a un lado, despacio, antes de seguir)
+function trekAside(o) {
+  if (o.kind !== 'rock' && o.kind !== 'chest') return; o.asideTo = (o.side || 1) * ((o.rr || 0.8) + 1.4);
+  const wp = o.mesh.localToWorld(_tkh.set(0, 0.3, 0)).clone(); fx.dust(wp, 10, 0.4); SND.step(wp, true);
+}
+// La roca del derrumbe es sólida y no se mueve: en cada embestida tiembla (y retumba). Solo si la cabeza llega a meterse
+// en ella se aparta lo justo (y vuelve despacio), para no verla por dentro. En la última, se hace añicos
 function trekRockSolid(o, dt, t) {
   if (o.shake > 0) { o.shake -= dt; const k = Math.max(0, o.shake / 0.45); o.box.position.x = Math.sin(t * 70) * 0.06 * k; o.box.rotation.z = Math.sin(t * 53) * 0.05 * k; o.box.rotation.x = Math.sin(t * 61) * 0.03 * k; }
-  const L = trekLoc(o, HL.x, HL.z), gap = L.z - (o.rr || 1), z = gap < 0.3 ? gap - 0.3 : 0; o.box.position.z += (z - o.box.position.z) * (z < o.box.position.z ? 1 : Math.min(1, dt * 3));
+  const L = trekLoc(o, HL.x, HL.z), gap = L.z - (o.rr || 1), z = gap < 0.02 ? gap - 0.02 : 0; o.box.position.z += (z - o.box.position.z) * (z < o.box.position.z ? 1 : Math.min(1, dt * 1.2));
 }
 // los añicos: trozos de la misma roca (la del Stylized Nature, pequeña) que salen despedidos, caen y se apagan
 function trekRockBurst(o) {
@@ -15675,7 +15716,7 @@ function trekChunks(dt) {
   });
 }
 function trekHaltEnd(o, won) {
-  TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1;
+  TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1; if (!won) trekAside(o);
   if (o.exit) { TREK.glide = Math.max(0, o.exit - TREK.dist); if (o.glow) o.glow.visible = false; } // (al otro lado, también si se acaba el tramo a medias)
   if (o.kind === 'bandit') { o.warn.material.opacity = 0; for (const b of o.bandits) if (b.st !== 'down' && b.st !== 'gone') { b.st = 'leave'; b.t = 0; trekBandPlay(b, 'Walk_Loop'); } } // (los que quedan se van)
   if (!won) return;
@@ -15696,8 +15737,9 @@ const TREK_GEMS = 'reparena3-gems';
 /* ---------- Bandidos que cortan el paso ---------- */
 // El explorador con capucha (Modular Character Outfits, de Quaternius), con dos ropas y las animaciones de anims.glb (su
 // esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan piedras. La alta
-// se esquiva agachándote; la baja (rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
-// esquivadas (6 desde el tercer tramo), se rinde y huye; la que no esquivas te da (una vida) y no cuenta. Sin puñetazos:
+// se esquiva agachándote; la baja (bota y rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
+// esquivadas (6 desde el tercer tramo; las bolitas de encima dicen cuántas faltan), cae muerto; la que no esquivas te da
+// (una vida) y no cuenta. Sin puñetazos:
 // con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más bandidos y piedras más rápidas en cada tramo y
 // con el rango. Si en 90 s no acabas, se van (sin premio)
 const TREK_BAND = { scene: null, clips: {}, loading: false, failed: false, bare: false, mats: null };
@@ -15755,46 +15797,63 @@ function trekLoc(o, x, z) { const p = o.mesh.position, a = -o.mesh.rotation.y, d
 // el sitio del combate: a 1,1 m delante de tu cabeza (el gancho se agacha: más cerca, quedaba bajo la vista) (en el grupo de la parada)
 const _tbw = new V3(), _tbv = new V3(), _tbh = new V3();
 // El combate (opción A del usuario: sin golpes, que con el retraso de las manos no daba tiempo): el bandido se planta a
-// unos 4,5 m y te lanza piedras que ves volar más de un segundo. La alta, a la cabeza: agáchate; la baja, a las
-// espinillas: salta; la que va al cuerpo: apártate a un lado. Cada una esquivada le quita aguante; con 5 (6 desde el
-// tercer tramo) se rinde y huye. La que te da, una vida. Lanza con su animación de lanzar, llevada a mano (despacio)
+// unos 4,5 m y te lanza piedras. La alta, a la cabeza: agáchate; la baja, que bota y rueda hasta las espinillas: salta; la
+// que va al cuerpo: apártate a un lado. Cada una esquivada le duele (se encoge y se queja) y le quita una bolita de las que
+// lleva encima; sin ninguna, cae muerto. La que te da, una vida. El lanzamiento es el de su animación, a su velocidad:
+// echa el brazo atrás despacio (el aviso), lo mantiene un instante y lo descarga de golpe; la piedra sale de su mano
+// justo al pasar el brazo por encima de la cabeza y vuela en parábola, deprisa
 const TREK_STONE_TXT = { high: ['¡PIEDRA ALTA!', '¡Agáchate!'], low: ['¡PIEDRA BAJA!', '¡Salta!'], body: ['¡AL CUERPO!', '¡Apártate!'] };
+// (en OverhandThrow: el brazo atrás del todo a los 0,25 s; la piedra sale a los 0,35 s, por encima de la cabeza)
+const TREK_THROW = { cock: 0.25, rel: 0.35 };
 function trekBandFight(o, dt, t) {
   if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
-  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if (!o.stones2 || !o.stones2.length) trekHaltEnd(o, true); return; }
+  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.alive && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if ((!o.stones2 || !o.stones2.length) && !o.bandits.some(b => b.st === 'down')) trekHaltEnd(o, true); return; } // (sigues cuando el último caído ya no está en el sendero)
   if (o.haltT > 90) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
   const L = trekLoc(o, HL.x, HL.z), fz = L.z - 4.5, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
   if (B.st === 'wait') { B.st = 'come'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); }
-  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.1); trekBandPlay(B, 'Idle_Loop'); } }
-  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo
-    B.st = 'wind'; B.t = 0; B.atk = pick(['high', 'low', 'body']); B.played = false; const [a, b] = TREK_STONE_TXT[B.atk];
-    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.2); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8);
+  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.25 * Math.min(1, B.t * 2)); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.6, 1.0); trekBandPlay(B, 'Idle_Loop'); } } // (arranca sin tirón)
+  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo (de tres en tres, las tres: no se repite siempre la misma)
+    if (!B.bag || !B.bag.length) { B.bag = ['high', 'low', 'body'].sort(() => Math.random() - 0.5); if (B.bag[0] === B.atk) B.bag.push(B.bag.shift()); }
+    B.st = 'wind'; B.t = 0; B.atk = B.bag.shift(); const [a, b] = TREK_STONE_TXT[B.atk];
+    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.4); SND.banditThrow(o.mesh.localToWorld(_tbw.set(B.x, 1.6, B.z))); // (su esfuerzo, con voz de persona)
     trekBandPlay(B, 'OverhandThrow', true); if (B.cur) { B.cur.paused = true; B.cur.time = 0; } }
-  else if (B.st === 'wind') { // echa el brazo atrás despacio y suelta la piedra
-    const P = BEAST_PUNCH.OverhandThrow || [0.25, 0.35]; if (B.cur && B.cur.paused) B.cur.time = P[1] * smooth(clamp(B.t / D.wu, 0, 1));
-    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.timeScale = 0.6; } trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } }
-  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done)) { B.st = 'guard'; B.t = 0; B.gap = rand(0.9, 1.4); trekBandPlay(B, 'Idle_Loop'); }
+  else if (B.st === 'wind') { // echa el brazo atrás despacio y lo aguanta un instante (el aviso)…
+    if (B.cur && B.cur.paused) B.cur.time = TREK_THROW.cock * smooth(clamp(B.t / (D.wu * 0.75), 0, 1));
+    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.time = TREK_THROW.cock; B.cur.timeScale = 1; } B.st = 'whip'; B.t = 0; } }
+  else if (B.st === 'whip' && (B.cur ? B.cur.time >= TREK_THROW.rel : B.t >= TREK_THROW.rel - TREK_THROW.cock)) { trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } // (…y lo descarga: la piedra sale de su mano)
+  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done) && B.t > 0.5) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.2); trekBandPlay(B, 'Idle_Loop'); }
+  else if (B.st === 'hurt' && B.t > (B.hurtT || 0.45) + 0.15) { B.st = 'guard'; B.t = 0; B.gap = rand(0.5, 0.9); trekBandPlay(B, 'Idle_Loop'); } // (se rehace y vuelve a la carga)
   // el aviso rojo sobre él mientras prepara el lanzamiento
   o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(0xff3b5c); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : 0;
 }
-// la piedra: de su mano a donde estás (a la cabeza, a las espinillas o al pecho), en un arco que se ve venir
+// La piedra: sale de su mano derecha y vuela en parábola (con su gravedad) a donde estás: a la cabeza, al pecho o, la baja,
+// botando en el suelo a medio camino y rodando hasta las espinillas
+const _tbm = new V3();
 function trekStoneThrow(o, B, L, D) {
   const m = new THREE.Group(); trekRock(m, 0, 0.11); m.children.forEach(c => { c.castShadow = true; }); o.mesh.add(m);
-  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.22 : calibRef - 0.5, from = new V3(B.x + 0.15, 1.7, B.z + 0.2), to = new V3(L.x, y, L.z);
-  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow);
-  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0 });
+  const from = new V3(B.x - 0.25, 1.75, B.z + 0.3), hand = B.mesh && B.mesh.getObjectByName('hand_r');
+  if (hand) { B.mesh.updateMatrixWorld(true); hand.getWorldPosition(_tbm); o.mesh.worldToLocal(from.copy(_tbm)); from.y = Math.max(0.6, from.y); }
+  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.2 : calibRef - 0.5, to = new V3(L.x, y, L.z);
+  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow); m.position.copy(from);
+  // la baja: primero hasta el suelo, a medio camino (bota); luego, a ras, hasta ti
+  const legs = B.atk === 'low' ? [[from, new V3((from.x + to.x) / 2, 0.1, (from.z + to.z) / 2), 0.5], [null, to, 0.5]] : [[from, to, 1]];
+  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0, legs, leg: -1, v: new V3() });
   SND.whoosh(o.mesh.localToWorld(_tbw.copy(from)), 'arc');
 }
+// en cada tramo del vuelo, la velocidad de salida que lo lleva de un punto a otro en su tiempo, con la gravedad (p = p0 + v·t − ½·g·t²)
+function trekStoneLeg(q, i) { const [a, b, k] = q.legs[i], T = q.dur * k, p0 = a || q.m.position; q.leg = i; q.t0 = q.t; q.p0 = p0.clone(); q.T = T; q.v.subVectors(b, p0).divideScalar(T); q.v.y += 0.5 * 9.8 * T; }
 function trekStoneStep(o, dt) {
   for (const q of o.stones2 || []) {
     q.t += dt; const k = q.t / q.dur;
     if (!q.done) {
-      const h = q.atk === 'low' ? 0.35 : 0.7; q.m.position.lerpVectors(q.from, q.to, Math.min(1, k)); q.m.position.y += h * Math.sin(Math.PI * Math.min(1, k)); q.m.rotation.x += dt * 9; q.m.rotation.z += dt * 6;
+      if (q.leg < 0) trekStoneLeg(q, 0);
+      let u = q.t - q.t0; if (u >= q.T && q.leg < q.legs.length - 1) { q.m.position.copy(q.legs[q.leg][1]); trekStoneLeg(q, q.leg + 1); u = q.t - q.t0; fx.dust(o.mesh.localToWorld(_tbw.copy(q.m.position)).clone(), 5, 0.15); SND.step(o.mesh.localToWorld(_tbw.copy(q.m.position)), false); } // (bota)
+      u = Math.min(u, q.T); q.m.position.copy(q.p0).addScaledVector(q.v, u); q.m.position.y -= 0.5 * 9.8 * u * u; q.m.rotation.x += dt * 14; q.m.rotation.z += dt * 8;
       if (k > 1 - 0.45 / q.dur) q.up = Math.max(q.up, head.p.y - calibRef); // (el salto, en el último medio segundo)
-      if (k >= 1) { q.done = true; trekStoneJudge(o, q); }
-    } else { // esquivada: sigue de largo y se va; si te dio, cae a tus pies y se apaga
-      q.after += dt; if (q.ok) q.m.position.add(_tbh.set((q.to.x - q.from.x) / q.dur, -0.6, (q.to.z - q.from.z) / q.dur).multiplyScalar(dt)); else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
-      if (q.after > 0.8) { o.mesh.remove(q.m); q.gone = true; }
+      if (k >= 1) { q.done = true; q.vEnd = new V3(q.v.x, q.v.y - 9.8 * q.T, q.v.z); trekStoneJudge(o, q); }
+    } else { // esquivada: sigue de largo (y cae); si te dio, cae a tus pies y se apaga
+      q.after += dt; if (q.ok) { q.vEnd.y -= 9.8 * dt; q.m.position.addScaledVector(q.vEnd, dt); if (q.m.position.y < 0.08) { q.m.position.y = 0.08; q.vEnd.y *= -0.3; q.vEnd.x *= 0.6; q.vEnd.z *= 0.6; } } else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
+      if (q.after > 0.9) { o.mesh.remove(q.m); q.gone = true; }
     }
   }
   if (o.stones2) o.stones2 = o.stones2.filter(q => !q.gone);
@@ -15803,29 +15862,33 @@ function trekStoneStep(o, dt) {
 // (la cabeza, «Altura del salto» por encima); al cuerpo: apartado 20 cm a un lado
 function trekStoneJudge(o, q) {
   const B = q.by, ok = q.atk === 'high' ? calibRef - HL.y > 0.2 : q.atk === 'low' ? q.up > settings.jumpHeight / 100 : Math.abs(HL.x - q.x0) > 0.2; q.ok = ok;
-  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone();
+  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone(), bp = o.mesh.localToWorld(new V3(B.x, 1.6, B.z));
   if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; SND.whoosh(p, 'arc');
-    if (B.hp <= 0) { B.st = 'leave'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Se rinde y huye!', '#3cf0c6', 1.4); score += 200; }
-    else say(`¡Esquivada! Le quedan ${B.hp}`, '#ffd166', 0.9); }
+    if (B.hp <= 0) { // sin aguante: cae muerto (se desploma, se queda tendido y luego se hunde en la hierba)
+      B.alive = false; B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); SND.banditDeath(bp); comicKill(bp, false); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Derribado!', '#3cf0c6', 1.2); score += 200;
+    } else { // le duele: se encoge (al pecho o a la cabeza) y se queja
+      B.st = 'hurt'; B.t = 0; B.hurtT = trekBandPlay(B, Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head', true) || 0.4; SND.banditHurt(bp); fx.sparks(bp, 8, [1, 0.85, 0.5], 1, 0.03);
+      say(`¡Esquivada! Le ${B.hp === 1 ? 'queda 1' : `quedan ${B.hp}`}`, '#ffd166', 0.9); } }
   else { hurtPlayer({ silent: true }); comicHit(head.p.clone()); fx.dust(p, 8, 0.2); SND.metalHit(p, false); o.hits = (o.hits || 0) + 1;
     say(q.atk === 'high' ? '¡Te ha dado! Agáchate antes' : q.atk === 'low' ? '¡Te ha dado! Salta antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); }
 }
 // ¿hay una piedra baja en el aire? (en «Probar en el ordenador», soltar Espacio entonces es saltar)
 const trekStoneLow = () => { const o = TREK.halt; return !!(o && o.stones2 && o.stones2.some(q => !q.done && q.atk === 'low')); };
-// menos tiempo de vuelo en cada tramo y con el rango, poco a poco (de 1,4 s a 1 s: con 1,75 s se veían lentas); el brazo
+// menos tiempo de vuelo en cada tramo y con el rango, poco a poco (de 1 s a 0,75 s: con 1,4 s se veían flotar); el brazo
 // atrás (el aviso), siempre igual
-const trekBandDiff = () => ({ fly: Math.max(1, 1.4 - 0.04 * waveIdx - 0.025 * rankIdx()), wu: 0.9 });
+const trekBandDiff = () => ({ fly: Math.max(0.75, 1 - 0.035 * waveIdx - 0.02 * rankIdx()), wu: 0.9 });
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
   if (TREK_BAND.scene && o.bandits[0] && !o.bandits[0].mesh) o.bandits.forEach(b => trekBandMesh(o.mesh, b));
   const L = trekLoc(o, HL.x, HL.z);
   for (const b of o.bandits) {
-    if (b.st === 'down' && o.bandits.find(c => c.st !== 'down' && c.st !== 'gone') !== b && (b.t += dt) > 1.6) { b.y = (b.y || 0) - dt * 0.5; if (b.y < -0.6) b.st = 'gone'; } // (tras caer, se hunde en la hierba)
+    if (b.st === 'down' && (b.t += dt) > 2.6) { b.y = (b.y || 0) - dt * 0.8; if (b.y < -0.6) b.st = 'gone'; } // (cae, se queda tendido y luego se hunde en la hierba)
     if (b.st === 'leave') { b.t += dt; b.x += (b.x < 0 ? -1 : 1) * dt * 1.2; if (b.t > 4) b.st = 'gone'; }
     if (!b.mesh) continue;
     b.mesh.visible = b.st !== 'gone'; b.mesh.position.set(b.x, b.y || 0, b.z);
-    b.mesh.rotation.y = b.st === 'leave' ? (b.x < 0 ? Math.PI / 2 : -Math.PI / 2) : Math.atan2(L.x - b.x, L.z - b.z) + Math.PI; // (de cara a ti: el modelo mira hacia −z)
+    const want = b.st === 'leave' ? (b.x < 0 ? Math.PI / 2 : -Math.PI / 2) : Math.atan2(L.x - b.x, L.z - b.z) + Math.PI; // (de cara a ti: el modelo mira hacia −z)
+    if (b.st !== 'down') { let d = want - (b.ry === undefined ? want : b.ry); d = Math.atan2(Math.sin(d), Math.cos(d)); b.ry = (b.ry === undefined ? want : b.ry) + d * Math.min(1, dt * 6); } b.mesh.rotation.y = b.ry; // (se gira sin saltos)
     b.mix.update(dt * (b.st === 'stun' ? 0.6 : 1));
   }
 }
@@ -15932,11 +15995,13 @@ function trekStep(dt, t) {
   TREK.dist += step;
   trekFrame(); trekGround(); trekRibbon(); trekLayout(); trekLight(dt); trekHopStep(dt);
   TREK_WT.value = t; TREK_SUN.value.copy(keyLight.position).sub(keyLight.target.position).normalize(); // (el agua se mueve; los destellos, donde está el sol)
-  // los retos: salen a 40 m y se juzgan al pasar por ti
-  if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
+  // los retos: salen a lo lejos, entre la niebla (a TREK_SEE m, donde acaba el paisaje: no aparecen de golpe cerca) y se
+  // juzgan al pasar por ti
+  if (state === 'play' && TREK.next && TREK.next - TREK.dist < TREK_SEE) trekSpawn();
   for (const o of TREK.obs) {
     const z = o.zl = (o.fixed ? 0 : HL.z) - (o.at - TREK.dist); // (su distancia, como si el sendero fuera recto: lo que cuenta para saltar o agacharse)
     o.mesh.rotation.y = trekBend(o.at, o.dx || 0, _tkq); o.mesh.position.set(_tkq.x, 0, _tkq.z + (o.fixed ? 0 : HL.z)); o.mesh.updateMatrixWorld(true);
+    if (o.asideTo !== undefined) o.dx = (o.dx || 0) + (o.asideTo - (o.dx || 0)) * Math.min(1, dt * 2.5); // (la que no rompiste, apartándose)
     if (o.bandits) trekBandAnim(o, dt, t);
     if (o.pillars) for (const p of o.pillars) { const u = p.userData; if (u.sink) { u.sink += dt * 4; p.position.y -= u.sink * dt; p.rotation.z += dt * 0.25; if (p.position.y < -14) p.visible = false; } } // (los que se hunden, al fondo)
     if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
@@ -16550,9 +16615,8 @@ function punchStep(dt) {
   for (const s of ['left', 'right']) {
     const h = hands[s], P = PUNCH[s]; P.cd -= dt;
     if (!h.ok || h.back) { P.ok = false; if (!h.ok) continue; } // (al volver tras una mano calculada, el salto no es un puñetazo)
-    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; P.acc = 0; continue; }
-    P.acc += dt; if (!handNew(h)) continue; // (postura repetida por las gafas: se mide con la siguiente, con el tiempo de verdad entre las dos)
-    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(P.acc); P.last.copy(h.wrist); P.hl.copy(head.p); P.acc = 0;
+    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
+    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
     const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;
     for (const e of enemies) {
       if (!e.alive || e.state === 'emerge' || (e.punchT && PUNCH.t < e.punchT)) continue;
@@ -16996,7 +17060,7 @@ function readXR(frame, t = 0) {
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
-      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02 && !handCurled(h); h.trig = h.pinch; // con las manos, pellizcar es el gatillo (con el puño cerrado el pulgar cae sobre el índice: eso no es un pellizco; si no, cerrar los puños 1 s ponía la pausa)
+      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
@@ -17039,9 +17103,8 @@ function handRescue(frame, ref, t) {
     if (h.ok && h.isHand) { // la ven las cámaras: su forma (respecto a la muñeca), su velocidad y su sitio respecto a la muñeca del cuerpo
       const W = h.J[0]; _hrQi.copy(W.q).invert();
       for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; if (!J.ok) continue; r.p.copy(J.p).sub(W.p).applyQuaternion(_hrQi); r.q.copy(_hrQi).multiply(J.q); r.r = J.r; }
-      const wasPred = R.mode === 'pred' && R.lostT > 0.08; // (antes de olvidar cuánto estuvo perdida)
       R.has = true; if (h.F) R.v.lerp(t - h.F.tRaw < 0.06 ? _hrT.set(h.F.v[0], h.F.v[1], h.F.v[2]) : _hrT.set(0, 0, 0), 0.6); R.lastP.copy(W.p); R.lastQ.copy(W.q); R.lostT = 0; // (si las gafas repiten la misma postura un rato, está parada: sin velocidad)
-      h.back = R.mode === 'body' || wasPred; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto más de 0,08 s, también: la de verdad ya frenó o giró y el salto hasta ella no es una sacudida)
+      h.back = R.mode === 'body'; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto, no: va por el mismo camino)
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
@@ -17078,17 +17141,12 @@ function bodySessionEnd() {
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
 const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
-// Los tres últimos dedos (corazón, anular y meñique) cerrados: puño (para no confundirlo con un pellizco). Se compara la
-// punta con su nudillo respecto a la muñeca (vale para cualquier tamaño de mano): cerrado, la punta vuelve hacia la palma
-// y queda casi tan cerca como el nudillo; estirado o relajado, bastante más lejos
-function handCurled(h) { const W = h.J[0]; if (!W.ok) return false; let n = 0, c = 0; for (const [tip, kn] of [[14, 11], [19, 16], [24, 21]]) { const T = h.J[tip], K = h.J[kn]; if (!T.ok || !K.ok) continue; n++; if (T.p.distanceTo(W.p) < 1.15 * K.p.distanceTo(W.p)) c++; } return n >= 2 && c >= n - 1 && c >= 2; }
 function handSmooth(h, t) {
   const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
-  const same = !reset && J[0].ok && Math.abs(W.x - F.raw[0]) + Math.abs(W.y - F.raw[1]) + Math.abs(W.z - F.raw[2]) < 1e-5, rdt = t - F.tRaw; // (con margen: lo guardado va en precisión simple)
+  const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
   if (!same) F.tRaw = t;
-  F.fresh = !same; // (para el juego: si esta postura es nueva; ver handNew)
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
     if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
@@ -17329,10 +17387,30 @@ cv.addEventListener('pointerup', e => {
 });
 
 /* =================== BUCLE PRINCIPAL =================== */
+// Registro de tirones: en las gafas, cuando la imagen se congela más de 0,1 s, se apunta lo que hizo el fotograma anterior
+// (lo que tardó el juego en pensar y en mandar el dibujo, y si en él se rehízo un menú, se pintó la carátula, se
+// precompiló algo, se crearon texturas o sombreadores). Al salir de las gafas, la página lo resume (#hitchStatus): así se
+// sabe qué congela el menú aunque no haya un patrón a la vista
+function hitchNote(gap, js, rd) {
+  const ri = renderer.info, tex = ri.memory ? ri.memory.textures : 0, prog = ri.programs ? ri.programs.length : 0;
+  const cur = { js, rd, warm: HITCH.f.warm, intro: HITCH.f.intro, menu: HITCH.f.menu, tx: tex - HITCH.tex, pg: prog - HITCH.prog, st: state, open: !!menu && !menu.closed };
+  HITCH.tex = tex; HITCH.prog = prog; HITCH.f.warm = HITCH.f.intro = HITCH.f.menu = 0;
+  if (xrActive && gap > 0.1 && HITCH.prev) { HITCH.n++; if (HITCH.list.length < 80) HITCH.list.push(Object.assign({ gap: Math.round(gap * 1000) }, HITCH.prev)); }
+  HITCH.prev = cur;
+}
+function hitchText(L) {
+  if (!L || !L.n) return L ? 'Última sesión en las gafas: sin tirones (ningún fotograma de más de 0,1 s).' : '';
+  const c = { menu: 0, intro: 0, warm: 0, tx: 0, pg: 0, js: 0, rd: 0, otra: 0 }, open = L.list.filter(x => x.open).length;
+  for (const x of L.list) { if (x.menu) c.menu++; else if (x.intro) c.intro++; else if (x.warm) c.warm++; else if (x.pg > 0) c.pg++; else if (x.tx > 0) c.tx++; else if (x.js > 50) c.js++; else if (x.rd > 50) c.rd++; else c.otra++; }
+  const worst = Math.max(...L.list.map(x => x.gap)), parts = [[c.menu, 'al rehacer un menú'], [c.intro, 'pintando la carátula'], [c.warm, 'precompilando enemigos'], [c.pg, 'compilando un sombreador'], [c.tx, 'creando texturas'], [c.js, 'el juego pensando'], [c.rd, 'mandando el dibujo'], [c.otra, 'sin causa en el juego (la gráfica o el navegador)']].filter(x => x[0]).map(x => `${x[0]} ${x[1]}`);
+  return `Última sesión en las gafas: ${L.n} tirones (el peor, ${worst} ms; ${open} con un menú abierto): ${parts.join(', ')}.`;
+}
+function hitchInitPage() { const el = $('#hitchStatus'); if (el) el.textContent = hitchText(store(HITCH.KEY)); }
+function hitchSave() { const L = { n: HITCH.n, list: HITCH.list, at: Date.now() }; store(HITCH.KEY, L); const el = typeof document !== 'undefined' && $('#hitchStatus'); if (el) el.textContent = hitchText(L); HITCH.list = []; HITCH.n = 0; HITCH.prev = null; }
 let lastT = 0, boardT = 0, centerT = 0;
 const AMBX = { clank: 6 };
 renderer.setAnimationLoop((time, frame) => {
-  const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
+  const t = time / 1000, gap = t - lastT, dt = Math.min(0.05, Math.max(0, gap)); lastT = t;
   if (!xrActive && !preview) return;
   const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
@@ -17354,12 +17432,12 @@ renderer.setAnimationLoop((time, frame) => {
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
-  if (WARM.q.length && !['play', 'rest'].includes(state)) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida
+  if (WARM.q.length && !['play', 'rest'].includes(state) && !menuBusy()) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida y no mientras tocas el menú (cada uno puede congelar la imagen un instante)
   introIdle(dt); envSwitchStep(dt); // (la ilustración de la carátula, por partes, mientras estás en el menú; el cambio de entorno, a oscuras)
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   qualStep(dt);
   const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();
-  perfStep(t, dt, t1 - t0, t2 - t1);
+  perfStep(t, dt, t1 - t0, t2 - t1); hitchNote(gap, t1 - t0, t2 - t1);
 });
 
 /* =================== NITIDEZ Y FLUIDEZ =================== */
@@ -17483,7 +17561,7 @@ async function startXR(ar) {
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     qualSessionStart(session); await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); warmQueue(); bodySessionStart();
-    session.addEventListener('end', () => { bodySessionEnd(); hrxClose(); GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { bodySessionEnd(); hitchSave(); hrxClose(); GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
@@ -17511,7 +17589,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage(); appInit();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); hitchInitPage(); pageNav(); pageHelp(); demoPage(); appInit();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

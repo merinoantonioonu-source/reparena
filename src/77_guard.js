@@ -218,9 +218,8 @@ function punchStep(dt) {
   for (const s of ['left', 'right']) {
     const h = hands[s], P = PUNCH[s]; P.cd -= dt;
     if (!h.ok || h.back) { P.ok = false; if (!h.ok) continue; } // (al volver tras una mano calculada, el salto no es un puñetazo)
-    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; P.acc = 0; continue; }
-    P.acc += dt; if (!handNew(h)) continue; // (postura repetida por las gafas: se mide con la siguiente, con el tiempo de verdad entre las dos)
-    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(P.acc); P.last.copy(h.wrist); P.hl.copy(head.p); P.acc = 0;
+    if (!P.ok) { P.last.copy(h.wrist); P.hl.copy(head.p); P.ok = true; continue; }
+    _puV.subVectors(h.wrist, P.last).sub(_puH.subVectors(head.p, P.hl)).divideScalar(dt); P.last.copy(h.wrist); P.hl.copy(head.p);
     const sp = _puV.length(); if (sp < PUNCH_V || P.cd > 0) continue;
     for (const e of enemies) {
       if (!e.alive || e.state === 'emerge' || (e.punchT && PUNCH.t < e.punchT)) continue;

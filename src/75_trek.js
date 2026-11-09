@@ -293,7 +293,7 @@ function trekObsMesh(o) {
     o.stones.push(new V3(0, 0.3, -o.len - 0.4)); o.glow = glowSprite(0xffd166, 0.9, 0.45); o.glow.position.copy(o.stones[0]); g.add(o.glow);
   } else if (o.kind === 'bandit') { // los bandidos, plantados en el sendero, uno detrás de otro
     const n = waveIdx >= 4 ? 3 : waveIdx >= 2 ? 2 : 1;
-    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3 }; o.bandits.push(b); trekBandMesh(g, b); }
+    o.bandits = []; for (let i = 0; i < n; i++) { const b = { x: (i % 2 ? 1 : -1) * (i ? 0.9 : 0.15), z: -2.5 - i * 1.6, st: 'wait', t: 0, hp: waveIdx >= 2 ? 6 : 5, /* (las piedras que hay que esquivarle) */ skin: i % 2, ph: Math.random() * 3, alive: true, band: true, ry: Math.PI }; b.maxHp = b.hp; o.bandits.push(b); trekBandMesh(g, b); }
     o.warn = glowSprite(0xff3b5c, 0.8, 0); g.add(o.warn); trekShadow(g, 2.4, 3.4, 0);
   } else { // el derrumbe: una roca grande atravesada en el sendero
     o.box = new THREE.Group(); g.add(o.box); const n = trekRock(o.box, 0, 1.5); trekShadow(g, 3, 2);
@@ -353,12 +353,17 @@ function trekHoleMat(m) {
 }
 for (const m of [natGround.material, trekPath.material]) trekHoleMat(m);
 // El tramo: cuántas repeticiones pide (lo pone la partida); los retos salen a ratos, uno de cada tipo por turnos
+// (los que ya están en el camino, por delante, se quedan: el tramo nuevo sigue tras ellos; al empezar la ronda, el camino
+// ya tiene sus retos hasta donde alcanza la vista)
+const TREK_SEE = 88;
 function trekWave(i) {
-  TREK.biome = i % TREK_BIOMES.length; if (i) cheer(`Tramo ${i + 1}: ${TREK_BIOMES[TREK.biome].name}`, '#8fdc5a', 2.4);
-  TREK.next = TREK.dist + 9; return [];
+  TREK.biome = i % TREK_BIOMES.length;
+  TREK.next = Math.max(TREK.next || 0, TREK.dist + 12); if (!i) for (let n = 0; n < 12 && TREK.next - TREK.dist < TREK_SEE; n++) trekSpawn();
+  return [];
 }
 function trekSpawn() {
-  const K = trekKinds(), kind = K[(TREK.nObs = (TREK.nObs || 0) + 1) % K.length], /* (por turnos) */ top = calibRef + HEAD_TOP;
+  const K = trekKinds(); let kind = K[(TREK.nObs = (TREK.nObs || 0) + 1) % K.length]; /* (por turnos) */ const top = calibRef + HEAD_TOP;
+  if (kind === 'chasm' && TREK.obs.some(q => q.kind === 'chasm')) kind = K[(TREK.nObs = TREK.nObs + 1) % K.length]; // (un desfiladero a la vez: el hueco en el suelo es uno)
   const o = { kind, at: TREK.next, judged: false, side: Math.random() < 0.5 ? -1 : 1, y: top - rand(0.22, 0.34), maxUp: -1 };
   if (o.kind === 'bandit' && !TREK_BAND.scene && !TREK_BAND.bare) { trekBandLoad(); o.kind = trekKinds().includes('log') ? 'log' : 'rock'; } // (los bandidos, en cuanto estén cargados)
   if (o.kind === 'bandit') Object.assign(o, { fixed: true, stop: 3.2 });
@@ -419,7 +424,7 @@ function trekWindStep(dt) {
 // Ante el cofre o la roca te paras; lo que te mueve ahora es otro movimiento, contado por la cabeza:
 //  · salto: subir jumpHeight sobre tu altura de pie y volver
 //  · sentadilla: bajar lo que pide la sentadilla (85 %) y volver arriba
-//  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante, y volver
+//  · zancada (embestir): bajar al menos 12 cm con la cabeza 15 cm más adelante (cuenta ahí, al embestir), y volver
 // Las cadenas se rompen eslabón a eslabón; la roca, a cada embestida, se aparta un poco hasta rodar fuera. Si en 40 s no
 // sale, lo rodeas (sin premio)
 // El salto cuenta al despegar (así el paso a la piedra o al pilar siguiente va a la vez que tu salto); el siguiente, al volver
@@ -427,10 +432,11 @@ function trekWindStep(dt) {
 const TMV = { st: 'up', z0: 0, x0: 0 };
 function trekMoveStep() {
   const up = HL.y - calibRef, down = calibRef - HL.y, k = TREK.halt.move;
+  if (TMV.go) { TMV.go = false; return true; } // (un movimiento dado por hecho: lo usan las pruebas)
   if (TMV.st === 'up') { if (Math.abs(down) < 0.05) TMV.z0 += (HL.z - TMV.z0) * 0.1; // (la postura de partida, de pie)
     if (k === 'jump' && up > settings.jumpHeight / 100) { TMV.st = 'air'; return true; }
-    if (k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : k === 'lunge' && down > 0.12 && HL.z < TMV.z0 - 0.15) TMV.st = 'hit'; return false; }
-  if (k === 'jump' ? up < 0.04 : down < 0.07) { const ok = TMV.st === 'hit'; TMV.st = 'up'; return ok; }
+    if (k === 'squat' ? down > dv('squatDepth') / 100 * 0.85 : k === 'lunge' && down > 0.12 && HL.z < TMV.z0 - 0.15) { TMV.st = 'hit'; return true; } return false; } // (cuenta abajo, al embestir: no al volver)
+  if (k === 'jump' ? up < 0.04 : down < 0.07) TMV.st = 'up';
   return false;
 }
 function trekHaltSay(o, first) {
@@ -484,11 +490,17 @@ function trekHaltStep(dt, t) {
   }
   if (o.haltT > 40 && TREK.halt === o) { say(o.kind === 'chest' ? 'Dejas el cofre atrás' : 'Rodeas la roca', '#a49fc8', 1.6); trekHaltEnd(o, false); }
 }
-// La roca del derrumbe es sólida: en cada embestida tiembla (y retumba); si la cabeza se acerca a menos de 30 cm de su
-// cara, la roca no deja meterse en ella: se queda delante, como si la empujaras. En la última, se hace añicos
+// La roca o el cofre que no se superan (se acaba el tiempo o la ronda) no se atraviesan: el sendero los rodea (se
+// apartan a un lado, despacio, antes de seguir)
+function trekAside(o) {
+  if (o.kind !== 'rock' && o.kind !== 'chest') return; o.asideTo = (o.side || 1) * ((o.rr || 0.8) + 1.4);
+  const wp = o.mesh.localToWorld(_tkh.set(0, 0.3, 0)).clone(); fx.dust(wp, 10, 0.4); SND.step(wp, true);
+}
+// La roca del derrumbe es sólida y no se mueve: en cada embestida tiembla (y retumba). Solo si la cabeza llega a meterse
+// en ella se aparta lo justo (y vuelve despacio), para no verla por dentro. En la última, se hace añicos
 function trekRockSolid(o, dt, t) {
   if (o.shake > 0) { o.shake -= dt; const k = Math.max(0, o.shake / 0.45); o.box.position.x = Math.sin(t * 70) * 0.06 * k; o.box.rotation.z = Math.sin(t * 53) * 0.05 * k; o.box.rotation.x = Math.sin(t * 61) * 0.03 * k; }
-  const L = trekLoc(o, HL.x, HL.z), gap = L.z - (o.rr || 1), z = gap < 0.3 ? gap - 0.3 : 0; o.box.position.z += (z - o.box.position.z) * (z < o.box.position.z ? 1 : Math.min(1, dt * 3));
+  const L = trekLoc(o, HL.x, HL.z), gap = L.z - (o.rr || 1), z = gap < 0.02 ? gap - 0.02 : 0; o.box.position.z += (z - o.box.position.z) * (z < o.box.position.z ? 1 : Math.min(1, dt * 1.2));
 }
 // los añicos: trozos de la misma roca (la del Stylized Nature, pequeña) que salen despedidos, caen y se apagan
 function trekRockBurst(o) {
@@ -512,7 +524,7 @@ function trekChunks(dt) {
   });
 }
 function trekHaltEnd(o, won) {
-  TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1;
+  TREK.halt = null; o.done = true; o.judged = true; o.side = o.side || 1; if (!won) trekAside(o);
   if (o.exit) { TREK.glide = Math.max(0, o.exit - TREK.dist); if (o.glow) o.glow.visible = false; } // (al otro lado, también si se acaba el tramo a medias)
   if (o.kind === 'bandit') { o.warn.material.opacity = 0; for (const b of o.bandits) if (b.st !== 'down' && b.st !== 'gone') { b.st = 'leave'; b.t = 0; trekBandPlay(b, 'Walk_Loop'); } } // (los que quedan se van)
   if (!won) return;
@@ -533,8 +545,9 @@ const TREK_GEMS = 'reparena3-gems';
 /* ---------- Bandidos que cortan el paso ---------- */
 // El explorador con capucha (Modular Character Outfits, de Quaternius), con dos ropas y las animaciones de anims.glb (su
 // esqueleto es el mismo). Te paras ante ellos y salen de uno en uno: se plantan delante de ti y te lanzan piedras. La alta
-// se esquiva agachándote; la baja (rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
-// esquivadas (6 desde el tercer tramo), se rinde y huye; la que no esquivas te da (una vida) y no cuenta. Sin puñetazos:
+// se esquiva agachándote; la baja (bota y rueda a ras de suelo), saltando; la que va al cuerpo, apartándote a un lado. Con 5
+// esquivadas (6 desde el tercer tramo; las bolitas de encima dicen cuántas faltan), cae muerto; la que no esquivas te da
+// (una vida) y no cuenta. Sin puñetazos:
 // con el retraso de las manos en las gafas, no daba tiempo a pegarles. Más bandidos y piedras más rápidas en cada tramo y
 // con el rango. Si en 90 s no acabas, se van (sin premio)
 const TREK_BAND = { scene: null, clips: {}, loading: false, failed: false, bare: false, mats: null };
@@ -592,46 +605,63 @@ function trekLoc(o, x, z) { const p = o.mesh.position, a = -o.mesh.rotation.y, d
 // el sitio del combate: a 1,1 m delante de tu cabeza (el gancho se agacha: más cerca, quedaba bajo la vista) (en el grupo de la parada)
 const _tbw = new V3(), _tbv = new V3(), _tbh = new V3();
 // El combate (opción A del usuario: sin golpes, que con el retraso de las manos no daba tiempo): el bandido se planta a
-// unos 4,5 m y te lanza piedras que ves volar más de un segundo. La alta, a la cabeza: agáchate; la baja, a las
-// espinillas: salta; la que va al cuerpo: apártate a un lado. Cada una esquivada le quita aguante; con 5 (6 desde el
-// tercer tramo) se rinde y huye. La que te da, una vida. Lanza con su animación de lanzar, llevada a mano (despacio)
+// unos 4,5 m y te lanza piedras. La alta, a la cabeza: agáchate; la baja, que bota y rueda hasta las espinillas: salta; la
+// que va al cuerpo: apártate a un lado. Cada una esquivada le duele (se encoge y se queja) y le quita una bolita de las que
+// lleva encima; sin ninguna, cae muerto. La que te da, una vida. El lanzamiento es el de su animación, a su velocidad:
+// echa el brazo atrás despacio (el aviso), lo mantiene un instante y lo descarga de golpe; la piedra sale de su mano
+// justo al pasar el brazo por encima de la cabeza y vuela en parábola, deprisa
 const TREK_STONE_TXT = { high: ['¡PIEDRA ALTA!', '¡Agáchate!'], low: ['¡PIEDRA BAJA!', '¡Salta!'], body: ['¡AL CUERPO!', '¡Apártate!'] };
+// (en OverhandThrow: el brazo atrás del todo a los 0,25 s; la piedra sale a los 0,35 s, por encima de la cabeza)
+const TREK_THROW = { cock: 0.25, rel: 0.35 };
 function trekBandFight(o, dt, t) {
   if (state !== 'play') { if (state === 'rest' || state === 'end') trekHaltEnd(o, false); return; }
-  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.st !== 'down' && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if (!o.stones2 || !o.stones2.length) trekHaltEnd(o, true); return; }
+  o.haltT += dt; trekStoneStep(o, dt); const B = o.bandits.find(b => b.alive && b.st !== 'gone' && b.st !== 'leave'); if (!B) { if ((!o.stones2 || !o.stones2.length) && !o.bandits.some(b => b.st === 'down')) trekHaltEnd(o, true); return; } // (sigues cuando el último caído ya no está en el sendero)
   if (o.haltT > 90) { say('Los bandidos se van', '#a49fc8', 1.6); trekHaltEnd(o, false); return; }
   const L = trekLoc(o, HL.x, HL.z), fz = L.z - 4.5, D = trekBandDiff(); B.t += dt; // (tu cabeza, en las coordenadas de la parada)
   if (B.st === 'wait') { B.st = 'come'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); }
-  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.3); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.1); trekBandPlay(B, 'Idle_Loop'); } }
-  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo
-    B.st = 'wind'; B.t = 0; B.atk = pick(['high', 'low', 'body']); B.played = false; const [a, b] = TREK_STONE_TXT[B.atk];
-    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.2); SND.hiss(o.mesh.localToWorld(_tbw.set(B.x, 1.5, B.z)), 0.8);
+  if (B.st === 'come') { const tx = L.x * 0.3, dx = tx - B.x, dz = fz - B.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 1.25 * Math.min(1, B.t * 2)); if (d > 0.02) { B.x += dx / d * v; B.z += dz / d * v; } if (d < 0.05) { B.st = 'guard'; B.t = 0; B.gap = rand(0.6, 1.0); trekBandPlay(B, 'Idle_Loop'); } } // (arranca sin tirón)
+  else if (B.st === 'guard' && B.t > B.gap) { // prepara el lanzamiento: alta, baja o al cuerpo (de tres en tres, las tres: no se repite siempre la misma)
+    if (!B.bag || !B.bag.length) { B.bag = ['high', 'low', 'body'].sort(() => Math.random() - 0.5); if (B.bag[0] === B.atk) B.bag.push(B.bag.shift()); }
+    B.st = 'wind'; B.t = 0; B.atk = B.bag.shift(); const [a, b] = TREK_STONE_TXT[B.atk];
+    say(`${a} ${b}`, '#ff3b5c', D.wu + D.fly + 0.4); SND.banditThrow(o.mesh.localToWorld(_tbw.set(B.x, 1.6, B.z))); // (su esfuerzo, con voz de persona)
     trekBandPlay(B, 'OverhandThrow', true); if (B.cur) { B.cur.paused = true; B.cur.time = 0; } }
-  else if (B.st === 'wind') { // echa el brazo atrás despacio y suelta la piedra
-    const P = BEAST_PUNCH.OverhandThrow || [0.25, 0.35]; if (B.cur && B.cur.paused) B.cur.time = P[1] * smooth(clamp(B.t / D.wu, 0, 1));
-    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.timeScale = 0.6; } trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } }
-  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done)) { B.st = 'guard'; B.t = 0; B.gap = rand(0.9, 1.4); trekBandPlay(B, 'Idle_Loop'); }
+  else if (B.st === 'wind') { // echa el brazo atrás despacio y lo aguanta un instante (el aviso)…
+    if (B.cur && B.cur.paused) B.cur.time = TREK_THROW.cock * smooth(clamp(B.t / (D.wu * 0.75), 0, 1));
+    if (B.t >= D.wu) { if (B.cur) { B.cur.paused = false; B.cur.time = TREK_THROW.cock; B.cur.timeScale = 1; } B.st = 'whip'; B.t = 0; } }
+  else if (B.st === 'whip' && (B.cur ? B.cur.time >= TREK_THROW.rel : B.t >= TREK_THROW.rel - TREK_THROW.cock)) { trekStoneThrow(o, B, L, D); B.st = 'throw'; B.t = 0; } // (…y lo descarga: la piedra sale de su mano)
+  else if (B.st === 'throw' && !(o.stones2 || []).some(q => q.by === B && !q.done) && B.t > 0.5) { B.st = 'guard'; B.t = 0; B.gap = rand(0.7, 1.2); trekBandPlay(B, 'Idle_Loop'); }
+  else if (B.st === 'hurt' && B.t > (B.hurtT || 0.45) + 0.15) { B.st = 'guard'; B.t = 0; B.gap = rand(0.5, 0.9); trekBandPlay(B, 'Idle_Loop'); } // (se rehace y vuelve a la carga)
   // el aviso rojo sobre él mientras prepara el lanzamiento
   o.warn.position.set(B.x, 1.45, B.z); o.warn.material.color.setHex(0xff3b5c); o.warn.material.opacity = B.st === 'wind' ? 0.35 + 0.35 * Math.sin(t * 18) : 0;
 }
-// la piedra: de su mano a donde estás (a la cabeza, a las espinillas o al pecho), en un arco que se ve venir
+// La piedra: sale de su mano derecha y vuela en parábola (con su gravedad) a donde estás: a la cabeza, al pecho o, la baja,
+// botando en el suelo a medio camino y rodando hasta las espinillas
+const _tbm = new V3();
 function trekStoneThrow(o, B, L, D) {
   const m = new THREE.Group(); trekRock(m, 0, 0.11); m.children.forEach(c => { c.castShadow = true; }); o.mesh.add(m);
-  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.22 : calibRef - 0.5, from = new V3(B.x + 0.15, 1.7, B.z + 0.2), to = new V3(L.x, y, L.z);
-  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow);
-  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0 });
+  const from = new V3(B.x - 0.25, 1.75, B.z + 0.3), hand = B.mesh && B.mesh.getObjectByName('hand_r');
+  if (hand) { B.mesh.updateMatrixWorld(true); hand.getWorldPosition(_tbm); o.mesh.worldToLocal(from.copy(_tbm)); from.y = Math.max(0.6, from.y); }
+  const y = B.atk === 'high' ? calibRef - 0.02 : B.atk === 'low' ? 0.2 : calibRef - 0.5, to = new V3(L.x, y, L.z);
+  const glow = glowSprite(0xff8a3d, 0.35, 0.7); m.add(glow); m.position.copy(from);
+  // la baja: primero hasta el suelo, a medio camino (bota); luego, a ras, hasta ti
+  const legs = B.atk === 'low' ? [[from, new V3((from.x + to.x) / 2, 0.1, (from.z + to.z) / 2), 0.5], [null, to, 0.5]] : [[from, to, 1]];
+  (o.stones2 = o.stones2 || []).push({ by: B, m, from, to, atk: B.atk, dur: D.fly, t: 0, x0: HL.x, up: 0, done: false, after: 0, legs, leg: -1, v: new V3() });
   SND.whoosh(o.mesh.localToWorld(_tbw.copy(from)), 'arc');
 }
+// en cada tramo del vuelo, la velocidad de salida que lo lleva de un punto a otro en su tiempo, con la gravedad (p = p0 + v·t − ½·g·t²)
+function trekStoneLeg(q, i) { const [a, b, k] = q.legs[i], T = q.dur * k, p0 = a || q.m.position; q.leg = i; q.t0 = q.t; q.p0 = p0.clone(); q.T = T; q.v.subVectors(b, p0).divideScalar(T); q.v.y += 0.5 * 9.8 * T; }
 function trekStoneStep(o, dt) {
   for (const q of o.stones2 || []) {
     q.t += dt; const k = q.t / q.dur;
     if (!q.done) {
-      const h = q.atk === 'low' ? 0.35 : 0.7; q.m.position.lerpVectors(q.from, q.to, Math.min(1, k)); q.m.position.y += h * Math.sin(Math.PI * Math.min(1, k)); q.m.rotation.x += dt * 9; q.m.rotation.z += dt * 6;
+      if (q.leg < 0) trekStoneLeg(q, 0);
+      let u = q.t - q.t0; if (u >= q.T && q.leg < q.legs.length - 1) { q.m.position.copy(q.legs[q.leg][1]); trekStoneLeg(q, q.leg + 1); u = q.t - q.t0; fx.dust(o.mesh.localToWorld(_tbw.copy(q.m.position)).clone(), 5, 0.15); SND.step(o.mesh.localToWorld(_tbw.copy(q.m.position)), false); } // (bota)
+      u = Math.min(u, q.T); q.m.position.copy(q.p0).addScaledVector(q.v, u); q.m.position.y -= 0.5 * 9.8 * u * u; q.m.rotation.x += dt * 14; q.m.rotation.z += dt * 8;
       if (k > 1 - 0.45 / q.dur) q.up = Math.max(q.up, head.p.y - calibRef); // (el salto, en el último medio segundo)
-      if (k >= 1) { q.done = true; trekStoneJudge(o, q); }
-    } else { // esquivada: sigue de largo y se va; si te dio, cae a tus pies y se apaga
-      q.after += dt; if (q.ok) q.m.position.add(_tbh.set((q.to.x - q.from.x) / q.dur, -0.6, (q.to.z - q.from.z) / q.dur).multiplyScalar(dt)); else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
-      if (q.after > 0.8) { o.mesh.remove(q.m); q.gone = true; }
+      if (k >= 1) { q.done = true; q.vEnd = new V3(q.v.x, q.v.y - 9.8 * q.T, q.v.z); trekStoneJudge(o, q); }
+    } else { // esquivada: sigue de largo (y cae); si te dio, cae a tus pies y se apaga
+      q.after += dt; if (q.ok) { q.vEnd.y -= 9.8 * dt; q.m.position.addScaledVector(q.vEnd, dt); if (q.m.position.y < 0.08) { q.m.position.y = 0.08; q.vEnd.y *= -0.3; q.vEnd.x *= 0.6; q.vEnd.z *= 0.6; } } else q.m.scale.multiplyScalar(Math.max(0, 1 - dt * 4));
+      if (q.after > 0.9) { o.mesh.remove(q.m); q.gone = true; }
     }
   }
   if (o.stones2) o.stones2 = o.stones2.filter(q => !q.gone);
@@ -640,29 +670,33 @@ function trekStoneStep(o, dt) {
 // (la cabeza, «Altura del salto» por encima); al cuerpo: apartado 20 cm a un lado
 function trekStoneJudge(o, q) {
   const B = q.by, ok = q.atk === 'high' ? calibRef - HL.y > 0.2 : q.atk === 'low' ? q.up > settings.jumpHeight / 100 : Math.abs(HL.x - q.x0) > 0.2; q.ok = ok;
-  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone();
+  const p = o.mesh.localToWorld(_tbw.copy(q.to)).clone(), bp = o.mesh.localToWorld(new V3(B.x, 1.6, B.z));
   if (ok) { B.hp--; score += 100; boardDirty = true; hapticBoth(0.3, 40); o.dodges = (o.dodges || 0) + 1; SND.whoosh(p, 'arc');
-    if (B.hp <= 0) { B.st = 'leave'; B.t = 0; trekBandPlay(B, 'Walk_Loop'); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Se rinde y huye!', '#3cf0c6', 1.4); score += 200; }
-    else say(`¡Esquivada! Le quedan ${B.hp}`, '#ffd166', 0.9); }
+    if (B.hp <= 0) { // sin aguante: cae muerto (se desploma, se queda tendido y luego se hunde en la hierba)
+      B.alive = false; B.st = 'down'; B.t = 0; trekBandPlay(B, 'Death01', true); SND.banditDeath(bp); comicKill(bp, false); cheer('¡Bandido derrotado!', '#3cf0c6', 1.2); say('¡Derribado!', '#3cf0c6', 1.2); score += 200;
+    } else { // le duele: se encoge (al pecho o a la cabeza) y se queja
+      B.st = 'hurt'; B.t = 0; B.hurtT = trekBandPlay(B, Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head', true) || 0.4; SND.banditHurt(bp); fx.sparks(bp, 8, [1, 0.85, 0.5], 1, 0.03);
+      say(`¡Esquivada! Le ${B.hp === 1 ? 'queda 1' : `quedan ${B.hp}`}`, '#ffd166', 0.9); } }
   else { hurtPlayer({ silent: true }); comicHit(head.p.clone()); fx.dust(p, 8, 0.2); SND.metalHit(p, false); o.hits = (o.hits || 0) + 1;
     say(q.atk === 'high' ? '¡Te ha dado! Agáchate antes' : q.atk === 'low' ? '¡Te ha dado! Salta antes' : '¡Te ha dado! Apártate a un lado', '#ff3b5c', 1.6); }
 }
 // ¿hay una piedra baja en el aire? (en «Probar en el ordenador», soltar Espacio entonces es saltar)
 const trekStoneLow = () => { const o = TREK.halt; return !!(o && o.stones2 && o.stones2.some(q => !q.done && q.atk === 'low')); };
-// menos tiempo de vuelo en cada tramo y con el rango, poco a poco (de 1,4 s a 1 s: con 1,75 s se veían lentas); el brazo
+// menos tiempo de vuelo en cada tramo y con el rango, poco a poco (de 1 s a 0,75 s: con 1,4 s se veían flotar); el brazo
 // atrás (el aviso), siempre igual
-const trekBandDiff = () => ({ fly: Math.max(1, 1.4 - 0.04 * waveIdx - 0.025 * rankIdx()), wu: 0.9 });
+const trekBandDiff = () => ({ fly: Math.max(0.75, 1 - 0.035 * waveIdx - 0.02 * rankIdx()), wu: 0.9 });
 // Cada fotograma: dónde está cada uno, de cara a ti, su animación; los derribados se hunden y desaparecen, y los que se
 // van, se apartan del camino
 function trekBandAnim(o, dt, t) {
   if (TREK_BAND.scene && o.bandits[0] && !o.bandits[0].mesh) o.bandits.forEach(b => trekBandMesh(o.mesh, b));
   const L = trekLoc(o, HL.x, HL.z);
   for (const b of o.bandits) {
-    if (b.st === 'down' && o.bandits.find(c => c.st !== 'down' && c.st !== 'gone') !== b && (b.t += dt) > 1.6) { b.y = (b.y || 0) - dt * 0.5; if (b.y < -0.6) b.st = 'gone'; } // (tras caer, se hunde en la hierba)
+    if (b.st === 'down' && (b.t += dt) > 2.6) { b.y = (b.y || 0) - dt * 0.8; if (b.y < -0.6) b.st = 'gone'; } // (cae, se queda tendido y luego se hunde en la hierba)
     if (b.st === 'leave') { b.t += dt; b.x += (b.x < 0 ? -1 : 1) * dt * 1.2; if (b.t > 4) b.st = 'gone'; }
     if (!b.mesh) continue;
     b.mesh.visible = b.st !== 'gone'; b.mesh.position.set(b.x, b.y || 0, b.z);
-    b.mesh.rotation.y = b.st === 'leave' ? (b.x < 0 ? Math.PI / 2 : -Math.PI / 2) : Math.atan2(L.x - b.x, L.z - b.z) + Math.PI; // (de cara a ti: el modelo mira hacia −z)
+    const want = b.st === 'leave' ? (b.x < 0 ? Math.PI / 2 : -Math.PI / 2) : Math.atan2(L.x - b.x, L.z - b.z) + Math.PI; // (de cara a ti: el modelo mira hacia −z)
+    if (b.st !== 'down') { let d = want - (b.ry === undefined ? want : b.ry); d = Math.atan2(Math.sin(d), Math.cos(d)); b.ry = (b.ry === undefined ? want : b.ry) + d * Math.min(1, dt * 6); } b.mesh.rotation.y = b.ry; // (se gira sin saltos)
     b.mix.update(dt * (b.st === 'stun' ? 0.6 : 1));
   }
 }
@@ -769,11 +803,13 @@ function trekStep(dt, t) {
   TREK.dist += step;
   trekFrame(); trekGround(); trekRibbon(); trekLayout(); trekLight(dt); trekHopStep(dt);
   TREK_WT.value = t; TREK_SUN.value.copy(keyLight.position).sub(keyLight.target.position).normalize(); // (el agua se mueve; los destellos, donde está el sol)
-  // los retos: salen a 40 m y se juzgan al pasar por ti
-  if (state === 'play' && TREK.next && TREK.next - TREK.dist < 40) trekSpawn();
+  // los retos: salen a lo lejos, entre la niebla (a TREK_SEE m, donde acaba el paisaje: no aparecen de golpe cerca) y se
+  // juzgan al pasar por ti
+  if (state === 'play' && TREK.next && TREK.next - TREK.dist < TREK_SEE) trekSpawn();
   for (const o of TREK.obs) {
     const z = o.zl = (o.fixed ? 0 : HL.z) - (o.at - TREK.dist); // (su distancia, como si el sendero fuera recto: lo que cuenta para saltar o agacharse)
     o.mesh.rotation.y = trekBend(o.at, o.dx || 0, _tkq); o.mesh.position.set(_tkq.x, 0, _tkq.z + (o.fixed ? 0 : HL.z)); o.mesh.updateMatrixWorld(true);
+    if (o.asideTo !== undefined) o.dx = (o.dx || 0) + (o.asideTo - (o.dx || 0)) * Math.min(1, dt * 2.5); // (la que no rompiste, apartándose)
     if (o.bandits) trekBandAnim(o, dt, t);
     if (o.pillars) for (const p of o.pillars) { const u = p.userData; if (u.sink) { u.sink += dt * 4; p.position.y -= u.sink * dt; p.rotation.z += dt * 0.25; if (p.position.y < -14) p.visible = false; } } // (los que se hunden, al fondo)
     if (o.glow) o.glow.material.opacity = o.open ? Math.max(0, o.glow.material.opacity - dt) : 0.4 + 0.25 * Math.sin(t * 5);
