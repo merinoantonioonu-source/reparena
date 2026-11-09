@@ -78,7 +78,7 @@ function handRescue(frame, ref, t) {
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
-    if (h.ok || !h.isHand || !R.has || handEx()) { R.mode = null; continue; } // (con mandos, sin una mano vista antes o en un ejercicio que se hace con las manos, nada)
+    if (h.ok || !h.isHand || !R.has || handEx() || !['play', 'rest', 'ready'].includes(state)) { R.mode = null; continue; } // (con mandos, sin una mano vista antes, en un ejercicio que se hace con las manos o fuera de la partida —en los menús—, nada)
     R.lostT += dt; let mode = null;
     if (R.v.length() > HRS.vmin && R.lostT < HRS.pred) { _hrP.copy(R.lastP).addScaledVector(R.v, (1 - Math.exp(-HRS.k * R.lostT)) / HRS.k); _hrQ.copy(R.lastQ); mode = 'pred'; }
     else if (body) { _hrQ.copy(_hrBQ).multiply(R.offQ); _hrP.copy(R.offP).applyQuaternion(_hrBQ).add(_hrB); mode = 'body'; }
@@ -110,16 +110,16 @@ function bodySessionEnd() {
 // Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
-const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+const HSM = { minC: 1.5, beta: 20, betaQ: 2.5, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
 function handSmooth(h, t) {
-  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
+  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), w: new Float32Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
   const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
   if (!same) F.tRaw = t;
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
-    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
+    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); J[i].sq.copy(J[i].q); F.w[i] = 0; F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
     let tx, ty, tz;
     if (same) { const k = rdt < 0.06 ? rdt : 0; tx = P.x + F.v[o] * k; ty = P.y + F.v[o + 1] * k; tz = P.z + F.v[o + 2] * k; }
     else {
@@ -132,6 +132,10 @@ function handSmooth(h, t) {
     const a = hfA(HSM.minC + HSM.beta * Math.hypot(F.dx[o], F.dx[o + 1], F.dx[o + 2]), dt);
     F.x[o] += a * (tx - F.x[o]); F.x[o + 1] += a * (ty - F.x[o + 1]); F.x[o + 2] += a * (tz - F.x[o + 2]);
     J[i].s.set(F.x[o], F.x[o + 1], F.x[o + 2]);
+    // el giro de cada articulación, con el mismo filtro (antes llegaba tal cual: la palma y las falanges temblaban y daban
+    // sacudidas aunque la posición fuera suave). Quieto, muy suave; girando deprisa, casi sin retraso. Solo para pintarla
+    const Q = J[i].sq, q = J[i].q, d = Math.min(1, Math.abs(Q.x * q.x + Q.y * q.y + Q.z * q.z + Q.w * q.w)), ang = 2 * Math.acos(d);
+    F.w[i] += hfA(HSM.dC, dt) * (ang / dt - F.w[i]); Q.slerp(q, hfA(HSM.minC + HSM.betaQ * F.w[i], dt));
   }
 }
 
@@ -419,7 +423,7 @@ renderer.setAnimationLoop((time, frame) => {
 //   a ×1 la imagen se estira y se ve blanda. Alta: ×1,4 (más que la pantalla: lo más nítido); Automática: ×1,2 a 72 Hz (a
 //   90 o 120 Hz no hay tiempo para tanto: ×1); Media, ×1; Baja, ×0,8
 // · para aligerar, solo la foveación (menos detalle en los bordes de la vista: se cambia en la misma capa) y las sombras
-//   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, sin foveación
+//   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, igual (y sombras cada 4)
 const QRES = { alta: 1.4, auto: 'hz', media: 1, baja: 0.8 };
 const QLV = [{ fov: 0.3, sh: 1, sm: 1024 }, { fov: 0.55, sh: 2, sm: 1024 }, { fov: 0.8, sh: 2, sm: 512 }, { fov: 1, sh: 3, sm: 512 }], QFIX = { alta: 0, auto: 0, media: 1, baja: 2 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, fov: -1, sc: 1, native: 1, swaps: 0 };
@@ -446,10 +450,13 @@ function qualLevel(lv) {
 }
 function qualFov(v, session) { const L = session.renderState && session.renderState.baseLayer; if (L && 'fixedFoveation' in L && QUAL.fov !== v) { L.fixedFoveation = v; QUAL.fov = v; } }
 function qualStep(dt) {
-  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
+  // con un menú abierto fuera de la partida (inicio, pausa, resumen) nada se mueve: las sombras, cada 4 fotogramas
+  const inMenu = !!(menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state));
+  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % (inMenu ? Math.max(4, QLV[QUAL.lv].sh) : QLV[QUAL.lv].sh) === 0; // sombras: cada fotograma, o cada 2 o 3
   const s = renderer.xr.getSession(); if (!s || preview) return;
-  // con un menú abierto fuera de la partida (inicio, pausa, resumen), sin foveación: las letras, nítidas hasta los bordes
-  if (menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state)) { qualFov(0, s); QUAL.t = 0; QUAL.n = 0; return; }
+  // En el menú, la misma foveación que en la partida (la que pide tu calidad; el centro, donde está el menú, sigue nítido) y
+  // también se mira si las gafas llegan: antes, con un menú abierto, se quitaba la foveación y no se vigilaba nada, y el
+  // menú era lo más pesado de todo el juego (a saltos al mover la cabeza, aun con la calidad más baja)
   qualFov(QLV[QUAL.lv].fov, s);
   // un tirón suelto (compilar un entorno o un monstruo, cargar una textura) no es que el juego vaya lento: ese segundo no cuenta
   const nowR = performance.now() / 1000, raw = nowR - (QUAL.last || nowR); QUAL.last = nowR;

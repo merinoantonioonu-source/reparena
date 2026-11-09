@@ -1997,7 +1997,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   { const r = RA.renderer, s = r.xr.getSession(), fovMenu = s.renderState.baseLayer.fixedFoveation; RA.qualLevel(3); RA.hideMenu(); frame(3, 16, xrFrame); const fovPlay = s.renderState.baseLayer.fixedFoveation; RA.qualLevel(0); RA.lobbyMenu(); frame(3, 16, xrFrame);
     const madeIn = QL.made.length; RA.setSetting('quality', 'media'); const swap = QL.made.slice(madeIn);
     log(`sharpness: scale on entering ${r.xr._fb} (Alta 1.4, the headset says 1.3) · new layers while playing ${madeIn} · foveation menu ${fovMenu} / slow game ${fovPlay} · choosing Media → new layer ${swap.join(',')}`);
-    if (r.xr._fb !== 1.4 || madeIn || fovMenu !== 0 || fovPlay !== 1 || swap[0] !== 1) errors.push('nitidez: «Alta» debería entrar a ×1,4, sin capas nuevas en la partida, sin foveación en el menú y con una capa nueva solo al cambiar la calidad');
+    if (r.xr._fb !== 1.4 || madeIn || fovMenu !== 0.3 || fovPlay !== 1 || swap[0] !== 1) errors.push('nitidez: «Alta» debería entrar a ×1,4, sin capas nuevas en la partida, en el menú con la foveación de su calidad (no a pelo: era lo más pesado del juego) y con una capa nueva solo al cambiar la calidad');
     RA.setSetting('quality', qual0); frame(3, 16, xrFrame); }
   log('XR mode', RA.settings.mode, RA.settings.exercise); log('XR lobby state', RA.state, 'menu?', !!RA.menu, 'gloves seg count', RA.gloves.right.seg.count);
   // pulsar EMPEZAR con el índice derecho
@@ -2518,6 +2518,20 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (!(trkBody > 0.3)) errors.push('medición de las manos: debería contar el rato con la mano colocada por el cuerpo');
     if (!pads) errors.push('con mandos no debería calcularse ninguna mano');
     XRS.body = null; XRS.hands = null; RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
+  // ---- En los menús no se inventa ninguna mano (ni el gesto ni el cuerpo); y la mano que se pinta no tiembla al girar ----
+  { const sv = { ...RA.settings }; applyCfg({ mode: 'combat', exercise: 'squat', intro: 0, bodyHands: 1 }); XRS.headY = 1.7; await RA.startXR(false); await sleep(700); frame(20, 16, xrFrame);
+    const V = (x, y, z) => new THREE.Vector3(x, y, z), H = RA.hands.right; XRS.hands = { left: V(-0.3, 1.1, -0.35), right: V(0.3, 1.15, -0.3) }; frame(20, 16, xrFrame);
+    XRS.body = { left: XRS.hands.left.clone(), right: XRS.hands.right.clone() }; frame(20, 16, xrFrame);
+    for (let i = 0; i < 6; i++) { XRS.hands.right.y += 0.04; frame(1, 16, xrFrame); } // (deprisa hacia arriba y se pierde)
+    XRS.noRight = true; let inv = 0; for (let i = 0; i < 30; i++) { XRS.body.right.y += 0.01; frame(1, 16, xrFrame); if (H.est) inv++; } XRS.noRight = false; XRS.body = null; frame(10, 16, xrFrame);
+    // el giro de la muñeca, con temblor de ±4° en cada postura: la palma que se pinta tiembla mucho menos
+    const rot = new THREE.Quaternion(), ax = V(0, 0, 1); let rawJ = 0, drawJ = 0, prevR = null, prevD = null; const G = RA.gloves.right.palm.quaternion, ang = (a, b) => 2 * Math.acos(Math.min(1, Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w)));
+    for (let i = 0; i < 60; i++) { XRS.rotJit = (Math.random() - 0.5) * 0.14; frame(1, 16, xrFrame); const R = H.J[0].q.clone(), D = G.clone(); if (prevR && i > 10) { rawJ += ang(R, prevR); drawJ += ang(D, prevD); } prevR = R; prevD = D; }
+    XRS.rotJit = 0; XRS.hands = null;
+    log(`hands in the menu: invented frames ${inv} · wrist rotation jitter per frame: raw ${(rawJ / 49 * 57.3).toFixed(2)}° → drawn ${(drawJ / 49 * 57.3).toFixed(2)}°`);
+    if (inv) errors.push(`en los menús no debería inventarse ninguna mano perdida (${inv} fotogramas)`);
+    if (!(rawJ > 0) || drawJ > rawJ * 0.5) errors.push(`la mano que se pinta debería temblar bastante menos que lo que dan las gafas al girar la muñeca (${(rawJ * 57.3).toFixed(1)}° → ${(drawJ * 57.3).toFixed(1)}°)`);
+    RA.exitAll(); frame(2, 16, xrFrame); applyCfg(sv); }
 
   // ---- Pistolas en XR con mandos: bláster en cada mano y el gatillo dispara ----
   applyCfg({ mode: 'flyers', exercise: 'squat', pistol: 1, lives: 0, waves: 1, repsWave: 6, rest: 0, flySpeed: 8, squatDepth: 25 });
@@ -3144,6 +3158,7 @@ function makeXRFrame() {
         if ((XRS.fist === j.side || XRS.fist === 'both') && (i === 14 || i === 19 || i === 24)) { const g = XRS.hands[j.side]; pos = { x: g.x + 0.01, y: g.y, z: g.z - 0.02 }; } // puño: las puntas vuelven hacia la palma
         if ((XRS.pinch === j.side || XRS.pinch === 'both') && (i === 4 || i === 9)) { const w = HJ.indexOf('wrist'); pos = { x: pos.x - (i % 5) * 0.01 + 0.03, y: pos.y + 0.02, z: pos.z - 0.06 }; } // pulgar e índice juntos
         if (XRS.grip) { const g = XRS.grip[j.side]; pos = { x: g.x, y: g.y - (i === 10 ? 0.02 : 0), z: g.z + (i === 10 ? 0.02 : 0) }; }
+        if (XRS.rotJit && j.side === 'right') { const h = XRS.rotJit / 2; ori = { x: 0, y: 0, z: Math.sin(h), w: Math.cos(h) }; } // (el giro de la muñeca, con temblor)
         if (XRS.left && j.side === 'left') pos = leftJoint(i, XRS.left); // mano izquierda con forma de mano: palma, dedos y puño
         if (XRS.thumbUp === j.side) pos = thumbJoint(i, j.side); // (pulgar arriba y el resto del puño cerrado)
         if (j.side === 'left' && i === 9 && XRS.ltip) pos = { x: XRS.ltip.x, y: XRS.ltip.y, z: XRS.ltip.z }; // (el índice izquierdo, para pulsar)

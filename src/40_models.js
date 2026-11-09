@@ -493,7 +493,7 @@ function updateGloves(dt) {
     if (h.est === 'body' && settings.mode !== 'touch') g.tipMat.color.lerp(_gw.setRGB(0.45, 0.85, 1), 0.85); // la mano que coloca el cuerpo (las cámaras la han perdido): puntas celestes (en los Toques no: ahí el color dice qué mano es)
     // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
     // viendo donde estaba en vez de parpadear
-    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off);
+    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off), rq = A => h.isHand ? A.sq : A.q; // (con las manos, el giro suavizado)
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
       g.palm.visible = false;
@@ -504,14 +504,14 @@ function updateGloves(dt) {
     G_SEGS.forEach(([a, b], i) => {
       const A = J[a], B = J[b]; if (!held && (!A.ok || !B.ok)) { g.seg.setMatrixAt(i, ZERO_M); return; }
       const r = Math.max(0.006, A.r), len = A.s.distanceTo(B.s);
-      _goff.set(0, r * 0.15, 0).applyQuaternion(A.q); _gp.copy(sp(A)).add(_goff);
-      _gm.compose(_gp, A.q, _gs.set(r * 2.25, r * 1.9, len)); g.seg.setMatrixAt(i, _gm);
+      _goff.set(0, r * 0.15, 0).applyQuaternion(rq(A)); _gp.copy(sp(A)).add(_goff);
+      _gm.compose(_gp, rq(A), _gs.set(r * 2.25, r * 1.9, len)); g.seg.setMatrixAt(i, _gm);
     });
-    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(sp(A), A.q, _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
-    G_TIPS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(sp(A), A.q, _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
-    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(A.q); _gp.copy(sp(A)).add(_goff); _gm.compose(_gp, A.q, _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
+    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(sp(A), rq(A), _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
+    G_TIPS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(sp(A), rq(A), _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
+    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(rq(A)); _gp.copy(sp(A)).add(_goff); _gm.compose(_gp, rq(A), _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
     for (const m of [g.seg, g.joint, g.tip, g.guard]) { m.count = m.instanceMatrix.count; m.instanceMatrix.needsUpdate = true; }
-    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(sp(J[0])); g.palm.quaternion.copy(J[0].q);
+    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(sp(J[0])); g.palm.quaternion.copy(rq(J[0]));
     const size = J[11].ok ? J[0].s.distanceTo(J[11].s) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
   }
 }

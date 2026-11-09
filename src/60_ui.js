@@ -1,7 +1,7 @@
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
-const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
+const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3(), sq: new Q4() }); // s y sq: la posición y el giro suavizados, para pintarla
 const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, tipS: new V3(), tipSm: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
