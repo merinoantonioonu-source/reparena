@@ -358,10 +358,30 @@ cv.addEventListener('pointerup', e => {
 });
 
 /* =================== BUCLE PRINCIPAL =================== */
+// Registro de tirones: en las gafas, cuando la imagen se congela más de 0,1 s, se apunta lo que hizo el fotograma anterior
+// (lo que tardó el juego en pensar y en mandar el dibujo, y si en él se rehízo un menú, se pintó la carátula, se
+// precompiló algo, se crearon texturas o sombreadores). Al salir de las gafas, la página lo resume (#hitchStatus): así se
+// sabe qué congela el menú aunque no haya un patrón a la vista
+function hitchNote(gap, js, rd) {
+  const ri = renderer.info, tex = ri.memory ? ri.memory.textures : 0, prog = ri.programs ? ri.programs.length : 0;
+  const cur = { js, rd, warm: HITCH.f.warm, intro: HITCH.f.intro, menu: HITCH.f.menu, tx: tex - HITCH.tex, pg: prog - HITCH.prog, st: state, open: !!menu && !menu.closed };
+  HITCH.tex = tex; HITCH.prog = prog; HITCH.f.warm = HITCH.f.intro = HITCH.f.menu = 0;
+  if (xrActive && gap > 0.1 && HITCH.prev) { HITCH.n++; if (HITCH.list.length < 80) HITCH.list.push(Object.assign({ gap: Math.round(gap * 1000) }, HITCH.prev)); }
+  HITCH.prev = cur;
+}
+function hitchText(L) {
+  if (!L || !L.n) return L ? 'Última sesión en las gafas: sin tirones (ningún fotograma de más de 0,1 s).' : '';
+  const c = { menu: 0, intro: 0, warm: 0, tx: 0, pg: 0, js: 0, rd: 0, otra: 0 }, open = L.list.filter(x => x.open).length;
+  for (const x of L.list) { if (x.menu) c.menu++; else if (x.intro) c.intro++; else if (x.warm) c.warm++; else if (x.pg > 0) c.pg++; else if (x.tx > 0) c.tx++; else if (x.js > 50) c.js++; else if (x.rd > 50) c.rd++; else c.otra++; }
+  const worst = Math.max(...L.list.map(x => x.gap)), parts = [[c.menu, 'al rehacer un menú'], [c.intro, 'pintando la carátula'], [c.warm, 'precompilando enemigos'], [c.pg, 'compilando un sombreador'], [c.tx, 'creando texturas'], [c.js, 'el juego pensando'], [c.rd, 'mandando el dibujo'], [c.otra, 'sin causa en el juego (la gráfica o el navegador)']].filter(x => x[0]).map(x => `${x[0]} ${x[1]}`);
+  return `Última sesión en las gafas: ${L.n} tirones (el peor, ${worst} ms; ${open} con un menú abierto): ${parts.join(', ')}.`;
+}
+function hitchInitPage() { const el = $('#hitchStatus'); if (el) el.textContent = hitchText(store(HITCH.KEY)); }
+function hitchSave() { const L = { n: HITCH.n, list: HITCH.list, at: Date.now() }; store(HITCH.KEY, L); const el = typeof document !== 'undefined' && $('#hitchStatus'); if (el) el.textContent = hitchText(L); HITCH.list = []; HITCH.n = 0; HITCH.prev = null; }
 let lastT = 0, boardT = 0, centerT = 0;
 const AMBX = { clank: 6 };
 renderer.setAnimationLoop((time, frame) => {
-  const t = time / 1000, dt = Math.min(0.05, Math.max(0, t - lastT)); lastT = t;
+  const t = time / 1000, gap = t - lastT, dt = Math.min(0.05, Math.max(0, gap)); lastT = t;
   if (!xrActive && !preview) return;
   const t0 = performance.now();
   if (frame) readXR(frame, t); else previewInput(dt);
@@ -383,12 +403,12 @@ renderer.setAnimationLoop((time, frame) => {
   updateEnv(dt, t);
   if (!arMode && !forestOn() && !ISL.group.visible && AUD.C) { AMBX.clank -= dt; if (AMBX.clank <= 0) { AMBX.clank = rand(5, 13); const a = rand(0, TAU); SND.clankFar(new V3(Math.cos(a) * 25, rand(2, 8), Math.sin(a) * 25)); } }
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
-  if (WARM.q.length && !['play', 'rest'].includes(state)) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida
+  if (WARM.q.length && !['play', 'rest'].includes(state) && !menuBusy()) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida y no mientras tocas el menú (cada uno puede congelar la imagen un instante)
   introIdle(dt); envSwitchStep(dt); // (la ilustración de la carátula, por partes, mientras estás en el menú; el cambio de entorno, a oscuras)
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   qualStep(dt);
   const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();
-  perfStep(t, dt, t1 - t0, t2 - t1);
+  perfStep(t, dt, t1 - t0, t2 - t1); hitchNote(gap, t1 - t0, t2 - t1);
 });
 
 /* =================== NITIDEZ Y FLUIDEZ =================== */
@@ -512,7 +532,7 @@ async function startXR(ar) {
     xrAR = useAR; arMode = ar && useAR; applyEnvMode(); applyShadows();
     qualSessionStart(session); await renderer.xr.setSession(session);
     xrActive = true; state = 'lobby'; anchorsInit(session); roomSessionStart(session); xrRate(session); warmQueue(); bodySessionStart();
-    session.addEventListener('end', () => { bodySessionEnd(); hrxClose(); GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
+    session.addEventListener('end', () => { bodySessionEnd(); hitchSave(); hrxClose(); GOALS.shown = false; endSession(); campEnd(); CAMP.env = null; xrActive = false; anchorsEnd(); PLACE.on = PLACE.wait = false; EQ.edit = null; hideMenu(); resetWorld(); center.mesh.visible = false; toastP.mesh.visible = false; watch.mesh.visible = false; state = 'idle'; ambientStop(); renderHistory(); syncForm(); });
     // si sale algo del sistema por encima (los controles de Spotify o el menú de las gafas), la partida se pausa, no se pierde
     session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible' && GAME_STATES.includes(state)) openPause(); });
     // el gatillo del mando abre la pausa, salvo con las pistolas: entonces dispara (y la pausa va con X/Y)
@@ -540,7 +560,7 @@ async function checkXR() {
 settingHooks.push(k => { if (['mode', 'exercise', 'aim', 'foesGate', 'foesHatch', 'foesFly', 'pistol', '*'].includes(k) && preview) $('#cross').hidden = !aimManual(); });
 
 /* =================== ARRANQUE =================== */
-buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); pageNav(); pageHelp(); demoPage(); appInit();
+buildForm(); syncForm(); renderHistory(); checkXR(); layoutArena(); spInitPage(); sesInitPage(); sndPageInit(); xferInitPage(); devInitPage(); exSongsInitPage(); hrInitPage(); hitchInitPage(); pageNav(); pageHelp(); demoPage(); appInit();
 setTimeout(ensureRigs, 60);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardDirty = true; });
 })();

@@ -2,6 +2,7 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const V3 = THREE.Vector3, Q4 = THREE.Quaternion;
+const HITCH = { list: [], f: { warm: 0, intro: 0, menu: 0 }, prev: null, tex: 0, prog: 0, n: 0, KEY: 'reparena3-hitch' }; // (el registro de tirones: ver hitchNote, 80_main)
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;

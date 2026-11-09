@@ -77,15 +77,20 @@ No las cambies sin preguntarle.
   Turbo por racha: seis repeticiones seguidas a buen ritmo lo encienden (más deprisa, puntos ×2, estelas de viento); una floja,
   3 s sin ninguna o chocar lo apagan. El
   sendero serpentea (el mundo gira despacio a tu alrededor; «Sendero con curvas» lo quita si marea). Detrás, siempre paisaje.
-- Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer). Los retos piden **otro movimiento**
+- Cada oleada, un tramo con su paisaje (bosque, aldea, pradera del lago, pinar al atardecer), y se llama tramo (panel «TRAMO
+  2 DE 5 · Aldea», las repeticiones que faltan en el marcador). El tramo no acaba a mitad de una parada, y las repeticiones
+  hechas en una parada no cuentan para él. Los retos salen a lo lejos, entre la niebla (88 m), no de golpe cerca; la roca o
+  el cofre que no se superan se apartan del sendero (nunca se atraviesan). Los retos piden **otro movimiento**
   que el que hace avanzar: con las piernas, troncos que saltar; con curl, ramas bajas para agacharse (frenan y rompen la
   racha, sin quitar vidas). Todo apoyado en el suelo, con su sombra.
 - Paradas: el cofre con cadenas (se rompen con repeticiones de otro ejercicio; dentro, una llave —con tres, el tesoro— y
-  una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: cada
-  embestida la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
+  una gema), el derrumbe (la roca, sólida —nunca se entra en ella; te paras a 1 m de su cara—, se embiste con zancadas: no se mueve con
+  la zancada, y cada embestida —al llegar abajo y adelante, no al volver— la hace temblar y retumbar, y en la última se hace añicos que saltan por los aires), el arroyo sinuoso (de piedra en piedra con
   saltos; cada salto, el mundo baja y sube como si te elevara), el desfiladero que se desmorona (cada salto, al pilar siguiente; el de atrás se hunde) y los bandidos (solo
   esquivar: lanzan piedras con aviso largo —la alta, agacharse; la baja, saltar; la que va al cuerpo, apartarse— y, con 5
-  esquivadas (6 desde el tercer tramo), se rinden y huyen; nada de puñetazos, que con el retraso de las manos en las gafas
+  esquivadas (6 desde el tercer tramo; encima, una bolita de vida por cada una que falta), caen muertos; cada esquivada les
+  duele (gesto y quejido); al lanzar, voz de persona (nunca el siseo de las arañas), con su animación a su velocidad, la
+  piedra desde su mano y en parábola; nada de puñetazos, que con el retraso de las manos en las gafas
   no daba tiempo; con la cabeza del personaje base y sin contorno). Lobos que te cortan el paso: salen a lo lejos, delante y a un
   lado (siempre a la vista: flecha roja encima, que se ve a través de rocas y árboles), y corren en diagonal a un punto del
   sendero por delante de ti; si llegas antes (con margen: basta con ir a su paso a buen ritmo; muerden a menos de 0,8 m),
@@ -122,7 +127,7 @@ No las cambies sin preguntarle.
 - Cargas ×2/×3/×4 aguantando la postura más dura, como en la sentadilla: fondos (abajo, codos a 90°), elevación frontal
   (arriba), antebrazos (la barra escurrida), dominadas y remo (arriba; al bajar, onda que con ×4 revienta también a los
   cercanos) y la plancha con un brazo (una flexión aguantada abajo carga ×2/×3/×4, con la bola a la vista; el brazo que se
-  levanta después lanza esa carga).
+  levanta después lanza esa carga: la bola se va a esa mano y el rayo sale siempre de la mano levantada, nunca de la bola).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
   aún venga de camino.
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.

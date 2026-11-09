@@ -116,6 +116,18 @@ function noise(dest, { t = 0, a = 0.002, d = 0.3, gain = 0.3, type = 'lowpass', 
 }
 function shaper(dest, hard) { const w = AUD.C.createWaveShaper(); w.curve = hard ? AUD.curveHard : AUD.curve; w.oversample = '2x'; w.connect(dest); return w; }
 
+// Una voz humana breve: la vibración de la garganta (diente de sierra con el tono que cae) por tres formantes de la vocal,
+// un soplo de aire y, al final del lamento, la voz que se quiebra (fry)
+function voxSynth(pos, { f0, f1, d, a = 0.02, form, breath = 0.4, fry = 0, gain = 1 }) {
+  if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.3, gain, ref: 2.5 }), f = f0 * rand(0.92, 1.08);
+  const env = C.createGain(); env.gain.setValueAtTime(0.0001, T); env.gain.exponentialRampToValueAtTime(0.6, T + a); env.gain.setValueAtTime(0.6, T + a + d * 0.35); env.gain.exponentialRampToValueAtTime(0.0001, T + a + d);
+  for (const [ff, q, g] of form) { const bp = C.createBiquadFilter(), gg = C.createGain(); bp.type = 'bandpass'; bp.frequency.value = ff; bp.Q.value = q; gg.gain.value = g; env.connect(bp); bp.connect(gg); gg.connect(o); }
+  const os = C.createOscillator(); os.type = 'sawtooth'; os.frequency.setValueAtTime(f * 1.06, T); os.frequency.linearRampToValueAtTime(f, T + a + 0.03); os.frequency.exponentialRampToValueAtTime(f1 * f / f0, T + a + d);
+  const vib = C.createOscillator(), vg = C.createGain(); vib.frequency.value = rand(5, 7); vg.gain.value = f * 0.02; vib.connect(vg).connect(os.frequency); vib.start(T); vib.stop(T + a + d + 0.05);
+  let src = os; if (fry) { const am = C.createGain(), lfo = C.createOscillator(), lg = C.createGain(); am.gain.value = 0.6; lfo.frequency.value = 28; lg.gain.setValueAtTime(0, T); lg.gain.linearRampToValueAtTime(0.5, T + a + d); lfo.connect(lg).connect(am.gain); lfo.start(T); lfo.stop(T + a + d + 0.05); os.connect(am); src = am; }
+  src.connect(env); os.start(T); os.stop(T + a + d + 0.05);
+  noise(o, { type: 'bandpass', f: 1600, q: 0.9, a, d: d * 0.8, gain: 0.12 * breath });
+}
 function roarSynth(pos, s) {
   if (!sndOK()) return; const C = AUD.C, T = C.currentTime, o = sout(pos, { rev: 0.55, gain: 1.0, ref: 3 });
   const sh = shaper(o, true), bp = C.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
@@ -221,6 +233,11 @@ const SND = {
     noise(o, { type: 'bandpass', f: 2200, q: 1.1, a: 0.01, d: 0.45, gain: 0.35 });
     for (const t of [0.18, 0.3]) noise(o, { t, type: 'highpass', f: 2500, a: 0.001, d: 0.03, gain: 0.6 }); // (la dentellada: dos chasquidos de mandíbula)
   },
+  // los bandidos de la Travesía, con voz de persona (no el siseo de las arañas): el esfuerzo al lanzar («¡ja!»), el
+  // quejido al esquivarles una piedra («¡uh!») y el lamento al caer
+  banditThrow(pos) { voxSynth(pos, { f0: 150, f1: 105, d: 0.28, a: 0.02, form: [[720, 6, 1], [1150, 8, 0.6], [2500, 10, 0.25]], breath: 0.5, gain: 1 }); },
+  banditHurt(pos) { voxSynth(pos, { f0: 210, f1: 135, d: 0.34, a: 0.015, form: [[420, 6, 1], [900, 8, 0.45], [2400, 10, 0.18]], breath: 0.35, gain: 0.95 }); },
+  banditDeath(pos) { voxSynth(pos, { f0: 170, f1: 70, d: 1.1, a: 0.04, form: [[650, 5, 1], [1050, 7, 0.5], [2450, 9, 0.2]], breath: 0.45, fry: 1, gain: 1 }); },
   // un pájaro entre los árboles (bosque de día): dos a cinco trinos rápidos, cada uno un silbido que sube o baja
   bird(pos) { if (ambMute()) return; /* sonido ambiente: con Spotify, o sin ambiente, se calla */
     if (!sndOK()) return; const o = sout(pos, { rev: 0.45, gain: 0.5, ref: 4 }), n = 2 + Math.floor(Math.random() * 4), f0 = rand(2600, 4200), up = Math.random() < 0.5; let t = 0;
@@ -384,7 +401,8 @@ const SND_FILES = {
   whoosh: [{ who: 1, def: 'flyer' }, 0], thunder: ['trueno'], swordSwish: ['espada-aire', 0, 1], swordClang: ['espada-choque', 0, 1], swordHit: ['espada-golpe', 0, 1],
   swordBlock: ['espada-bloqueo', 0, 1], swordSlice: ['espada-corte', 0, 1], engulf: ['remolino-engulle', 0], vortexClose: ['remolino-cierra', 0],
   owl: ['buho', 0], bird: ['pajaro', 0], gull: ['gaviota', 0], creak: ['crujido', 0], clankFar: ['metal-lejano', 0],
-  wolfHowl: ['lobo-aullido', 0], wolfGrowl: ['lobo-grunido', 0], wolfBite: ['lobo-ataque', 0]
+  wolfHowl: ['lobo-aullido', 0], wolfGrowl: ['lobo-grunido', 0], wolfBite: ['lobo-ataque', 0],
+  banditThrow: ['bandido-lanza', 0], banditHurt: ['bandido-dolor', 0], banditDeath: ['bandido-muere', 0]
 };
 const OWN_FILES = ['rayo', 'rayo-cargado', 'impacto', 'tentaculos', 'caida-foso', 'pompa'];
 function sampleNames() {
