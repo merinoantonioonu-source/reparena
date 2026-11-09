@@ -145,7 +145,9 @@ No las cambies sin preguntarle.
   barras: lo que necesite la mano de verdad tiene que saltársela; al volver a verla, `h.back` (ese fotograma). En los
   ejercicios que se hacen con las manos (`handEx`: los de pesa —curl, curl con barra, elevación frontal…— y la plancha
   con un brazo) no se inventa ninguna mano: con los brazos abajo las gafas las pierden a menudo, y la inventada subía sola
-  y contaba curls y disparos que no se habían hecho.
+  y contaba curls y disparos que no se habían hecho. Fuera de la partida (menús), tampoco.
+- La mano que se pinta usa la posición suavizada (`J.s`) y también el giro suavizado (`J.sq`, mismo filtro): con el giro
+  tal cual, la palma y las falanges temblaban. Solo para pintar: el juego sigue con lo que dan las gafas.
 - La lectura de las manos (suavizado, filtro `HF` de las dos manos juntas, lanzamiento, puñetazo, pellizco) está como antes
   de la auditoría externa: sus cambios (solo posturas nuevas, pellizco con puño, salto de la mano recuperada) empeoraron
   mucho los dos curls en las gafas y el usuario pidió quitarlos. No vuelvas a tocarla sin probarlo con él en las gafas.

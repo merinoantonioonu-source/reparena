@@ -5358,7 +5358,7 @@ function updateGloves(dt) {
     if (h.est === 'body' && settings.mode !== 'touch') g.tipMat.color.lerp(_gw.setRGB(0.45, 0.85, 1), 0.85); // la mano que coloca el cuerpo (las cámaras la han perdido): puntas celestes (en los Toques no: ahí el color dice qué mano es)
     // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
     // viendo donde estaba en vez de parpadear
-    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off);
+    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off), rq = A => h.isHand ? A.sq : A.q; // (con las manos, el giro suavizado)
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
       g.palm.visible = false;
@@ -5369,14 +5369,14 @@ function updateGloves(dt) {
     G_SEGS.forEach(([a, b], i) => {
       const A = J[a], B = J[b]; if (!held && (!A.ok || !B.ok)) { g.seg.setMatrixAt(i, ZERO_M); return; }
       const r = Math.max(0.006, A.r), len = A.s.distanceTo(B.s);
-      _goff.set(0, r * 0.15, 0).applyQuaternion(A.q); _gp.copy(sp(A)).add(_goff);
-      _gm.compose(_gp, A.q, _gs.set(r * 2.25, r * 1.9, len)); g.seg.setMatrixAt(i, _gm);
+      _goff.set(0, r * 0.15, 0).applyQuaternion(rq(A)); _gp.copy(sp(A)).add(_goff);
+      _gm.compose(_gp, rq(A), _gs.set(r * 2.25, r * 1.9, len)); g.seg.setMatrixAt(i, _gm);
     });
-    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(sp(A), A.q, _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
-    G_TIPS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(sp(A), A.q, _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
-    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(A.q); _gp.copy(sp(A)).add(_goff); _gm.compose(_gp, A.q, _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
+    G_JOINTS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.joint.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.006, A.r) * 2.05; _gm.compose(sp(A), rq(A), _gs.set(r, r, r)); g.joint.setMatrixAt(i, _gm); });
+    G_TIPS.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.tip.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.005, A.r) * 2.1; _gm.compose(sp(A), rq(A), _gs.set(r, r, r)); g.tip.setMatrixAt(i, _gm); });
+    G_KNUCK.forEach((j, i) => { const A = J[j]; if (!held && !A.ok) { g.guard.setMatrixAt(i, ZERO_M); return; } const r = Math.max(0.007, A.r); _goff.set(0, r * 1.1, 0).applyQuaternion(rq(A)); _gp.copy(sp(A)).add(_goff); _gm.compose(_gp, rq(A), _gs.set(r * 2.6, r * 1.3, r * 2.3)); g.guard.setMatrixAt(i, _gm); });
     for (const m of [g.seg, g.joint, g.tip, g.guard]) { m.count = m.instanceMatrix.count; m.instanceMatrix.needsUpdate = true; }
-    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(sp(J[0])); g.palm.quaternion.copy(J[0].q);
+    g.pad.visible = false; g.palm.visible = true; g.palm.position.copy(sp(J[0])); g.palm.quaternion.copy(rq(J[0]));
     const size = J[11].ok ? J[0].s.distanceTo(J[11].s) / 0.095 : 1; g.palm.scale.setScalar(clamp(size, 0.75, 1.3));
   }
 }
@@ -6370,7 +6370,7 @@ function drawPulse(c, x, y) {
 
 /* =================== ESTADO DEL JUGADOR =================== */
 const head = { p: new V3(0, 1.6, 0), q: new Q4(), prev: new V3(), speed: 0 };
-const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3() }); // s: la posición suavizada, para pintarla
+const mkJ = () => ({ p: new V3(), q: new Q4(), r: 0.008, ok: false, s: new V3(), sq: new Q4() }); // s y sq: la posición y el giro suavizados, para pintarla
 const mkHand = () => ({ ok: false, isHand: false, trig: false, trigPrev: false, wrist: new V3(), wristQ: new Q4(), tip: new V3(), tipOk: false, tipS: new V3(), tipSm: false, pinch: false, J: HJ.map(mkJ), rayOk: false, rayO: new V3(), rayD: new V3(0, 0, -1), rayQ: new Q4() });
 const hands = { left: mkHand(), right: mkHand() };
 let lastStandY = 1.6;
@@ -17113,7 +17113,7 @@ function handRescue(frame, ref, t) {
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
-    if (h.ok || !h.isHand || !R.has || handEx()) { R.mode = null; continue; } // (con mandos, sin una mano vista antes o en un ejercicio que se hace con las manos, nada)
+    if (h.ok || !h.isHand || !R.has || handEx() || !['play', 'rest', 'ready'].includes(state)) { R.mode = null; continue; } // (con mandos, sin una mano vista antes, en un ejercicio que se hace con las manos o fuera de la partida —en los menús—, nada)
     R.lostT += dt; let mode = null;
     if (R.v.length() > HRS.vmin && R.lostT < HRS.pred) { _hrP.copy(R.lastP).addScaledVector(R.v, (1 - Math.exp(-HRS.k * R.lostT)) / HRS.k); _hrQ.copy(R.lastQ); mode = 'pred'; }
     else if (body) { _hrQ.copy(_hrBQ).multiply(R.offQ); _hrP.copy(R.offP).applyQuaternion(_hrBQ).add(_hrB); mode = 'body'; }
@@ -17145,16 +17145,16 @@ function bodySessionEnd() {
 // Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
-const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+const HSM = { minC: 1.5, beta: 20, betaQ: 2.5, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
 function handSmooth(h, t) {
-  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
+  const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), w: new Float32Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
   const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
   if (!same) F.tRaw = t;
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
-    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
+    if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); J[i].sq.copy(J[i].q); F.w[i] = 0; F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }
     let tx, ty, tz;
     if (same) { const k = rdt < 0.06 ? rdt : 0; tx = P.x + F.v[o] * k; ty = P.y + F.v[o + 1] * k; tz = P.z + F.v[o + 2] * k; }
     else {
@@ -17167,6 +17167,10 @@ function handSmooth(h, t) {
     const a = hfA(HSM.minC + HSM.beta * Math.hypot(F.dx[o], F.dx[o + 1], F.dx[o + 2]), dt);
     F.x[o] += a * (tx - F.x[o]); F.x[o + 1] += a * (ty - F.x[o + 1]); F.x[o + 2] += a * (tz - F.x[o + 2]);
     J[i].s.set(F.x[o], F.x[o + 1], F.x[o + 2]);
+    // el giro de cada articulación, con el mismo filtro (antes llegaba tal cual: la palma y las falanges temblaban y daban
+    // sacudidas aunque la posición fuera suave). Quieto, muy suave; girando deprisa, casi sin retraso. Solo para pintarla
+    const Q = J[i].sq, q = J[i].q, d = Math.min(1, Math.abs(Q.x * q.x + Q.y * q.y + Q.z * q.z + Q.w * q.w)), ang = 2 * Math.acos(d);
+    F.w[i] += hfA(HSM.dC, dt) * (ang / dt - F.w[i]); Q.slerp(q, hfA(HSM.minC + HSM.betaQ * F.w[i], dt));
   }
 }
 
@@ -17454,7 +17458,7 @@ renderer.setAnimationLoop((time, frame) => {
 //   a ×1 la imagen se estira y se ve blanda. Alta: ×1,4 (más que la pantalla: lo más nítido); Automática: ×1,2 a 72 Hz (a
 //   90 o 120 Hz no hay tiempo para tanto: ×1); Media, ×1; Baja, ×0,8
 // · para aligerar, solo la foveación (menos detalle en los bordes de la vista: se cambia en la misma capa) y las sombras
-//   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, sin foveación
+//   (sm: tamaño de su textura; sh: cada cuántos fotogramas se recalculan). Con un menú abierto, igual (y sombras cada 4)
 const QRES = { alta: 1.4, auto: 'hz', media: 1, baja: 0.8 };
 const QLV = [{ fov: 0.3, sh: 1, sm: 1024 }, { fov: 0.55, sh: 2, sm: 1024 }, { fov: 0.8, sh: 2, sm: 512 }, { fov: 1, sh: 3, sm: 512 }], QFIX = { alta: 0, auto: 0, media: 1, baja: 2 };
 const QUAL = { lv: 0, t: 0, n: 0, slow: 0, ok: 0, cool: 0, block: 0, upT: -99, now: 0, shN: 0, fov: -1, sc: 1, native: 1, swaps: 0 };
@@ -17481,10 +17485,13 @@ function qualLevel(lv) {
 }
 function qualFov(v, session) { const L = session.renderState && session.renderState.baseLayer; if (L && 'fixedFoveation' in L && QUAL.fov !== v) { L.fixedFoveation = v; QUAL.fov = v; } }
 function qualStep(dt) {
-  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % QLV[QUAL.lv].sh === 0; // sombras: cada fotograma, o cada 2 o 3
+  // con un menú abierto fuera de la partida (inicio, pausa, resumen) nada se mueve: las sombras, cada 4 fotogramas
+  const inMenu = !!(menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state));
+  QUAL.shN++; renderer.shadowMap.needsUpdate = QUAL.shN % (inMenu ? Math.max(4, QLV[QUAL.lv].sh) : QLV[QUAL.lv].sh) === 0; // sombras: cada fotograma, o cada 2 o 3
   const s = renderer.xr.getSession(); if (!s || preview) return;
-  // con un menú abierto fuera de la partida (inicio, pausa, resumen), sin foveación: las letras, nítidas hasta los bordes
-  if (menu && !menu.closed && !['play', 'rest', 'ready', 'calib'].includes(state)) { qualFov(0, s); QUAL.t = 0; QUAL.n = 0; return; }
+  // En el menú, la misma foveación que en la partida (la que pide tu calidad; el centro, donde está el menú, sigue nítido) y
+  // también se mira si las gafas llegan: antes, con un menú abierto, se quitaba la foveación y no se vigilaba nada, y el
+  // menú era lo más pesado de todo el juego (a saltos al mover la cabeza, aun con la calidad más baja)
   qualFov(QLV[QUAL.lv].fov, s);
   // un tirón suelto (compilar un entorno o un monstruo, cargar una textura) no es que el juego vaya lento: ese segundo no cuenta
   const nowR = performance.now() / 1000, raw = nowR - (QUAL.last || nowR); QUAL.last = nowR;
