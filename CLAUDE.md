@@ -141,7 +141,9 @@ No las cambies sin preguntarle.
 - El marcador tumbado en el suelo (flexiones, planchas, inchworm) es sólido: los bichos lo rodean.
 - Manos perdidas (solo manos desnudas): la que iba deprisa sigue su gesto un instante (`h.est = 'pred'`) y, con «Manos
   con el cuerpo» (Ajustes → Menú, de serie) y si el navegador da el cuerpo, la perdida se coloca en la muñeca del
-  cuerpo con su última forma y las puntas celestes (`h.est = 'body'`). Una mano con `h.est` no pulsa menús ni coloca
+  cuerpo con su última forma (`h.est = 'body'`). Ninguna mano con `h.est` se pinta (salían volando hacia delante o delante
+  de la cara): la que se ve se queda donde se la vio 0,3 s y desaparece. Un salto imposible de la muñeca (más de 30 cm entre
+  dos posturas, `HSM.jump`) no se pinta hasta que lo confirma la postura siguiente. Una mano con `h.est` no pulsa menús ni coloca
   barras: lo que necesite la mano de verdad tiene que saltársela; al volver a verla, `h.back` (ese fotograma). En los
   ejercicios que se hacen con las manos (`handEx`: los de pesa —curl, curl con barra, elevación frontal…— y la plancha
   con un brazo) no se inventa ninguna mano: con los brazos abajo las gafas las pierden a menudo, y la inventada subía sola
@@ -255,12 +257,14 @@ No las cambies sin preguntarle.
   el dedo sale de ella más de 1 cm, la mano que se ve se acerca a ella y, al tocarla, se queda clavada donde tocó; decide la
   punta suavizada (la que se ve) y el barrido de lado se juzga por el movimiento de ~0,1 s, no por un fotograma.
 - Las teclas son **planas** (opción B del usuario; `flatKeys`, `src/60_ui.js`): cada una, un solo panel con su cara de
-  color, su borde y su texto, que flota un poco sobre la bandeja con su sombra; con el dedo delante se aclara, al pulsar
-  baja, se encoge y se oscurece, y destella; nada de eso repinta el panel (solo su color). Las de relieve (una malla con
-  laterales y contorno de tinta, y la etiqueta encima) pesaban demasiado y el menú principal iba a saltos.
+  color, su borde y su texto, que flota un poco sobre la bandeja con su sombra. **No se hunden** (pedido del usuario: al
+  pulsar, el menú se rehace y la tecla nueva salía sin hundir, con el dedo dentro): con el dedo delante se aclara, tocada
+  brilla y, al pulsar, destella con un fogonazo de luz donde está el dedo; nada de eso repinta el panel (solo su color).
+  Las de relieve (una malla con laterales y contorno de tinta, y la etiqueta encima) pesaban demasiado.
 - **Pegadas** (pedido del usuario): la tecla pulsada retiene el dedo que se ve hasta que lo apartas por delante; aunque la
   mano de verdad resbale de lado (hasta `POKE_KEEP`, 7 cm), la punta sigue sobre ella y no se desliza por el panel ni
-  ilumina las vecinas.
+  ilumina las vecinas. En las planas, la punta se queda en el punto exacto que tocó (`pinW`, en el candado `POKE.lock`),
+  también cuando la pulsación rehace el menú con teclas nuevas en el mismo sitio.
 - Detrás del fondo de cada menú (y de la columna HOY), una pantalla invisible que solo escribe profundidad y se pinta la
   primera (`menuOccluder`, `src/60_ui.js`): así no se pinta el paisaje tapado por el menú. Sin ella, el menú principal, que
   cubre casi toda la vista, iba a saltos al mover la cabeza (el resumen, pequeño, no). Un panel de menú nuevo, con la suya.
