@@ -2905,6 +2905,22 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     for (const sd of ['left', 'right']) XRS.hands[sd].x = sd === 'left' ? -0.2 : 0.2;
     const jit = RA.stats.reps - r0; log(`curl con barra XR, puños juntos temblando: ${jit} reps · bola ${ball} fotogramas`);
     if (jit < 4 || !ball) errors.push('curl con barra: con los puños juntos y el seguimiento temblando debería contar cada subida (y salir la bola)'); }
+  // las manos abajo, junto a los muslos, se pierden a menudo: ni el gesto que llevaban ni el cuerpo que da el navegador
+  // (que dice que la muñeca sube) deben inventar una subida. Sin moverlas, ninguna repetición ni disparo; y al volver a verlas
+  // abajo, nada. Y una sacudida hacia arriba que se pierde a medias no sigue subiendo sola
+  { const r0 = RA.stats.reps, s0 = RA.stats.shots, bh = RA.settings.bodyHands; RA.setSetting('bodyHands', 1); let est = 0, maxY = 0;
+    for (const sd of ['left', 'right']) XRS.hands[sd].y = 0.95; frame(20, 16, xrFrame);
+    XRS.body = { left: new THREE.Vector3(-0.2, 0.95, -0.2), right: new THREE.Vector3(0.2, 0.95, -0.2) }; frame(20, 16, xrFrame);
+    for (let c = 0; c < 3; c++) { XRS.noLeft = XRS.noRight = true;
+      for (let i = 0; i < 60; i++) { const y = 0.95 + 0.45 * Math.sin(Math.PI * i / 60); XRS.body.left.y = XRS.body.right.y = y; frame(1, 16, xrFrame); for (const sd of ['left', 'right']) { const h = RA.hands[sd]; if (h.est) est++; if (h.ok) maxY = Math.max(maxY, h.wrist.y); } }
+      XRS.noLeft = XRS.noRight = false; XRS.body.left.y = XRS.body.right.y = 0.95; frame(40, 16, xrFrame); }
+    // la sacudida hacia arriba que se pierde: la mano no sigue subiendo
+    for (let i = 0; i < 10; i++) { for (const sd of ['left', 'right']) XRS.hands[sd].y = 0.95 + 0.017 * i; frame(1, 16, xrFrame); } // (15 cm deprisa: menos que un curl)
+    const yLost = RA.hands.left.wrist.y; XRS.body = null; XRS.noLeft = XRS.noRight = true; frame(6, 16, xrFrame); const flew = RA.hands.left.ok && RA.hands.left.wrist.y > yLost + 0.02;
+    XRS.noLeft = XRS.noRight = false; for (const sd of ['left', 'right']) XRS.hands[sd].y = 0.95; frame(60, 16, xrFrame);
+    const ghost = RA.stats.reps - r0, ghostShots = RA.stats.shots - s0; RA.setSetting('bodyHands', bh);
+    log(`curl con barra XR, manos perdidas abajo y el cuerpo diciendo que suben: ${ghost} reps, ${ghostShots} disparos · fotogramas con mano inventada ${est} · lo más alto que se vio una mano ${maxY.toFixed(2)} m · la sacudida perdida siguió subiendo ${flew}`);
+    if (ghost || ghostShots || est || flew) errors.push(`curl con barra: con las manos perdidas abajo no debería inventarse ninguna mano ni subida (${ghost} reps, ${ghostShots} disparos, ${est} fotogramas inventados, siguió subiendo ${flew})`); }
   // con la barra, el seguimiento puede ver una mano más baja (aquí, al 75 % del recorrido) y un instante después: cuenta igual
   { const r0 = RA.stats.reps, p0 = RA.stats.partial;
     for (let c = 0; c < 4; c++) for (let i = 0; i < 80; i++) { XRS.hands.left.y = i >= 20 && i < 50 ? 1.42 : 0.95; XRS.hands.right.y = i >= 26 && i < 52 ? 1.15 : 0.95; frame(1, 16, xrFrame); }
