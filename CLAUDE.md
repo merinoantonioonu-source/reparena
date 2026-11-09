@@ -143,9 +143,9 @@ No las cambies sin preguntarle.
   con el cuerpo» (Ajustes → Menú, de serie) y si el navegador da el cuerpo, la perdida se coloca en la muñeca del
   cuerpo con su última forma y las puntas celestes (`h.est = 'body'`). Una mano con `h.est` no pulsa menús ni coloca
   barras: lo que necesite la mano de verdad tiene que saltársela; al volver a verla, `h.back` (ese fotograma).
-- Las gafas repiten a ratos la postura de la mano (leen las manos a menos fotogramas que la imagen): lo que mida velocidades o
-  saltos de las manos usa solo posturas nuevas (`handNew`, `src/70_game.js`) y el tiempo desde la última que contó (el
-  lanzamiento, el puñetazo y el filtro `HF`). El pellizco no cuenta con el puño cerrado (`handCurled`, `src/80_main.js`).
+- La lectura de las manos (suavizado, filtro `HF` de las dos manos juntas, lanzamiento, puñetazo, pellizco) está como antes
+  de la auditoría externa: sus cambios (solo posturas nuevas, pellizco con puño, salto de la mano recuperada) empeoraron
+  mucho los dos curls en las gafas y el usuario pidió quitarlos. No vuelvas a tocarla sin probarlo con él en las gafas.
 - Espada: corta solo con el brazo (la mano también a ≥ 0,6 m/s, `SWORD_ARM`); el bloqueo, con la hoja en la marca en los
   últimos 0,35 s (`BLOCK_LATE`), y la marca se pone turquesa al cubrirla. Arriba del curl y la elevación frontal, chispa y
   chasquido (`topCue`); el disparo sigue al bajar (por las cargas). Puñetazo y tajo empujan también hacia el lado del golpe.

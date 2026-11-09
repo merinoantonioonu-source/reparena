@@ -2723,24 +2723,6 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.pinch = 'right'; frame(10, 16, xrFrame); XRS.pinch = null; frame(4, 16, xrFrame); const pinchShots = RA.stats.shots - shots0;
     throwAt('right', true); const slowShots = RA.stats.shots - shots0;
     throwAt('left'); const one = RA.stats.shots - shots0; throwAt('right'); const two = RA.stats.shots - shots0; throwAt('left'); const extra = RA.stats.shots - shots0 - two;
-    // las gafas leen las manos menos veces de las que pintan y repiten la postura a ratos: una sacudida normal (32 cm en
-    // 0,2 s, unos 1,6 m/s) con la mano nueva solo uno de cada dos fotogramas tiene que lanzar igual que con todas nuevas
-    // (antes, el fotograma repetido parecía un frenazo y cortaba el gesto en trozos de unos 5 cm)
-    const throwRep = (side, every) => { const s0 = RA.stats.shots; squat();
-      for (let i = 0; i < 200 && !RA.enemies.some(x => x.alive) && RA.state !== 'end'; i++) frame(1, 16, xrFrame);
-      const e = RA.enemies.find(x => x.alive), back = new THREE.Vector3(side === 'left' ? -0.2 : 0.2, XRS.headY - 0.25, 0); XRS.hands[side] = back.clone(); frame(6, 16, xrFrame);
-      const d = (e ? e.center(new THREE.Vector3()) : new THREE.Vector3(0, 1.5, -5)).sub(back).normalize();
-      for (let k = 1; k <= 12; k++) { if (k % every === 0) XRS.hands[side] = back.clone().addScaledVector(d, 0.32 * k / 12); frame(1, 16, xrFrame); }
-      frame(8, 16, xrFrame); XRS.hands = rest(); frame(4, 16, xrFrame); return RA.stats.shots - s0; };
-    const repAll = pis ? 1 : throwRep('right', 1); globalThis.__THD = !pis; const repHalf = pis ? 1 : throwRep('left', 2); globalThis.__THD = false; const _q = 0, repThird = pis ? 1 : throwRep('right', 3);
-    if (!pis) log(`throw XR with repeated hand samples: a normal flick (1.6 m/s) fires ${repAll} with every sample new, ${repHalf} with one in two repeated, ${repThird} with two in three repeated`);
-    if (!pis && (repAll < 1 || repHalf < 1 || repThird < 1)) errors.push(`lanzar con la mano: con las posturas repetidas por las gafas, una sacudida normal debería lanzar (todas nuevas ${repAll}, una de cada dos ${repHalf}, una de cada tres ${repThird})`);
-    if (!pis) { // con los puños cerrados el pulgar cae sobre el índice: eso no es un pellizco (si no, 1 s así ponía la pausa)
-      const st0 = RA.state; XRS.pinch = 'both'; frame(3, 16, xrFrame); const pinchOk = RA.hands.left.pinch && RA.hands.right.pinch;
-      XRS.fist = 'both'; frame(3, 16, xrFrame); const fistPinch = RA.hands.left.pinch || RA.hands.right.pinch; frame(80, 16, xrFrame); const st1 = RA.state;
-      XRS.fist = null; XRS.pinch = null; frame(4, 16, xrFrame);
-      log(`pinch vs fist: open-hand pinch seen ${pinchOk} · with the fist closed it counts as a pinch ${fistPinch} · after 1.3 s with both fists: ${st0} → ${st1}`);
-      if (!pinchOk || fistPinch || st1 !== st0) errors.push('pellizco: con los puños cerrados no debería contar como pellizco ni poner la pausa (y un pellizco con la mano abierta, sí contar)'); }
     // sin manos a la vista: la repetición carga las dos manos y no dispara sola; una sacudida que no va hacia ningún enemigo
     // no lanza (la carga sigue); una sacudida desde la cadera hacia el enemigo, en plena bajada, sí
     const seen = new Set(); let autoOrbs = 0; const scan = () => RA.projs.forEach(p => { if (p.kind === 'orb' && !seen.has(p)) { seen.add(p); autoOrbs++; } });

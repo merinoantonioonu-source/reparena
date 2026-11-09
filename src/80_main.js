@@ -25,7 +25,7 @@ function readXR(frame, t = 0) {
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
-      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02 && !handCurled(h); h.trig = h.pinch; // con las manos, pellizcar es el gatillo (con el puño cerrado el pulgar cae sobre el índice: eso no es un pellizco; si no, cerrar los puños 1 s ponía la pausa)
+      h.pinch = T.ok && Th.ok && T.p.distanceTo(Th.p) < 0.02; h.trig = h.pinch; // con las manos, pellizcar es el gatillo
     } else if (src.gripSpace) {
       h.isHand = false; h.pad = src.gamepad || null; const B = (src.gamepad && src.gamepad.buttons) || [], bt = B[0]; h.trig = !!(bt && bt.pressed); h.btnMenu = !!((B[4] && B[4].pressed) || (B[5] && B[5].pressed)); // X/Y (o A/B)
       const gp = frame.getPose(src.gripSpace, ref);
@@ -68,9 +68,8 @@ function handRescue(frame, ref, t) {
     if (h.ok && h.isHand) { // la ven las cámaras: su forma (respecto a la muñeca), su velocidad y su sitio respecto a la muñeca del cuerpo
       const W = h.J[0]; _hrQi.copy(W.q).invert();
       for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; if (!J.ok) continue; r.p.copy(J.p).sub(W.p).applyQuaternion(_hrQi); r.q.copy(_hrQi).multiply(J.q); r.r = J.r; }
-      const wasPred = R.mode === 'pred' && R.lostT > 0.08; // (antes de olvidar cuánto estuvo perdida)
       R.has = true; if (h.F) R.v.lerp(t - h.F.tRaw < 0.06 ? _hrT.set(h.F.v[0], h.F.v[1], h.F.v[2]) : _hrT.set(0, 0, 0), 0.6); R.lastP.copy(W.p); R.lastQ.copy(W.q); R.lostT = 0; // (si las gafas repiten la misma postura un rato, está parada: sin velocidad)
-      h.back = R.mode === 'body' || wasPred; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto más de 0,08 s, también: la de verdad ya frenó o giró y el salto hasta ella no es una sacudida)
+      h.back = R.mode === 'body'; R.mode = null; // (vuelve tras una mano colocada por el cuerpo: puede saltar un poco, y eso no es un gesto; tras seguir su gesto, no: va por el mismo camino)
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
@@ -107,17 +106,12 @@ function bodySessionEnd() {
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
 const HSM = { minC: 1.5, beta: 20, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
-// Los tres últimos dedos (corazón, anular y meñique) cerrados: puño (para no confundirlo con un pellizco). Se compara la
-// punta con su nudillo respecto a la muñeca (vale para cualquier tamaño de mano): cerrado, la punta vuelve hacia la palma
-// y queda casi tan cerca como el nudillo; estirado o relajado, bastante más lejos
-function handCurled(h) { const W = h.J[0]; if (!W.ok) return false; let n = 0, c = 0; for (const [tip, kn] of [[14, 11], [19, 16], [24, 21]]) { const T = h.J[tip], K = h.J[kn]; if (!T.ok || !K.ok) continue; n++; if (T.p.distanceTo(W.p) < 1.15 * K.p.distanceTo(W.p)) c++; } return n >= 2 && c >= n - 1 && c >= 2; }
 function handSmooth(h, t) {
   const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
-  const same = !reset && J[0].ok && Math.abs(W.x - F.raw[0]) + Math.abs(W.y - F.raw[1]) + Math.abs(W.z - F.raw[2]) < 1e-5, rdt = t - F.tRaw; // (con margen: lo guardado va en precisión simple)
+  const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
   if (!same) F.tRaw = t;
-  F.fresh = !same; // (para el juego: si esta postura es nueva; ver handNew)
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }
     if (reset || !F.ok[i] || Math.abs(P.x - F.x[o]) + Math.abs(P.y - F.x[o + 1]) + Math.abs(P.z - F.x[o + 2]) > 0.3) { J[i].s.copy(P); F.ok[i] = 1; F.x[o] = F.raw[o] = P.x; F.x[o + 1] = F.raw[o + 1] = P.y; F.x[o + 2] = F.raw[o + 2] = P.z; F.v.fill(0, o, o + 3); F.dx.fill(0, o, o + 3); continue; }

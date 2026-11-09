@@ -1509,12 +1509,6 @@ function armStep(kind, side, t, dt) {
 // ven un momento en otro sitio). Cada fotograma, cada mano solo vale (HF) si está a tu alcance (por debajo de los ojos,
 // salvo en lo que se sube por encima de la cabeza) y sin saltar más deprisa de lo que se mueve en ese ejercicio (un salto
 // así es un error del seguimiento); al reaparecer, tiene que verse igual dos fotogramas seguidos
-// Las gafas leen las manos menos veces que pintan la imagen (unas 60 frente a 72 o 90): a ratos repiten la misma postura.
-// Para medir velocidades y saltos solo cuentan las posturas nuevas, con el tiempo de verdad desde la anterior; si no, la
-// mano parece pararse en seco en el fotograma repetido y avanzar el doble en el siguiente (lo vio una auditoría externa)
-// (repetida hace poco: es un hueco del seguimiento y se espera a la nueva; si lleva más de 45 ms igual, está quieta de
-// verdad y cuenta, con velocidad cero). Quien mide velocidades divide por el tiempo desde la última postura que contó
-const handNew = h => !(h.isHand && !h.est && h.F && h.F.fresh === false && h.F.t - h.F.tRaw < 0.045);
 const HF = { left: { n: 0, p: new V3(), has: false, ok: false }, right: { n: 0, p: new V3(), has: false, ok: false } };
 const HF_V = { swing: 7, chop: 6, thruster: 5, frontsq: 5, fraise: 4, press2: 4, curl2: 3.2 }, HF_UP = { press2: 0.6, thruster: 0.6, chop: 0.45 }, _hfd = new V3();
 function handFilter(dt) {
@@ -1523,8 +1517,7 @@ function handFilter(dt) {
     const h = hands[s], F = HF[s];
     if (!h.ok) { F.n = 0; F.has = false; F.ok = false; continue; }
     const d = _hfd.subVectors(h.wrist, head.p), reach = d.y < up && d.y > -1.15 && Math.hypot(d.x, d.z) < 0.9;
-    F.acc = (F.acc || 0) + dt; if (F.has && !handNew(h)) continue; // (postura repetida por las gafas: se juzga la siguiente)
-    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * F.acc); F.p.copy(h.wrist); F.has = true; F.acc = 0; // (el salto, con el tiempo desde la postura anterior: si no, al llegar una nueva tras una repetida parecía imposible)
+    const steady = F.has && F.p.distanceTo(h.wrist) <= Math.max(0.03, vmax * dt); F.p.copy(h.wrist); F.has = true;
     F.n = reach && steady ? F.n + 1 : 0; F.ok = F.n >= 2;
   }
 }
@@ -2111,12 +2104,11 @@ function throwStep(dt, t) {
     // perdió (con las mismas condiciones: hacia delante o hacia fuera y hacia un enemigo)
     if (lostFor > 0.08 && lostFor < 0.8 && T.c && !T.cool && T.gone.lengthSq() > 0) {
       const dd = _thd.subVectors(_thr, T.gone), len = dd.length();
-      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); T.acc = 0; continue; }
+      if (len > THROW_REAPPEAR && len / lostFor > 1.2) { T.from.copy(T.gone); T.hist.length = 0; throwTry(s, h.wrist, dd); T.gone.set(0, 0, 0); T.have = true; T.prev.copy(_thr); T.v.set(0, 0, 0); continue; }
     }
     T.gone.set(0, 0, 0);
-    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; T.acc = 0; continue; }
-    T.acc = (T.acc || 0) + dt; if (!handNew(h)) continue; // (postura repetida por las gafas: ni se ha parado ni ha frenado; se espera a la siguiente)
-    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(T.acc, 1e-3)); T.prev.copy(_thr); T.acc = 0;
+    if (!T.have) { T.prev.copy(_thr); T.v.set(0, 0, 0); T.have = true; T.hist.length = 0; continue; }
+    _thv.subVectors(_thr, T.prev).divideScalar(Math.max(dt, 1e-3)); T.prev.copy(_thr);
     if (_thv.length() > THROW_JUMP) continue; // salto del seguimiento: se ignora ese fotograma, sin estropear el gesto
     T.v.lerp(_thv, 0.6);
     const sp = T.v.length(); T.hist.push({ p: _thr.clone(), sp, t }); while (T.hist.length && t - T.hist[0].t > 0.5) T.hist.shift();
