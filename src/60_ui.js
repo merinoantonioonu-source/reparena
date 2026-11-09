@@ -101,8 +101,12 @@ class Btn {
   setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { const rec = style && style !== this.style; this.label = l; if (style) this.style = style; this.draw(); if (rec && this.setHover) this.setHover(this.hover, true); } }
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
-    if (this.cap) { // tecla de verdad (buildKeys): el cuerpo es la tecla; aquí solo lo que va impreso encima
-      const tc = this.fill ? (this.style === 'selected' ? '#1a0716' : '#ffffff') : keyc(this.style)[1]; c.clearRect(0, 0, W, H); c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (this.flat) { // tecla plana (flatKeys): su cara de color con el borde (en cómic, de tinta) y lo que va impreso encima
+      const tc = this.fill ? (this.style === 'selected' ? '#1a0716' : '#ffffff') : keyc(this.style)[1]; c.clearRect(0, 0, W, H);
+      const ink = comicOn(), lw = Math.max(3, H * (ink ? 0.055 : 0.03)), r = Math.min(H * 0.26, 26); rr(c, lw / 2 + 1, lw / 2 + 1, W - lw - 2, H - lw - 2, r); c.fillStyle = keyHex(this); c.fill();
+      { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(255,255,255,0.22)'); g.addColorStop(0.35, 'rgba(255,255,255,0)'); g.addColorStop(0.75, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.18)'); c.fillStyle = g; c.fill(); } // (un poco de luz arriba y de sombra abajo: se lee como tecla)
+      c.lineWidth = lw; c.strokeStyle = ink ? '#1b1222' : 'rgba(0,0,0,0.45)'; c.stroke();
+      c.fillStyle = tc; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (this.accent && this.style === 'normal' && !this.fill) { rr(c, H * 0.1, H * 0.24, Math.max(6, H * 0.07), H * 0.52, Math.max(3, H * 0.035)); c.fillStyle = this.accent; c.fill(); c.fillStyle = tc; }
       if (this.icon) { drawIcon(c, this.icon, W / 2, H / 2, H * 0.5, tc); this.p.tex.needsUpdate = true; return; }
       if (this.card) { drawFoeCard(this, c, W, H, this.card, tc); this.p.tex.needsUpdate = true; return; }
@@ -138,12 +142,10 @@ class Slider {
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, pad = this.pad / this.w * W, y = H / 2, x0 = pad, x1 = W - pad, x = x0 + (x1 - x0) * this.frac();
     c.clearRect(0, 0, W, H);
-    rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = this.knob ? 'rgba(255,255,255,0.14)' : '#30284f'; c.stroke(); // (ranura hundida: el filo de abajo con luz)
+    rr(c, x0 - H * 0.12, y - H * 0.12, x1 - x0 + H * 0.24, H * 0.24, H * 0.12); c.fillStyle = '#120e26'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#30284f'; c.stroke(); // (ranura hundida: el filo de abajo con luz)
     rr(c, x0 - H * 0.12, y - H * 0.12, Math.max(H * 0.24, x - x0 + H * 0.12), H * 0.24, H * 0.12); c.fillStyle = '#ff4fa3'; c.fill();
     c.fillStyle = 'rgba(238,234,255,0.35)'; for (let i = 0; i <= 10; i++) { const tx = x0 + (x1 - x0) * i / 10; c.fillRect(tx - 1, y + H * 0.2, 2, H * 0.1); }
-    if (this.knob) { c.save(); c.filter = 'blur(5px)'; c.fillStyle = 'rgba(0,0,0,0.7)'; c.beginPath(); c.ellipse(x + H * 0.08, y + H * 0.12, H * 0.32, H * 0.3, 0, 0, TAU); c.fill(); c.restore(); } // la sombra de la bolita en la ranura
-    if (this.knob) { this.knob.position.x = -this.w / 2 + this.pad + (this.w - 2 * this.pad) * this.frac(); this.knob.material.color.setHex(this.hover ? 0xffd166 : 0xffffff); } // la bolita de verdad, que se arrastra
-    else { c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke(); }
+    { c.beginPath(); c.arc(x, y, H * 0.3, 0, TAU); c.fillStyle = this.hover ? '#ffd166' : '#eeeaff'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#1a0716'; c.stroke(); } // la bolita
     this.p.tex.needsUpdate = true;
   }
   set(v) { if (v !== this.value) { this.value = v; this.draw(); } }
@@ -153,12 +155,13 @@ class Slider {
   }
   commit() { if (this.pending) { this.pending = false; if (this.onDrag) this.onDrag(this.value, true); } }
 }
-/* ---------- Teclas de verdad ---------- */
-// Los botones de los menús son teclas como las de un teclado: base redondeada, laterales que se estrechan hacia arriba y
-// canto biselado, con la luz ya pintada (arriba claras, los laterales más oscuros y el de abajo aún más) sobre una bandeja
-// oscura con grosor. Todas las de un menú van en una sola malla (un solo dibujo); al pulsar una se mueven sus vértices y,
-// con el dedo encima, se aclara (sin volver a pintar su etiqueta)
-const KEY_H = 0.012, KEY_RO = 51; // alto de las teclas, en metros reales; su orden de dibujo (tras OUT.black)
+/* ---------- Teclas planas ---------- */
+// Los botones de los menús son teclas planas (opción B del usuario: las de relieve —una malla con sus laterales, su canto y
+// su contorno de tinta, y la etiqueta en otro panel encima— hacían el menú principal demasiado pesado y daba saltos al
+// mover la cabeza). Cada tecla es un solo panel con su cara de color y su texto, que flota un poco sobre la bandeja (con su
+// sombra); al pulsarla baja hacia ella, se encoge un poco y se oscurece; con el dedo delante, se aclara; al pulsar,
+// destella. Nada de eso vuelve a pintar el panel: solo cambia su color
+const KEY_H = 0.012; // lo que flota la tecla sobre la bandeja, en metros reales (y lo que puede hundirse)
 const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
   danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
 // con el estilo cómic: teclas de colores claros con la letra oscura, sobre una bandeja violeta (y con contorno de tinta)
@@ -168,109 +171,25 @@ const keyc = style => { const P = comicOn() ? KEYC_C : KEYC; return P[style] || 
 // el color del cuerpo de una tecla: el de su estilo o, elegida y con tinte (los del menú principal), el de su parte
 const hexDim = (h, k) => { const v = parseInt(h.slice(1), 16); return ((v >> 16 & 255) * k << 16) | ((v >> 8 & 255) * k << 8) | ((v & 255) * k | 0); };
 const keyBody = w => w.fill ? (w.style === 'selected' ? parseInt(w.fill.slice(1), 16) : hexDim(w.fill, 0.42)) : w.kind !== 'slider' && w.tint && w.style === 'selected' ? parseInt(w.tint.slice(1), 16) : keyc(w.kind === 'slider' ? 'slider' : w.style)[0];
-// la luz con la que se pintan las teclas (en el plano del menú: x a la derecha, y arriba, z hacia ti): de arriba a la izquierda
-const KEY_L = new V3(-0.42, 0.62, 0.66).normalize(), KEY_HV = KEY_L.clone().add(new V3(0, 0, 1)).normalize();
-// anillo de un rectángulo redondeado (centro cx, cy; medio ancho a, medio alto b; radio r) a la altura z, en sentido antihorario
-function keyRing(P, cx, cy, a, b, r, z) {
-  const n = 3;
-  for (const [sx, sy, a0] of [[1, 1, 0], [-1, 1, 0.5], [-1, -1, 1], [1, -1, 1.5]]) for (let i = 0; i <= n; i++) { const t = (a0 + i / n * 0.5) * Math.PI; P.push(cx + sx * (a - r) + Math.cos(t) * r, cy + sy * (b - r) + Math.sin(t) * r, z); }
-}
-// normales de cada vértice (media de las caras que lo tocan, pesada por su área)
-function vNormals(P, I) {
-  const N = new Float32Array(P.length);
-  for (let k = 0; k < I.length; k += 3) {
-    const a = I[k] * 3, b = I[k + 1] * 3, c = I[k + 2] * 3, ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
-    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-    for (const o of [a, b, c]) { N[o] += nx; N[o + 1] += ny; N[o + 2] += nz; }
-  }
-  for (let o = 0; o < N.length; o += 3) { const l = Math.hypot(N[o], N[o + 1], N[o + 2]) || 1; N[o] /= l; N[o + 1] /= l; N[o + 2] /= l; }
-  return N;
-}
-// un color con su luz: difusa desde KEY_L, un brillo donde la superficie refleja hacia ti y oscurecido abajo (ao)
-function shadeInto(C, i, col, N, ao, spec = 0.32) {
-  const o = i * 3, d = Math.max(0, N[o] * KEY_L.x + N[o + 1] * KEY_L.y + N[o + 2] * KEY_L.z), h = Math.max(0, N[o] * KEY_HV.x + N[o + 1] * KEY_HV.y + N[o + 2] * KEY_HV.z);
-  if (comicOn() && spec < 0.45) { // cómic: dos tonos, la sombra violácea (la bolita de los deslizadores sigue como siempre)
-    const lit = d > 0.35, f = (lit ? 1 : 0.8) * (0.6 + 0.4 * ao);
-    C[o] = Math.min(1, col.r * f * (lit ? 1 : 0.88)); C[o + 1] = Math.min(1, col.g * f * (lit ? 1 : 0.84)); C[o + 2] = Math.min(1, col.b * f); return;
-  }
-  const f = (0.34 + 0.78 * d) * ao, sp = spec * Math.pow(h, 28);
-  C[o] = Math.min(1, col.r * f + sp); C[o + 1] = Math.min(1, col.g * f + sp); C[o + 2] = Math.min(1, col.b * f + sp);
-}
-const KRING = 16, _kc = new THREE.Color(), _kc2 = new THREE.Color();
-// la bolita de los deslizadores: un cilindro bajo con la cara de arriba abombada y el canto redondeado, con su luz pintada
-const knobGeo = (() => {
-  const prof = [[1, 0], [1, 0.5], [0.97, 0.72], [0.88, 0.86], [0.7, 0.95], [0.42, 1.0], [0, 1.03]], n = 24, P = [], I = [];
-  prof.forEach(([r, z]) => { for (let i = 0; i < n; i++) { const a = i / n * TAU; P.push(Math.cos(a) * r, Math.sin(a) * r, z - 0.5); } });
-  for (let k = 0; k + 1 < prof.length; k++) for (let i = 0; i < n; i++) { const A = k * n + i, B = k * n + (i + 1) % n; I.push(A, B, B + n, A, B + n, A + n); }
-  const N = vNormals(P, I), C = new Float32Array(P.length), col = new THREE.Color(0xf2f4ff); if (col.convertSRGBToLinear) col.convertSRGBToLinear();
-  for (let i = 0; i < P.length / 3; i++) shadeInto(C, i, col, N, i < n ? 0.6 : 1, 0.5);
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.setIndex(I); return g;
-})();
-// list: botones y deslizadores ya colocados; tray: { w, h, d } la bandeja bajo todo
-function buildKeys(group, list, kh, tray) {
-  const P = [], I = [], R = [], IO = []; // IO: los triángulos con contorno (sin la cara de arriba)
-  const shapeOf = (cx, cy, w, h, z0, top, colHex, flat) => {
-    const start = P.length / 3, a = w / 2, b = h / 2, t = Math.min(0.007, Math.min(w, h) * 0.14), r0 = Math.min(a, b) * 0.34, H = top - z0, ao = [];
-    // de abajo arriba: la base, el lateral (que se estrecha), el hombro redondeado y el canto; la bandeja, recta
-    const rings = flat ? [[0, z0, 1], [0, top, 1]] : [[0, z0, 0.55], [t * 0.15, z0 + H * 0.45, 0.85], [t * 0.5, z0 + H * 0.8, 1], [t * 0.82, z0 + H * 0.95, 1], [t, top, 1]];
-    rings.forEach(([ins, z, o]) => { keyRing(P, cx, cy, a - ins, b - ins, Math.max(0.002, r0 - ins * 0.5), z); for (let i = 0; i < KRING; i++) ao.push(o); });
-    for (let k = 0; k + 1 < rings.length; k++) for (let i = 0; i < KRING; i++) { const A = start + k * KRING + i, B = start + k * KRING + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); IO.push(A, B, B + KRING, A, B + KRING, A + KRING); }
-    if (!flat) { // la cara de arriba, algo cóncava (como las teclas de verdad): su borde, un anillo más adentro algo más hondo y el centro
-      const c0 = P.length / 3, dish = H * 0.1;
-      keyRing(P, cx, cy, a - t, b - t, Math.max(0.002, r0 - t * 0.5), top); keyRing(P, cx, cy, (a - t) * 0.72, (b - t) * 0.6, Math.max(0.002, (r0 - t * 0.5) * 0.7), top - dish * 0.75); P.push(cx, cy, top - dish);
-      for (let i = 0; i < KRING * 2 + 1; i++) ao.push(1);
-      for (let i = 0; i < KRING; i++) { const A = c0 + i, B = c0 + (i + 1) % KRING; I.push(A, B, B + KRING, A, B + KRING, A + KRING); I.push(c0 + KRING * 2, c0 + KRING + i, c0 + KRING + (i + 1) % KRING); }
-    }
-    return { start, count: P.length / 3 - start, ao, col: colHex, cx, cy };
-  };
-  if (tray) R.push({ w: null, ...shapeOf(0, 0, tray.w, tray.h, -tray.d, -0.0008, keyc('tray')[0], true) });
-  for (const w of list) R.push({ w, ...shapeOf(w.mesh.position.x, w.mesh.position.y, w.w, w.h, 0, kh, keyBody(w), false) });
-  const N = vNormals(P, I), C = new Float32Array(P.length);
-  for (const rg of R) { rg.N = N; keyColors(rg, C, rg.col, false); }
-  const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(P), 3), col = new THREE.BufferAttribute(C, 3);
-  if (pos.setUsage) { pos.setUsage(THREE.DynamicDrawUsage); col.setUsage(THREE.DynamicDrawUsage); }
-  g.setAttribute('position', pos); g.setAttribute('color', col); g.setIndex(I);
-  // (se pintan después de la esfera negra del final de la ronda, OUT.black, que tapa todo lo opaco: si no, en el resumen las
-  // teclas salían negras y no se leía lo que ponían)
-  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })); mesh.frustumCulled = false; mesh.renderOrder = KEY_RO; mesh.userData.own = 'all'; group.add(mesh);
-  if (comicOn()) { // contorno de tinta de las teclas y la bandeja (comparte las posiciones: al hundir una tecla, su contorno la sigue)
-    g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); outN(g);
-    // (solo los laterales: la cara de arriba es cóncava y, vista en ángulo, su contorno asomaba por ella como grietas)
-    const go = new THREE.BufferGeometry(); go.setAttribute('position', pos); go.setAttribute('normal', g.attributes.normal); go.setAttribute('aOutN', g.attributes.aOutN); go.setIndex(IO);
-    const o = new THREE.Mesh(go, outlMat(false)); o.renderOrder = KEY_RO; o.userData.isOutline = true; o.userData.own = 'geo'; o.frustumCulled = false; o.raycast = () => {}; mesh.add(o);
-  }
-  const base = new Float32Array(P), K = { mesh, pos, col, base };
-  const touch = (attr, rg) => { attr.needsUpdate = true; if (attr.updateRange) { const lo = attr.updateRange.count < 0 ? Infinity : attr.updateRange.offset; const a0 = Math.min(lo, rg.start * 3), a1 = Math.max(attr.updateRange.count < 0 ? -1 : attr.updateRange.offset + attr.updateRange.count, (rg.start + rg.count) * 3); attr.updateRange.offset = a0; attr.updateRange.count = a1 - a0; } };
-  mesh.onAfterRender = () => { for (const a of [pos, col]) if (a.updateRange) a.updateRange.count = -1; };
-  for (const rg of R) {
-    const w = rg.w; if (!w) continue;
-    w.cap = true; w.draw();
-    w.mesh.position.z = kh + 0.0006; w.baseZ = w.mesh.position.z; w.maxPush = kh * 0.8;
-    if (w.kind === 'slider') { // la bolita: se arrastra por la ranura
-      const m = new THREE.Mesh(knobGeo, new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff, toneMapped: false })), r = w.h * 0.3;
-      m.scale.set(r, r, kh * 0.9); m.position.z = kh * 0.45; m.renderOrder = KEY_RO; m.userData.own = 'mat'; w.mesh.add(m); w.knob = m; w.draw(); continue;
-    }
-    // al hundirla, además de bajar, se encoge un poco y se oscurece (de frente, el descenso solo apenas se veía); al pulsar, destella
+// el color de una tecla en el lienzo, para pintar su cara
+const keyHex = w => '#' + keyBody(w).toString(16).padStart(6, '0');
+const KEY_DIM = 0.84; // en reposo, algo más oscura: con el dedo delante, a pleno color (sin repintar el panel)
+// list: botones y deslizadores ya colocados; kh: lo que flotan sobre la bandeja (a la escala del menú)
+function flatKeys(list, kh) {
+  for (const w of list) {
+    if (w.kind === 'slider') continue; // (el deslizador se pinta entero en su panel, con su bolita)
+    w.flat = true; w.draw();
+    w.mesh.position.z = kh; w.baseZ = kh; w.maxPush = kh * 0.8; const mat = w.mesh.material;
+    w.recolor = () => { const k = (w.hover ? 1 : KEY_DIM) * (1 - 0.3 * (w.pressK || 0)), f = w.flashT > 0 ? w.flashT / 0.22 : 0; mat.color.setScalar(k + (1 - k) * f); };
     w.setPush = p => {
-      const k = clamp(p / w.maxPush, 0, 1), s = 1 - 0.09 * k, a = pos.array;
-      for (let i = rg.start; i < rg.start + rg.count; i++) { a[i * 3] = rg.cx + (base[i * 3] - rg.cx) * s; a[i * 3 + 1] = rg.cy + (base[i * 3 + 1] - rg.cy) * s; a[i * 3 + 2] = base[i * 3 + 2] - p; }
-      w.mesh.position.z = w.baseZ - p; w.mesh.scale.set(s, s, 1); touch(pos, rg);
-      if (Math.abs(k - (rg.press || 0)) > 0.04 || (k === 0) !== !rg.press) { rg.press = k; w.recolor(); }
+      const k = clamp(p / w.maxPush, 0, 1), s = 1 - 0.06 * k; w.mesh.position.z = w.baseZ - p; w.mesh.scale.set(s, s, 1);
+      if (Math.abs(k - (w.pressK || 0)) > 0.04 || (k === 0) !== !w.pressK) { w.pressK = k; w.recolor(); }
     };
-    w.recolor = () => { keyColors(rg, col.array, rg.col, w.hover); touch(col, rg); };
-    w.setHover = (h, restyle) => { if (restyle) rg.col = keyBody(w); w.recolor(); };
-    w.flash = () => { w.flashT = 0.22; };
-    w.flashStep = dt => { w.flashT = Math.max(0, w.flashT - dt); rg.flash = w.flashT / 0.22; w.recolor(); };
+    w.setHover = (h, restyle) => { if (restyle) w.draw(); w.recolor(); };
+    w.flash = () => { w.flashT = 0.22; w.recolor(); };
+    w.flashStep = dt => { w.flashT = Math.max(0, w.flashT - dt); w.recolor(); };
+    w.recolor();
   }
-  return K;
-}
-// los colores de una tecla con su luz (ver shadeInto); con el dedo encima, más clara
-function keyColors(rg, C, hex, hover) {
-  _kc.setHex(hex); if (hover) _kc.lerp(_kc2.setHex(0xffffff), 0.28);
-  if (rg.press) _kc.multiplyScalar(1 - 0.35 * rg.press); // hundida, más oscura
-  if (rg.flash) _kc.lerp(_kc2.setHex(0xffffff), 0.7 * rg.flash); // y el destello al pulsar
-  if (_kc.convertSRGBToLinear) _kc.convertSRGBToLinear(); // (los colores de los vértices van en lineal: si no, salen lavados)
-  for (let i = 0; i < rg.count; i++) shadeInto(C, rg.start + i, _kc, rg.N, rg.ao[i], rg.w === null ? 0.1 : 0.32);
 }
 
 const fingers = [];
@@ -281,7 +200,7 @@ const _wl = new V3(), _pkL = new V3(), _pkV = new V3();
 //    dedo puede pulsar; entrar de lado o por detrás no pulsa nada
 //  · al tocarlo, la cara del botón se hunde con el dedo (hasta POKE_TRAVEL) y pulsa al hundirse POKE_DEPTH, yendo hacia
 //    dentro (un barrido de lado no cuenta)
-//  · mientras está hundido, ese botón no cambia aunque el dedo resbale sobre los vecinos (si se sale más de POKE_SLIDE,
+//  · mientras está hundido, ese botón no cambia aunque el dedo resbale sobre los vecinos (si se sale más de POKE_KEEP,
 //    se anula); para volver a pulsar hay que sacar el dedo por delante (POKE_OUT), y entre dos pulsaciones pasa POKE_GAP
 //  · tras pulsar (o al abrirse un menú), ese dedo no pulsa en el menú nuevo hasta retirarse (POKE_BACK por delante o fuera)
 //  · vale cualquiera de las dos manos (el botón MENÚ de la muñeca izquierda, solo la derecha)
@@ -296,10 +215,14 @@ const POKE_HOVER = 0.06, POKE_DEPTH = 0.007, POKE_TRAVEL = 0.012, POKE_OUT = 0.0
 // El imán (elegido por el usuario): la tecla iluminada sigue iluminada hasta que el dedo sale de ella más de POKE_STICK (así
 // el temblor no la hace saltar a la vecina, y tocar en ese margen pulsa la iluminada); a menos de POKE_MAG_Z por delante, la
 // mano que se ve se acerca a ella (hasta POKE_MAG_MAX) y, al tocarla, se queda clavada donde tocó: ni el temblor ni los
-// deslizamientos pequeños la mueven, hasta sacar el dedo o salirse POKE_SLIDE. El barrido de lado se juzga por lo que se
+// deslizamientos pequeños la mueven, hasta sacar el dedo por delante o salirse mucho de lado (POKE_KEEP). El barrido de lado se juzga por lo que se
 // movió la punta en los últimos POKE_SWIPE_T s (y nunca por menos de POKE_SWIPE_MIN): antes se miraba la velocidad de un
 // solo fotograma, y el temblor del seguimiento de manos parecía un barrido y se perdía la pulsación
 const POKE_STICK = 0.012, POKE_MAG_Z = 0.035, POKE_MAG_MAX = 0.015, POKE_SWIPE_T = 0.06, POKE_SWIPE_MIN = 0.02;
+// Pegado (pedido por el usuario): una vez tocada, la tecla retiene el dedo que se ve hasta que lo apartas por delante; si la
+// mano de verdad resbala de lado (hasta POKE_KEEP), el dedo que se ve sigue sobre ella y no se desliza por el panel ni
+// ilumina las vecinas. Solo si se va mucho más de lado, se suelta
+const POKE_KEEP = 0.07;
 function pokeSt(key, side) { const K = POKE.st[key] || (POKE.st[key] = {}); return K[side] || (K[side] = { cand: null, n: 0, push: false, done: false, hist: [], clock: 0, pin: null, mag: new V3() }); }
 // el panel del menú (su cara, en z = 0 del grupo): delante y dentro, el dedo queda «armado»; si sigue y lo cruza, la mano
 // que se ve se queda en la superficie hasta que salga por delante, por un lado o se hunda más de POKE_HOLD_MAX
@@ -375,7 +298,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       }
       if (S.push) {
         const w = S.cand;
-        if (!cur || cur.ex > POKE_SLIDE) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st; } // se fue de lado: anulado
+        if (!cur || cur.ex > POKE_KEEP) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st; } // se fue muy de lado: se suelta
         if (cur.z > POKE_OUT) { S.push = false; S.done = false; S.pin = null; } // fuera, por delante: lista para otra
         else {
           const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
@@ -410,7 +333,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       }
     }
     // hundiendo la tecla, clavado donde tocó (al momento, sin temblor); si no, el imán va y viene suave
-    if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_SLIDE)); }
+    if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_KEEP)); } // (pegado a la tecla: no se desliza por el panel)
     else S.mag.lerp(_pkM, Math.min(1, dt * 18));
     if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
     Hd.v.add(S.mag);
@@ -526,7 +449,7 @@ function openMenu(rows, opts = {}) {
   const widgets = [], fieldRows = [];
   let y = H / 2 - PAD;
   const X0 = -MW / 2 + PAD, CW = MW - PAD * 2;
-  // cada botón y deslizador es una tecla (buildKeys, al final) con una sombra suave en la bandeja
+  // cada botón es una tecla plana (flatKeys, al final) con una sombra suave en la bandeja
   const addW = (w, cx, cy) => {
     w.mesh.position.set(cx, cy, 0.003); w.baseZ = 0.003; w.mesh.renderOrder = RO.widget; group.add(w.mesh); widgets.push(w);
     // sombra difuminada hacia abajo a la derecha (la luz viene de arriba a la izquierda)
@@ -617,7 +540,7 @@ function openMenu(rows, opts = {}) {
   });
   bg.tex.needsUpdate = true;
   const wrist = wristMenuOn(), ksc = wrist ? wristScale() : 1;
-  buildKeys(group, widgets.filter(w => w.kind === 'btn' || w.kind === 'slider'), KEY_H / ksc, { w: MW, h: H, d: 0.014 / ksc });
+  flatKeys(widgets.filter(w => w.kind === 'btn'), KEY_H / ksc);
   scene.add(group);
   if (wrist) { // en la muñeca: la postura la pone updateWristMenu; se pulsa con cualquiera de las dos manos
     if (!reuse && !recent) wristOpen(); // un menú nuevo sale solo delante de ti; el siguiente de uno abierto, en su sitio
@@ -667,7 +590,7 @@ function openKeypad(f, row, opt = null) {
   const cancel = new Btn('Cancelar', bw, kh, () => closeKeypad(), { style: 'danger', font: 0.38 }), ok = new Btn('OK', bw, kh, () => keypadOK(), { style: 'primary', font: 0.45 });
   cancel.mesh.position.set(-(bw + g) / 2, yb, 0.003); ok.mesh.position.set((bw + g) / 2, yb, 0.003); cancel.baseZ = ok.baseZ = 0.003;
   cancel.mesh.renderOrder = ok.mesh.renderOrder = RO.key; grp.add(cancel.mesh, ok.mesh); kp.widgets.push(cancel, ok);
-  buildKeys(grp, kp.widgets, kkh, { w: KW, h: KH, d: kd });
+  flatKeys(kp.widgets, kkh);
   menu.keypad = kp; drawKeypad();
 }
 function drawKeypad() {
