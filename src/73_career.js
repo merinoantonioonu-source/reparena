@@ -354,7 +354,7 @@ function drawHoy(c, W, H, big) {
 const HOY_W = 0.36, HOY_H = 0.52;
 function goalSide(m) {
   if (!m || !m.group) return; const p = makePanel(HOY_W, HOY_H, 512, { hd: 1.5 }); drawHoy(p.ctx, p.W, p.H, false); p.tex.needsUpdate = true;
-  p.mesh.position.set(-MW / 2 - 0.03 - HOY_W / 2, m.H / 2 - HOY_H / 2, 0); p.mesh.renderOrder = RO.menu; m.group.add(p.mesh);
+  p.mesh.position.set(-MW / 2 - 0.03 - HOY_W / 2, m.H / 2 - HOY_H / 2, 0); p.mesh.renderOrder = RO.menu; m.group.add(p.mesh); menuOccluder(p.mesh, HOY_W, HOY_H);
 }
 // 1) la carátula al entrar
 const GOALS = { t: -1, p: null, veil: null, mask: { left: 0, right: 0 }, thumbT: 0, skip: false, shown: false };

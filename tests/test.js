@@ -2000,6 +2000,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     if (r.xr._fb !== 1.4 || madeIn || fovMenu !== 0.3 || fovPlay !== 1 || swap[0] !== 1) errors.push('nitidez: «Alta» debería entrar a ×1,4, sin capas nuevas en la partida, en el menú con la foveación de su calidad (no a pelo: era lo más pesado del juego) y con una capa nueva solo al cambiar la calidad');
     RA.setSetting('quality', qual0); frame(3, 16, xrFrame); }
   log('XR mode', RA.settings.mode, RA.settings.exercise); log('XR lobby state', RA.state, 'menu?', !!RA.menu, 'gloves seg count', RA.gloves.right.seg.count);
+  // detrás del fondo del menú principal (y de la columna HOY), una pantalla invisible que solo escribe profundidad y se pinta la
+  // primera: así no se pinta el paisaje que queda detrás del menú (era lo que lo hacía ir a saltos al mover la cabeza)
+  { const occ = []; if (RA.menu) RA.menu.group.traverse(o => { if (o.userData.occluder) occ.push(o); });
+    const ok = occ.length >= 2 && occ.every(o => o.material.colorWrite === false && o.renderOrder < 0 && o.position.z < 0.001);
+    log(`menu occluders: ${occ.length} · depth only, drawn first, behind the panel ${ok}`); if (!ok) errors.push('menú principal: detrás de su fondo y de la columna HOY debería haber una pantalla invisible de profundidad, pintada la primera'); }
   // pulsar EMPEZAR con el índice derecho
   const w = findW('EMPEZAR'); w.mesh.updateWorldMatrix(true, false);
   const p = w.mesh.getWorldPosition(new THREE.Vector3()), n = w.mesh.getWorldDirection(new THREE.Vector3());
