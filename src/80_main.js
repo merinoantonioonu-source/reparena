@@ -50,6 +50,11 @@ function readXR(frame, t = 0) {
 //    que una sacudida: colocarse no lanza nada). El primer fotograma en que las cámaras la vuelven a ver, h.back (el salto
 //    hasta la de verdad no cuenta como sacudida ni puñetazo)
 const HRS = { pred: 0.15, vmin: 0.9, k: 5, glide: 0.6 };
+// En los ejercicios que se hacen con las manos (curl, curl con barra, elevación frontal, plancha con un brazo…) no se inventa
+// ninguna: la mano perdida se queda perdida (sus detectores ya saben qué hacer). Con los brazos abajo, junto a los muslos,
+// las gafas las pierden a menudo, y la inventada (el gesto que seguía o el cuerpo, que con las manos ocultas se equivoca)
+// subía sola y contaba curls y disparos que no se habían hecho
+const handEx = () => holdsWeights() || oneArm();
 const BODY = { asked: false, seen: 0, used: 0, now: false }; // (now: el navegador da el cuerpo en este fotograma; used: segundos con alguna mano colocada por él)
 const _hrB = new V3(), _hrBQ = new Q4(), _hrQi = new Q4(), _hrP = new V3(), _hrQ = new Q4(), _hrT = new V3(), _hrTQ = new Q4();
 const mkRescue = () => ({ rel: Array.from({ length: 25 }, () => ({ p: new V3(), q: new Q4(), r: 0.008 })), has: false, v: new V3(), lastP: new V3(), lastQ: new Q4(), lostT: 0, offP: new V3(), offQ: new Q4(), cal: false, outP: new V3(), outQ: new Q4(), tgt: new V3(), mode: null, t: -1 });
@@ -73,7 +78,7 @@ function handRescue(frame, ref, t) {
       if (body) { _hrQi.copy(_hrBQ).invert(); _hrTQ.copy(_hrQi).multiply(W.q); _hrT.copy(W.p).sub(_hrB).applyQuaternion(_hrQi); if (!R.cal) { R.offQ.copy(_hrTQ); R.offP.copy(_hrT); R.cal = true; } else { R.offQ.slerp(_hrTQ, 0.1); R.offP.lerp(_hrT, 0.1); } }
       continue;
     }
-    if (h.ok || !h.isHand || !R.has) { R.mode = null; continue; } // (con mandos, o sin una mano vista antes, nada)
+    if (h.ok || !h.isHand || !R.has || handEx()) { R.mode = null; continue; } // (con mandos, sin una mano vista antes o en un ejercicio que se hace con las manos, nada)
     R.lostT += dt; let mode = null;
     if (R.v.length() > HRS.vmin && R.lostT < HRS.pred) { _hrP.copy(R.lastP).addScaledVector(R.v, (1 - Math.exp(-HRS.k * R.lostT)) / HRS.k); _hrQ.copy(R.lastQ); mode = 'pred'; }
     else if (body) { _hrQ.copy(_hrBQ).multiply(R.offQ); _hrP.copy(R.offP).applyQuaternion(_hrBQ).add(_hrB); mode = 'body'; }
