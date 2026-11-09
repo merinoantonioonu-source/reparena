@@ -457,6 +457,17 @@ function placeAnchor(dist) {
   const f = fwdH(), pos = head.p.clone().addScaledVector(f, dist); pos.y = preview ? Math.max(0.5, head.p.y - 0.02) : standHeadY() - 0.18;
   return { pos, yaw: yawOf(head.q) };
 }
+// Detrás del fondo de un menú, una pantalla invisible que solo escribe su profundidad y se pinta la primera: la gráfica ya no
+// pinta lo que queda detrás del menú (el bosque, el cielo, sus contornos). El fondo del menú es transparente para el dibujo
+// (sus esquinas redondeadas), así que se pintaba al final, encima de todo el paisaje ya pintado: con el menú principal, que
+// cubre casi toda la vista, las gafas no llegaban y el menú iba a saltos al mover la cabeza. Algo más pequeña que el fondo,
+// para que las esquinas redondeadas no dejen ver huecos
+const OCC_MAT = new THREE.MeshBasicMaterial({ colorWrite: false }), OCC_RO = -100;
+function menuOccluder(panelMesh, w, h, inset = 0.02) {
+  const o = new THREE.Mesh(new THREE.PlaneGeometry(Math.max(0.01, w - inset * 2), Math.max(0.01, h - inset * 2)), OCC_MAT);
+  o.position.copy(panelMesh.position); o.position.z -= 0.002; o.renderOrder = OCC_RO; o.userData.own = 'geo'; o.userData.occluder = true; o.raycast = () => {};
+  panelMesh.parent.add(o); return o;
+}
 // Libera lo que se hizo para un menú: los paneles dibujados y, marcado con userData.own, lo de sus teclas en 3D ('all': la
 // geometría y el material; 'geo': solo la geometría, como el contorno, de material compartido; 'mat': solo el material, como
 // la bolita de los deslizadores, de geometría compartida)
@@ -504,7 +515,7 @@ function openMenu(rows, opts = {}) {
   const heights = rows.map((r, i) => r.h || (lines[i] && lines[i].length > 1 ? ROWH.text + (lines[i].length - 1) * TXT_LH : ROWH[r.t]) || 0.06);
   const H = PAD * 2 + heights.reduce((a, b) => a + b, 0) + GAP * (rows.length - 1);
   const group = new THREE.Group(); group.rotation.order = 'YXZ';
-  const bg = makePanel(MW, H, 1024, { hd: 1.75 }); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh); // (lienzo de 1792 px: letras nítidas)
+  const bg = makePanel(MW, H, 1024, { hd: 1.75 }); bg.mesh.renderOrder = RO.menu; group.add(bg.mesh); menuOccluder(bg.mesh, MW, H); // (lienzo de 1792 px: letras nítidas; detrás, la pantalla que ahorra pintar el paisaje)
   const c = bg.ctx, sc = bg.W / MW;
   // la bandeja de las teclas: gris muy oscuro, con un filo del color de la sección
   if (comicOn()) { // en cómic: violeta con una trama de puntos (como el papel de los cómics), borde de tinta y un filo del color de la sección
