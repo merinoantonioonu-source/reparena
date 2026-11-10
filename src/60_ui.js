@@ -159,8 +159,9 @@ class Slider {
 // Los botones de los menús son teclas planas (opción B del usuario: las de relieve —una malla con sus laterales, su canto y
 // su contorno de tinta, y la etiqueta en otro panel encima— hacían el menú principal demasiado pesado y daba saltos al
 // mover la cabeza). Cada tecla es un solo panel con su cara de color y su texto, que flota un poco sobre la bandeja (con su
-// sombra); al pulsarla baja hacia ella, se encoge un poco y se oscurece; con el dedo delante, se aclara; al pulsar,
-// destella. Nada de eso vuelve a pintar el panel: solo cambia su color
+// sombra). No se hunde (pedido del usuario: al pulsar, el menú se rehace con la opción nueva y la tecla nueva salía sin
+// hundir, con el dedo dentro): con el dedo delante se aclara, tocada brilla y, al pulsar, destella con un fogonazo de luz
+// donde está el dedo. Nada de eso vuelve a pintar el panel: solo cambia su color
 const KEY_H = 0.012; // lo que flota la tecla sobre la bandeja, en metros reales (y lo que puede hundirse)
 const KEYC = { normal: [0x5a6375, '#f2f4ff'], primary: [0xff9f1c, '#1e1305'], selected: [0xffb52e, '#1e1305'], value: [0x262b3a, '#ffd166'], tab: [0x434b5c, '#c9cde0'],
   danger: [0x8c3242, '#ffe0e6'], key: [0x5a6375, '#ffffff'], ghost: [0x363c4b, '#a9adc4'], slider: [0x2b3040, ''], tray: [0x1b1e26, ''] };
@@ -179,14 +180,12 @@ function flatKeys(list, kh) {
   for (const w of list) {
     if (w.kind === 'slider') continue; // (el deslizador se pinta entero en su panel, con su bolita)
     w.flat = true; w.draw();
-    w.mesh.position.z = kh; w.baseZ = kh; w.maxPush = kh * 0.8; const mat = w.mesh.material;
-    w.recolor = () => { const k = (w.hover ? 1 : KEY_DIM) * (1 - 0.3 * (w.pressK || 0)), f = w.flashT > 0 ? w.flashT / 0.22 : 0; mat.color.setScalar(k + (1 - k) * f); };
-    w.setPush = p => {
-      const k = clamp(p / w.maxPush, 0, 1), s = 1 - 0.06 * k; w.mesh.position.z = w.baseZ - p; w.mesh.scale.set(s, s, 1);
-      if (Math.abs(k - (w.pressK || 0)) > 0.04 || (k === 0) !== !w.pressK) { w.pressK = k; w.recolor(); }
-    };
+    w.mesh.position.z = kh; w.baseZ = kh; w.maxPush = 0; const mat = w.mesh.material; // (maxPush 0: no se hunde; la mano que se ve se queda en su cara)
+    // (más de 1: más clara que su dibujo, hacia el blanco; el color del material multiplica el del panel)
+    w.recolor = () => { const k = w.touching ? 1.28 : w.hover ? 1 : KEY_DIM, f = w.flashT > 0 ? w.flashT / 0.3 : 0; mat.color.setScalar(k + (1.7 - k) * f); };
+    w.setTouch = t => { w.touching = t; w.recolor(); };
     w.setHover = (h, restyle) => { if (restyle) w.draw(); w.recolor(); };
-    w.flash = () => { w.flashT = 0.22; w.recolor(); };
+    w.flash = () => { w.flashT = 0.3; w.recolor(); };
     w.flashStep = dt => { w.flashT = Math.max(0, w.flashT - dt); w.recolor(); };
     w.recolor();
   }
@@ -265,7 +264,7 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
   for (const side of ['left', 'right']) {
     const f = fingers.find(x => x.side === side), S = pokeSt(key, side), Hd = POKE.hold[side][key] || (POKE.hold[side][key] = { v: new V3(), t: 0 });
     Hd.v.set(0, 0, 0); Hd.t = now;
-    if (!f) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); S.hist.length = 0; S.mag.set(0, 0, 0); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
+    if (!f) { Object.assign(S, { cand: null, push: false, done: false, pin: null, pinW: null }); S.hist.length = 0; S.mag.set(0, 0, 0); if (POKE.lock[side] && POKE.lock[side].key === key) POKE.lock[side] = null; continue; }
     // la punta del dedo que se ve (suavizada: sin el temblor del seguimiento) decide de lado (qué tecla, deslizarse,
     // barrer); la de las gafas, sin suavizar, cuánto se hunde (así no se retrasa la pulsación)
     const fs = f.s || f.p;
@@ -273,8 +272,11 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     // la mano apoyada en la tecla: ¿sigue el dedo detrás del fondo de la que hundió? (con el menú a la vista)
     const L = POKE.lock[side], shown = !isMenu || (menu && !menu.closed && menu.group.visible && (!menu.wrist || WM.on));
     if (L && L.key === key) {
-      const e = _pkL.subVectors(L.p, f.p).dot(L.n), lat = _pkL.addScaledVector(L.n, -e).length();
-      if (shown && e > 0 && e < POKE_HOLD_MAX && lat < 0.3) Hd.v.copy(L.n).multiplyScalar(e); else POKE.lock[side] = null;
+      const e = _pkL.subVectors(L.p, f.p).dot(L.n); let lat = _pkL.addScaledVector(L.n, -e).length();
+      if (L.pinW) { _pkL.subVectors(fs, L.pinW); lat = _pkL.addScaledVector(L.n, -_pkL.dot(L.n)).length(); }
+      // pegada: la punta que se ve se queda en el punto de la tecla que tocó (también si la pulsación rehízo el menú con
+      // teclas nuevas en el mismo sitio), hasta que el dedo sale por delante o se va muy de lado
+      if (shown && e > 0 && e < POKE_HOLD_MAX && lat < (L.pinW ? POKE_KEEP : 0.3)) { if (L.pinW) { Hd.v.subVectors(L.pinW, fs); S.mag.set(0, 0, 0); } else Hd.v.copy(L.n).multiplyScalar(e); } else POKE.lock[side] = null;
     }
     if (isMenu) pokePanel(side, f, shown, Hd);
     // dónde está el dedo respecto a cada botón (z: delante de su superficie en reposo, en metros; ex: cuánto se sale de él)
@@ -294,24 +296,25 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
         let near = behind;
         if (!near && menu && menu.group) { menu.group.updateMatrixWorld(); const l = menu.group.worldToLocal(_wl.copy(f.p)); if (Math.abs(l.x) < MW / 2 + 0.4 && Math.abs(l.y) < menu.H / 2 + 0.4 && l.z < POKE_BACK && l.z > -0.2) near = true; }
         if (!near) POKE.need[side] = false;
-        Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st;
+        Object.assign(S, { cand: null, push: false, done: false, pin: null, pinW: null }); break st;
       }
       if (S.push) {
         const w = S.cand;
-        if (!cur || cur.ex > POKE_KEEP) { Object.assign(S, { cand: null, push: false, done: false, pin: null }); break st; } // se fue muy de lado: se suelta
-        if (cur.z > POKE_OUT) { S.push = false; S.done = false; S.pin = null; } // fuera, por delante: lista para otra
+        if (!cur || cur.ex > POKE_KEEP) { Object.assign(S, { cand: null, push: false, done: false, pin: null, pinW: null }); break st; } // se fue muy de lado: se suelta
+        if (cur.z > POKE_OUT) { S.push = false; S.done = false; S.pin = null; S.pinW = null; } // fuera, por delante: lista para otra
         else {
           const depth = Math.max(0, -cur.z), stop = Math.min(POKE_TRAVEL, (w.maxPush !== undefined ? w.maxPush : Infinity) * cur.sc), ex = depth - stop;
           if (ex < POKE_HOLD_MAX) { // el fondo de la tecla: de ahí no pasa la mano que se ve
             const e = w.mesh.matrixWorld.elements, Lk = POKE.lock[side] || (POKE.lock[side] = { n: new V3(), p: new V3() });
-            Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex);
-            if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
+            Lk.key = key; Lk.n.set(e[8], e[9], e[10]).normalize(); Lk.p.copy(f.p).addScaledVector(Lk.n, ex); Lk.pinW = S.pinW || null;
+            if (S.pinW) Hd.v.subVectors(S.pinW, fs); // (pegada: la punta, en el punto que tocó)
+            else if (ex > 0 && ex > Hd.v.length()) Hd.v.copy(Lk.n).multiplyScalar(ex); // (sin pasar del fondo, lo que diga el panel)
           }
           if (w.kind === 'slider') drags.set(w, pokeU(w, cur.l));
           else {
             push.set(w, Math.max(push.get(w) || 0, Math.min(depth, POKE_TRAVEL) / cur.sc));
             if (!S.done && depth >= POKE_DEPTH) { if (pokeSwipe(S, w, fs)) S.done = true; else if (!press) press = { w, side, S }; } // hacia dentro y no de lado (se da por hecha solo si se dispara: si el menú aún no está listo, o acaba de pulsarse otra, espera con el dedo dentro en vez de perderse)
-            pin = !!S.pin;
+            pin = !!S.pin && !S.pinW;
           }
           hov.add(w); break st;
         }
@@ -319,7 +322,8 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       // la iluminada: si el dedo la toca (aunque sea en su margen), empieza a hundirla y el dedo que se ve se clava ahí
       if (cur && cur.z <= 0 && cur.ex <= POKE_STICK && !S.push) {
         S.push = true; S.done = false; hov.add(S.cand);
-        if (S.cand.kind === 'slider') { drags.set(S.cand, pokeU(S.cand, cur.l)); S.pin = null; } else { S.pin = cur.l.clone(); pin = true; }
+        if (S.cand.kind === 'slider') { drags.set(S.cand, pokeU(S.cand, cur.l)); S.pin = null; } else { S.pin = cur.l.clone(); pin = true;
+          if (S.cand.flat) { const e = S.cand.mesh.matrixWorld.elements; _pnN.set(e[8], e[9], e[10]).normalize(); const P = new V3().copy(fs).add(S.mag); S.pinW = P.addScaledVector(_pnN, -_pkV.set(P.x - e[12], P.y - e[13], P.z - e[14]).dot(_pnN)); pin = false; } } // (tecla plana: la punta se queda en su cara, donde tocó)
         break st;
       }
       // delante: la iluminada se queda hasta que el dedo sale de ella (o se aleja); si no, la que tenga delante
@@ -333,7 +337,8 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
       }
     }
     // hundiendo la tecla, clavado donde tocó (al momento, sin temblor); si no, el imán va y viene suave
-    if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_KEEP)); } // (pegado a la tecla: no se desliza por el panel)
+    const Lp = POKE.lock[side]; if (S.pinW || (Lp && Lp.key === key && Lp.pinW)) S.mag.set(0, 0, 0); // (pegada: ya la lleva el candado)
+    else if (pin && cur && S.pin) { const [px, py] = pokeSafe(cur, S.pin.x, S.pin.y); S.mag.copy(pokeCap(pokeMagTo(cur, px, py, _pkM), POKE_KEEP)); } // (pegado a la tecla: no se desliza por el panel)
     else S.mag.lerp(_pkM, Math.min(1, dt * 18));
     if (S.mag.lengthSq() < 1e-10) S.mag.set(0, 0, 0);
     Hd.v.add(S.mag);
@@ -348,13 +353,16 @@ function pokeWidgets(list, dt, ready = true, isMenu = false) {
     if (w.kind === 'slider') { if (drags.has(w) && ready) w.drag(drags.get(w)); else w.commit(); }
     else {
       const p = Math.min(push.get(w) || 0, w.maxPush !== undefined ? w.maxPush : Infinity), dn = p > 0;
-      if (w.setPush) { if (p !== (w.pushed || 0)) { w.pushed = p; w.setPush(p); } } // la tecla entera se hunde
+      if (w.setTouch) { const t = push.has(w); if (t !== !!w.touching) w.setTouch(t); } // (tecla plana: no se hunde; tocada, brilla)
+      else if (w.setPush) { if (p !== (w.pushed || 0)) { w.pushed = p; w.setPush(p); } } // la tecla entera se hunde
       else { w.mesh.position.z = w.baseZ - p; if (dn !== !!w.down) { w.down = dn; w.draw(); } }
     }
   }
   if (!press || !ready || press.w.cool > 0 || now < POKE.until) return false;
   press.S.done = true; POKE.until = now + POKE_GAP; press.w.cool = 0.3; if (isMenu) POKE.need[press.side] = true;
-  SND.click(); haptic(press.side, 0.15, 15); if (press.w.flash) press.w.flash(); press.w.onPress(); return true;
+  SND.click(); haptic(press.side, 0.15, 15); if (press.w.flash) press.w.flash();
+  if (press.S.pinW) { const e = press.w.mesh.matrixWorld.elements, c = _wl.copy(press.S.pinW).add(_pkV.set(e[8], e[9], e[10]).normalize().multiplyScalar(0.012)).clone(); fx.glow(c, [1, 0.95, 0.7], 0.07, 0.22); fx.sparks(c, 8, [1, 0.88, 0.5], 0.5, 0.006); } // (pulsada: un fogonazo donde está el dedo, que se ve aunque el menú se rehaga)
+  press.w.onPress(); return true;
 }
 
 /* =================== MENÚ: PANEL DE LA MUÑECA IZQUIERDA (O ATRIL) =================== */

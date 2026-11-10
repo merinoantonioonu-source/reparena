@@ -21,7 +21,7 @@ function readXR(frame, t = 0) {
         if (filled) for (let i = 0; i < 25; i++) { const J = h.J[i]; _jm.fromArray(poseBuf, i * 16); _jm.decompose(J.p, J.q, _js); J.r = radBuf[i] || 0.008; J.ok = true; }
       }
       if (!filled) spaces.forEach((sp, i) => { const jp = sp && frame.getJointPose(sp, ref), J = h.J[i]; if (jp) { const p = jp.transform.position, o = jp.transform.orientation; J.p.set(p.x, p.y, p.z); J.q.set(o.x, o.y, o.z, o.w); J.r = jp.radius || 0.008; J.ok = true; } });
-      if (h.J[0].ok) handSmooth(h, t); // (perdida, el filtro se queda como estaba: si handRescue la coloca, sigue desde ahí sin saltos)
+      if (h.J[0].ok) handSmooth(h, t); // (perdida, el filtro se queda como estaba: la mano que se pinta, quieta donde se la vio)
       const W = h.J[0], T = h.J[9], Th = h.J[4];
       if (W.ok) { h.ok = true; h.wrist.copy(W.p); h.wristQ.copy(W.q); }
       if (T.ok) { h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; } // (tipS: la punta que se ve, suavizada)
@@ -92,7 +92,7 @@ function handRescue(frame, ref, t) {
     }
     R.mode = mode;
     for (let i = 0; i < 25; i++) { const J = h.J[i], r = R.rel[i]; J.p.copy(r.p).applyQuaternion(R.outQ).add(R.outP); J.q.copy(R.outQ).multiply(r.q); J.r = r.r; J.ok = true; }
-    handSmooth(h, t);
+    // (sin pasar por el suavizado: la mano que se pinta se queda donde se la vio; esta solo la usa el juego)
     const T = h.J[9]; h.ok = true; h.wrist.copy(R.outP); h.wristQ.copy(R.outQ); h.tipOk = true; h.tip.copy(T.p); h.tipS.copy(T.s); h.tipSm = true; h.pinch = h.trig = false; h.est = mode;
     if (mode === 'body') usedT = dt;
   }
@@ -110,12 +110,21 @@ function bodySessionEnd() {
 // Suavizado de las articulaciones de las manos para pintarlas (J.s; el juego sigue usando lo que dan las gafas, J.p): filtro
 // «One Euro»: quietas, quita el temblor del seguimiento; deprisa, casi no retrasa. Si las gafas repiten la misma postura (el seguimiento de manos va a menos fotogramas que la imagen),
 // se adelanta con la velocidad que llevaba, para que la mano no avance a tirones
-const HSM = { minC: 1.5, beta: 20, betaQ: 2.5, dC: 4 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
+const HSM = { minC: 1.5, beta: 20, betaQ: 2.5, dC: 4, jump: 0.3 }, hfA = (fc, dt) => 1 / (1 + 1 / (TAU * fc * dt));
 function handSmooth(h, t) {
   const F = h.F || (h.F = { x: new Float32Array(75), dx: new Float32Array(75), raw: new Float32Array(75), v: new Float32Array(75), ok: new Uint8Array(25), w: new Float32Array(25), t: 0, tRaw: 0 });
   const dt = t - F.t, J = h.J; F.t = t;
   const reset = !(dt > 0 && dt < 0.25), W = J[0].p;
   const same = !reset && J[0].ok && W.x === F.raw[0] && W.y === F.raw[1] && W.z === F.raw[2], rdt = t - F.tRaw;
+  // un salto imposible de la muñeca (más de HSM.jump de una postura a la siguiente: la mano aparecía de golpe delante de la
+  // cara o lanzada hacia delante) no se pinta hasta que la postura siguiente lo confirma (cerca de la nueva); si vuelve, nada
+  if (!reset && !same && F.ok[0] && J[0].ok && rdt < 0.12) {
+    const jx = W.x - F.raw[0], jy = W.y - F.raw[1], jz = W.z - F.raw[2];
+    if (jx * jx + jy * jy + jz * jz > HSM.jump * HSM.jump) {
+      const c = F.cand; if (!c || Math.hypot(W.x - c[0], W.y - c[1], W.z - c[2]) > 0.06) { F.cand = [W.x, W.y, W.z]; F.glitch = (F.glitch || 0) + 1; return; } // (se queda como estaba)
+    }
+  }
+  F.cand = null;
   if (!same) F.tRaw = t;
   for (let i = 0; i < 25; i++) {
     const P = J[i].p, o = i * 3; if (!J[i].ok) { F.ok[i] = 0; continue; }

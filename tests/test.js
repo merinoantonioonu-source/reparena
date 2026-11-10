@@ -231,13 +231,28 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       RA.fingers.length = 0;
       log(`sticky key: real finger slid 9 cm, 4 cm into B, while pressing A → visible fingertip up to x ${(maxV * 100).toFixed(1)} cm (A ends at 0) · B lit ${bLit} · A held ${aHeld}/${steps} · presses ${pressed} · freed after pulling out ${freed}`);
       if (!(maxV <= 0.001) || bLit || aHeld !== steps || pressed !== 'A' || !freed) errors.push(`teclas: la tecla pulsada debería retener el dedo que se ve hasta sacarlo por delante (punta hasta ${(maxV * 100).toFixed(1)} cm, B iluminada ${bLit}, A ${aHeld}/${steps}, ${pressed}, suelta ${freed})`); }
-    // teclas planas: al acercar el dedo se aclaran y al hundirlas bajan y se oscurecen, sin volver a pintar el panel
+    // teclas planas: no se hunden; al acercar el dedo se aclaran y, tocadas, brillan más (y al pulsar destellan), sin volver
+    // a pintar el panel
     { const T = mk(); RA.flatKeys([T.a, T.b], 0.012); for (const w of [T.a, T.b]) w.mesh.position.z = w.baseZ = -0.5; let draws = 0; const d0 = T.a.draw.bind(T.a); T.a.draw = () => { draws++; d0(); };
-      const c0 = T.a.mesh.material.color.r, z0 = T.a.mesh.position.z; for (let i = 0; i < 6; i++) at(T, -0.05, 1.5, 0.03); const cH = T.a.mesh.material.color.r;
-      for (let z = 0.03; z > -0.01; z -= 0.004) at(T, -0.05, 1.5, z); const zP = T.a.mesh.position.z, cP = T.a.mesh.material.color.r; for (let i = 0; i < 30; i++) at(T, -0.05, 1.5, 0.08);
+      await sleep(260); const c0 = T.a.mesh.material.color.r, z0 = T.a.mesh.position.z; for (let i = 0; i < 6; i++) at(T, -0.05, 1.5, 0.03); const cH = T.a.mesh.material.color.r;
+      for (let z = 0.03; z > -0.002; z -= 0.004) at(T, -0.05, 1.5, z); at(T, -0.05, 1.5, -0.003); at(T, -0.05, 1.5, -0.003); const cT = T.a.mesh.material.color.r; for (let z = -0.004; z > -0.01; z -= 0.002) at(T, -0.05, 1.5, z); const zP = T.a.mesh.position.z, cF = T.a.mesh.material.color.r;
+      for (let i = 0; i < 30; i++) at(T, -0.05, 1.5, 0.08);
       RA.fingers.length = 0;
-      log(`flat keys: flat ${!!T.a.flat} · colour at rest ${c0.toFixed(2)}, lit ${cH.toFixed(2)}, pressed ${cP.toFixed(2)} · sinks ${((z0 - zP) * 1000).toFixed(1)} mm · repaints ${draws}`);
-      if (!T.a.flat || !(cH > c0) || !(cP < cH) || !(z0 - zP > 0.005) || draws) errors.push(`teclas planas: deberían aclararse con el dedo delante y hundirse y oscurecerse al pulsar, sin repintar el panel (${c0.toFixed(2)}, ${cH.toFixed(2)}, ${cP.toFixed(2)}, ${draws})`); }
+      log(`flat keys: flat ${!!T.a.flat} · colour at rest ${c0.toFixed(2)}, lit ${cH.toFixed(2)}, touched ${cT.toFixed(2)}, pressed (flash) ${cF.toFixed(2)} · sinks ${((z0 - zP) * 1000).toFixed(1)} mm · presses ${T.hits.join('')} · repaints ${draws}`);
+      if (!T.a.flat || !(cH > c0) || !(cT > cH) || !(cF > cT) || Math.abs(z0 - zP) > 1e-6 || T.hits.join('') !== 'A' || draws) errors.push(`teclas planas: deberían aclararse con el dedo delante, brillar al tocarlas y destellar al pulsar, sin hundirse ni repintar el panel (${c0.toFixed(2)}, ${cH.toFixed(2)}, ${cT.toFixed(2)}, ${cF.toFixed(2)}, ${((z0 - zP) * 1000).toFixed(1)} mm, ${T.hits.join('')}, ${draws})`); }
+    // pegada también cuando la pulsación rehace el menú: la tecla pulsada se cambia por otras nuevas en el mismo sitio (como
+    // al elegir una opción) y la mano de verdad sigue dentro y resbala 4 cm de lado: la punta que se ve sigue donde tocó; al
+    // sacar el dedo por delante, se suelta
+    { await sleep(260); let L = mk(); RA.flatKeys([L.a, L.b], 0.012); for (const w of [L.a, L.b]) w.mesh.position.z = w.baseZ = -0.5;
+      const swap = () => { const N = mk(); RA.flatKeys([N.a, N.b], 0.012); for (const w of [N.a, N.b]) w.mesh.position.z = w.baseZ = -0.5; L = N; };
+      L.a.onPress = () => { L.hits.push('A'); swap(); };
+      const at2 = (x, z) => { L.a.mesh.updateMatrixWorld(); L.b.mesh.updateMatrixWorld(); RA.fingers.length = 0; RA.fingers.push({ side: 'right', p: new THREE.Vector3(x, 1.5, -0.5 + z) }); RA.pokeWidgets([L.a, L.b], 1 / 72); };
+      for (let i = 0; i < 10; i++) at2(-0.05, 0.03); let tipX = null; for (let z = 0.03; z > -0.012; z -= 0.004) { at2(-0.05, z); }
+      const pinX = -0.05 + Hd().x, swapped = !L.hits.length; let drift = 0; for (let x = -0.05; x <= -0.01 + 1e-9; x += 0.004) { at2(x, -0.012); drift = Math.max(drift, Math.abs(x + Hd().x - pinX)); }
+      const lit = L.a.hover || L.b.hover; for (let i = 0; i < 30; i++) at2(-0.01, 0.06); const freed = Math.abs(Hd().x) < 1e-4;
+      RA.fingers.length = 0;
+      log(`sticky after the menu is rebuilt: keys swapped ${swapped} · visible fingertip drift while the real one slid 4 cm ${(drift * 1000).toFixed(1)} mm · new keys lit ${lit} · freed after pulling out ${freed}`);
+      if (!swapped || drift > 0.002 || lit || !freed) errors.push(`teclas: tras pulsar (con el menú rehecho), la punta que se ve debería seguir pegada donde tocó hasta sacar el dedo (deriva ${(drift * 1000).toFixed(1)} mm, iluminadas ${lit}, suelta ${freed})`); }
   }
   const base = { lives: 0, waves: 2, repsWave: 4, repsInc: 1, rest: 5, walkTime: 8, flySpeed: 6, maxAlive: 5, perfectTime: 1.0, arcRate: 20, arcSpeed: 12, arcMin: 15, arcMax: 30, arcPatterns: 0, arcNew: 0, arcFever: 0, arcMace: 0, arcPlank: 0, arcHurdles: 0, arcBurpee: 0 }; // (los arcos de siempre: las coreografías y lo nuevo tienen su prueba)
   // ---- Estilo cómic (prueba): se elige en Entorno; sombreado de dibujo, contornos de tinta y la fortaleza con cielo y suelo de cómic; al quitarlo, todo como antes ----
@@ -2506,7 +2521,7 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.hands = { left: V(-0.3, 1.1, -0.25), right: V(0.3, 1.15, -0.2) }; frame(15, 16, xrFrame);
     // B: la derecha va deprisa hacia delante (2,5 m/s) y las gafas la pierden: sigue su camino, frenando, y luego se da por perdida
     for (let i = 0; i < 8; i++) { XRS.hands.right.z -= 0.04; frame(1, 16, xrFrame); }
-    const z0 = H.wrist.z; XRS.noRight = true; frame(4, 16, xrFrame);
+    const z0 = H.wrist.z, palm0 = RA.gloves.right.palm.position.clone(); XRS.noRight = true; frame(4, 16, xrFrame); const predFly = RA.gloves.right.palm.position.distanceTo(palm0); // (el juego sigue el gesto; la mano que se pinta, no: se queda donde se la vio)
     const predDz = z0 - H.wrist.z, pred = H.ok && H.est === 'pred' && predDz > 0.04 && predDz < 0.2;
     frame(12, 16, xrFrame); const predEnd = !H.ok && !H.est;
     XRS.noRight = false; XRS.hands.right = V(0.3, 1.15, -0.2); frame(20, 16, xrFrame);
@@ -2514,23 +2529,23 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     XRS.noRight = true; frame(3, 16, xrFrame); const stillLost = !H.ok && !H.est; XRS.noRight = false; frame(10, 16, xrFrame);
     // A: el navegador da las muñecas del cuerpo (un poco desplazadas de las de las manos); mientras se ven las dos, aprende la distancia
     XRS.body = { left: XRS.hands.left.clone().add(V(0.02, -0.01, 0.01)), right: XRS.hands.right.clone().add(V(-0.02, -0.01, 0.01)) }; frame(20, 16, xrFrame);
-    const tip0 = RA.gloves.right.tipMat.color.clone(), trk0 = RA.TRK.right.body;
+    const trk0 = RA.TRK.right.body;
     XRS.noRight = true; frame(3, 16, xrFrame); const est = H.est, noPoke = !RA.fingers.some(f => f.side === 'right'), jump0 = H.wrist.distanceTo(XRS.hands.right);
     for (let i = 0; i < 30; i++) { XRS.body.right.x += 0.005; frame(1, 16, xrFrame); } // el cuerpo lleva la muñeca 15 cm a la derecha
-    const err = H.wrist.distanceTo(XRS.body.right.clone().add(V(0.02, 0.01, -0.01))), tip = RA.gloves.right.tipMat.color.clone(), blue = tip.b > 0.9 && tip.b > tip0.b + 0.1, trkBody = RA.TRK.right.body - trk0;
+    const err = H.wrist.distanceTo(XRS.body.right.clone().add(V(0.02, 0.01, -0.01))), hidden = !RA.gloves.right.palm.visible, trkBody = RA.TRK.right.body - trk0;
     // las cámaras la vuelven a ver (en otro sitio): ese fotograma, h.back (el salto no es un gesto); el siguiente, ya no
-    XRS.hands.right.x += 0.1; XRS.noRight = false; frame(1, 16, xrFrame); const back = H.back && !H.est; frame(1, 16, xrFrame); const back1 = H.back, tip1 = RA.gloves.right.tipMat.color.b;
+    XRS.hands.right.x += 0.1; XRS.noRight = false; frame(1, 16, xrFrame); const back = H.back && !H.est; frame(1, 16, xrFrame); const back1 = H.back;
     frame(10, 16, xrFrame);
     // sin «Manos con el cuerpo», el cuerpo no la coloca
     RA.setSetting('bodyHands', 0); XRS.noRight = true; frame(3, 16, xrFrame); const off = !H.ok && !H.est; XRS.noRight = false; RA.setSetting('bodyHands', 1); frame(5, 16, xrFrame);
     const seen = RA.BODY.seen, used = RA.BODY.used, now = RA.BODY.now;
     // con mandos, nada de esto
     XRS.controllers = true; frame(5, 16, xrFrame); const pads = !RA.hands.right.est && !RA.hands.left.est && !RA.hands.right.isHand; XRS.controllers = false; frame(5, 16, xrFrame);
-    log(`lost hands (${st}): fast one goes on ${pred} (${(predDz * 100).toFixed(1)} cm), then lost ${predEnd} · still one not invented ${stillLost} · body places it ${est} (start jump ${(jump0 * 100).toFixed(1)} cm, off by ${(err * 100).toFixed(1)} cm after the body moved) · light-blue tips ${blue} (b ${tip0.b.toFixed(2)} → ${tip.b.toFixed(2)} → ${tip1.toFixed(2)}) · no menu poke ${noPoke} · back flag ${back}/${back1} · setting off ${off} · body seen ${seen}, used ${used.toFixed(2)} s, now ${now} · tracking audit ${trkBody.toFixed(2)} s · controllers ${pads}`);
+    log(`lost hands (${st}): fast one goes on ${pred} (${(predDz * 100).toFixed(1)} cm), then lost ${predEnd} · still one not invented ${stillLost} · body places it ${est} (start jump ${(jump0 * 100).toFixed(1)} cm, off by ${(err * 100).toFixed(1)} cm after the body moved) · the calculated hand is not drawn: following its gesture moved ${(predFly * 100).toFixed(1)} cm, placed by the body hidden ${hidden} · no menu poke ${noPoke} · back flag ${back}/${back1} · setting off ${off} · body seen ${seen}, used ${used.toFixed(2)} s, now ${now} · tracking audit ${trkBody.toFixed(2)} s · controllers ${pads}`);
     if (!pred || !predEnd) errors.push('mano perdida en plena sacudida: debería seguir su camino un instante (B) y luego darse por perdida');
     if (!stillLost) errors.push('mano perdida quieta y sin el cuerpo: no debería inventarse');
     if (est !== 'body' || jump0 > 0.01 || err > 0.015) errors.push('manos con el cuerpo: la mano perdida debería colocarse donde dice el cuerpo (con la distancia aprendida, sin saltar) y seguirlo');
-    if (!blue || tip1 > tip0.b + 0.05) errors.push('manos con el cuerpo: mientras la coloca el cuerpo, las puntas deberían verse celestes (y volver a su color al verla)');
+    if (!hidden || predFly > 0.01) errors.push(`manos perdidas: la mano que calcula el juego no debería pintarse (siguiendo el gesto se movió ${(predFly * 100).toFixed(1)} cm; la del cuerpo, escondida ${hidden})`);
     if (!noPoke) errors.push('manos con el cuerpo: una mano calculada no debería pulsar menús');
     if (!back || back1) errors.push('manos con el cuerpo: al volver a verla, h.back solo ese fotograma');
     if (!off) errors.push('«Manos con el cuerpo» quitado: el cuerpo no debería colocar la mano');
@@ -2547,7 +2562,15 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     // el giro de la muñeca, con temblor de ±4° en cada postura: la palma que se pinta tiembla mucho menos
     const rot = new THREE.Quaternion(), ax = V(0, 0, 1); let rawJ = 0, drawJ = 0, prevR = null, prevD = null; const G = RA.gloves.right.palm.quaternion, ang = (a, b) => 2 * Math.acos(Math.min(1, Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w)));
     for (let i = 0; i < 60; i++) { XRS.rotJit = (Math.random() - 0.5) * 0.14; frame(1, 16, xrFrame); const R = H.J[0].q.clone(), D = G.clone(); if (prevR && i > 10) { rawJ += ang(R, prevR); drawJ += ang(D, prevD); } prevR = R; prevD = D; }
-    XRS.rotJit = 0; XRS.hands = null;
+    XRS.rotJit = 0;
+    // un salto imposible del seguimiento (40 cm hacia la cara en una postura, y vuelve): la mano que se pinta no salta; si se
+    // queda allí (dos posturas seguidas), sí va
+    { const P = RA.gloves.right.palm.position, hp = XRS.hands.right.clone(); frame(10, 16, xrFrame); const p0 = P.clone();
+      XRS.hands.right = hp.clone().add(V(0, 0.15, 0.37)); frame(1, 16, xrFrame); const jump1 = P.distanceTo(p0); XRS.hands.right = hp.clone(); frame(3, 16, xrFrame); const back = P.distanceTo(p0);
+      XRS.hands.right = hp.clone().add(V(0, 0.15, 0.37)); frame(6, 16, xrFrame); const stay = P.distanceTo(p0); XRS.hands.right = hp.clone(); frame(10, 16, xrFrame);
+      log(`hand glitch: a one-sample 40 cm jump moves the drawn palm ${(jump1 * 100).toFixed(1)} cm (then ${(back * 100).toFixed(1)} cm) · a jump that stays moves it ${(stay * 100).toFixed(1)} cm`);
+      if (jump1 > 0.02 || back > 0.02 || stay < 0.3) errors.push(`manos: un salto suelto e imposible del seguimiento no debería pintarse (y uno que se queda, sí): ${(jump1 * 100).toFixed(1)} cm, ${(stay * 100).toFixed(1)} cm`); }
+    XRS.hands = null;
     log(`hands in the menu: invented frames ${inv} · wrist rotation jitter per frame: raw ${(rawJ / 49 * 57.3).toFixed(2)}° → drawn ${(drawJ / 49 * 57.3).toFixed(2)}°`);
     if (inv) errors.push(`en los menús no debería inventarse ninguna mano perdida (${inv} fotogramas)`);
     if (!(rawJ > 0) || drawJ > rawJ * 0.5) errors.push(`la mano que se pinta debería temblar bastante menos que lo que dan las gafas al girar la muñeca (${(rawJ * 57.3).toFixed(1)}° → ${(drawJ * 57.3).toFixed(1)}°)`);

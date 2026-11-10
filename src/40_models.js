@@ -490,10 +490,11 @@ function updateGloves(dt) {
     // en los Toques, las puntas del color de los diamantes de esa mano (izquierda azul, derecha naranja)
     if (settings.mode === 'touch') { g.tipMat.color.setHex(TCH_COL[side]); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); }
     else { g.tipMat.color.setHex(lookHex('hands')); g.tipMat.color.lerp(_gw.setRGB(1, 1, 1), g.pulse); } // (el color que hayas puesto: 73_career)
-    if (h.est === 'body' && settings.mode !== 'touch') g.tipMat.color.lerp(_gw.setRGB(0.45, 0.85, 1), 0.85); // la mano que coloca el cuerpo (las cámaras la han perdido): puntas celestes (en los Toques no: ahí el color dice qué mano es)
     // si las gafas pierden la mano un instante (pasa con las manos por encima de la cabeza o pegadas a la cara), se sigue
-    // viendo donde estaba en vez de parpadear
-    const held = h.isHand && !h.ok && h.lostT < 0.3, show = (h.isHand && (h.ok || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off), rq = A => h.isHand ? A.sq : A.q; // (con las manos, el giro suavizado)
+    // viendo donde estaba en vez de parpadear. La que calcula el juego cuando la pierde (h.est: la que sigue su gesto o la que
+    // coloca el cuerpo) no se pinta: salía volando hacia delante o aparecía delante de la cara (el juego la sigue usando)
+    const real = h.ok && !h.est; g.lost = real ? 0 : (g.lost || 0) + dt;
+    const held = h.isHand && !real && g.lost < 0.3, show = (h.isHand && (real || held)) || (h.virt && h.ok), J = h.J, off = gloveHold(side, dt), sp = A => _gj.copy(A.s).add(off), rq = A => h.isHand ? A.sq : A.q; // (con las manos, el giro suavizado)
     if (!show) {
       for (const m of [g.seg, g.joint, g.tip, g.guard]) m.count = 0;
       g.palm.visible = false;
