@@ -35,7 +35,7 @@ function oldProfPatch(b) {
   for (const k in p.s) if (blockKeyOk(k)) o[k] = p.s[k];
   return o;
 }
-// La música del bloque: canciones de Spotify (de una o varias listas) que suenan en orden y en bucle mientras dura
+// La música del bloque: canciones de Spotify (de una o varias listas) que suenan al azar y en bucle mientras dura
 function blockMusic(b) {
   const m = Array.isArray(b && b.music) ? b.music.filter(t => t && typeof t.uri === 'string' && t.uri.startsWith('spotify:track:')).slice(0, MUSIC_MAX).map(t => ({ uri: t.uri, name: String(t.name || '').slice(0, 120), by: String(t.by || '').slice(0, 120) })) : [];
   return m.length ? { music: m } : {};

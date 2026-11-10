@@ -95,12 +95,13 @@ function drawFoeCard(b, c, W, H, it, tc) {
 class Btn {
   constructor(label, w, h, onPress, o = {}) {
     this.kind = 'btn'; this.w = w; this.h = h; this.label = label; this.onPress = onPress; this.style = o.style || 'normal'; this.font = o.font; this.accent = o.accent; this.icon = o.icon; this.badge = o.badge; this.tint = o.tint; this.card = o.card; this.paint = o.paint; this.fill = o.fill; // (fill: la tecla entera de ese color, más oscuro si no está elegida: los modos del menú principal) (paint: lo impreso en la tecla, dibujado a mano: las fichas del menú principal)
-    this.p = makePanel(w, h, Math.round(clamp(4200 * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 4 píxeles por milímetro: letras nítidas)
-    this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; this.draw();
+    this.p = makePanel(w, h, Math.round(clamp(KEY_PXM * w, 256, 2048)), { depthTest: o.depthTest }); // (unos 3 píxeles por milímetro: lo que las gafas distinguen a la distancia del menú)
+    this.own = this.p; this.mesh = this.p.mesh; this.hover = false; this.cool = 0; this.baseZ = 0; this.prevZ = {}; if (!BTN_LATER) this.draw(); // (en un menú, la pinta flatKeys: una sola vez)
   }
   setLabel(l, style) { if (l !== this.label || (style && style !== this.style)) { const rec = style && style !== this.style; this.label = l; if (style) this.style = style; this.draw(); if (rec && this.setHover) this.setHover(this.hover, true); } }
   draw() {
     const c = this.p.ctx, W = this.p.W, H = this.p.H, s = STY[this.style] || STY.normal;
+    if (this.flat === true && !this.paint && !this.card && keyCached(this)) return; // (ya pintada igual en otro menú: la misma textura)
     if (this.flat) { // tecla plana (flatKeys): su cara de color con el borde (en cómic, de tinta) y lo que va impreso encima
       const tc = this.fill ? (this.style === 'selected' ? '#1a0716' : '#ffffff') : keyc(this.style)[1]; c.clearRect(0, 0, W, H);
       const ink = comicOn(), lw = Math.max(3, H * (ink ? 0.055 : 0.03)), r = Math.min(H * 0.26, 26); rr(c, lw / 2 + 1, lw / 2 + 1, W - lw - 2, H - lw - 2, r); c.fillStyle = keyHex(this); c.fill();
@@ -172,6 +173,32 @@ const keyc = style => { const P = comicOn() ? KEYC_C : KEYC; return P[style] || 
 // el color del cuerpo de una tecla: el de su estilo o, elegida y con tinte (los del menú principal), el de su parte
 const hexDim = (h, k) => { const v = parseInt(h.slice(1), 16); return ((v >> 16 & 255) * k << 16) | ((v >> 8 & 255) * k << 8) | ((v & 255) * k | 0); };
 const keyBody = w => w.fill ? (w.style === 'selected' ? parseInt(w.fill.slice(1), 16) : hexDim(w.fill, 0.42)) : w.kind !== 'slider' && w.tint && w.style === 'selected' ? parseInt(w.tint.slice(1), 16) : keyc(w.kind === 'slider' ? 'slider' : w.style)[0];
+// Las teclas planas ya pintadas se guardan (su lienzo y su textura, por cómo se ven) y se reutilizan: al pulsar, el menú se
+// rehace entero y casi todas sus teclas salen iguales; pintarlas y subirlas a la gráfica otra vez (unos 14 millones de
+// píxeles en el menú principal) dejaba la imagen congelada en las gafas hasta que acababa. Las que se pintan solas
+// (fichas con dibujo propio) no se guardan. Como mucho KEYTEX_MAX píxeles sin usar: se tiran las más viejas
+const KEY_PXM = 3000, KEYTEX = new Map(), KEYTEX_MAX = 6e6; let BTN_LATER = false;
+const keySig = w => [w.label, w.style, w.p.W, w.p.H, w.font, w.accent, w.icon, w.badge, !!w.fill, comicOn(), keyHex(w)].join('|');
+function keyCached(w) {
+  const sig = keySig(w); if (w.sig === sig) return true;
+  let e = KEYTEX.get(sig);
+  if (!e) { // nueva: se pinta una vez en su propio lienzo, que ya no cambia
+    const p = w.own; e = { c: mkCanvas(p.c.width, p.c.height), refs: 0 }; e.ctx = e.c.getContext('2d'); e.tex = new THREE.CanvasTexture(e.c); e.tex.encoding = THREE.sRGBEncoding; e.tex.anisotropy = MAX_ANISO; e.tex._keyc = e;
+    const was = w.p; w.p = { c: e.c, ctx: e.ctx, tex: e.tex, mesh: w.mesh, W: p.W, H: p.H }; w.sig = sig; w.flat = 'paint'; try { w.draw(); } finally { w.flat = true; w.p = was; }
+    KEYTEX.set(sig, e); keycTrim();
+  }
+  keyUse(w, e); w.sig = sig; return true;
+}
+function keyUse(w, e) {
+  const m = w.mesh.material, old = m.map && m.map._keyc; if (old === e) return;
+  if (old) old.refs--; e.refs++; e.t = performance.now(); m.map = e.tex; m.needsUpdate = true; w.mesh.userData.ownTex = w.own.tex;
+}
+function keyFree(tex) { const e = tex && tex._keyc; if (e) { e.refs = Math.max(0, e.refs - 1); e.t = performance.now(); } return !!e; }
+function keycTrim() {
+  let px = 0; for (const e of KEYTEX.values()) if (!e.refs) px += e.c.width * e.c.height;
+  if (px <= KEYTEX_MAX) return;
+  for (const [k, e] of [...KEYTEX].sort((a, b) => a[1].t - b[1].t)) { if (px <= KEYTEX_MAX) break; if (e.refs) continue; KEYTEX.delete(k); e.tex.dispose(); px -= e.c.width * e.c.height; }
+}
 // el color de una tecla en el lienzo, para pintar su cara
 const keyHex = w => '#' + keyBody(w).toString(16).padStart(6, '0');
 const KEY_DIM = 0.84; // en reposo, algo más oscura: con el dedo delante, a pleno color (sin repintar el panel)
@@ -179,7 +206,7 @@ const KEY_DIM = 0.84; // en reposo, algo más oscura: con el dedo delante, a ple
 function flatKeys(list, kh) {
   for (const w of list) {
     if (w.kind === 'slider') continue; // (el deslizador se pinta entero en su panel, con su bolita)
-    w.flat = true; w.draw();
+    w.flat = true; w.draw(); w.drawn = true;
     w.mesh.position.z = kh; w.baseZ = kh; w.maxPush = 0; const mat = w.mesh.material; // (maxPush 0: no se hunde; la mano que se ve se queda en su cara)
     // (más de 1: más clara que su dibujo, hacia el blanco; el color del material multiplica el del panel)
     w.recolor = () => { const k = w.touching ? 1.28 : w.hover ? 1 : KEY_DIM, f = w.flashT > 0 ? w.flashT / 0.3 : 0; mat.color.setScalar(k + (1.7 - k) * f); };
@@ -405,6 +432,7 @@ function menuOccluder(panelMesh, w, h, inset = 0.02) {
 function disposeTree(o) {
   o.traverse(n => {
     const own = n.userData.own; if (own && own !== 'mat') n.geometry.dispose(); if (own === 'all' || own === 'mat') n.material.dispose();
+    if (n.material && n.material.map && keyFree(n.material.map)) { n.material.dispose(); if (n.userData.ownTex) n.userData.ownTex.dispose(); return; } // (tecla guardada: se suelta, no se tira)
     if (n.material && n.material.map && n.material.map.isCanvasTexture && !(n.material.userData && n.material.userData.keep)) { n.material.map.dispose(); n.material.dispose(); if (n.geometry) n.geometry.dispose(); }
   });
 }
@@ -427,7 +455,9 @@ function wrapLines(text, maxPx) {
   for (const w of String(text).split(' ')) { const t = cur ? cur + ' ' + w : w; if (cur && c.measureText(t).width > maxPx) { lines.push(cur); cur = w; } else cur = t; }
   if (cur) lines.push(cur); return lines;
 }
-function openMenu(rows, opts = {}) {
+// (mientras se monta, las teclas no se pintan al crearlas: las pinta flatKeys, una sola vez)
+function openMenu(rows, opts) { BTN_LATER = true; try { return openMenuNow(rows, opts); } finally { BTN_LATER = false; } }
+function openMenuNow(rows, opts = {}) {
   HITCH.f.menu = 1; rows = rows.slice();
   // con un menú abierto, el siguiente sale en el mismo sitio (también el que trajiste con «Traer menú»);
   // si no hay ninguno, delante de ti
@@ -548,7 +578,7 @@ function openMenu(rows, opts = {}) {
   });
   bg.tex.needsUpdate = true;
   const wrist = wristMenuOn(), ksc = wrist ? wristScale() : 1;
-  flatKeys(widgets.filter(w => w.kind === 'btn'), KEY_H / ksc);
+  BTN_LATER = false; flatKeys(widgets.filter(w => w.kind === 'btn'), KEY_H / ksc);
   scene.add(group);
   if (wrist) { // en la muñeca: la postura la pone updateWristMenu; se pulsa con cualquiera de las dos manos
     if (!reuse && !recent) wristOpen(); // un menú nuevo sale solo delante de ti; el siguiente de uno abierto, en su sitio
@@ -1107,6 +1137,18 @@ function boardSay(c, t, col, x, y, maxW, size) {
   const l1 = t.slice(0, cut), l2 = t.slice(cut + 1), f2 = Math.min(fitFont(c, l1, maxW, Math.min(size, 72), '%px ' + FD), fitFont(c, l2, maxW, Math.min(size, 72), '%px ' + FD));
   c.font = `${f2}px ${FD}`; glowText(c, l1, x, y - f2 * 0.58, col, 12); glowText(c, l2, x, y + f2 * 0.58, col, 12);
 }
+// Lo que llevas entrenando (la ronda; en una sesión, la sesión entera) y, más discreta, la hora: siempre a la vista
+const fmtClock = s => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
+function trainSecs() { const done = SES.active ? SES.results.reduce((a, r) => a + (r.time || 0), 0) : 0; return done + (SES.active && state === 'between' ? 0 : stats.time); }
+const nowHM = () => { const d = new Date(); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function boardTimes(c, cx, cy) {
+  const t = fmtClock(trainSecs()), k = nowHM(); c.textBaseline = 'middle';
+  c.font = '700 40px ' + FB; const tw = c.measureText(t).width; c.font = '500 30px ' + FB; const kw = c.measureText(k).width, gap = 34, ic = 30, w = ic + 8 + tw + gap + ic * 0.8 + 6 + kw; let x = cx - w / 2;
+  drawStopwatch(c, x + ic / 2, cy, ic * 0.5, BC.teal); x += ic + 8; c.textAlign = 'left'; c.font = '700 40px ' + FB; c.fillStyle = BC.ink; c.fillText(t, x, cy + 2); x += tw + gap;
+  drawClockIcon(c, x + ic * 0.4, cy, ic * 0.38, BC.lil); x += ic * 0.8 + 6; c.font = '500 30px ' + FB; c.fillStyle = BC.lil; c.fillText(k, x, cy + 2);
+}
+function drawStopwatch(c, x, y, r, col) { c.strokeStyle = col; c.fillStyle = col; c.lineWidth = r * 0.22; c.beginPath(); c.arc(x, y + r * 0.1, r * 0.82, 0, TAU); c.stroke(); c.fillRect(x - r * 0.2, y - r * 1.1, r * 0.4, r * 0.25); c.beginPath(); c.moveTo(x, y + r * 0.1); c.lineTo(x + r * 0.35, y - r * 0.35); c.stroke(); }
+function drawClockIcon(c, x, y, r, col) { c.strokeStyle = col; c.lineWidth = r * 0.22; c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(x, y - r * 0.6); c.lineTo(x, y); c.lineTo(x + r * 0.45, y + r * 0.2); c.stroke(); }
 function drawBoard() {
   const c = board.ctx, W = board.W, H = board.H;
   c.clearRect(0, 0, W, H); boardFrame(c, W, H);
@@ -1116,6 +1158,7 @@ function drawBoard() {
     const t = `${MODE_NAMES[settings.mode]} · ${EX_NAMES[settings.exercise]}`; c.fillStyle = BC.ink; fitFont(c, t, W - 120, 40, '500 %px ' + FB); c.fillText(t, W / 2, 172);
     c.fillStyle = BC.lil; const tip = wristMenuOn() ? 'El menú: pulsa MENÚ en tu muñeca izquierda' : 'Pulsa EMPEZAR en el menú'; fitFont(c, tip, W - 120, 30, '500 %px ' + FB); c.fillText(tip, W / 2, 236);
     boardDay2(c, W, 352);
+    c.textAlign = 'right'; c.textBaseline = 'middle'; c.font = '500 30px ' + FB; drawClockIcon(c, W - 44 - c.measureText(nowHM()).width - 26, 420, 11, BC.lil); c.fillStyle = BC.lil; c.fillText(nowHM(), W - 44, 422); // (la hora, discreta)
     board.tex.needsUpdate = true; return;
   }
   const N = nWaves(), hang = settings.exercise === 'hang', RX = W - 44, live = ['play', 'rest', 'ready'].includes(state);
@@ -1132,6 +1175,7 @@ function drawBoard() {
   else if (nLives() <= 8) { let s = ''; for (let i = 0; i < nLives(); i++) s += i < lives ? '♥' : '♡'; fitFont(c, s, 280, 56, '%px ' + FB); glowText(c, s, RX + 4, 56, BC.pink, 10); }
   else { c.font = `52px ${FD}`; c.fillStyle = BC.pink; c.fillText(`♥ ${lives}`, RX + 4, 56); }
   drawPulse(c, RX + 4, 118); // (tu pulso, si hay pulsómetro: 57_pulse)
+  boardTimes(c, W / 2 + 40, 118); // (bajo los puntos: lo que llevas entrenando y, discreta, la hora)
   // izquierda: el rosco doble. Fuera, la oleada (con la muesca de tu mejor ronda); dentro, la racha en 10 tramos; en
   // medio, tus repeticiones (en colgado, los segundos)
   const ox = 196, oy = 272, big = String(hang ? Math.floor(state === 'play' ? BAR.hold : stats.hold) : stats.reps);

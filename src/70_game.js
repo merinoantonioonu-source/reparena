@@ -2329,6 +2329,8 @@ function freeGate() {
 }
 // Plancha con un brazo: una trampilla del lado pedido (las arañas salen alternando izquierda y derecha)
 function sideHatch(left) { const l = liveHatches(), side = l.filter(h => (h.x < 0) === left); return pick(side.length ? side : l); }
+// Burpee: lo que tarda en llegar la valla tras pasar el arco de plancha (antes 1,6 s: no daba tiempo a levantarse)
+const BURPEE_UP = 3.0;
 function spawnFromQueue() {
   const spec = spawnQueue.shift(); if (!spec) return;
   if (settings.mode === 'arcs') {
@@ -2336,7 +2338,7 @@ function spawnFromQueue() {
     if (spec.kind === 'combo') { arcs.push(new ArcObs(spec.with)); arcs.push(new Arc(spec.drop, 0, true, 0)); } // a la vez: apártate (o métete en el hueco) y agáchate
     else if (spec.kind === 'laser' || spec.kind === 'walls' || spec.kind === 'mace') arcs.push(new ArcObs(spec.kind));
     else if (spec.kind === 'plank') { // (más despacio: los que vienen detrás esperan a que pase, con 2,5 s para levantarte; y sin orbe)
-      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + (spec.burpee ? 1.6 : 2.5); // (en el burpee, la valla llega enseguida: arriba de un salto)
+      const a = new Arc(0, 0, false, 0, false, 0, true); arcs.push(a); const L = HL.z - a.z; ARX.minNext = Math.max(0, L / a.speed - L / arxSpeed()) + (spec.burpee ? BURPEE_UP : 2.5); // (en el burpee, la valla llega tras BURPEE_UP s: levantarte de la plancha y saltar)
       if (spec.burpee) bigNotice('¡BURPEE!', 'Al suelo en plancha… ¡y arriba a saltar la valla!', '#ffd166'); else bigNotice('¡ARCO DE PLANCHA!', 'Manos al suelo y pies atrás', '#ffd166'); SND.horn(); ARX.nextGap = spec.gap || 0; return;
     }
     else if (spec.kind === 'wheel') arcs.push(new Arc(spec.drop, 0, false, (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1) * Math.max(15, settings.arcTiltMax) * Math.PI / 180, false, (Math.random() < 0.5 ? -1 : 1) * rand(2.2, 3.4)));

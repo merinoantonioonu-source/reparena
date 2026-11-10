@@ -178,10 +178,11 @@ async function spPlayList(l, fromUri, shuffle) {
   try { await spApi('PUT', '/me/player/shuffle?state=' + (!!shuffle) + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
   SP.started = true; SP.block = null; if (SP.st) SP.st.is_playing = true;
 }
-// La música de un bloque de la sesión: sus canciones, en orden y en bucle mientras dura (si el bloque anterior tenía las
-// mismas, siguen sin empezar de nuevo)
+// Tus canciones elegidas o la música de un bloque de la sesión: en un orden al azar distinto cada vez (antes, siempre en el
+// orden en que las marcaste) y en bucle mientras dura (si el bloque anterior tenía las mismas, siguen sin empezar de nuevo)
 async function spPlayTracks(tracks) {
   const uris = tracks.map(t => t.uri).filter(Boolean).slice(0, 100); if (!uris.length) return;
+  for (let i = uris.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [uris[i], uris[k]] = [uris[k], uris[i]]; }
   const q = spQ(); await spApi('PUT', '/me/player/play' + q, { uris });
   try { await spApi('PUT', '/me/player/shuffle?state=false' + (q ? '&' + q.slice(1) : '')); await spApi('PUT', '/me/player/repeat?state=context' + (q ? '&' + q.slice(1) : '')); } catch (e) { /* da igual */ }
   SP.started = true; if (SP.st) SP.st.is_playing = true;
@@ -208,7 +209,7 @@ const spFadeIn = (v0, ms = SP_FADE.in) => spFade(0, v0, ms);
 function spToggle() {
   spDo(async () => {
     if (spPlaying()) { await spApi('PUT', '/me/player/pause'); SP.st.is_playing = false; }
-    else if (spPicks().length && !SP.started) { await spPlayTracks(spPicks()); SP.block = null; } // la primera vez, tus canciones elegidas (en orden y en bucle)…
+    else if (spPicks().length && !SP.started) { await spPlayTracks(spPicks()); SP.block = null; } // la primera vez, tus canciones elegidas (al azar y en bucle)…
     else if (spLists().length && !SP.started) await spPlayLists(); // …o tus listas; luego Play reanuda
     else if (spHereOk() && !spHereNow()) await spToHere(); // en pausa en otro dispositivo: Play la trae a las gafas
     else if (SP.st && SP.st.device) { await spApi('PUT', '/me/player/play'); SP.st.is_playing = true; }
@@ -552,7 +553,7 @@ function spInitPage() {
   spPlayerInit();
 }
 // Tus listas: cada una con su casilla (toda la lista) y «Canciones ▾», que despliega sus canciones para elegir solo las
-// que quieras. Las canciones elegidas (de una o varias listas) suenan ellas, en el orden en que las marcaste y en bucle;
+// que quieras. Las canciones elegidas (de una o varias listas) suenan ellas, en un orden al azar cada vez y en bucle;
 // si no eliges ninguna, suenan las listas marcadas (varias, mezcladas). Los nombres largos ocupan las líneas que haga falta
 const spPicks = () => (SP.cfg.picks || []).filter(t => t && t.uri);
 const escSp = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

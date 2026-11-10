@@ -342,12 +342,18 @@ function drawHoy(c, W, H, big) {
   if (big) { c.fillStyle = '#a49fc8'; const st = M.chest ? '¡Las tres cumplidas! El cofre de hoy ya es tuyo' : `${done} de 3 · cumple las tres y se abre el cofre del día`; fitFont(c, st, W - pad * 2, Math.round(H * 0.045), '600 %px ' + FB); c.fillText(st, W / 2, H * 0.18); }
   const y0 = H * (big ? 0.24 : 0.14), gh = H * (big ? 0.15 : 0.13);
   M.list.forEach((m, i) => drawGoal(c, m, pad, y0 + i * gh * 1.08, W - pad * 2, gh, '#eeeaff', big));
-  let y = y0 + 3 * gh * 1.08 + H * 0.03; const s = H * (big ? 0.045 : 0.04);
-  drawChest(c, pad + s, y + s * 0.2, s, M.chest); c.textAlign = 'left'; c.fillStyle = '#ffd166'; const ct = M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP, un escudo y un color`; fitFont(c, ct, W - pad * 2 - s * 3, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(ct, pad + s * 2.6, y);
-  y += H * (big ? 0.085 : 0.075); drawFlame(c, pad + s, y, s * 0.9); c.fillStyle = '#ffb36b'; const rt = `Racha: ${daysTxt(P.streak)}`; fitFont(c, rt, W * 0.42, Math.round(H * (big ? 0.045 : 0.04)), '700 %px ' + FB); c.fillText(rt, pad + s * 2.6, y);
-  for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, W - pad - (SHIELD_MAX - i) * s * 2.1 + s, y, s * 0.85, i < CR.shield);
-  if (!big) { y += H * 0.085; drawLvlBadge(c, pad + s * 1.2, y, s * 1.2, L.n); c.fillStyle = '#eeeaff'; const lt = `Nivel ${L.n} · ${titleOf(L.n)}`; fitFont(c, lt, W - pad * 2 - s * 3.5, Math.round(H * 0.04), '700 %px ' + FB); c.fillText(lt, pad + s * 3, y - H * 0.012);
-    const bx = pad + s * 3, bw = W - pad - bx, bh = H * 0.016; rr(c, bx, y + H * 0.022, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.35)'; c.fill(); if (L.into) { rr(c, bx, y + H * 0.022, Math.max(bh, bw * L.into / L.need), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); } }
+  // debajo, cada cosa en su renglón, con sitio para su icono (sin montarse): el cofre, la racha con los escudos a la derecha
+  // y, en la columna, el nivel con su barra. Cada texto, alineado a la izquierda y sin pasar de lo que le toca
+  let y = y0 + 3 * gh * 1.08 + H * (big ? 0.03 : 0.04); const s = H * (big ? 0.045 : 0.04), row = s * (big ? 2.4 : 2.6), tx = pad + s * 2.8;
+  const line = (t, x, yy, maxW, px, col, w = 700) => { c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = col; fitFont(c, t, maxW, Math.round(px), `${w} %px ` + FB); c.fillText(t, x, yy); };
+  drawChest(c, pad + s, y + s * 0.2, s, M.chest); line(M.chest ? '¡Cofre del día abierto!' : `Cofre: +${CHEST_XP} XP, un escudo y un color`, tx, y, W - pad - tx, H * (big ? 0.045 : 0.036), '#ffd166');
+  y += row; drawFlame(c, pad + s, y, s * 0.9);
+  const sw = s * 1.9, sx0 = W - pad - SHIELD_MAX * sw + sw / 2; for (let i = 0; i < SHIELD_MAX; i++) drawShield(c, sx0 + i * sw, y, s * 0.8, i < CR.shield);
+  line(`Racha: ${daysTxt(P.streak)}`, tx, y, sx0 - sw / 2 - s * 0.5 - tx, H * (big ? 0.045 : 0.04), '#ffb36b');
+  if (!big) {
+    y += row; drawLvlBadge(c, pad + s, y, s * 1.05, L.n); line(`Nivel ${L.n} · ${titleOf(L.n)}`, tx, y - s * 0.45, W - pad - tx, H * 0.036, '#eeeaff');
+    const bw = W - pad - tx, bh = H * 0.014, by = y + s * 0.45; rr(c, tx, by, bw, bh, bh / 2); c.fillStyle = 'rgba(128,128,128,0.35)'; c.fill(); if (L.into) { rr(c, tx, by, Math.max(bh, bw * L.into / L.need), bh, bh / 2); c.fillStyle = PROG_COL; c.fill(); }
+    line(`${L.into} / ${L.need} XP`, tx, by + bh + s * 0.55, bw, H * 0.026, '#a49fc8', 600); }
   else { c.textAlign = 'center'; c.fillStyle = '#a49fc8'; fitFont(c, 'Cualquier botón (o el pulgar arriba) para seguir', W - pad * 2, Math.round(H * 0.038), '600 %px ' + FB); c.fillText('Cualquier botón (o el pulgar arriba) para seguir', W / 2, H * 0.94); }
 }
 // 2) la columna «HOY», a la izquierda del menú principal (se va con él)

@@ -92,7 +92,7 @@ function arxPatterns(total) {
 const ARX_JUMP_GAP = 1.1;
 // Ráfaga de vallas: 3 o 4 seguidas (con ritmo, a uno o dos pulsos una de otra), con su aviso
 function arxHurdles() { const n = Math.random() < 0.5 ? 3 : 4, l = []; for (let k = 0; k < n; k++) l.push({ kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: k < n - 1 ? 0.4 : 1.4 }); l[0].note = ['¡RÁFAGA DE VALLAS!', `${n} saltos seguidos`]; return l; }
-// Burpee: el arco de plancha y, en cuanto pasa, una valla (sale con poco tiempo para levantarte: arriba de un salto)
+// Burpee: el arco de plancha y, tras él, una valla (llega BURPEE_UP s después: tiempo para levantarte y saltar)
 const arxBurpee = () => [{ kind: 'plank', drop: 0, tilt: 0, hp: 1, gap: 0.1, burpee: true }, { kind: 'jump', drop: 0, tilt: 0, hp: 1, gap: 1.6 }];
 // Antes de un arco de plancha o de semipuente, tiempo para bajar al suelo (el anterior deja un hueco largo)
 function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' || o.low) && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap || 1, o.low ? 1.5 : 1.8); }); return list; }
@@ -100,7 +100,7 @@ function arxPlankRoom(list) { list.forEach((o, i) => { if ((o.kind === 'plank' |
 /* ---------- Obstáculos nuevos: láser que barre y paredes que se cierran ---------- */
 // Llegan por la pista como los arcos y se mueven mientras llegan, hasta quedarse quietos justo al pasar por ti: el láser,
 // cerca del centro (apártate al lado libre); las paredes, con el hueco a un lado (métete en él)
-const LASER_MAT = new THREE.MeshBasicMaterial({ color: 0xffd0d0, toneMapped: false });
+const LASER_MAT = new THREE.MeshBasicMaterial({ color: 0xffd0d0, toneMapped: false }), LASER_STILL = 1.6;
 // Las paredes, bien visibles (antes, unas rayas rojas tenues que apenas se distinguían del hueco): rojas casi opacas, con
 // franjas de peligro en diagonal y el canto que da al hueco en verde, para no dudar de hacia dónde volcar el cuerpo
 const WALL_TEX = (() => {
@@ -115,11 +115,12 @@ class ArcObs {
     const D = arenaDepth(); Object.assign(this, { kind, alive: true, judged: false, second: false, checked: false, hit: false, jump: false, t: 0, warnT: 0, z: -D + 0.9, speed: arxSpeed() });
     this.tReach = Math.max(0.5, (HL.z - this.z) / this.speed); this.grp = new THREE.Group(); this.grp.position.z = this.z; arena.add(this.grp);
     if (kind === 'laser') {
-      // cuanto más difícil (Láser: amenaza, del rango), barre más pista, más deprisa, con un amago (otra oscilación más rápida
-      // encima, que le hace cambiar de sentido) y se sigue moviendo hasta más cerca de ti; donde se para, siempre con un lado libre
+      // cuanto más difícil (Láser: amenaza, del rango), barre más pista, más deprisa y con un amago (otra oscilación más rápida
+      // encima, que le hace cambiar de sentido), pero a una velocidad que se puede seguir (antes, de 6 a 13 m/s de lado, y se
+      // paraba en los últimos 0,7 s: imposible de sortear); se queda quieto en su sitio LASER_STILL s antes de llegar, con un lado libre
       const k = Math.min(1.3, dv('arcLaser') / 100); this.lk = k;
-      Object.assign(this, { end: rand(-0.2, 0.2), amp: rand(0.6, 0.85) + 0.3 * k, ph: rand(0, TAU), fq: 2.2 + 2.4 * k, amp2: 0.3 * k, ph2: rand(0, TAU), win: 1.2 - 0.5 * Math.min(1, k) });
-      this.xf = this.x(0); const safe = this.xf > 0 ? -1 : 1;
+      Object.assign(this, { xf: (Math.random() < 0.5 ? -1 : 1) * rand(0.05, 0.35), amp: 0.45 + 0.25 * k, ph: rand(0, TAU), w: 1.5 + 1.0 * k, amp2: 0.12 * k, ph2: rand(0, TAU), still: LASER_STILL - 0.3 * Math.min(1, k) });
+      const safe = this.xf > 0 ? -1 : 1;
       this.leanX = this.xf + safe * 0.5; this.tilt = safe * 0.01; this.drop = 0.01; // el lado libre (para el marcador y la vista previa)
       this.mat = new THREE.MeshBasicMaterial({ map: TX.beam, color: 0xff2a14, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
       this.beam = new THREE.Group(); this.grp.add(this.beam);
@@ -152,7 +153,9 @@ class ArcObs {
   // lo que queda para que llegue: se mueve mucho al principio y se asienta en su sitio al pasar por ti
   settle(w = 1.2) { const tau = Math.max(0, this.tReach - this.t); return tau * Math.min(1, tau / w); }
   gapX(y) { return this.gx - Math.tan(this.ang || 0) * y; } // (el centro del hueco a esa altura)
-  x(s = this.settle(this.win)) { const x = this.end + this.amp * Math.sin(this.ph + s * this.fq) + this.amp2 * Math.sin(this.ph2 + s * this.fq * 2.6); return Math.max(-0.85, Math.min(0.85, x)); } // (donde se para: x(0))
+  // el láser: alrededor de su sitio (xf), con un vaivén que se apaga del todo `still` s antes de llegar a ti
+  x() { const tau = Math.max(0, this.tReach - this.t), env = smooth(clamp((tau - this.still) / 1.0, 0, 1)), t = this.t;
+    const x = this.xf + env * (this.amp * Math.sin(this.ph + t * this.w) + this.amp2 * Math.sin(this.ph2 + t * this.w * 2.4)); return Math.max(-0.85, Math.min(0.85, x)); }
   update(dt, t) {
     this.t += dt; this.z += this.speed * dt; this.grp.position.z = this.z;
     const hz = HL.z, inLane = Math.abs(HL.x) < 1.0, s = this.settle();
