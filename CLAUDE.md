@@ -51,6 +51,9 @@ ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja;
   resolución se elige una vez al entrar (`qualSessionStart`, `src/80_main.js`) y no cambia en la partida: para aligerar,
   solo foveación y sombras (si no, la nitidez se quedaba baja y las letras, borrosas). El navegador de las Quest 3 da
   como «nativa» ×1 (1680×1760 por ojo, menos que la pantalla): para que se vea nítido hay que pedir más (Alta ×1,4).
+- Teclas del menú: las planas ya pintadas se guardan y se reutilizan (`keyCached`, `src/60_ui.js`): al pulsar, el menú se
+  rehace entero, y pintar y subir otra vez todas sus texturas (14 Mpx en el menú principal) congelaba la imagen en las
+  gafas. No pintes una tecla dos veces ni subas su resolución (`KEY_PXM`) sin medirlo.
 - Los modelos 3D están en `models/` (Quaternius, cada pack con su licencia). Los sonidos se pueden sustituir con
   archivos en `sounds/` (lista en `sounds/LEEME.md`, que el build copia a la página).
 - Los simulacros de las pruebas son limitados:
@@ -129,7 +132,8 @@ No las cambies sin preguntarle.
   cercanos) y la plancha con un brazo (una flexión aguantada abajo carga ×2/×3/×4, con la bola a la vista; el brazo que se
   levanta después lanza esa carga: la bola se va a esa mano y el rayo sale siempre de la mano levantada, nunca de la bola).
 - En Toques, entre un toque y el siguiente hay que **volver a la postura de partida**. Un toque vale aunque el objetivo
-  aún venga de camino.
+  aún venga de camino. El oblicuo es un diamante a un lado, junto a la rodilla, que se toca con la mano contraria
+  (cruzando: gira el tronco); «Manos a rodillas», un diamante delante de las rodillas (las gafas no ven las rodillas).
 - Con espadas no hay diana ni láser, y los enemigos van directos a por el jugador.
 - Inchworm: se sigue la **cabeza**, no las manos. Llegar con la cabeza a la línea luminosa del suelo (donde queda en la
   plancha, según la altura) carga el rayo; volver andando con las manos hasta la salida y ponerse de pie dispara y saca la
@@ -187,7 +191,9 @@ No las cambies sin preguntarle.
   aparte de la de Toques. Hay ráfagas de vallas (3 o 4 seguidas) y burpees (arco de plancha y, enseguida, una valla).
 - Arcos inclinados: agacharse en el centro no vale; hay que apartarse hacia el lado alto (pared de energía bajo el lado
   bajo hasta pasado el centro) y bajar sobre esa pierna.
-- Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos).
+- Arcos: cuanto más difícil (el rango), el láser oscila más amenazante (más pista, más deprisa, con amagos), pero a una
+  velocidad que se pueda sortear (como mucho unos 2,5 m/s de lado) y quieto en su sitio el último segundo y medio.
+- Arcos, burpee: tras el arco de plancha, la valla llega con tiempo para levantarse (3 s).
 - Arcos: las paredes (obstáculos con hueco y la del lado bajo de los inclinados), rojas casi opacas con franjas, y el
   canto del hueco en verde: que no haya duda de hacia dónde volcar el cuerpo.
 
@@ -197,6 +203,9 @@ No las cambies sin preguntarle.
 - Se mueven con naturalidad y agresividad, sin chocar entre ellos.
 - Parados esperando su turno, bailan al compás (el marcado o el de la canción de Spotify), también los robots.
 - El lanzador tira algo más deprisa (y más a menudo) cuanto más difícil, poco a poco (como mucho un 40 %).
+- Travesía: la roca del derrumbe se queda quieta del todo al embestirla (el golpe se ve en su cara). Una zancada hacia
+  delante empuja a los bandidos y hace recular a los lobos cercanos. Los bandidos no se quedan plantados: cambian de
+  sitio entre lanzamientos y a veces provocan.
 - Al abrirse una compuerta, su interior es oscuro.
 - Toques: las «amebas» son aros de neón (tubo de luz con flechas que giran hacia el hueco; estallan en chispas), elegidos
   por el usuario en vez de los aros de agua (se leían mal y no casaban con Cómic).
@@ -226,6 +235,7 @@ No las cambies sin preguntarle.
 - El marcador se ve siempre, también al mirarlo de frente, y sin texto de más.
   - Por defecto (VR), a un lado (izquierda o derecha, configurable), el doble de grande y siempre a la vista, por fuera de
     las compuertas.
+  - Siempre, bajo los puntos, lo que llevas entrenando (la ronda; en una sesión, la sesión entera) y, discreta, la hora.
   - Diseño elegido (C): rosco doble (fuera, la oleada con la muesca del récord; dentro, la racha en 10 tramos), oleadas en
     puntos, un solo hueco para mensajes a 48 px o más. En el relámpago, el borde es una mecha. Nada de cargas ni escudo en
     el marcador: se ven en el juego (bola en la mano, celdas del bláster, brazalete del escudo en el antebrazo).
@@ -282,7 +292,8 @@ No las cambies sin preguntarle.
     pestañas) y Salir; en Ajustes, las pestañas de los modos se llaman «Modo Arcos», «Modo Barras» y «Modo Toques»;
   - el jugador solo ve lo que el desarrollador marca con el ojo en su tabla de dificultad (`src/67_dev.js`); el menú
     completo y la tabla son del modo desarrollador, que está escondido; ya no hay estrellas de favoritos;
-  - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla);
+  - las canciones de cada ejercicio son del jugador (también se ponen de serie desde la tabla); las elegidas, las de cada
+    ejercicio y las de cada bloque suenan en un orden al azar distinto cada vez;
   - cada parte tiene su color.
 - Solo se ofrecen los ejercicios que valen para el modo elegido.
 

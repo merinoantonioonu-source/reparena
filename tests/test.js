@@ -50,7 +50,7 @@ let src = fs.readFileSync(require('path').join(__dirname, '..', 'build', 'game.j
 const expose = `
 window.__RA = { flatKeys, get SWORD_ARM(){return SWORD_ARM}, TOPC, LIFE, lifeWant, MOTES, MOTEB, motesBeat, HRX, hrxStep, hrxTake, hrxSeal, spMove, spPicksMenu, misLive, recLive, REC, HR, hrParse, hrNow, hrCol, SPP, spPreview, spBpmFilt, spBpmFiltBar, spPlayBtn, STORM, TREK_WIND, arcJumpNeed, arxClean, arxFeverLook, FIELD, store, syncAskText, SYNC, syncCreate, syncLink, syncCheck, syncPush, syncImport, syncDecline, syncMenu, syncSt, viewQ, BIGN, arxMul, WIN, startWave, hideMenu, cheer, say, BRACE, drawBoard, get combo(){return combo}, set combo(v){combo = v}, punchStep, PUNCH, FRONT_MIN, SP_FADE, WM, wristFar, DEMOV, center, showToast, PK, PERKS, GH, RUSH, GOLD, CHEST, perkOnHit, perkSlow, hurtPlayer, onKilled, registerRep, ghostText, rushStart, rushStop, chestMaybe, stand, get state(){return state}, get menu(){return menu}, settings, get enemies(){return enemies}, get arcs(){return arcs}, get stats(){return stats}, get waveIdx(){return waveIdx}, get lives(){return lives},
   PV, startPreview, renderer, gates, hands, head, onRep, onCharge, openPause, settingsMenu, lobbyMenu, keypadKey, keypadOK, openKeypad, activeWidgets, SPLEGS, debris, get projs(){return projs}, get spawnQueue(){return spawnQueue},
-  setSetting, startXR, gloves, watch, BODY, HRS, appVal, APP_SECS, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, sndPreview, sndSetOn, shieldCheck, crSave,
+  setSetting, startXR, gloves, watch, BODY, HRS, appVal, APP_SECS, exitAll, beginRun, AUD, PADD, PNORM, scene, arena, HJ, get xrActive(){return xrActive}, resumeGame, get calibRef(){return calibRef}, HL, endRun, onWatch, VX, vortex, SWD, blockPoint, get arMode(){return arMode}, forest, env, get xrAR(){return xrAR}, eqLocal, dipOne, pokeWidgets, fingers, Btn, panelHides, collectThreats, HUD, board, toastP, progress, kcalOf, progressLine, HTH, POKE, SCHEMA, gateSolids, beatNow, RPL: (() => { try { return RPL; } catch (e) { return null; } })(), spMyLists, spPlayLists, locks, lasers, SPP, spPlayerInit, get menuH(){return menu && menu.H}, SND, buzzLoop, saberLoop, sampleNames, get score(){return score}, DET, get msg(){return msg}, ArcObs, sndPreview, sndSetOn, shieldCheck, crSave,
   COMIC, CFX, get renderer(){return renderer}, SP, MODE_EX, OUT, ISL, NAT, sceneryNewRun, FOE_GATE, FOE_HATCH, FOE_FLY, BEAST, BEAST_DEF, BEAST_CLIPS, ROCKS, ATK_ZONE, blockStart, blockPoint, beastReady, buildWave, foesMenu, HATCH_KIND, FLYER_KIND, groundList, flyList, envSolids, solidPush, boardDay, drawBoard, RAMP, rampWaveEnd, PREFS, EX_SHORT, spVol, WARN, onPartial, demoDraw, DEMOP, DEMOV, DEMO, spRefresh, spTick, spNowText, dayStats, spToggle, EQ, BAR, PLACE, POOL, TENT, ARX, ARX_DECO, barTopPoint, AUDM, ambMute, GAME_STATES, barNear, eqPose, pool, eqGroup, SES, startSession, get stateT(){return stateT}, GUN, BLASTERS, camera, BOLTS, get touches(){return touches}, foes, autoAim, aimManual, ROBOT_KIND, hatches, ROOM, roomPlan, liveGates, roomBlocked, boardRig, EQ, TCH, IW, DET, dv, get waveIdx(){return waveIdx}, GUARD, guardAbsorb, armsMenu, GV, LKL, locks, gazeLock, XFER, xferSend, xferFetch, xferApply, xferMenu, spListMenu, spBlockMusic, blockMusic, sesMusicHTML, applyBlock, sesClean, spListTracks, endSession, sessSave, sessLoad, savedSessions, xferPack, spToggle, sesSetHTML, blockFields, sesDup, sesMove, renderSession, tempoRows, spFavToggle, spTrackMenu, rankVals, spSongBpmSet, spAutoTempo, rankFitAdd, RANK, CHG, SORB, IWW, blockExRank, endMenu, BPM_SRC, BPMQ, RB, rbBpms, spBpmPrefetch, throwTarget, spBpmCell, spBpmScale, spTrackBpm, LADDER, DEV, devSet, devVal, devCell, devEye, devEyeToggle, devExport, devImport, devToggle, devRows, devTap, devTableHTML, menuFull, EXS, exSongs, exSongsSet, exSongsStart, exSongsHTML, devFoe, devFoeSet, devFoes, INTRO, thumbsUp, introBoss, MODE_COL, MODE_NAMES, ENVSW, wristFar, get TRK(){return TRK}, trkLine, MARQ, demoTips, FLOORB, IWW, LOBBY, danceP, throwK, CR, CAMP, lvlOf, titleOf, misToday, MIS, campStart, campOf, campLv, careerRun, careerTake, PROG, LOOKS, lookSet, lookHex, lookOwn, boltRGB, CAMP_N, progRows, careerLine, ARX_TINT, arxSpeed, QUAL, qualLevel, DAYB, TROPHY, trophy, TREK, trekRep, trekMoveStep, TMV, TREK_BAND, TREK_WOLF, demoJoints, demoPose };
 })();`;
 src = src.replace(/\}\)\(\);\s*$/, expose);
@@ -882,13 +882,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   // Travesía: los bandidos lanzan piedras (sin golpes): la alta se esquiva agachado, la baja saltando y la que va al
   // cuerpo apartándose; cada una esquivada le quita aguante y, sin aguante, huye. La primera, sin esquivar: una vida
   // (y cada esquivada le duele; sin bolitas de vida, cae muerto; al lanzar, su voz de persona, no el siseo de las arañas)
-  { const T = { o: null, first: 1, kinds: new Set(), hurt: 0, beads: 0, beadsLow: 99, down: 0 }, S = { banditThrow: 0, banditHurt: 0, banditDeath: 0, hiss: 0 }, keepS = {}; for (const k in S) { keepS[k] = RA.SND[k]; RA.SND[k] = (...a) => { if (RA.TREK.halt) S[k]++; return keepS[k](...a); }; }
+  { const T = { o: null, first: 1, kinds: new Set(), hurt: 0, beads: 0, beadsLow: 99, down: 0, xs: new Set() }, S = { banditThrow: 0, banditHurt: 0, banditDeath: 0, hiss: 0 }, keepS = {}; for (const k in S) { keepS[k] = RA.SND[k]; RA.SND[k] = (...a) => { if (RA.TREK.halt) S[k]++; return keepS[k](...a); }; }
     const sv = { ...RA.settings }; RA.TREK_BAND.bare = true;
     await runConfig('Travesía: bandidos', { ...base, mode: 'trek', exercise: 'squat', waves: 3, repsWave: 60, repsInc: 0, rest: 0, lives: 3 }, t => {
       RA.TREK.nextChase = 1e9; const O = RA.TREK.obs, h = RA.TREK.halt, K = RA.PV.keys;
       if (!T.o) { RA.TREK.nObs = 2; const o = O.find(o => o.kind === 'bandit'); if (o) { T.o = o; o.hp0 = o.bandits.reduce((a, b) => a + b.hp, 0); RA.TREK.nObs = 0; } }
       if (!h || h.kind !== 'bandit') { RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; K.KeyA = K.KeyD = false; return; }
-      for (const b of h.bandits) { if (b.st === 'hurt') T.hurt = 1; if (b.st === 'down') T.down = 1; const L = RA.LIFE.sets.get(b), n = L ? L.b.filter(x => !x.die).length : 0; if (b.alive && b.st === 'guard') { T.beads = Math.max(T.beads, n); if (n !== b.hp) T.beadsOff = `${n} bolitas con ${b.hp} de vida`; } }
+      for (const b of h.bandits) { if (b.alive && b.st === 'guard') T.xs.add(Math.round(b.x * 3)); if (b.st === 'move') T.moves = (T.moves || 0) + 1; if (b.st === 'hurt') T.hurt = 1; if (b.st === 'down') T.down = 1; const L = RA.LIFE.sets.get(b), n = L ? L.b.filter(x => !x.die).length : 0; if (b.alive && b.st === 'guard') { T.beads = Math.max(T.beads, n); if (n !== b.hp) T.beadsOff = `${n} bolitas con ${b.hp} de vida`; } }
       const q = (h.stones2 || []).find(q => !q.done); if (!q) { RA.PV.crouch = false; K.KeyD = false; K.KeyA = Math.abs(RA.HL.x) > 0.05 && RA.HL.x > 0; return; }
       T.kinds.add(q.atk); if (T.first) { RA.PV.crouch = false; K.KeyD = false; if (h.hits) T.first = 0; return; } // (la primera, sin esquivar)
       const left = q.dur - q.t;
@@ -897,7 +897,34 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
       else { RA.PV.crouch = false; K.KeyD = Math.abs(RA.HL.x - q.x0) < 0.3; }
     }, 260, s => !T.o ? 'deberían salir los bandidos' : !T.o.done ? `deberían caer todos (${T.o.bandits.map(b => b.st + ':' + b.hp).join(', ')})` : T.o.bandits.some(b => b.hp > 0) ? 'han caído sin esquivarles todas las piedras' : !T.down || !S.banditDeath ? 'sin vida, el bandido debería caer muerto (con su lamento)' : !T.hurt || !S.banditHurt ? 'cada esquivada debería dolerle (gesto y quejido)' : !S.banditThrow || S.hiss ? `al lanzar, el bandido debería soltar su esfuerzo de persona, no el siseo de las arañas (${S.banditThrow}, ${S.hiss})` : !T.beads || T.beadsOff ? `sobre cada bandido, una bolita por esquiva que falta (${T.beads}${T.beadsOff ? ' · ' + T.beadsOff : ''})` : s.taken !== 1 ? `la piedra sin esquivar debería quitar una vida, y las esquivadas ninguna (${s.taken})` : T.o.dodges !== T.o.hp0 ? `cada uno debería rendirse tras esquivarle todas sus piedras (${T.o.dodges} de ${T.o.hp0})` : T.kinds.size < 3 ? `deberían llegar piedras altas, bajas y al cuerpo (${[...T.kinds]})` : '', true);
     log(`trek bandits: ${T.o && T.o.bandits.length} · stones dodged ${T.o && T.o.dodges} of ${T.o && T.o.hp0} · hit ${T.o && T.o.hits} · kinds ${[...T.kinds].join(',')} · ${T.o && T.o.bandits.map(b => b.st).join(',')} · hurt ${T.hurt}, fell dead ${T.down} · beads up to ${T.beads}${T.beadsOff ? ` (${T.beadsOff})` : ''} · voice: throw ${S.banditThrow}, hurt ${S.banditHurt}, death ${S.banditDeath}, hiss ${S.hiss}`);
+    log(`trek bandits on the move: ${T.moves || 0} frames moving · ${T.xs.size} different spots`); if (T.xs.size < 3) errors.push('travesía: los bandidos deberían moverse de un sitio a otro entre lanzamientos');
     for (const k in S) RA.SND[k] = keepS[k]; RA.TREK_BAND.bare = false; for (const k in sv) RA.setSetting(k, sv[k]); }
+  // Travesía: la zancada hacia delante (la cabeza baja y avanza) empuja al bandido (recula y pierde una bolita) y hace recular
+  // a los lobos cercanos; y la roca del derrumbe no se mueve nada mientras la embistes
+  { const sv = { ...RA.settings }; RA.TREK_BAND.bare = true; const Z = { o: null, rock: null, rockMove: 0, rockGot: 0, ban: null, moved: 0, xs: new Set() };
+    const lunge = (t, K) => { const ph = t % 2.2; RA.PV.crouch = ph < 0.7; K.KeyW = ph < 0.35; K.KeyS = ph >= 0.7 && ph < 1.05; };
+    await runConfig('Travesía: zancadas que empujan', { ...base, mode: 'trek', exercise: 'squat', waves: 3, repsWave: 60, repsInc: 0, rest: 0, lives: 9 }, t => {
+      RA.TREK.nextChase = 1e9; const O = RA.TREK.obs, h = RA.TREK.halt, K = RA.PV.keys;
+      if (!Z.rock && !O.some(o => o.kind === 'rock')) RA.TREK.nObs = 3; else if (Z.rock && !Z.ban && !O.some(o => o.kind === 'bandit')) RA.TREK.nObs = 2;
+      for (const o of O) { if (o.kind === 'rock' && !Z.rock) Z.rock = o; if (o.kind === 'bandit' && !Z.ban) Z.ban = o; }
+      if (!h) { lunge(t, { }); RA.PV.crouch = Math.floor(t * 0.9) % 2 === 0; K.KeyW = K.KeyS = false; return; }
+      lunge(t, K);
+      if (h.kind === 'rock') { const b = h.box.position, r = h.box.rotation; Z.rockMove = Math.max(Z.rockMove, Math.hypot(b.x, b.y, b.z) + Math.abs(r.x) + Math.abs(r.z)); Z.rockGot = h.got; }
+      }, 260, s => '', true);
+    RA.PV.keys.KeyW = RA.PV.keys.KeyS = false; RA.PV.crouch = false; RA.TREK_BAND.bare = false; for (const k in sv) RA.setSetting(k, sv[k]);
+    const sh = Z.ban ? Z.ban.shoves || 0 : 0;
+    log(`trek lunges: rock hits ${Z.rockGot} · rock moved ${Z.rockMove.toFixed(3)} · bandit shoves ${sh}`);
+    if (!Z.rock || Z.rockGot < 1 || Z.rockMove > 1e-6) errors.push('travesía: la roca debería recibir las zancadas sin moverse nada');
+    if (!Z.ban || sh < 1) errors.push('travesía: una zancada debería empujar al bandido');
+    }
+  { let shoves = 0, chased = 0;
+    await runConfig('Travesía: zancada contra los lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 9, rest: 0 }, t => {
+      const K = RA.PV.keys, C = RA.TREK.chase; if (RA.state === 'play' && !C && !chased) RA.TREK.nextChase = 0; if (C) chased = 1;
+      const near = C && C.wolves.some(w => (w.st === 'race' || w.st === 'chase') && Math.hypot(w.s - RA.TREK.dist, w.u - RA.HL.x) < 3.5);
+      if (near) { const ph = (t * 3) % 2.2; RA.PV.crouch = ph < 0.7; K.KeyW = ph < 0.35; K.KeyS = ph >= 0.7 && ph < 1.05; } else { RA.PV.crouch = false; K.KeyW = K.KeyS = false; }
+      if (C && C.shoves) shoves = Math.max(shoves, C.shoves); }, 40, s => '', true);
+    RA.PV.keys.KeyW = RA.PV.keys.KeyS = false; RA.PV.crouch = false;
+    log(`trek wolves shoved back by a lunge: ${shoves}`); if (!shoves) errors.push('travesía: una zancada debería hacer recular a un lobo cercano'); }
   // Travesía: si no avanzas, los lobos te alcanzan y muerden (una vida)
   { let chased = 0; const W = { wolfHowl: 0, wolfGrowl: 0, wolfBite: 0 }, keep = {}; for (const k in W) { keep[k] = RA.SND[k]; RA.SND[k] = (...a) => { W[k]++; return keep[k](...a); }; }
     await runConfig('Travesía con lobos', { ...base, mode: 'trek', exercise: 'squat', waves: 1, repsWave: 30, lives: 3, rest: 0 }, t => { RA.PV.crouch = false; if (RA.state === 'play' && !chased) { RA.TREK.nextChase = 0; } if (RA.TREK.chase) chased = 1; }, 40, s => !chased ? 'deberían salir los lobos' : s.taken < 1 ? 'parado, los lobos deberían alcanzarte y morder' : '', true);
@@ -959,15 +986,27 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     const k = RA.STORM.k.value, f = RA.STORM.f.value; log(`arcs fever start: storm ${k.toFixed(2)} · flash ${f.toFixed(2)}`);
     if (!F.fever || k < 0.7 || f < 1.5) errors.push('arcos: la fiebre debería empezar con un relámpago enorme y el rojo de golpe');
     [F.streak, F.fever, F.feverN] = keep; RA.arxFeverLook(false); RA.STORM.k.value = 0; RA.STORM.f.value = 0; RA.setSetting('arcFever', sv); }
+  // el láser: se mueve de lado a una velocidad que se puede seguir (más deprisa cuanto más difícil) y se queda quieto antes de llegar
+  { const sv = { ...RA.settings }; const L = {};
+    for (const [rk, lz] of [['recluta', 0], ['general', 100]]) { applyCfg({ mode: 'arcs', exercise: 'squat', arcLaser: lz }); let vmax = 0, still = 0, prev = null, n = 0;
+      for (let k = 0; k < 6; k++) { const o = new RA.ArcObs('laser'), dt = 1 / 60;
+        for (let i = 0; i < 2000 && o.t < o.tReach; i++) { o.update(dt, i * dt); const x = o.beam.position.x; if (prev !== null) { const v = Math.abs(x - prev) / dt; vmax = Math.max(vmax, v); if (o.tReach - o.t < 1.2 && v > 0.01) still++; } prev = x; }
+        prev = null; n++; RA.arena.remove(o.grp); if (o.hum) o.hum.stop(); }
+      L[rk] = { vmax, still }; }
+    applyCfg({ mode: sv.mode, exercise: sv.exercise, arcLaser: sv.arcLaser }); for (const k in sv) RA.settings[k] = sv[k];
+    log(`arcs laser: top side speed with «Láser: amenaza» at 0 % (recluta) ${L.recluta.vmax.toFixed(2)} m/s, at 100 % (general) ${L.general.vmax.toFixed(2)} m/s · moving in the last 1.2 s ${L.recluta.still + L.general.still} frames`);
+    if (L.general.vmax > 3.6 || L.general.vmax <= L.recluta.vmax || L.recluta.still + L.general.still) errors.push('arcos: el láser debería barrer a una velocidad sorteable (más deprisa cuanto más difícil) y estar quieto al llegar'); }
   // ráfagas de vallas (tres o cuatro seguidas) y burpees (plancha y, enseguida, una valla), con su propia altura de salto
-  { const A = { burst: 0, plankThenJump: 0, seen: new Set(), last: null, lastT: 0, need: null, jd: new Set(), jt: [] }, jh0 = RA.settings.jumpHeight;
+  { const A = { burst: 0, plankThenJump: 0, seen: new Set(), last: null, lastT: 0, need: null, jd: new Set(), jt: [], pj: new Set(), plankT: null, up: [] }, jh0 = RA.settings.jumpHeight;
     await runConfig('Arcos con ráfagas de vallas y burpees', { ...base, mode: 'arcs', exercise: 'squat', arcPatterns: 1, arcHurdles: 60, arcBurpee: 60, arcCombo: 0, arcTunnel: 0, arcNew: 0, arcTilt: 0, arcJump: 0, arcDouble: 0, arcMace: 0, arcPlank: 0, arcLow: 0, arcOrbs: 0, waves: 1, repsWave: 32, lives: 0, jumpHeight: 35, arcJumpH: 6 }, t => {
       RA.PV.crouch = true; A.need = RA.arcJumpNeed();
       for (const a of RA.arcs.filter(a => !A.seen.has(a))) { A.seen.add(a); if (a.jump && A.last && A.last.jump) A.burst++; if (a.jump && A.last && A.last.plank) A.plankThenJump++; A.last = a; }
-      for (const a of RA.arcs) if (a.jump && a.judged && !A.jd.has(a)) { A.jd.add(a); A.jt.push(t); } }, 600,
+      for (const a of RA.arcs) if (a.plank && a.judged && !A.pj.has(a)) { A.pj.add(a); A.plankT = t; }
+      for (const a of RA.arcs) if (a.jump && a.judged && !A.jd.has(a)) { A.jd.add(a); A.jt.push(t); if (A.plankT != null) { A.up.push(t - A.plankT); A.plankT = null; } } }, 600,
       s => !A.burst ? 'deberían llegar vallas seguidas (ráfagas)' : !A.plankThenJump ? 'en el burpee, tras el arco de plancha debería llegar una valla' : s.taken > 2 ? `las ráfagas y los burpees deberían poder pasarse (${s.taken} golpes)` : Math.abs(A.need - 0.06) > 1e-6 ? `las vallas deberían usar su propia altura de salto (${A.need})` : '');
     const gaps = A.jt.slice(1).map((x, i) => x - A.jt[i]), minGap = gaps.length ? Math.min(...gaps) : 9;
-    log(`arcs hurdles: back-to-back hurdles ${A.burst} · plank then hurdle ${A.plankThenJump} · hurdle jump ${A.need} m · shortest time between hurdles ${minGap.toFixed(2)} s`);
+    log(`arcs hurdles: back-to-back hurdles ${A.burst} · plank then hurdle ${A.plankThenJump} · hurdle jump ${A.need} m · shortest time between hurdles ${minGap.toFixed(2)} s · burpee: plank arc to hurdle ${A.up.map(x => x.toFixed(1)).join(' ')} s`);
+    if (!A.up.length || Math.min(...A.up) < 2.6) errors.push(`burpee: tras el arco de plancha, la valla debería llegar con tiempo para levantarse (${A.up.map(x => x.toFixed(1)).join(' ')} s)`);
     if (minGap < 1.0) errors.push(`arcos: entre una valla y la siguiente debería haber al menos 1 s (${minGap.toFixed(2)} s)`); RA.setSetting('jumpHeight', jh0); }
   // arcos al compás: con ritmo, cada arco llega a la cabeza justo en un pulso
   // (y los orbes también llegan en el pulso, cogidos en él valen el doble; cada 32 pulsos, frase intensa o de respiro)
@@ -1249,12 +1288,13 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
     log(`spotify: lists in game ${page1}+${page2} (of 11) · from a song → ${JSON.stringify(fromSong && fromSong.body)} · block music ${(mus || []).length} songs → play ${JSON.stringify(play && play.body)} · repeat ${rep && rep.path} · shuffle ${shuf && shuf.path} · next block with the same songs restarts them ${n1 > n0} · page picker: chips ${(html.match(/class="chip"/g) || []).length}, tracks ${(html.match(/data-m="trk"/g) || []).length}, checked ${(html.match(/ checked/g) || []).length}`);
     if (page1 !== 8 || page2 !== 3 || !liked1 || l10) errors.push(`Spotify: en el juego deberían salir tus canciones que te gustan y tus listas (no las de otros usuarios), de 8 en 8 (${page1}+${page2}, me gusta ${liked1}, ajena ${l10})`);
     if (!fromSong || !fromSong.body || fromSong.body.context_uri !== 'spotify:playlist:L9' || !fromSong.body.offset || fromSong.body.offset.uri !== 'spotify:track:L9-3') errors.push('Spotify: tocar una canción debería poner su lista empezando por ella');
-    if (!mus || mus.length !== 3 || !play || JSON.stringify(play.body.uris) !== JSON.stringify(['spotify:track:L1-2', 'spotify:track:L1-5', 'spotify:track:L7-0']) || !/state=context/.test(rep && rep.path) || !/state=false/.test(shuf && shuf.path)) errors.push('Spotify: la música del bloque debería sonar en su orden y en bucle');
+    // (en un orden al azar distinto cada vez: las mismas tres canciones, en bucle)
+    if (!mus || mus.length !== 3 || !play || JSON.stringify(play.body.uris.slice().sort()) !== JSON.stringify(['spotify:track:L1-2', 'spotify:track:L1-5', 'spotify:track:L7-0']) || !/state=context/.test(rep && rep.path) || !/state=false/.test(shuf && shuf.path)) errors.push('Spotify: la música del bloque debería sonar entera (al azar) y en bucle');
     if (n1 > n0) errors.push('Spotify: si el bloque siguiente tiene las mismas canciones, no deberían empezar de nuevo');
     if ((html.match(/class="chip"/g) || []).length !== 3 || (html.match(/data-m="trk"/g) || []).length !== 12 || (html.match(/ checked/g) || []).length !== 2) errors.push('Spotify: en la página, el bloque debería enseñar sus canciones y las de la lista elegida, marcadas las suyas');
     { await sleep(600); calls.length = 0; RA.SP.busy = false; RA.SP.started = false; RA.SP.st = { is_playing: false, device: { id: 'D1', name: 'PC' } }; RA.SP.cfg.picks = [{ uri: 'spotify:track:L3-1', name: 'X' }, { uri: 'spotify:track:L5-4', name: 'Y' }];
       RA.spToggle(); await waitFor(() => calls.some(c => c.path.startsWith('/me/player/play'))); const pp = calls.find(c => c.path.startsWith('/me/player/play'));
-      log(`   picked songs → Play plays ${JSON.stringify(pp && pp.body)}`); if (!pp || JSON.stringify(pp.body && pp.body.uris) !== JSON.stringify(['spotify:track:L3-1', 'spotify:track:L5-4'])) errors.push('Spotify: con canciones elegidas, Play debería poner esas, en su orden'); }
+      log(`   picked songs → Play plays ${JSON.stringify(pp && pp.body)}`); if (!pp || JSON.stringify(((pp.body && pp.body.uris) || []).slice().sort()) !== JSON.stringify(['spotify:track:L3-1', 'spotify:track:L5-4'])) errors.push('Spotify: con canciones elegidas, Play debería poner esas (al azar)'); }
     { // el ritmo: «Al compás» siempre se ve, también con el ritmo de Spotify puesto (y entonces, además, «Encajar el pulso»)
       const b0 = RA.settings.bpm, a0 = RA.SP.cfg.autoBpm; RA.SP.cfg.autoBpm = true; RA.setSetting('bpm', 120);
       const L = RA.tempoRows(() => {}).flatMap(r => r.items || []).map(i => i.label); RA.SP.cfg.autoBpm = a0; RA.setSetting('bpm', b0);
@@ -1317,10 +1357,11 @@ let curlSide = 0; const curlSim = t => { const ph = t % 1.4; if (ph < 0.034) { R
   const assist = () => { RA.PV.crouch = true; RA.PV.keys.KeyG = true; };
   for (const [name, ex, extra] of [['slam', 'slam', {}], ['saltos', 'jump', {}], ['abdominales', 'abs', {}], ['abdominales laterales', 'abs', { absMoves: 'side' }], ['flexiones (aros)', 'pushup', {}],
     ['combinado de pie', 'combo', { comboBase: 'stand', comboStand: 'squat,jump,punch', comboOrder: 'seq' }], ['combinado plancha', 'combo', { comboBase: 'floor', comboFloor: 'push,plank,tap', plankHold: 3 }], ['combinado boca arriba', 'combo', { comboBase: 'abs', comboAbs: 'crunch,twist,knee', comboOrder: 'seq' }]]) {
-    const parts = new Set(); let fromSide = true;
-    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => { parts.add(x.part + ':' + x.move); if (x.move === 'side' && Math.abs(x.from.x) < 2) fromSide = false; }); }), 200,
+    const parts = new Set(); let fromSide = true; const obl = { n: 0, bad: 0 };
+    await runConfig('Toques+' + name, { ...base, mode: 'touch', exercise: ex, lives: 0, waves: 1, repsWave: 6, tchHands: 40, tchArrive: 2, tchGap: 2, ...extra }, watchPanels(t => { assist(); RA.touches.forEach(x => { parts.add(x.part + ':' + x.move); if (x.move === 'side' && Math.abs(x.from.x) < 2) fromSide = false; if (x.move === 'twist') { obl.n++; if (Math.abs(x.pos.x) < 0.25 || (x.pos.x > 0) !== (x.hand === 'left')) obl.bad++; } }); }), 200,
       panelCheck(name, s => s.taken ? `falla ${s.taken} objetivos` : s.reps < 6 ? 'no cuenta los toques' : RA.settings.exercise === 'combo' && parts.size < 3 ? `el combinado no mezcla movimientos (${[...parts]})` : extra.absMoves === 'side' && ([...parts].join() !== 'hand:side' || !fromSide) ? `los abdominales laterales no traen solo diamantes por los lados (${[...parts]})` : ''));
-    log('   movimientos:', [...parts].join(' '));
+    log('   movimientos:', [...parts].join(' '), obl.n ? `· oblicuos ${obl.n} frames, a un lado y con la mano contraria salvo ${obl.bad}` : '');
+    if (obl.bad) errors.push('toques: el oblicuo debería salir a un lado y tocarse con la mano contraria');
   }
   RA.PV.keys.KeyG = false; RA.PV.crouch = false;
   // Slam: obliga a moverse de verdad (amebas a los lados, muy abajo, delante o arriba; diamantes a ras de suelo) y alterna de lado;

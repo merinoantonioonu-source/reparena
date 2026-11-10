@@ -417,6 +417,7 @@ renderer.setAnimationLoop((time, frame) => {
   centerT += dt; if (center.mesh.visible && centerT > 0.2) { centerT = 0; drawCenter(); } // (cada dibujo se sube entero a la tarjeta: pocas veces)
   if (WARM.q.length && !['play', 'rest'].includes(state) && !menuBusy()) warmStep(); // precompilar poco a poco (uno por fotograma), fuera de la partida y no mientras tocas el menú (cada uno puede congelar la imagen un instante)
   introIdle(dt); envSwitchStep(dt); // (la ilustración de la carátula, por partes, mientras estás en el menú; el cambio de entorno, a oscuras)
+  { const m = new Date().getMinutes(); if (m !== AMBX.min) { AMBX.min = m; boardDirty = true; } } // (la hora del marcador, al día)
   boardT += dt; if (boardDirty && boardT > 0.12) { drawBoard(); boardDirty = false; boardT = 0; }
   qualStep(dt);
   const t1 = performance.now(); renderer.render(scene, camera); const t2 = performance.now();

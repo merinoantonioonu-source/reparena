@@ -20,8 +20,8 @@ const tchPeriod = () => settings.bpm > 0 ? 60 / settings.bpm : 0;
 // por encima de la cabeza (estirarse de puntillas)
 const SLAM_HEAD = [['duck', 3], ['lside', 4], ['lfwd', 2], ['jump', 2]], SLAM_HAND = [['floor', 3], ['low', 2], ['reach', 1]]; // floor: pulsadores en el suelo
 const pickW = L => { let r = Math.random() * L.reduce((a, x) => a + x[1], 0); for (const [m, w] of L) if ((r -= w) <= 0) return m; return L[0][0]; };
-const TCH_MOVES = { slam: [SLAM_HEAD.map(x => x[0]), SLAM_HAND.map(x => x[0])], squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch', 'twist'], ['knee']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
-const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'low', 'floor']; // side: abdominal lateral (diamante por un costado)
+const TCH_MOVES = { slam: [SLAM_HEAD.map(x => x[0]), SLAM_HAND.map(x => x[0])], squat: [['squat'], ['punch']], lunge: [['lunge'], ['punch']], jump: [['jump'], ['reach']], abs: [['crunch'], ['knee', 'twist']], pushup: [['push'], []] }; // en flexiones solo amebas: las manos están apoyadas
+const HAND_MOVES = ['punch', 'reach', 'tap', 'knee', 'side', 'twist', 'low', 'floor']; // side: abdominal lateral (diamante por un costado); twist: oblicuo (a un lado, con la mano contraria)
 // Con espadas, los diamantes pasan a ser bloques que se cortan; cada uno llega donde obliga a moverse:
 // bajo (sentadilla), adelantado (zancada), a un lado (inclinarse) o muy alto (saltar)
 const CUT_MOVES = ['cutLow', 'cutFwd', 'cutSide', 'cutHigh'];
@@ -121,7 +121,10 @@ function moveSpec(move, sd0) {
   else if (move === 'cutHigh') o.pos = new V3(side * rand(0, 0.2), S + 0.45 + jh, -0.55);
   else { // boca arriba: la cabeza gira alrededor de la cadera (a R por debajo, hacia los pies)
     const R = clamp(standHeadY() * 0.34, 0.45, 0.65), hip = new V3(0, S, -R);
-    if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3);
+    if (move === 'knee') o.pos = new V3(side * rand(0.04, 0.15), S + 0.3 + rand(0, 0.1), -R - 0.3); // manos a las rodillas: subir el tronco hasta tocarlo
+    // oblicuo: a un lado, junto a la rodilla de ese lado, y se toca con la mano CONTRARIA cruzando por delante del cuerpo (gira
+    // el tronco: antes era un aro apenas ladeado, que se hacía como un abdominal normal). «Giro del tronco», cuánto se aparta
+    else if (move === 'twist') { o.pos = new V3(side * (0.22 + 0.4 * Math.sin(settings.abTwist * Math.PI / 180)), S + 0.22 + rand(0, 0.08), -R - rand(0.15, 0.3)); o.hand = side < 0 ? 'right' : 'left'; }
     // abdominal lateral: junto a la cadera, a ras de suelo y bien abierto hacia un lado; se llega inclinando el tronco
     else if (move === 'side') o.pos = new V3(side * rand(0.36, 0.46), clamp(S - 0.02, 0.08, 0.25) + rand(0, 0.06), -R - rand(0.1, 0.3));
     else {
@@ -161,7 +164,7 @@ function sampleHands(dt) {
     if (!A.armed) {
       // la muñeca vuelve hacia el cuerpo o baja desde donde tocó (con márgenes holgados: basta con retirar la mano)
       const w = A.cur[0], P = A.hitP, closer = A.hitD - Math.hypot(w.x - HL.x, w.y - HL.y, w.z - HL.z) > 0.1;
-      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'low' || A.move === 'floor' ? closer || w.y > P.y + 0.25 : true;
+      const back = A.move === 'punch' ? closer || w.z - P.z > 0.1 || w.y < P.y - 0.2 : A.move === 'reach' ? closer || w.y < HL.y || w.y < P.y - 0.3 : A.move === 'tap' ? w.y < 0.2 || w.y < P.y - 0.1 : A.move === 'knee' ? closer || w.y < P.y - 0.12 || w.y < TCH.ref + 0.12 : A.move === 'side' ? closer || Math.abs(w.x) < Math.abs(P.x) - 0.12 : A.move === 'twist' ? closer || w.x * Math.sign(P.x) < Math.abs(P.x) - 0.2 || w.y < P.y - 0.12 : A.move === 'low' || A.move === 'floor' ? closer || w.y > P.y + 0.25 : true;
       if (back) A.armed = true;
     }
   }
@@ -254,7 +257,7 @@ class TouchTarget {
       const A = TCH.arm[s];
       for (let i = 0; i < A.n; i++) {
         if (segDist(_tv.subVectors(A.prev[i], this.prevPos), _tw.subVectors(A.cur[i], this.root.position)) >= GEM_R) continue;
-        if (s !== this.hand) { touchHint(`¡Con la mano ${HAND_NAME[this.hand]}!`); break; }
+        if (s !== this.hand) { touchHint(this.move === 'twist' ? `¡Oblicuo: cruza con la mano ${HAND_NAME[this.hand]}!` : `¡Con la mano ${HAND_NAME[this.hand]}!`); break; }
         if (!A.armed) { touchHint('Vuelve a la posición de partida'); return false; }
         this.by = s; return true;
       }
@@ -395,7 +398,7 @@ function buildTouchWave(i) {
   } else {
     let [head, hand] = TCH_MOVES[settings.exercise] || TCH_MOVES.squat;
     if (settings.exercise === 'abs') { // los elegidos (Movimientos): si solo hay de un tipo, todos de ese tipo
-      const sel = String(settings.absMoves).split(','); head = head.filter(m => sel.includes(m)); hand = ['knee', 'side'].filter(m => sel.includes(m));
+      const sel = String(settings.absMoves).split(','); head = head.filter(m => sel.includes(m)); hand = ['knee', 'side', 'twist'].filter(m => sel.includes(m));
       if (!head.length) head = hand; if (!hand.length) hand = head;
     }
     const hm = swordSet() && SWORD_CUTS[settings.exercise] ? SWORD_CUTS[settings.exercise] : hand;
