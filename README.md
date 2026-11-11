@@ -1,5 +1,7 @@
 # RepArena
 
+> **RepArena se ha mudado a [RepArena XR](https://github.com/merinoantonioonu-source/reparena-xr)** (hecha con el SDK de Meta). La dirección de siempre lleva a la nueva; esta versión sigue entera en `clasica.html` («la versión clásica») mientras lo que le falta a la nueva (armas, Travesía, Sesiones y realidad mixta) llega allí. Las dos comparten tus datos.
+
 Juego de ejercicio físico en realidad virtual y mixta para **Meta Quest 3**, que se juega desde el navegador de las gafas (WebXR) con seguimiento de manos. Cada repetición bien hecha es un disparo.
 
 - **Modos:** Combate (cada repetición dispara; eliges los **enemigos**: robots que se reparten los puestos de ataque sin estorbarse y cargan corriendo —en flexiones, arañas que salen de trampillas a unos 2 m—, drones y avispones gigantes —uno de cada tres voladores, desde la primera oleada— que, antes de picarte, cargan doblando el aguijón, o una mezcla, además de zombis, monstruitos y otros voladores: cada uno se marca o se quita (abajo, «Qué enemigos salen»); y la **puntería**: automática, al enemigo más cercano y con disparo cargado si aguantas abajo, o apuntando tú con las manos (la puntería por defecto; a quien la tenía en automática se le cambió una vez) o la mirada. Con las manos (y también con las pistolas si no llevas los mandos: con las manos desnudas no se dispara pellizcando), cada repetición carga un rayo en cada mano (como mucho uno por mano: no se acumulan; un orbe brilla en la muñeca cargada) y cada mano lanza el suyo con una sacudida hacia un enemigo: la mano sale de donde sea (también colgando junto a la cadera, y en plena sentadilla, subiendo o bajando), acelera deprisa (más de 1,2 m/s respecto a la cabeza) y frena de golpe. El rayo va al enemigo más cercano a esa dirección, dentro de unos 50°; si la sacudida no apunta a ningún enemigo, o no hay sacudida, la carga se queda en la mano. Tampoco vale bajar la mano de golpe hacia el suelo: la sacudida no puede ir más de unos 45° por debajo (o por encima) del enemigo, así que al dejar caer los brazos no se gasta la carga. Sin manos a la vista, la repetición carga igual y no dispara sola: el rayo espera a que las gafas vuelvan a ver la mano. Si las gafas pierden la mano en plena sacudida hacia un enemigo, el rayo sale igual, y si tardas en lanzar, te lo recuerda. Con pistolas y mandos, cada repetición recarga una bala en cada pistola, y con espadas, una carga en cada espada. Sin manos a la vista, la repetición dispara con la mirada. La plancha con un brazo trae siempre arañas y el superman, voladores con puntería automática. Los ajustes, sesiones e historial de los antiguos Asalto y Enjambre pasan solos a Combate), Arcos (solo sentadillas: agáchate para pasar bajo los arcos de energía y salta las vallas que llegan a ras de suelo: no son arcos (no hay nada por encima de la cabeza) sino una cuchilla de sierra con sierras circulares que giran, entre dos postes bajos; el salto se detecta por la subida rápida de la cabeza —más de 0,6 m/s— hasta la altura del salto sobre tu altura de pie justo cuando pasa la valla, así que ponerse de puntillas despacio no vale; el porcentaje de vallas se ajusta en Ajustes → Arcos), Toques (no se dispara: vienen aros de neón («amebas») que ondulan para meter la cabeza por el hueco y diamantes con la mano que los toca dibujada; en Slam, saltos, abdominales, flexiones o un combinado a tu gusto) y Barras (barra de dominadas de puerta o paralelas: revientas con la cabeza las pompas o los avispones gigantes (cabeza naranja con grandes ojos negros, tórax peludo y abdomen a bandas naranjas y negras) que vuelan hacia tu cara con el aguijón apuntándote, esperan donde llegará tu cabeza (en el remo, casi a la altura de la barra —6 cm por debajo— y pasado su borde: hay que subir del todo) y amagan con picarte: antes de lanzarse cargan encabritándose, con el abdomen doblado en «C» hasta que el aguijón asoma por delante bajo la cabeza agachada, las patas adelantadas y las mandíbulas abiertas; bajo la barra de dominadas hay un charco con tentáculos (los del Pirate Kit de Quaternius, animados: se mecen, y de vez en cuando uno se estira hacia tus pies con un pinchazo o un latigazo; el agua se mueve con ellos: ondas que salen de donde asoma cada uno, fuertes cuando se lanzan o barren) y, si te sueltas, caes en él y te barren todos a la vez; en colgado puedes elegir en su lugar un remolino: un embudo magenta de estrías difuminadas, con un núcleo blanco que brilla en el fondo, que se hunde en el suelo bajo tus pies y gira queriendo engullirte y se va cerrando a medida que aguantas, hasta cerrarse justo al cumplir el tiempo de la oleada: si te sueltas antes, te engulle, pierdes una vida y esa oleada termina).
@@ -189,7 +191,8 @@ Abre la página de GitHub Pages del repositorio en el navegador de las Quest 3 y
 
 | Ruta | Qué es |
 |---|---|
-| `index.html` | El juego completo en un solo archivo. **Se genera**: no lo edites a mano. |
+| `clasica.html` | El juego completo en un solo archivo (la versión clásica). **Se genera**: no lo edites a mano. |
+| `index.html` | La dirección de siempre: lleva a RepArena XR, la versión nueva (`src/redirect.html`). **Se genera**. |
 | `src/page.html` | HTML y CSS de la página; el JS se inserta en `/*__JS__*/`. |
 | `src/00_core.js` | Ajustes (esquema, guardado, formulario web). |
 | `src/10_audio.js` | Sonido sintetizado y espacial (Web Audio, HRTF, reverberación). |
@@ -234,13 +237,13 @@ Los módulos `src/NN_*.js` se concatenan en orden dentro de una sola función, a
 ## Desarrollo
 
 ```bash
-python3 src/build.py      # regenera index.html
+python3 src/build.py      # regenera clasica.html (el juego) e index.html (lleva a RepArena XR)
 node tests/test.js        # juega partidas simuladas en todos los modos; debe acabar en "ERRORS: none"
 node tests/render.js      # (opcional) imágenes de los modelos en tests/out/
 node tests/retratos.js    # rehace models/retratos.png (al añadir un enemigo a FOE_PIC)
 node tests/iconos.js      # rehace los iconos de la app (icons/*.png) a partir de icons/logo.svg
 ```
 
-Haz commit de `index.html` junto con los cambios en `src/`: es lo que publica GitHub Pages.
+Haz commit de `clasica.html` e `index.html` junto con los cambios en `src/`: es lo que publica GitHub Pages.
 
 Three.js r128 se carga desde cdnjs. El juego no tiene otras dependencias.

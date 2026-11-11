@@ -17,7 +17,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.glb': 'model/g
     await p.route(/SkeletonUtils\.js/, r => r.fulfill({ path: path.join(T, 'examples/js/utils/SkeletonUtils.js'), contentType: 'text/javascript' }));
   }
   // el juego, con una puerta para ejecutar código dentro de su ámbito (window.__ev), servido desde la carpeta del proyecto
-  let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const k = html.trimEnd().lastIndexOf('})();'); html = html.slice(0, k) + 'window.__ev = s => eval(s);\n' + html.slice(k);
+  let html = fs.readFileSync(path.join(ROOT, 'clasica.html'), 'utf8'); const k = html.trimEnd().lastIndexOf('})();'); html = html.slice(0, k) + 'window.__ev = s => eval(s);\n' + html.slice(k);
   await p.route('http://reparena.local/**', r => {
     const u = decodeURIComponent(new URL(r.request().url()).pathname); if (u === '/' || u === '/index.html') return r.fulfill({ body: html, contentType: 'text/html' });
     const f = path.join(ROOT, u); if (!f.startsWith(ROOT) || !fs.existsSync(f)) return r.fulfill({ status: 404, body: '' });
