@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- La dirección de siempre de RepArena lleva a la nueva, RepArena XR (hecha con el SDK de Meta). La versión anterior
+     sigue entera en clasica.html (con lo que aún no ha llegado a la nueva). Se genera con src/build.py: no la edites en
+     index.html. Las dos están en el mismo sitio y comparten tus datos (ajustes, progreso, misiones). -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepArena se ha mudado</title>
+<meta name="theme-color" content="#100d1a">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta http-equiv="refresh" content="0; url=../reparena-xr/">
+<script>
+  // a la nueva, con lo que traiga la dirección (por ejemplo ?dev=1)
+  location.replace('../reparena-xr/' + location.search + location.hash);
+</script>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #100d1a; color: #f2eefc; font: 18px/1.5 system-ui, sans-serif; }
+  main { max-width: 34em; padding: 1.5em; text-align: center; }
+  h1 { color: #ff4f8b; font-size: 1.8em; margin: 0 0 0.4em; }
+  a { color: #3cf0c6; }
+  .alt { opacity: 0.75; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RepArena se ha mudado</h1>
+  <p>Ahora es <a href="../reparena-xr/"><b>RepArena XR</b></a>, hecha con el SDK de Meta para las Quest 3. Tus ajustes y tu progreso te esperan allí.</p>
+  <p class="alt">¿Buscas la versión anterior (con las armas, la Travesía, las Sesiones y la realidad mixta, que llegan poco a poco a la nueva)? Está en <a href="clasica.html">la versión clásica</a>.</p>
+</main>
+</body>
+</html>

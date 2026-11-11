@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Une src/page.html y los módulos src/NN_*.js en index.html (lo que sirve GitHub Pages)."""
+"""Une src/page.html y los módulos src/NN_*.js en clasica.html (la versión clásica) e index.html lleva a RepArena XR."""
 import glob, os
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.dirname(here)
@@ -36,7 +36,9 @@ def sounds_html():
     out.append('</section>')
     return '\n'.join(out)
 page = page.replace('<!--__SOUNDS__-->', sounds_html())
-open(os.path.join(root, 'index.html'), 'w', encoding='utf-8').write(page.replace('/*__JS__*/', js))
+# El juego, en clasica.html (la versión clásica); la dirección de siempre (index.html) lleva a RepArena XR, la nueva
+open(os.path.join(root, 'clasica.html'), 'w', encoding='utf-8').write(page.replace('/*__JS__*/', js))
+open(os.path.join(root, 'index.html'), 'w', encoding='utf-8').write(open(os.path.join(here, 'redirect.html'), encoding='utf-8').read())
 os.makedirs(os.path.join(root, 'build'), exist_ok=True)
 open(os.path.join(root, 'build', 'game.js'), 'w', encoding='utf-8').write(js)
-print('index.html generado:', js.count('\n'), 'líneas de JS')
+print('clasica.html generado (index.html lleva a RepArena XR):', js.count('\n'), 'líneas de JS')

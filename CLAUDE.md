@@ -1,5 +1,8 @@
 # RepArena: instrucciones para Claude
 
+**RepArena se ha mudado a RepArena XR** (`merinoantonioonu-source/reparena-xr`): la dirección de siempre (`index.html`) lleva a la nueva y
+este juego sigue en `clasica.html`. Lo nuevo se hace allí; aquí, solo arreglos si hacen falta mientras la nueva no lo tiene todo.
+
 Juego de ejercicio físico para **Meta Quest 3** en el navegador de las gafas (WebXR, Three.js r128), con seguimiento de
 manos y mandos, en VR y en realidad mixta. Cada repetición bien hecha es un disparo. El objetivo es **hacer ejercicio**:
 cada mecánica nueva tiene que pedir movimiento real del cuerpo, no solo de los dedos.
@@ -16,13 +19,13 @@ página (`src/page.html`, sección «Dentro del juego»).
 ## Construir, probar y publicar
 
 ```bash
-python3 src/build.py                    # une src/page.html y src/NN_*.js en index.html (y build/game.js)
+python3 src/build.py                    # une src/page.html y src/NN_*.js en clasica.html (y build/game.js); index.html lleva a RepArena XR
 node tests/test.js                      # partidas simuladas en todos los modos: debe acabar en "ERRORS: none"
 XR=1 ONLY=zzz node tests/test.js        # solo las pruebas de WebXR (manos, mandos, menú de muñeca, barras…)
 ONLY='expresión' node tests/test.js     # solo las partidas cuyo nombre encaja; DBG=1 saca más registro
 ```
 
-- `index.html` **se genera**: nunca lo edites a mano, pero **haz commit de él** junto con `src/`, porque es lo que
+- `clasica.html` e `index.html` **se generan**: nunca los edites a mano, pero **haz commit de ellos** junto con `src/`, porque es lo que
   publica GitHub Pages. `build/` no se sube.
 - Ejecuta las pruebas en primer plano: en segundo plano la salida se corta.
 - Con `XR=1 ONLY=…` no cuentan las comprobaciones de las partidas que `ONLY` se salta (lo dice al empezar la parte XR).
